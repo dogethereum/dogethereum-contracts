@@ -1,11 +1,11 @@
-var DogeRelay = artifacts.require("./DogeChain.sol");
-var Constants = artifacts.require("./Constants.sol");
+//var Constants = artifacts.require("./Constants.sol");
+//var DogeChain = artifacts.require("./DogeChain.sol");
 var DogeRelay = artifacts.require("./DogeRelay.sol");
 
 module.exports = function(deployer) {
-  deployer.deploy(DogeChain);
-  deployer.deploy(Constants);
-  deployer.link(DogeRelay, DogeRelay);
-  deployer.link(Constants, DogeRelay);
+  //deployer.deploy(Constants);
+  //deployer.deploy(DogeChain);
+  //deployer.link(Constants, DogeRelay);
+  //deployer.link(DogeChain, DogeRelay);
   deployer.deploy(DogeRelay);
 };

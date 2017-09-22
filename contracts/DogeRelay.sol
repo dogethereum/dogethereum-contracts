@@ -1,9 +1,9 @@
 pragma solidity ^0.4.4;
 
-import "./ConvertLib.sol";
+import "./DogeChain.sol";
 import "./Constants.sol";
 
-contract DogeRelay {
+contract DogeRelay is DogeChain {
 	mapping (address => uint) balances;
 
 	event Transfer(address indexed _from, address indexed _to, uint256 _value);
@@ -21,7 +21,7 @@ contract DogeRelay {
 	}
 
 	function getBalanceInEth(address addr) returns(uint){
-		return ConvertLib.convert(getBalance(addr),2);
+		return 0; //ConvertLib.convert(getBalance(addr),2);
 	}
 
 	function getBalance(address addr) returns(uint) {

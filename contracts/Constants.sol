@@ -1,6 +1,6 @@
 pragma solidity ^0.4.4;
 
-library Constants {
+contract Constants {
 
 
  // Constants
