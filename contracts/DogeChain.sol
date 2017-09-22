@@ -1,4 +1,4 @@
-pragma solidity ^0.4.4;
+pragma solidity ^0.4.17;
 
 import "./Constants.sol";
 
@@ -56,19 +56,19 @@ contract DogeChain is Constants {
 	// returns 1 if 'txBlockHash' is in the main chain, ie not a fork
 	// otherwise returns 0
 	function priv_inMainChain__(bytes32 txBlockHash) private returns (bool) {
-	    require(msg.sender == address(this));
+    require(msg.sender == address(this));
 
-	    uint txBlockHeight = m_getHeight(txBlockHash);
+    uint txBlockHeight = m_getHeight(txBlockHash);
 
-	    // By assuming that a block with height 0 does not exist, we can do
-	    // this optimization and immediate say that txBlockHash is not in the main chain.
-	    // However, the consequence is that
-	    // the genesis block must be at height 1 instead of 0 [see setInitialParent()]
-	    if (txBlockHeight == 0) {
-	        return false;	    
-	    }
+    // By assuming that a block with height 0 does not exist, we can do
+    // this optimization and immediate say that txBlockHash is not in the main chain.
+    // However, the consequence is that
+    // the genesis block must be at height 1 instead of 0 [see setInitialParent()]
+    if (txBlockHeight == 0) {
+      return false;	    
+    }
 
-	    return priv_fastGetBlockHash__(txBlockHeight) == txBlockHash;
+    return priv_fastGetBlockHash__(txBlockHeight) == txBlockHash;
 	}
 
 
@@ -80,19 +80,19 @@ contract DogeChain is Constants {
 	// * blockHeight is less than the height of heaviestBlock, otherwise the
 	// heaviestBlock is returned
 	function priv_fastGetBlockHash__(uint blockHeight) private returns (bytes32) {
-	    require(msg.sender == address(this));
+    require(msg.sender == address(this));
 
-	    bytes32 blockHash = heaviestBlock;
-	    uint8 anc_index = NUM_ANCESTOR_DEPTHS - 1;
+    bytes32 blockHash = heaviestBlock;
+    uint8 anc_index = NUM_ANCESTOR_DEPTHS - 1;
 
-	    while (m_getHeight(blockHash) > blockHeight) {
-	        while (m_getHeight(blockHash) - blockHeight < m_getAncDepth(anc_index) && anc_index > 0) {
-	            anc_index -= 1;	        
-	        }
-	        blockHash = internalBlock[m_getAncestor(blockHash, anc_index)];	    
-	    }
+    while (m_getHeight(blockHash) > blockHeight) {
+      while (m_getHeight(blockHash) - blockHeight < m_getAncDepth(anc_index) && anc_index > 0) {
+        anc_index -= 1;	        
+      }
+      blockHash = internalBlock[m_getAncestor(blockHash, anc_index)];	    
+    }
 
-	    return blockHash;	
+    return blockHash;	
 	}
 
 
@@ -102,39 +102,68 @@ contract DogeChain is Constants {
 	// eg. for combined usage, internalBlock[m_getAncestor(someBlock, 2)] will
 	// return the block hash of someBlock's 3rd ancestor
 	function m_getAncestor(bytes32 blockHash, uint8 whichAncestor) returns (uint32) {
-  	return uint32 ((myblocks[blockHash]._ancestor * (2**(32*uint(whichAncestor)))) / BYTES_28);
+	  return uint32 ((myblocks[blockHash]._ancestor * (2**(32*uint(whichAncestor)))) / BYTES_28);
 	}
 
 
 	// index should be 0 to 7, so this returns 1, 5, 25 ... 78125
 	function m_getAncDepth(uint8 index) returns (uint) {
-	    return 5**(uint(index));
+    return 5**(uint(index));
 	}
 
 
 
-	// write int32 to memory at addrLoc
+	// writes fourBytes into word at position
 	// This is useful for writing 32bit ints inside one 32 byte word
 	function m_mwrite32(uint word, uint8 position, uint32 fourBytes) public constant returns (uint) {
-	    // Store uint in a struct wrapper because that is the only way to get a pointer to it
-	    UintWrapper memory uw = UintWrapper(word);
-	    uint pointer = ptr(uw);
-        assembly {
-            mstore8(add(pointer, position), byte(28, fourBytes))
-            mstore8(add(pointer, add(position,1)), byte(29, fourBytes))
-            mstore8(add(pointer, add(position,2)), byte(30, fourBytes))
-            mstore8(add(pointer, add(position,3)), byte(31, fourBytes))
-        }
-        return uw.value;
+    // Store uint in a struct wrapper because that is the only way to get a pointer to it
+    UintWrapper memory uw = UintWrapper(word);
+    uint pointer = ptr(uw);
+    assembly {
+      mstore8(add(pointer, position), byte(28, fourBytes))
+      mstore8(add(pointer, add(position,1)), byte(29, fourBytes))
+      mstore8(add(pointer, add(position,2)), byte(30, fourBytes))
+      mstore8(add(pointer, add(position,3)), byte(31, fourBytes))
     }
+    return uw.value;
+  }
 
+
+	// writes threeBytes into word at position
+	// This is useful for writing 24bit ints inside one 32 byte word
+	function m_mwrite24(uint word, uint8 position, uint24 threeBytes) public constant returns (uint) {
+    // Store uint in a struct wrapper because that is the only way to get a pointer to it
+    UintWrapper memory uw = UintWrapper(word);
+    uint pointer = ptr(uw);
+    assembly {
+      mstore8(add(pointer, position), byte(29, threeBytes))
+      mstore8(add(pointer, add(position,1)), byte(30, threeBytes))
+      mstore8(add(pointer, add(position,2)), byte(31, threeBytes))
+    }
+    return uw.value;
+  }
+
+
+	// writes twoBytes into word at position
+	// This is useful for writing 16bit ints inside one 32 byte word
+	function m_mwrite16(uint word, uint8 position, uint16 threeBytes) public constant returns (uint) {
+    // Store uint in a struct wrapper because that is the only way to get a pointer to it
+    UintWrapper memory uw = UintWrapper(word);
+    uint pointer = ptr(uw);
+    assembly {
+      mstore8(add(pointer, position), byte(30, twoBytes))
+      mstore8(add(pointer, add(position,1)), byte(31, twoBytes))
+    }
+    return uw.value;
+  }
 
   struct UintWrapper {
       uint value;
   }
     
 
-  function ptr(UintWrapper memory uw) internal pure returns (uint addr) {
+  // Returns a pointer to the supplied UintWrapper
+  function ptr(UintWrapper memory uw) internal view returns (uint addr) {
         assembly {
             addr := uw
         }
@@ -153,41 +182,4 @@ contract DogeChain is Constants {
 	bytes32 heaviestBlock;
 	function m_setHeight(bytes32 blockHash, uint height) {revert;}
 	function m_getIbIndex(bytes32 blockHash) returns (uint32) {revert;}
-	function m_mwrite32(uint target, uint position, uint32 source) returns (uint) {revert;}
-
-
 }
-
-
-/*
-
-----
-
-
-	// write $int24 to memory at $addrLoc
-	// This is useful for writing 24bit ints inside one 32 byte word
-	macro m_mwrite24($addrLoc, $int24):
-	    with $addr = $addrLoc:
-	        with $threeBytes = $int24:
-	            mstore8($addr, byte(29, $threeBytes))
-	            mstore8($addr + 1, byte(30, $threeBytes))
-	            mstore8($addr + 2, byte(31, $threeBytes))
-
-
-	// write $int16 to memory at $addrLoc
-	// This is useful for writing 16bit ints inside one 32 byte word
-	macro m_mwrite16($addrLoc, $int16):
-	    with $addr = $addrLoc:
-	        with $twoBytes = $int16:
-	            mstore8($addr, byte(30, $twoBytes))
-	            mstore8($addr + 1, byte(31, $twoBytes))
-
-
-
-
-//
-// macros
-//
-
-
-*/             
