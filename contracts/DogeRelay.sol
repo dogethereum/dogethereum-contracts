@@ -152,27 +152,29 @@ contract DogeRelay is DogeChain {
           startTime = m_getTimestamp(startBlock);
 
           newBits = m_computeNewBits(prevTime, startTime, prevTarget);
-          if bits != newBits && newBits != 0:  // newBits != 0 to allow first header
-              log(type=StoreHeader, blockHash, ERR_RETARGET)
-              return(0)
+          if (bits != newBits && newBits != 0) {  // newBits != 0 to allow first header
+              StoreHeader(blockHash, ERR_RETARGET);
+              return 0;
+          }
       }        
 
-      m_saveAncestors(blockHash, hashPrevBlock)  // increments ibIndex
+      m_saveAncestors(blockHash, hashPrevBlock);  // increments ibIndex
 
-      save(self.block[blockHash]._blockHeader[0], blockHeaderBytes, chars=80)
+      myblocks[blockHash]._blockHeader = blockHeaderBytes;
 
-      difficulty = 0x00000000FFFF0000000000000000000000000000000000000000000000000000 / target // https://en.bitcoin.it/wiki/Difficulty
-      scoreBlock = scorePrevBlock + difficulty
-      m_setScore(blockHash, scoreBlock)
+      difficulty = 0x00000000FFFF0000000000000000000000000000000000000000000000000000 / target; // https://en.bitcoin.it/wiki/Difficulty
+      scoreBlock = scorePrevBlock + difficulty;
+      m_setScore(blockHash, scoreBlock);
 
       // equality allows block with same score to become an (alternate) Tip, so that
       // when an (existing) Tip becomes stale, the chain can continue with the alternate Tip
-      if scoreBlock >= self.highScore:
-          self.heaviestBlock = blockHash
-          self.highScore = scoreBlock
+      if (scoreBlock >= highScore) {
+          heaviestBlock = blockHash;
+          highScore = scoreBlock;
+      }
 
-      log(type=StoreHeader, blockHash, blockHeight)
-      return(blockHeight)
+      StoreHeader(blockHash, blockHeight);
+      return blockHeight;
   }
 
 
