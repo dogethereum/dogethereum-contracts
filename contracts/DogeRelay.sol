@@ -171,9 +171,6 @@ contract DogeRelay is DogeChain {
         }
     }  
 
-  // mock
-
-
   // a Bitcoin block (header) is stored as:
   // - _blockHeader 80 bytes
   // - _info who's 32 bytes are comprised of "_height" 8bytes, "_ibIndex" 8bytes, "_score" 16bytes
@@ -198,6 +195,7 @@ contract DogeRelay is DogeChain {
 
 
   // DogeRelay start
+
 
 	// block with the highest score (aka the Tip of the blockchain)
 	uint heaviestBlock;
@@ -366,7 +364,7 @@ contract DogeRelay is DogeChain {
 	// the merkle proof is represented by 'txIndex', 'sibling', where:
 	// - 'txIndex' is the index of the tx within the block
 	// - 'sibling' are the merkle siblings of tx
-	function verifyTx(bytes txBytes, uint txIndex, bytes sibling, uint txBlockHash) returns (uint) {
+	function verifyTx(bytes txBytes, uint txIndex, uint[] sibling, uint txBlockHash) returns (uint) {
 	    uint txHash = m_dblShaFlip(txBytes);
 	    if (txBytes.length == 64) {  // todo: is check 32 also needed?
 	        VerifyTransaction(txHash, ERR_TX_64BYTE);
@@ -393,7 +391,7 @@ contract DogeRelay is DogeChain {
 	// - 'txHash' is the hash of the tx
 	// - 'txIndex' is the index of the tx within the block
 	// - 'sibling' are the merkle siblings of tx
-	function helperVerifyHash__(uint256 txHash, uint txIndex, bytes sibling, bytes32 txBlockHash) returns (uint) {
+	function helperVerifyHash__(uint256 txHash, uint txIndex, uint[] sibling, bytes32 txBlockHash) returns (uint) {
 	    // TODO: implement when dealing with incentives
 	    // if (!feePaid(txBlockHash, m_getFeeAmount(txBlockHash))) {  // in incentive.se
 	    //    VerifyTransaction(txHash, ERR_BAD_FEE);
@@ -433,7 +431,7 @@ contract DogeRelay is DogeChain {
 	// it may also have been returned by processTransaction(). callers should be
 	// aware of the contract that they are relaying transactions to and
 	// understand what that contract's processTransaction method returns.
-	function relayTx(bytes txBytes, uint txIndex, bytes sibling, uint txBlockHash, address targetContract) returns (uint) {
+	function relayTx(bytes txBytes, uint txIndex, uint[] sibling, uint txBlockHash, address targetContract) returns (uint) {
 	    uint txHash = verifyTx(txBytes, txIndex, sibling, txBlockHash);
 	    if (txHash != 0) {
 	        uint returnCode = targetContract.processTransaction(txBytes, txHash);
@@ -493,7 +491,7 @@ contract DogeRelay is DogeChain {
 	// Otherwise the return value is meaningless if the proof is invalid.
 	// [see documentation for verifyTx() for the merkle proof
 	// format of 'txHash', 'txIndex', 'sibling' ]
-	function computeMerkle(uint txHash, uint txIndex, bytes sibling) returns (uint) {
+	function computeMerkle(uint txHash, uint txIndex, uint[] sibling) returns (uint) {
 	    uint resultHash = txHash;
 	    uint proofLen = sibling.length;
 	    uint i = 0;
@@ -522,39 +520,41 @@ contract DogeRelay is DogeChain {
 	}    
 
 
-/*
-
-
 
 
 	// returns 1 if the 'txBlockHash' is within 6 blocks of self.heaviestBlock
 	// otherwise returns 0.
 	// note: return value of 0 does NOT mean 'txBlockHash' has more than 6
 	// confirmations; a non-existent 'txBlockHash' will lead to a return value of 0
-	function within6Confirms(uint txBlockHash) returns (uint) {revert();}
-	    blockHash = self.heaviestBlock
-
-	    i = 0
-	    while i < 6:
-	        if txBlockHash == blockHash:
-	            return(1)
-
+	function within6Confirms(uint txBlockHash) returns (uint) {
+	    uint blockHash = heaviestBlock;
+	    uint8 i = 0;
+	    while (i < 6) {
+	        if (txBlockHash == blockHash) {
+	            return 1;
+	        }
 	        // blockHash = self.block[blockHash]._prevBlock
-	        blockHash = getPrevBlock(blockHash)
-	        i += 1
-
-	    return(0)
+	        blockHash = getPrevBlock(blockHash);
+	        i += 1;
+	    }
+	    return 0;
+	}
 
 
 	// returns the 80-byte header (zeros for a header that does not exist) when
 	// sufficient payment is provided.  If payment is insufficient, returns 1-byte of zero.
-	function getBlockHeader(blockHash):
-	    if !self.feePaid(blockHash, m_getFeeAmount(blockHash), value=msg.value):  // in incentive.se
-	        log(type=GetHeader, blockHash, 0)
-	        return(text("\x00"):str)
+	function getBlockHeader(uint blockHash) {
+	    // TODO: incentives
+	    // if (feePaid(blockHash, m_getFeeAmount(blockHash))) {  // in incentive.se
+	    //     GetHeader (blockHash, 0);
+	    //    return(text("\x00"):str);
+	    // }
 
-	    log(type=GetHeader, blockHash, 1)
-	    return(load(self.block[blockHash]._blockHeader[0], chars=80):str)
+	    GetHeader(blockHash, 1);
+	    return myblocks[blockHash]._blockHeader;
+	}
+
+
 
 
 	// The getBlockHash(blockHeight) method has been removed because it could be
@@ -575,7 +575,6 @@ contract DogeRelay is DogeChain {
 	// TODO is an API like getInitialParent() needed? it could be obtained using
 	// something like web3.eth.getStorageAt using index 0
 
-
 	//
 	// macros
 	// (when running tests, ensure the testing macro overrides have the
@@ -584,209 +583,323 @@ contract DogeRelay is DogeChain {
 	//
 
 
-	function m_difficultyShouldBeAdjusted($blockHeight):
-	    mod($blockHeight, DIFFICULTY_ADJUSTMENT_INTERVAL) == 0
 
 
-	function m_computeNewBits($prevTime, $startTime, $prevTarget):
-	    with $actualTimespan = $prevTime - $startTime:
-	        if $actualTimespan < TARGET_TIMESPAN_DIV_4:
-	            $actualTimespan = TARGET_TIMESPAN_DIV_4
-	        if $actualTimespan > TARGET_TIMESPAN_MUL_4:
-	            $actualTimespan = TARGET_TIMESPAN_MUL_4
+	function m_difficultyShouldBeAdjusted(uint blockHeight) returns (bool) {
+	    return ((blockHeight % DIFFICULTY_ADJUSTMENT_INTERVAL) == 0);
+	}
 
-	        with $newTarget = div($actualTimespan * $prevTarget, TARGET_TIMESPAN):
-	            if $newTarget > UNROUNDED_MAX_TARGET:
-	                $newTarget = UNROUNDED_MAX_TARGET
-	            m_toCompactBits($newTarget)
+
+
+	function m_computeNewBits(uint prevTime, uint startTime, uint prevTarget) returns (uint) {
+		uint actualTimespan = prevTime - startTime;
+    if (actualTimespan < TARGET_TIMESPAN_DIV_4) {
+        actualTimespan = TARGET_TIMESPAN_DIV_4
+    }
+    if (actualTimespan > TARGET_TIMESPAN_MUL_4) {
+        actualTimespan = TARGET_TIMESPAN_MUL_4;
+    }
+    uint newTarget = actualTimespan * prevTarget / TARGET_TIMESPAN;
+    if (newTarget > UNROUNDED_MAX_TARGET) {
+        newTarget = UNROUNDED_MAX_TARGET;
+    }
+    return m_toCompactBits(newTarget);
+	}	            
+
 
 
 	// Convert uint256 to compact encoding
 	// based on https://github.com/petertodd/python-bitcoinlib/blob/2a5dda45b557515fb12a0a18e5dd48d2f5cd13c2/bitcoin/core/serialize.py
-	function m_toCompactBits($val):
-	    with $nbytes = m_shiftRight((m_bitLen($val) + 7), 3):
-	        with $compact = 0:
-	            if $nbytes <= 3:
-	                $compact = m_shiftLeft(($val & 0xFFFFFF), 8 * (3 - $nbytes))
-	            else:
-	                $compact = m_shiftRight($val, 8 * ($nbytes - 3))
-	                $compact = $compact & 0xFFFFFF
+	function m_toCompactBits(uint val) returns (uint) {
+	    uint nbytes = m_shiftRight((m_bitLen(val) + 7), 3):
+	    uint compact = 0;
+      if (nbytes <= 3) {
+          compact = m_shiftLeft((val & 0xFFFFFF), 8 * (3 - nbytes));
+      } else{
+          compact = m_shiftRight(val, 8 * (nbytes - 3));
+          compact = compact & 0xFFFFFF;
+      }
 
-	            // If the sign bit (0x00800000) is set, divide the mantissa by 256 and
-	            // increase the exponent to get an encoding without it set.
-	            if $compact & 0x00800000:
-	                $compact = m_shiftRight($compact, 8)
-	                $nbytes += 1
+      // If the sign bit (0x00800000) is set, divide the mantissa by 256 and
+      // increase the exponent to get an encoding without it set.
+      if (compact & 0x00800000) {
+          compact = m_shiftRight(compact, 8);
+          nbytes += 1;
+      }
 
-	            $compact | m_shiftLeft($nbytes, 24)
+      return compact | m_shiftLeft(nbytes, 24);
+	}
+
+
+  // Returns a pointer to the supplied BlockInformation
+  function ptr(BlockInformation memory bi) internal constant returns (uint addr) {
+        assembly {
+            addr := bi
+        }
+    }  
+
 
 
 	// get the parent of '$blockHash'
-	function getPrevBlock($blockHash):
-	    with $addr = ref(self.block[$blockHash]._blockHeader[0]):
-	        // sload($addr) gets first 32bytes
-	        // * BYTES_4 shifts over to skip the 4bytes of blockversion
-	        // At this point we have the first 28bytes of hashPrevBlock and we
-	        // want to get the remaining 4bytes so we:
-	        // sload($addr+1) get the second 32bytes
-	        //     but we only want the first 4bytes so div 28bytes
-	        // The single line statement can be interpreted as:
-	        // get the last 28bytes of the 1st chunk and combine (add) it to the
-	        // first 4bytes of the 2nd chunk,
-	        // where chunks are read in sizes of 32bytes via sload
-	        flip32Bytes(sload($addr) * BYTES_4 + div(sload($addr+1), BYTES_28))  // must use div()
+	function getPrevBlock(uint blockHash) returns (uint) {
+      // sload($addr) gets first 32bytes
+      // * BYTES_4 shifts over to skip the 4bytes of blockversion
+      // At this point we have the first 28bytes of hashPrevBlock and we
+      // want to get the remaining 4bytes so we:
+      // sload($addr+1) get the second 32bytes
+      //     but we only want the first 4bytes so div 28bytes
+      // The single line statement can be interpreted as:
+      // get the last 28bytes of the 1st chunk and combine (add) it to the
+      // first 4bytes of the 2nd chunk,
+      // where chunks are read in sizes of 32bytes via sload
+    	uint pointer = ptr(myblock[blockHash]);
+    	uint chunk1;
+    	uint chunk2;
+	    assembly {
+	    	chunk1 := sload(pointer);
+	    	chunk2 := sload(pointer+1);
+	    }
+	    return flip32Bytes(chunk1 * BYTES_4 + chunk2/BYTES_28);
+	}
 
 
 	// get the timestamp from a Bitcoin blockheader
-	function m_getTimestamp($blockHash):
-	    with $addr = ref(self.block[$blockHash]._blockHeader[0]):
-	        // get the 3rd chunk
-	        $tmp = sload($addr+2)
-	    // the timestamp are the 4th to 7th bytes of the 3rd chunk, but we also have to flip them
-	    BYTES_3*byte(7, $tmp) + BYTES_2*byte(6, $tmp) + BYTES_1*byte(5, $tmp) + byte(4, $tmp)
-
+	function m_getTimestamp($blockHash) returns (uint32 result) { 
+    	uint pointer = ptr(myblock[blockHash]);
+	    assembly {
+	    	// get the 3rd chunk
+	    	let tmp := sload(pointer+2)
+	    	// the timestamp are the 4th to 7th bytes of the 3rd chunk, but we also have to flip them
+	    	result := add( mul(BYTES_3,byte(7, tmp)) , add( mul(BYTES_2,byte(6, tmp)) , add( mul(BYTES_1,byte(5, tmp)) , byte(4, tmp) ) ) )
+	    }
+	 }
 
 	// get the 'bits' field from a Bitcoin blockheader
-	function m_getBits($blockHash):
-	    with $addr = ref(self.block[$blockHash]._blockHeader[0]):
-	        // get the 3rd chunk
-	        $tmp = sload($addr+2)
-	    // the 'bits' are the 8th to 11th bytes of the 3rd chunk, but we also have to flip them
-	    BYTES_3*byte(11, $tmp) + BYTES_2*byte(10, $tmp) + BYTES_1*byte(9, $tmp) + byte(8, $tmp)
-
+	function m_getBits(blockHash) returns (uint32 retult) {
+    	uint pointer = ptr(myblock[blockHash]);
+	    assembly {
+	    	// get the 3rd chunk
+	    	let tmp := sload(pointer+2)
+	    	// the 'bits' are the 8th to 11th bytes of the 3rd chunk, but we also have to flip them
+	    	result := add( mul(BYTES_3,byte(11, tmp)) , add( mul(BYTES_2,byte(10, tmp)) , add( mul(BYTES_1,byte(9, tmp)) , byte(8, tmp) ) ) )
+	    }
+	}
 
 	// get the merkle root of '$blockHash'
-	function getMerkleRoot($blockHash):
-	    with $addr = ref(self.block[$blockHash]._blockHeader[0]):
-	        flip32Bytes(sload($addr+1) * BYTES_4 + div(sload($addr+2), BYTES_28))  // must use div()
+	function getMerkleRoot(uint blockHash) returns (uint) {
+    	uint pointer = ptr(myblock[blockHash]);
+    	uint chunk2;
+    	uint chunk3;
+	    assembly {
+	    	chunk2 := sload(pointer+1);
+	    	chunk3 := sload(pointer+2);
+	    }
+	    return flip32Bytes(chunk2 * BYTES_4 + chunk3/BYTES_28);
+	}
 
 
-	function m_lastBlockHeight():
-	    m_getHeight(self.heaviestBlock)
+	function m_lastBlockHeight() returns (uint) {
+	    return m_getHeight(heaviestBlock);
+	}
 
 
 	// Bitcoin-way of hashing
-	function m_dblShaFlip(uint dataBytes) returns (uint) {revert();}
-	    flip32Bytes(sha256(sha256($dataBytes:str)))
+	function m_dblShaFlip(bytes dataBytes) returns (uint) {
+	    return flip32Bytes(sha256(sha256(dataBytes)));
+	}
+
 
 
 	// Bitcoin-way of computing the target from the 'bits' field of a blockheader
 	// based on http://www.righto.com/2014/02/bitcoin-mining-hard-way-algorithms.html//ref3
-	function targetFromBits($bits):
-	    $exp = div($bits, 0x1000000)  // 2^24
-	    $mant = $bits & 0xffffff
-	    $mant * 256^($exp - 3)
+	function targetFromBits(uint bits) returns (uint) {
+	    uint exp = bits / 0x1000000;  // 2^24
+	    uint mant = bits & 0xffffff;
+	    return mant * 256^(exp - 3);
+  }
+
+
+  // Returns a pointer to the supplied byte[]
+  function ptr(byte[] memory array) internal constant returns (uint addr) {
+        assembly {
+            addr := array
+        }
+    }  
+
 
 
 	// Bitcoin-way merkle parent of transaction hashes $tx1 and $tx2
-	function concatHash($tx1, $tx2):
-	    with $x = ~alloc(64):
-	        ~mstore($x, flip32Bytes($tx1))
-	        ~mstore($x + 32, flip32Bytes($tx2))
-	        flip32Bytes(sha256(sha256($x, chars=64)))
+	function concatHash(uint tx1, uint tx2) returns (uint) {
+		bytes concat = new bytes(64);
+    uint pointer = ptr(concat);
+    assembly {
+      mstore(pointer, flip32Bytes(tx1))
+      mstore(pointer + 32, flip32Bytes(tx2))
+    }
+	  return flip32Bytes(sha256(sha256(concat)));
+	}
 
 
-	function m_shiftRight($val, $shift):
-	    div($val, 2**$shift)
-
-	function m_shiftLeft($val, $shift):
-	    $val * 2**$shift
+	function m_shiftRight(uint val, uint8 shift) returns (uint) {
+	    retun val / 2**shift;
+	}
+	
+	function m_shiftLeft(uint val, uint8 shift) returns (uint) {
+	    retun val * 2**shift;
+	}
 
 	// bit length of '$val'
-	function m_bitLen($val):
-	    with $length = 0:
-	        with $int_type = $val:
-	            while ($int_type):
-	                $int_type = m_shiftRight($int_type, 1)
-	                $length += 1
-	        $length
+	function m_bitLen(uint val) returns (uint8 length) {
+	  uint int_type = val:
+	  while (int_type) {
+	    int_type = m_shiftRight(int_type, 1);
+	    length += 1;
+	  }
+	}
 
 
 	// reverse 32 bytes given by '$b32'
-	function flip32Bytes(uint input) returns (uint) {revert();}
-	    with $a = $b32:  // important to force $a to only be examined once below
-	        with $i = 0:
-	            // unrolling this would decrease gas usage, but would increase
-	            // the gas cost for code size by over 700K and exceed the PI million block gas limit
-	            while $i < 32:
-	                mstore8(ref($o) + $i, byte(31 - $i, $a))
-	                $i += 1
-	    $o
+	function flip32Bytes(uint b32) returns (uint) {
+	  uint a = b32;  // important to force $a to only be examined once below
+	  uint8 i = 0:
+	  // unrolling this would decrease gas usage, but would increase
+	  // the gas cost for code size by over 700K and exceed the PI million block gas limit
+	  uint result;
+	  UintWrapper memory uw = UintWrapper(result);
+    uint pointer = ptr(uw);
+	  while (i < 32) {
+	  	assembly {
+	    	mstore8(add(pointer, i), byte(sub(31 ,i), a))	  	
+	  	}
+	    i++;
+	  }  
+	  return result;
+	}
+
+
+	// writes fourBytes into word at position
+	// This is useful for writing 32bit ints inside one 32 byte word
+	function m_mwrite32(uint word, uint8 position, uint32 fourBytes) public constant returns (uint) {
+    // Store uint in a struct wrapper because that is the only way to get a pointer to it
+    UintWrapper memory uw = UintWrapper(word);
+    uint pointer = ptr(uw);
+    assembly {
+      mstore8(add(pointer, position), byte(28, fourBytes))
+      mstore8(add(pointer, add(position,1)), byte(29, fourBytes))
+      mstore8(add(pointer, add(position,2)), byte(30, fourBytes))
+      mstore8(add(pointer, add(position,3)), byte(31, fourBytes))
+    }
+    return uw.value;
+  }
+
+
+	// writes fourBytes into word at position
+	// This is useful for writing 32bit ints inside one 32 byte word
+	function m_mwrite32(uint word, uint8 position, uint32 fourBytes) public constant returns (uint) {
+    // Store uint in a struct wrapper because that is the only way to get a pointer to it
+    UintWrapper memory uw = UintWrapper(word);
+    uint pointer = ptr(uw);
+    assembly {
+      mstore8(add(pointer, position), byte(28, fourBytes))
+      mstore8(add(pointer, add(position,1)), byte(29, fourBytes))
+      mstore8(add(pointer, add(position,2)), byte(30, fourBytes))
+      mstore8(add(pointer, add(position,3)), byte(31, fourBytes))
+    }
+    return uw.value;
+  }
 
 
 	// write $int64 to memory at $addrLoc
 	// This is useful for writing 64bit ints inside one 32 byte word
-	function m_mwrite64($addrLoc, $int64):
-	    with $addr = $addrLoc:
-	        with $eightBytes = $int64:
-	            mstore8($addr, byte(24, $eightBytes))
-	            mstore8($addr + 1, byte(25, $eightBytes))
-	            mstore8($addr + 2, byte(26, $eightBytes))
-	            mstore8($addr + 3, byte(27, $eightBytes))
-	            mstore8($addr + 4, byte(28, $eightBytes))
-	            mstore8($addr + 5, byte(29, $eightBytes))
-	            mstore8($addr + 6, byte(30, $eightBytes))
-	            mstore8($addr + 7, byte(31, $eightBytes))
+	function m_mwrite64(uint word, uint8 position, uint64 eightBytes) public constant returns (uint) {
+    // Store uint in a struct wrapper because that is the only way to get a pointer to it
+    UintWrapper memory uw = UintWrapper(word);
+    uint pointer = ptr(uw);
+    assembly {
+      mstore8(add(pointer, position        ), byte(24, fourBytes))
+      mstore8(add(pointer, add(position, 1)), byte(25, fourBytes))
+      mstore8(add(pointer, add(position, 2)), byte(26, fourBytes))
+      mstore8(add(pointer, add(position, 3)), byte(27, fourBytes))
+      mstore8(add(pointer, add(position, 4)), byte(28, fourBytes))
+      mstore8(add(pointer, add(position, 5)), byte(29, fourBytes))
+      mstore8(add(pointer, add(position, 6)), byte(30, fourBytes))
+      mstore8(add(pointer, add(position, 7)), byte(31, fourBytes))
+    }
+    return uw.value;
+  }
+
 
 
 	// write $int128 to memory at $addrLoc
 	// This is useful for writing 128bit ints inside one 32 byte word
-	function m_mwrite128($addrLoc, $int128):
-	    with $addr = $addrLoc:
-	        with $bytes16 = $int128:
-	            mstore8($addr, byte(16, $bytes16))
-	            mstore8($addr + 1, byte(17, $bytes16))
-	            mstore8($addr + 2, byte(18, $bytes16))
-	            mstore8($addr + 3, byte(19, $bytes16))
-	            mstore8($addr + 4, byte(20, $bytes16))
-	            mstore8($addr + 5, byte(21, $bytes16))
-	            mstore8($addr + 6, byte(22, $bytes16))
-	            mstore8($addr + 7, byte(23, $bytes16))
-	            mstore8($addr + 8, byte(24, $bytes16))
-	            mstore8($addr + 9, byte(25, $bytes16))
-	            mstore8($addr + 10, byte(26, $bytes16))
-	            mstore8($addr + 11, byte(27, $bytes16))
-	            mstore8($addr + 12, byte(28, $bytes16))
-	            mstore8($addr + 13, byte(29, $bytes16))
-	            mstore8($addr + 14, byte(30, $bytes16))
-	            mstore8($addr + 15, byte(31, $bytes16))
-
-
+	function m_mwrite128(uint word, uint8 position, uint128 sixteenBytes) public constant returns (uint) {
+    // Store uint in a struct wrapper because that is the only way to get a pointer to it
+    UintWrapper memory uw = UintWrapper(word);
+    uint pointer = ptr(uw);
+    assembly {
+      mstore8(add(pointer, position         ),  byte(16, sixteenBytes))
+      mstore8(add(pointer, add(position,  1)),  byte(17, sixteenBytes))
+      mstore8(add(pointer, add(position,  2)),  byte(18, sixteenBytes))
+      mstore8(add(pointer, add(position,  3)),  byte(19, sixteenBytes))
+      mstore8(add(pointer, add(position,  4)),  byte(20, sixteenBytes))
+      mstore8(add(pointer, add(position,  5)),  byte(21, sixteenBytes))
+      mstore8(add(pointer, add(position,  6)),  byte(22, sixteenBytes))
+      mstore8(add(pointer, add(position,  7)),  byte(23, sixteenBytes))
+      mstore8(add(pointer, add(position,  8)),  byte(24, sixteenBytes))
+      mstore8(add(pointer, add(position,  9)),  byte(25, sixteenBytes))
+      mstore8(add(pointer, add(position,  10)), byte(26, sixteenBytes))
+      mstore8(add(pointer, add(position,  11)), byte(27, sixteenBytes))
+      mstore8(add(pointer, add(position,  12)), byte(28, sixteenBytes))
+      mstore8(add(pointer, add(position,  13)), byte(29, sixteenBytes))
+      mstore8(add(pointer, add(position,  14)), byte(30, sixteenBytes))
+      mstore8(add(pointer, add(position,  15)), byte(31, sixteenBytes))
+    }
+    return uw.value;
+  }  
 
 	//
 	//  function accessors for a block's _info (height, ibIndex, score)
 	//
 
-	// block height is the first 8 bytes of _info
-	function m_setHeight($blockHash, $blockHeight):
-	    $word = sload(ref(self.block[$blockHash]._info))
-	    m_mwrite64(ref($word), $blockHeight)
-	    self.block[$blockHash]._info = $word
+  // - _info who's 32 bytes are comprised of "_height" 8bytes, "_ibIndex" 8bytes, "_score" 16bytes
+  // -   "_height" is 1 more than the typical Bitcoin term height/blocknumber [see setInitialParent()]
+  // -   "_ibIndex" is the block's index to internalBlock (see btcChain)
+  // -   "_score" is 1 more than the chainWork [see setInitialParent()]
 
-	function m_getHeight($blockHash):
-	    div(sload(ref(self.block[$blockHash]._info)), BYTES_24)
+	// block height is the first 8 bytes of _info
+	function m_setHeight(uint blockHash, uint64 blockHeight) {
+			uint info = myblocks[blockHash]._info;	    
+	    info = m_mwrite64(info, 0, blockHeight);
+	    myblocks[blockHash]._info = info;	
+	}
+
+	function m_getHeight(uint blockHash) returns (uint64) {
+			return myblocks[blockHash]._info / BYTES_24;
+	}
 
 
 	// ibIndex is the index to self.internalBlock: it's the second 8 bytes of _info
-	function m_setIbIndex($blockHash, $internalIndex):
-	    $word = sload(ref(self.block[$blockHash]._info))
-	    m_mwrite64(ref($word) + 8, $internalIndex)
-	    self.block[$blockHash]._info = $word
+	function m_setIbIndex(uint blockHash, uint64 internalIndex) {
+			uint info = myblocks[blockHash]._info;	    
+	    info = m_mwrite64(info, 8, internalIndex);
+	    myblocks[blockHash]._info = info;	
+	 }
 
-	function m_getIbIndex($blockHash):
-	    div(sload(ref(self.block[$blockHash]._info)) * BYTES_8, BYTES_24)
+	function m_getIbIndex(uint blockHash) returns (uint64) {
+			return myblocks[blockHash]._info * BYTES_8 / BYTES_24;
+	}
 
 
 	// score of the block is the last 16 bytes of _info
-	function m_setScore(uint blockHash, uint blockScore) {revert();}
-	    $word = sload(ref(self.block[$blockHash]._info))
-	    m_mwrite128(ref($word) + 16, $blockScore)
-	    self.block[$blockHash]._info = $word
+	function m_setScore(uint blockHash, uint128 blockScore) {
+			uint info = myblocks[blockHash]._info;	    
+	    info = m_mwrite128(info, 16, blockScore);
+	    myblocks[blockHash]._info = info;	
+	}
 
-	function m_getScore($blockHash):
-	    div(sload(ref(self.block[$blockHash]._info)) * BYTES_16, BYTES_16)
+	function m_getScore(uint blockHash) returns (uint128) {
+				return myblocks[blockHash]._info * BYTES_16 / BYTES_16;
+	}
 
-
- */
 
 }
