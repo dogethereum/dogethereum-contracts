@@ -24,7 +24,7 @@ contract DogeRelay is DogeChain {
 
 	// save the ancestors for a block, as well as updating the height
 	// note: this is internal/private
-	function saveAncestors(uint blockHash, uint hashPrevBlock) {
+	function m_saveAncestors(uint blockHash, uint hashPrevBlock) {
     internalBlock[ibIndex] = blockHash;
     m_setIbIndex(blockHash, ibIndex);
     ibIndex += 1;
@@ -148,7 +148,7 @@ contract DogeRelay is DogeChain {
 
 	// writes twoBytes into word at position
 	// This is useful for writing 16bit ints inside one 32 byte word
-	function m_mwrite16(uint word, uint8 position, uint16 threeBytes) public constant returns (uint) {
+	function m_mwrite16(uint word, uint8 position, uint16 twoBytes) public constant returns (uint) {
     // Store uint in a struct wrapper because that is the only way to get a pointer to it
     UintWrapper memory uw = UintWrapper(word);
     uint pointer = ptr(uw);
@@ -184,7 +184,6 @@ contract DogeRelay is DogeChain {
         uint _info;
         uint _ancestor;
         // bytes _feeInfo;
-
   }
   //BlockInformation[] myblocks = new BlockInformation[](2**256);
   // block hash => BlockInformation
@@ -277,13 +276,13 @@ contract DogeRelay is DogeChain {
 	    // blockHash should be a function parameter in dogecoin because the hash can not be calculated onchain
 	    uint blockHash = m_dblShaFlip(blockHeaderBytes);
 
-	    uint scorePrevBlock = m_getScore(hashPrevBlock);
+	    uint128 scorePrevBlock = m_getScore(hashPrevBlock);
 	    if (!scorePrevBlock) {
 	        StoreHeader(blockHash, ERR_NO_PREV_BLOCK);
 	        return 0;
 	    }
 
-	    scoreBlock = m_getScore(blockHash);
+	    uint128 scoreBlock = m_getScore(blockHash);
 	    if (scoreBlock != 0) {
 					// block already stored/exists
 	        StoreHeader(blockHash, ERR_BLOCK_ALREADY_EXISTS);
@@ -296,7 +295,7 @@ contract DogeRelay is DogeChain {
 				wordWithBits := calldataload(add(OFFSET_ABI,72))  // 72 is offset for 'bits'
 				bits := add( byte(0, wordWithBits) , add( mul(byte(1, wordWithBits),BYTES_1) , add( mul(byte(2, wordWithBits),BYTES_2) , mul(byte(3, wordWithBits),BYTES_3) ) ) )
 			}
-	    target = targetFromBits(bits);
+	    uint target = targetFromBits(bits);
 
 	    // we only check the target and do not do other validation (eg timestamp) to save gas
 	    if (blockHash < 0 || blockHash > target) {
@@ -306,7 +305,7 @@ contract DogeRelay is DogeChain {
 
 
       uint blockHeight = 1 + m_getHeight(hashPrevBlock);
-      bytes4 prevBits = m_getBits(hashPrevBlock);
+      bytes32 prevBits = m_getBits(hashPrevBlock);
       if (!m_difficultyShouldBeAdjusted(blockHeight) || ibIndex == 1) {
           // since blockHeight is 1 more than blockNumber; OR clause is special case for 1st header
           // we need to check prevBits isn't 0 otherwise the 1st header
@@ -319,14 +318,14 @@ contract DogeRelay is DogeChain {
               return 0;          
           }
       } else {
-          prevTarget = targetFromBits(prevBits);
-          prevTime = m_getTimestamp(hashPrevBlock);
+          uint prevTarget = targetFromBits(prevBits);
+          uint32 prevTime = m_getTimestamp(hashPrevBlock);
 
           // (blockHeight - DIFFICULTY_ADJUSTMENT_INTERVAL) is same as [getHeight(hashPrevBlock) - (DIFFICULTY_ADJUSTMENT_INTERVAL - 1)]
-          startBlock = priv_fastGetBlockHash__(blockHeight - DIFFICULTY_ADJUSTMENT_INTERVAL);
-          startTime = m_getTimestamp(startBlock);
+          uint startBlock = priv_fastGetBlockHash__(blockHeight - DIFFICULTY_ADJUSTMENT_INTERVAL);
+          uint32 startTime = m_getTimestamp(startBlock);
 
-          newBits = m_computeNewBits(prevTime, startTime, prevTarget);
+          uint32 newBits = m_computeNewBits(prevTime, startTime, prevTarget);
           if (bits != newBits && newBits != 0) {  // newBits != 0 to allow first header
               StoreHeader(blockHash, ERR_RETARGET);
               return 0;
@@ -337,8 +336,8 @@ contract DogeRelay is DogeChain {
 
       myblocks[blockHash]._blockHeader = blockHeaderBytes;
 
-      difficulty = 0x00000000FFFF0000000000000000000000000000000000000000000000000000 / target; // https://en.bitcoin.it/wiki/Difficulty
-      scoreBlock = scorePrevBlock + difficulty;
+      uint128 myDifficulty = 0x00000000FFFF0000000000000000000000000000000000000000000000000000 / target; // https://en.bitcoin.it/wiki/Difficulty
+      scoreBlock = scorePrevBlock + myDifficulty;
       m_setScore(blockHash, scoreBlock);
 
       // equality allows block with same score to become an (alternate) Tip, so that
@@ -457,7 +456,7 @@ contract DogeRelay is DogeChain {
 
 	// return the chainWork of the Tip
 	// http://bitcoin.stackexchange.com/questions/26869/what-is-chainwork
-	function getChainWork() returns (uint) {
+	function getChainWork() returns (uint128) {
 	    return m_getScore(heaviestBlock);
 	}
 
@@ -472,7 +471,7 @@ contract DogeRelay is DogeChain {
 	function getAverageChainWork() returns (uint) {
 	    uint blockHash = heaviestBlock;
 
-	    uint chainWorkTip = m_getScore(blockHash);
+	    uint128 chainWorkTip = m_getScore(blockHash);
 
 	    uint8 i = 0;
 	    while (i < 10) {
@@ -480,7 +479,7 @@ contract DogeRelay is DogeChain {
 	        i += 1;
 	    }
 
-	    uint chainWork10Ancestors = m_getScore(blockHash);
+	    uint128 chainWork10Ancestors = m_getScore(blockHash);
 
 	    return (chainWorkTip - chainWork10Ancestors);
 	}
@@ -498,7 +497,7 @@ contract DogeRelay is DogeChain {
 	    while (i < proofLen) {
 	        byte proofHex = sibling[i];
 
-	        uint sideOfSibling = txIndex % 2  // 0 means sibling is on the right; 1 means left
+	        uint sideOfSibling = txIndex % 2;  // 0 means sibling is on the right; 1 means left
 
 					byte left;
 					byte right;
@@ -510,7 +509,7 @@ contract DogeRelay is DogeChain {
 	            right = proofHex;
 	        }
 
-	        uint resultHash = concatHash(left, right);
+	        resultHash = concatHash(left, right);
 
 	        txIndex /= 2;
 	        i += 1;
@@ -594,7 +593,7 @@ contract DogeRelay is DogeChain {
 	function m_computeNewBits(uint prevTime, uint startTime, uint prevTarget) returns (uint) {
 		uint actualTimespan = prevTime - startTime;
     if (actualTimespan < TARGET_TIMESPAN_DIV_4) {
-        actualTimespan = TARGET_TIMESPAN_DIV_4
+        actualTimespan = TARGET_TIMESPAN_DIV_4;
     }
     if (actualTimespan > TARGET_TIMESPAN_MUL_4) {
         actualTimespan = TARGET_TIMESPAN_MUL_4;
@@ -611,7 +610,7 @@ contract DogeRelay is DogeChain {
 	// Convert uint256 to compact encoding
 	// based on https://github.com/petertodd/python-bitcoinlib/blob/2a5dda45b557515fb12a0a18e5dd48d2f5cd13c2/bitcoin/core/serialize.py
 	function m_toCompactBits(uint val) returns (uint) {
-	    uint nbytes = m_shiftRight((m_bitLen(val) + 7), 3):
+	    uint nbytes = m_shiftRight((m_bitLen(val) + 7), 3);
 	    uint compact = 0;
       if (nbytes <= 3) {
           compact = m_shiftLeft((val & 0xFFFFFF), 8 * (3 - nbytes));
@@ -652,34 +651,34 @@ contract DogeRelay is DogeChain {
       // get the last 28bytes of the 1st chunk and combine (add) it to the
       // first 4bytes of the 2nd chunk,
       // where chunks are read in sizes of 32bytes via sload
-    	uint pointer = ptr(myblock[blockHash]);
+    	uint pointer = ptr(myblocks[blockHash]);
     	uint chunk1;
     	uint chunk2;
 	    assembly {
-	    	chunk1 := sload(pointer);
-	    	chunk2 := sload(pointer+1);
+	    	chunk1 := sload(pointer)
+	    	chunk2 := sload(add(pointer,1))
 	    }
 	    return flip32Bytes(chunk1 * BYTES_4 + chunk2/BYTES_28);
 	}
 
 
 	// get the timestamp from a Bitcoin blockheader
-	function m_getTimestamp($blockHash) returns (uint32 result) { 
-    	uint pointer = ptr(myblock[blockHash]);
+	function m_getTimestamp(uint blockHash) returns (uint32 result) { 
+    	uint pointer = ptr(myblocks[blockHash]);
 	    assembly {
 	    	// get the 3rd chunk
-	    	let tmp := sload(pointer+2)
+	    	let tmp := sload(add(pointer,2))
 	    	// the timestamp are the 4th to 7th bytes of the 3rd chunk, but we also have to flip them
 	    	result := add( mul(BYTES_3,byte(7, tmp)) , add( mul(BYTES_2,byte(6, tmp)) , add( mul(BYTES_1,byte(5, tmp)) , byte(4, tmp) ) ) )
 	    }
 	 }
 
 	// get the 'bits' field from a Bitcoin blockheader
-	function m_getBits(blockHash) returns (uint32 retult) {
-    	uint pointer = ptr(myblock[blockHash]);
+	function m_getBits(uint blockHash) returns (uint32 retult) {
+    	uint pointer = ptr(myblocks[blockHash]);
 	    assembly {
 	    	// get the 3rd chunk
-	    	let tmp := sload(pointer+2)
+	    	let tmp := sload(add(pointer,2))
 	    	// the 'bits' are the 8th to 11th bytes of the 3rd chunk, but we also have to flip them
 	    	result := add( mul(BYTES_3,byte(11, tmp)) , add( mul(BYTES_2,byte(10, tmp)) , add( mul(BYTES_1,byte(9, tmp)) , byte(8, tmp) ) ) )
 	    }
@@ -687,12 +686,12 @@ contract DogeRelay is DogeChain {
 
 	// get the merkle root of '$blockHash'
 	function getMerkleRoot(uint blockHash) returns (uint) {
-    	uint pointer = ptr(myblock[blockHash]);
+    	uint pointer = ptr(myblocks[blockHash]);
     	uint chunk2;
     	uint chunk3;
 	    assembly {
-	    	chunk2 := sload(pointer+1);
-	    	chunk3 := sload(pointer+2);
+	    	chunk2 := sload(add(pointer,1))
+	    	chunk3 := sload(add(pointer,2))
 	    }
 	    return flip32Bytes(chunk2 * BYTES_4 + chunk3/BYTES_28);
 	}
@@ -712,7 +711,7 @@ contract DogeRelay is DogeChain {
 
 	// Bitcoin-way of computing the target from the 'bits' field of a blockheader
 	// based on http://www.righto.com/2014/02/bitcoin-mining-hard-way-algorithms.html//ref3
-	function targetFromBits(uint bits) returns (uint) {
+	function targetFromBits(uint32 bits) returns (uint) {
 	    uint exp = bits / 0x1000000;  // 2^24
 	    uint mant = bits & 0xffffff;
 	    return mant * 256^(exp - 3);
@@ -734,23 +733,23 @@ contract DogeRelay is DogeChain {
     uint pointer = ptr(concat);
     assembly {
       mstore(pointer, flip32Bytes(tx1))
-      mstore(pointer + 32, flip32Bytes(tx2))
+      mstore(add(pointer, 32), flip32Bytes(tx2))
     }
 	  return flip32Bytes(sha256(sha256(concat)));
 	}
 
 
 	function m_shiftRight(uint val, uint8 shift) returns (uint) {
-	    retun val / 2**shift;
+	    return val / 2**shift;
 	}
 	
 	function m_shiftLeft(uint val, uint8 shift) returns (uint) {
-	    retun val * 2**shift;
+	    return val * 2**shift;
 	}
 
 	// bit length of '$val'
 	function m_bitLen(uint val) returns (uint8 length) {
-	  uint int_type = val:
+	  uint int_type = val;
 	  while (int_type) {
 	    int_type = m_shiftRight(int_type, 1);
 	    length += 1;
@@ -761,7 +760,7 @@ contract DogeRelay is DogeChain {
 	// reverse 32 bytes given by '$b32'
 	function flip32Bytes(uint b32) returns (uint) {
 	  uint a = b32;  // important to force $a to only be examined once below
-	  uint8 i = 0:
+	  uint8 i = 0;
 	  // unrolling this would decrease gas usage, but would increase
 	  // the gas cost for code size by over 700K and exceed the PI million block gas limit
 	  uint result;
@@ -775,38 +774,6 @@ contract DogeRelay is DogeChain {
 	  }  
 	  return result;
 	}
-
-
-	// writes fourBytes into word at position
-	// This is useful for writing 32bit ints inside one 32 byte word
-	function m_mwrite32(uint word, uint8 position, uint32 fourBytes) public constant returns (uint) {
-    // Store uint in a struct wrapper because that is the only way to get a pointer to it
-    UintWrapper memory uw = UintWrapper(word);
-    uint pointer = ptr(uw);
-    assembly {
-      mstore8(add(pointer, position), byte(28, fourBytes))
-      mstore8(add(pointer, add(position,1)), byte(29, fourBytes))
-      mstore8(add(pointer, add(position,2)), byte(30, fourBytes))
-      mstore8(add(pointer, add(position,3)), byte(31, fourBytes))
-    }
-    return uw.value;
-  }
-
-
-	// writes fourBytes into word at position
-	// This is useful for writing 32bit ints inside one 32 byte word
-	function m_mwrite32(uint word, uint8 position, uint32 fourBytes) public constant returns (uint) {
-    // Store uint in a struct wrapper because that is the only way to get a pointer to it
-    UintWrapper memory uw = UintWrapper(word);
-    uint pointer = ptr(uw);
-    assembly {
-      mstore8(add(pointer, position), byte(28, fourBytes))
-      mstore8(add(pointer, add(position,1)), byte(29, fourBytes))
-      mstore8(add(pointer, add(position,2)), byte(30, fourBytes))
-      mstore8(add(pointer, add(position,3)), byte(31, fourBytes))
-    }
-    return uw.value;
-  }
 
 
 	// write $int64 to memory at $addrLoc
@@ -861,11 +828,6 @@ contract DogeRelay is DogeChain {
 	//  function accessors for a block's _info (height, ibIndex, score)
 	//
 
-  // - _info who's 32 bytes are comprised of "_height" 8bytes, "_ibIndex" 8bytes, "_score" 16bytes
-  // -   "_height" is 1 more than the typical Bitcoin term height/blocknumber [see setInitialParent()]
-  // -   "_ibIndex" is the block's index to internalBlock (see btcChain)
-  // -   "_score" is 1 more than the chainWork [see setInitialParent()]
-
 	// block height is the first 8 bytes of _info
 	function m_setHeight(uint blockHash, uint64 blockHeight) {
 			uint info = myblocks[blockHash]._info;	    
@@ -879,13 +841,14 @@ contract DogeRelay is DogeChain {
 
 
 	// ibIndex is the index to self.internalBlock: it's the second 8 bytes of _info
-	function m_setIbIndex(uint blockHash, uint64 internalIndex) {
+	function m_setIbIndex(uint blockHash, uint32 internalIndex) {
 			uint info = myblocks[blockHash]._info;	    
-	    info = m_mwrite64(info, 8, internalIndex);
+			uint64 internalIndex64 = internalIndex;
+	    info = m_mwrite64(info, 8, internalIndex64);
 	    myblocks[blockHash]._info = info;	
 	 }
 
-	function m_getIbIndex(uint blockHash) returns (uint64) {
+	function m_getIbIndex(uint blockHash) returns (uint32) {
 			return myblocks[blockHash]._info * BYTES_8 / BYTES_24;
 	}
 
