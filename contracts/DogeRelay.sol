@@ -203,10 +203,10 @@ contract DogeRelay is DogeChain {
 	uint highScore;
 
 
-	event StoreHeader(uint indexed blockHash, int indexed returnCode);
-	event GetHeader(uint indexed blockHash, int indexed returnCode);
-	event VerifyTransaction(uint indexed txHash, int indexed returnCode);
-	event RelayTransaction(uint indexed txHash, int indexed returnCode);
+	event StoreHeader(uint indexed blockHash, uint indexed returnCode);
+	event GetHeader(uint indexed blockHash, uint indexed returnCode);
+	event VerifyTransaction(uint indexed txHash, uint indexed returnCode);
+	event RelayTransaction(uint indexed txHash, uint indexed returnCode);
 
   function DogeRelay() {
     // gasPriceAndChangeRecipientFee in incentive.se
@@ -233,7 +233,7 @@ contract DogeRelay is DogeChain {
 	// error will happen when the first block divisible by 2016 is reached, because
 	// difficulty computation requires looking up the 2016th parent, which will
 	// NOT exist with setInitialParent(0, 0, 1) (only the 2015th parent exists)
-	function setInitialParent(uint blockHash, uint height, uint chainWork) returns (bool) {
+	function setInitialParent(uint blockHash, uint64 height, uint128 chainWork) returns (bool) {
 	    // reuse highScore as the flag for whether setInitialParent() has already been called
 	    if (highScore != 0) {
 	        return false;	    
@@ -262,22 +262,25 @@ contract DogeRelay is DogeChain {
 
 
 
-	// Where the header begins
-	uint8 constant OFFSET_ABI = 68;  // 4 bytes function ID, then 2 32bytes before the header begins
+	// Where the header begins.
+	// 4 bytes function ID, then 2 32bytes before the header begins.
+	// Not declared constant because inline assembly would not be able to use it. 
+	// Declared uint so it has no offset to access it from assebly
+	uint OFFSET_ABI = 68;
 
 	// store a Dogecoin block header that must be provided in bytes format 'blockHeaderBytes'
 	// Callers must keep same signature since CALLDATALOAD is used to save gas.
 	function storeBlockHeader(bytes blockHeaderBytes) returns (uint) {
 			uint hashPrevBlockReverted;
 			assembly {
-				hashPrevBlockReverted := calldataload(add(OFFSET_ABI,4)) // 4 is offset for hashPrevBlock
+				hashPrevBlockReverted := calldataload(add(OFFSET_ABI_slot,4)) // 4 is offset for hashPrevBlock
 			}
 	    uint hashPrevBlock = flip32Bytes(hashPrevBlockReverted);  
 	    // blockHash should be a function parameter in dogecoin because the hash can not be calculated onchain
 	    uint blockHash = m_dblShaFlip(blockHeaderBytes);
 
 	    uint128 scorePrevBlock = m_getScore(hashPrevBlock);
-	    if (!scorePrevBlock) {
+	    if (scorePrevBlock == 0) {
 	        StoreHeader(blockHash, ERR_NO_PREV_BLOCK);
 	        return 0;
 	    }
@@ -292,8 +295,8 @@ contract DogeRelay is DogeChain {
 			uint wordWithBits;
 			uint32 bits;
 			assembly {
-				wordWithBits := calldataload(add(OFFSET_ABI,72))  // 72 is offset for 'bits'
-				bits := add( byte(0, wordWithBits) , add( mul(byte(1, wordWithBits),BYTES_1) , add( mul(byte(2, wordWithBits),BYTES_2) , mul(byte(3, wordWithBits),BYTES_3) ) ) )
+				wordWithBits := calldataload(add(OFFSET_ABI_slot,72))  // 72 is offset for 'bits'
+				bits := add( byte(0, wordWithBits) , add( mul(byte(1, wordWithBits),BYTES_1_slot) , add( mul(byte(2, wordWithBits),BYTES_2_slot) , mul(byte(3, wordWithBits),BYTES_3_slot) ) ) )
 			}
 	    uint target = targetFromBits(bits);
 
@@ -305,7 +308,7 @@ contract DogeRelay is DogeChain {
 
 
       uint blockHeight = 1 + m_getHeight(hashPrevBlock);
-      bytes32 prevBits = m_getBits(hashPrevBlock);
+      uint32 prevBits = m_getBits(hashPrevBlock);
       if (!m_difficultyShouldBeAdjusted(blockHeight) || ibIndex == 1) {
           // since blockHeight is 1 more than blockNumber; OR clause is special case for 1st header
           // we need to check prevBits isn't 0 otherwise the 1st header
@@ -336,7 +339,7 @@ contract DogeRelay is DogeChain {
 
       myblocks[blockHash]._blockHeader = blockHeaderBytes;
 
-      uint128 myDifficulty = 0x00000000FFFF0000000000000000000000000000000000000000000000000000 / target; // https://en.bitcoin.it/wiki/Difficulty
+      uint128 myDifficulty = uint128 (0x00000000FFFF0000000000000000000000000000000000000000000000000000 / target); // https://en.bitcoin.it/wiki/Difficulty
       scoreBlock = scorePrevBlock + myDifficulty;
       m_setScore(blockHash, scoreBlock);
 
@@ -390,7 +393,7 @@ contract DogeRelay is DogeChain {
 	// - 'txHash' is the hash of the tx
 	// - 'txIndex' is the index of the tx within the block
 	// - 'sibling' are the merkle siblings of tx
-	function helperVerifyHash__(uint256 txHash, uint txIndex, uint[] sibling, bytes32 txBlockHash) returns (uint) {
+	function helperVerifyHash__(uint256 txHash, uint txIndex, uint[] sibling, uint txBlockHash) returns (uint) {
 	    // TODO: implement when dealing with incentives
 	    // if (!feePaid(txBlockHash, m_getFeeAmount(txBlockHash))) {  // in incentive.se
 	    //    VerifyTransaction(txHash, ERR_BAD_FEE);
@@ -525,18 +528,18 @@ contract DogeRelay is DogeChain {
 	// otherwise returns 0.
 	// note: return value of 0 does NOT mean 'txBlockHash' has more than 6
 	// confirmations; a non-existent 'txBlockHash' will lead to a return value of 0
-	function within6Confirms(uint txBlockHash) returns (uint) {
+	function within6Confirms(uint txBlockHash) returns (bool) {
 	    uint blockHash = heaviestBlock;
 	    uint8 i = 0;
 	    while (i < 6) {
 	        if (txBlockHash == blockHash) {
-	            return 1;
+	            return true;
 	        }
 	        // blockHash = self.block[blockHash]._prevBlock
 	        blockHash = getPrevBlock(blockHash);
 	        i += 1;
 	    }
-	    return 0;
+	    return false;
 	}
 
 
@@ -590,7 +593,7 @@ contract DogeRelay is DogeChain {
 
 
 
-	function m_computeNewBits(uint prevTime, uint startTime, uint prevTarget) returns (uint) {
+	function m_computeNewBits(uint prevTime, uint startTime, uint prevTarget) returns (uint32) {
 		uint actualTimespan = prevTime - startTime;
     if (actualTimespan < TARGET_TIMESPAN_DIV_4) {
         actualTimespan = TARGET_TIMESPAN_DIV_4;
@@ -609,7 +612,7 @@ contract DogeRelay is DogeChain {
 
 	// Convert uint256 to compact encoding
 	// based on https://github.com/petertodd/python-bitcoinlib/blob/2a5dda45b557515fb12a0a18e5dd48d2f5cd13c2/bitcoin/core/serialize.py
-	function m_toCompactBits(uint val) returns (uint) {
+	function m_toCompactBits(uint val) returns (uint32) {
 	    uint nbytes = m_shiftRight((m_bitLen(val) + 7), 3);
 	    uint compact = 0;
       if (nbytes <= 3) {
@@ -669,7 +672,7 @@ contract DogeRelay is DogeChain {
 	    	// get the 3rd chunk
 	    	let tmp := sload(add(pointer,2))
 	    	// the timestamp are the 4th to 7th bytes of the 3rd chunk, but we also have to flip them
-	    	result := add( mul(BYTES_3,byte(7, tmp)) , add( mul(BYTES_2,byte(6, tmp)) , add( mul(BYTES_1,byte(5, tmp)) , byte(4, tmp) ) ) )
+	    	result := add( mul(BYTES_3_slot,byte(7, tmp)) , add( mul(BYTES_2_slot,byte(6, tmp)) , add( mul(BYTES_1_slot,byte(5, tmp)) , byte(4, tmp) ) ) )
 	    }
 	 }
 
@@ -680,7 +683,7 @@ contract DogeRelay is DogeChain {
 	    	// get the 3rd chunk
 	    	let tmp := sload(add(pointer,2))
 	    	// the 'bits' are the 8th to 11th bytes of the 3rd chunk, but we also have to flip them
-	    	result := add( mul(BYTES_3,byte(11, tmp)) , add( mul(BYTES_2,byte(10, tmp)) , add( mul(BYTES_1,byte(9, tmp)) , byte(8, tmp) ) ) )
+	    	result := add( mul(BYTES_3_slot,byte(11, tmp)) , add( mul(BYTES_2_slot,byte(10, tmp)) , add( mul(BYTES_1_slot,byte(9, tmp)) , byte(8, tmp) ) ) )
 	    }
 	}
 
