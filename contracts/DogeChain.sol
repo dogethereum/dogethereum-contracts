@@ -1,4 +1,4 @@
-pragma solidity ^0.4.17;
+pragma solidity ^0.4.15;
 
 import "./Constants.sol";
 
@@ -12,7 +12,7 @@ contract DogeChain is Constants {
 	// with a 32bit int
 	// This is not designed to be used for anything else, eg it contains all block
 	// hashes and nothing can be assumed about which blocks are on the main chain
-	bytes32[] internalBlock = new bytes32[](2**50);
+	uint[] internalBlock = new uint[](2**50);
 
 	// counter for next available slot in internalBlock
 	// 0 means no blocks stored yet and is used for the special of storing 1st block
@@ -22,7 +22,7 @@ contract DogeChain is Constants {
 
 	// save the ancestors for a block, as well as updating the height
 	// note: this is internal/private
-	function saveAncestors(bytes32 blockHash, bytes32 hashPrevBlock) {
+	function saveAncestors(uint blockHash, uint hashPrevBlock) {
     internalBlock[ibIndex] = blockHash;
     m_setIbIndex(blockHash, ibIndex);
     ibIndex += 1;
@@ -55,7 +55,7 @@ contract DogeChain is Constants {
 	// private (to prevent leeching)
 	// returns 1 if 'txBlockHash' is in the main chain, ie not a fork
 	// otherwise returns 0
-	function priv_inMainChain__(bytes32 txBlockHash) private returns (bool) {
+	function priv_inMainChain__(uint txBlockHash) private returns (bool) {
     require(msg.sender == address(this));
 
     uint txBlockHeight = m_getHeight(txBlockHash);
@@ -65,10 +65,10 @@ contract DogeChain is Constants {
     // However, the consequence is that
     // the genesis block must be at height 1 instead of 0 [see setInitialParent()]
     if (txBlockHeight == 0) {
-      return false;	    
+      return false;   
     }
 
-    return priv_fastGetBlockHash__(txBlockHeight) == txBlockHash;
+    return (priv_fastGetBlockHash__(txBlockHeight) == txBlockHash);
 	}
 
 
@@ -79,10 +79,10 @@ contract DogeChain is Constants {
 	// minimum height is 1)
 	// * blockHeight is less than the height of heaviestBlock, otherwise the
 	// heaviestBlock is returned
-	function priv_fastGetBlockHash__(uint blockHeight) private returns (bytes32) {
+	function priv_fastGetBlockHash__(uint blockHeight) private returns (uint) {
     require(msg.sender == address(this));
 
-    bytes32 blockHash = heaviestBlock;
+    uint blockHash = heaviestBlock;
     uint8 anc_index = NUM_ANCESTOR_DEPTHS - 1;
 
     while (m_getHeight(blockHash) > blockHeight) {
@@ -101,7 +101,7 @@ contract DogeChain is Constants {
 	// this function returns the index that can be used to lookup the desired ancestor
 	// eg. for combined usage, internalBlock[m_getAncestor(someBlock, 2)] will
 	// return the block hash of someBlock's 3rd ancestor
-	function m_getAncestor(bytes32 blockHash, uint8 whichAncestor) returns (uint32) {
+	function m_getAncestor(uint blockHash, uint8 whichAncestor) returns (uint32) {
 	  return uint32 ((myblocks[blockHash]._ancestor * (2**(32*uint(whichAncestor)))) / BYTES_28);
 	}
 
@@ -163,7 +163,7 @@ contract DogeChain is Constants {
     
 
   // Returns a pointer to the supplied UintWrapper
-  function ptr(UintWrapper memory uw) internal view returns (uint addr) {
+  function ptr(UintWrapper memory uw) internal constant returns (uint addr) {
         assembly {
             addr := uw
         }
@@ -171,15 +171,30 @@ contract DogeChain is Constants {
 
   // mock
 
+
+  // a Bitcoin block (header) is stored as:
+  // - _blockHeader 80 bytes
+  // - _info who's 32 bytes are comprised of "_height" 8bytes, "_ibIndex" 8bytes, "_score" 16bytes
+  // -   "_height" is 1 more than the typical Bitcoin term height/blocknumber [see setInitialParent()]
+  // -   "_ibIndex" is the block's index to internalBlock (see btcChain)
+  // -   "_score" is 1 more than the chainWork [see setInitialParent()]
+  // - _ancestor stores 8 32bit ancestor indices for more efficient backtracking (see btcChain)
+  // - _feeInfo is used for incentive.se (see m_getFeeInfo)
   struct BlockInformation {
+        bytes _blockHeader;
+        uint _info;
         uint _ancestor;
+        // bytes _feeInfo;
+
   }
   //BlockInformation[] myblocks = new BlockInformation[](2**256);
-	mapping (bytes32 => BlockInformation) myblocks;
+  // block hash => BlockInformation
+  mapping (uint => BlockInformation) myblocks;
 
-	function m_setIbIndex(bytes32 blockHash, uint32 internalIndex) {revert;}
-	function m_getHeight(bytes32 blockHash) returns (uint) { revert; }
-	bytes32 heaviestBlock;
-	function m_setHeight(bytes32 blockHash, uint height) {revert;}
-	function m_getIbIndex(bytes32 blockHash) returns (uint32) {revert;}
+
+	function m_setIbIndex(uint blockHash, uint32 internalIndex) {revert;}
+	function m_getHeight(uint blockHash) returns (uint) { revert; }
+	uint heaviestBlock;
+	function m_setHeight(uint blockHash, uint height) {revert;}
+	function m_getIbIndex(uint blockHash) returns (uint32) {revert;}
 }
