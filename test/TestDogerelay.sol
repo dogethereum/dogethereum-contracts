@@ -6,6 +6,7 @@ import "../contracts/DogeRelay.sol";
 
 contract TestDogerelay {
 
+  /*
   function testInitialBalanceUsingDeployedContract() {
     MetaCoin meta = MetaCoin(DeployedAddresses.MetaCoin());
 
@@ -21,5 +22,6 @@ contract TestDogerelay {
 
     Assert.equal(meta.getBalance(tx.origin), expected, "Owner should have 10000 MetaCoin initially");
   }
+  */
 
 }
