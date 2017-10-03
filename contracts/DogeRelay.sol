@@ -272,16 +272,17 @@ contract DogeRelay is DogeChain {
 	// store a Dogecoin block header that must be provided in bytes format 'blockHeaderBytes'
 	// Callers must keep same signature since CALLDATALOAD is used to save gas.
 	function storeBlockHeader(bytes blockHeaderBytes) returns (uint) {
-			uint hashPrevBlockReverted;
+			uint hashPrevBlock;
 			assembly {
-				hashPrevBlockReverted := calldataload(add(OFFSET_ABI_slot,4)) // 4 is offset for hashPrevBlock
+				hashPrevBlock := calldataload(add(OFFSET_ABI_slot,4)) // 4 is offset for hashPrevBlock
 			}
-	    uint hashPrevBlock = flip32Bytes(hashPrevBlockReverted);  
+	    hashPrevBlock = flip32Bytes(hashPrevBlock);  
 	    // blockHash should be a function parameter in dogecoin because the hash can not be calculated onchain.
 	    // Code here should call the Scrypt validator contract to make sure the supplied hash of the block is correct
 	    // If the block is merge mined, there are 2 Scrypts functions to execute, the one that checks PoW of the litecoin block
 	    // and the one that checks the block hash
 	    uint blockHash = m_dblShaFlip(blockHeaderBytes);
+
 
 	    uint128 scorePrevBlock = m_getScore(hashPrevBlock);
 	    if (scorePrevBlock == 0) {
@@ -289,8 +290,7 @@ contract DogeRelay is DogeChain {
 	        return 0;
 	    }
 
-	    uint128 scoreBlock = m_getScore(blockHash);
-	    if (scoreBlock != 0) {
+	    if (m_getScore(blockHash) != 0) {
 					// block already stored/exists
 	        StoreHeader(blockHash, ERR_BLOCK_ALREADY_EXISTS);
 	        return 0;
@@ -325,14 +325,10 @@ contract DogeRelay is DogeChain {
               return 0;          
           }
       } else {
-          uint prevTarget = targetFromBits(prevBits);
-          uint32 prevTime = m_getTimestamp(hashPrevBlock);
-
           // (blockHeight - DIFFICULTY_ADJUSTMENT_INTERVAL) is same as [getHeight(hashPrevBlock) - (DIFFICULTY_ADJUSTMENT_INTERVAL - 1)]
-          uint startBlock = priv_fastGetBlockHash__(blockHeight - DIFFICULTY_ADJUSTMENT_INTERVAL);
-          uint32 startTime = m_getTimestamp(startBlock);
-
-          uint32 newBits = m_computeNewBits(prevTime, startTime, prevTarget);
+          uint32 newBits = m_computeNewBits(m_getTimestamp(hashPrevBlock), 
+          																	m_getTimestamp(priv_fastGetBlockHash__(blockHeight - DIFFICULTY_ADJUSTMENT_INTERVAL)),
+          																	targetFromBits(prevBits));
           if (bits != newBits && newBits != 0) {  // newBits != 0 to allow first header
               StoreHeader(blockHash, ERR_RETARGET);
               return 0;
@@ -343,8 +339,8 @@ contract DogeRelay is DogeChain {
 
       myblocks[blockHash]._blockHeader = blockHeaderBytes;
 
-      uint128 myDifficulty = uint128 (0x00000000FFFF0000000000000000000000000000000000000000000000000000 / target); // https://en.bitcoin.it/wiki/Difficulty
-      scoreBlock = scorePrevBlock + myDifficulty;
+      // https://en.bitcoin.it/wiki/Difficulty
+      uint128 scoreBlock = scorePrevBlock + uint128 (0x00000000FFFF0000000000000000000000000000000000000000000000000000 / target);
       m_setScore(blockHash, scoreBlock);
 
       // equality allows block with same score to become an (alternate) Tip, so that
