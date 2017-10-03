@@ -277,7 +277,10 @@ contract DogeRelay is DogeChain {
 				hashPrevBlockReverted := calldataload(add(OFFSET_ABI_slot,4)) // 4 is offset for hashPrevBlock
 			}
 	    uint hashPrevBlock = flip32Bytes(hashPrevBlockReverted);  
-	    // blockHash should be a function parameter in dogecoin because the hash can not be calculated onchain
+	    // blockHash should be a function parameter in dogecoin because the hash can not be calculated onchain.
+	    // Code here should call the Scrypt validator contract to make sure the supplied hash of the block is correct
+	    // If the block is merge mined, there are 2 Scrypts functions to execute, the one that checks PoW of the litecoin block
+	    // and the one that checks the block hash
 	    uint blockHash = m_dblShaFlip(blockHeaderBytes);
 
 	    uint128 scorePrevBlock = m_getScore(hashPrevBlock);
