@@ -2,6 +2,7 @@ pragma solidity ^0.4.15;
 
 import "./DogeChain.sol";
 import "./Constants.sol";
+import "./TransactionProcessor.sol";
 
 contract DogeRelay is DogeChain {
 
@@ -433,7 +434,7 @@ contract DogeRelay is DogeChain {
 	// it may also have been returned by processTransaction(). callers should be
 	// aware of the contract that they are relaying transactions to and
 	// understand what that contract's processTransaction method returns.
-	function relayTx(bytes txBytes, uint txIndex, uint[] sibling, uint txBlockHash, address targetContract) returns (uint) {
+	function relayTx(bytes txBytes, uint txIndex, uint[] sibling, uint txBlockHash, TransactionProcessor targetContract) returns (uint) {
 	    uint txHash = verifyTx(txBytes, txIndex, sibling, txBlockHash);
 	    if (txHash != 0) {
 	        uint returnCode = targetContract.processTransaction(txBytes, txHash);
@@ -498,12 +499,12 @@ contract DogeRelay is DogeChain {
 	    uint proofLen = sibling.length;
 	    uint i = 0;
 	    while (i < proofLen) {
-	        byte proofHex = sibling[i];
+	        uint proofHex = sibling[i];
 
 	        uint sideOfSibling = txIndex % 2;  // 0 means sibling is on the right; 1 means left
 
-					byte left;
-					byte right;
+					uint left;
+					uint right;
 	        if (sideOfSibling == 1) {
 	            left = proofHex;
 	            right = resultHash;
@@ -545,7 +546,7 @@ contract DogeRelay is DogeChain {
 
 	// returns the 80-byte header (zeros for a header that does not exist) when
 	// sufficient payment is provided.  If payment is insufficient, returns 1-byte of zero.
-	function getBlockHeader(uint blockHash) {
+	function getBlockHeader(uint blockHash) returns (bytes) {
 	    // TODO: incentives
 	    // if (feePaid(blockHash, m_getFeeAmount(blockHash))) {  // in incentive.se
 	    //     GetHeader (blockHash, 0);
@@ -613,23 +614,23 @@ contract DogeRelay is DogeChain {
 	// Convert uint256 to compact encoding
 	// based on https://github.com/petertodd/python-bitcoinlib/blob/2a5dda45b557515fb12a0a18e5dd48d2f5cd13c2/bitcoin/core/serialize.py
 	function m_toCompactBits(uint val) returns (uint32) {
-	    uint nbytes = m_shiftRight((m_bitLen(val) + 7), 3);
-	    uint compact = 0;
+	    uint8 nbytes = uint8 (m_shiftRight((m_bitLen(val) + 7), 3));
+	    uint32 compact = 0;
       if (nbytes <= 3) {
-          compact = m_shiftLeft((val & 0xFFFFFF), 8 * (3 - nbytes));
-      } else{
-          compact = m_shiftRight(val, 8 * (nbytes - 3));
-          compact = compact & 0xFFFFFF;
+          compact = uint32 (m_shiftLeft((val & 0xFFFFFF), 8 * (3 - nbytes)));
+      } else {
+          compact = uint32 (m_shiftRight(val, 8 * (nbytes - 3)));
+          compact = uint32 (compact & 0xFFFFFF);
       }
 
       // If the sign bit (0x00800000) is set, divide the mantissa by 256 and
       // increase the exponent to get an encoding without it set.
-      if (compact & 0x00800000) {
-          compact = m_shiftRight(compact, 8);
+      if ((compact & 0x00800000) > 0) {
+          compact = uint32(m_shiftRight(compact, 8));
           nbytes += 1;
       }
 
-      return compact | m_shiftLeft(nbytes, 24);
+      return compact | uint32(m_shiftLeft(nbytes, 24));
 	}
 
 
@@ -677,7 +678,7 @@ contract DogeRelay is DogeChain {
 	 }
 
 	// get the 'bits' field from a Bitcoin blockheader
-	function m_getBits(uint blockHash) returns (uint32 retult) {
+	function m_getBits(uint blockHash) returns (uint32 result) {
     	uint pointer = ptr(myblocks[blockHash]);
 	    assembly {
 	    	// get the 3rd chunk
@@ -707,7 +708,7 @@ contract DogeRelay is DogeChain {
 
 	// Bitcoin-way of hashing
 	function m_dblShaFlip(bytes dataBytes) returns (uint) {
-	    return flip32Bytes(sha256(sha256(dataBytes)));
+	    return flip32Bytes(uint(sha256(sha256(dataBytes))));
 	}
 
 
@@ -722,7 +723,7 @@ contract DogeRelay is DogeChain {
 
 
   // Returns a pointer to the supplied byte[]
-  function ptr(byte[] memory array) internal constant returns (uint addr) {
+  function ptr(bytes memory array) internal constant returns (uint addr) {
         assembly {
             addr := array
         }
@@ -732,28 +733,30 @@ contract DogeRelay is DogeChain {
 
 	// Bitcoin-way merkle parent of transaction hashes $tx1 and $tx2
 	function concatHash(uint tx1, uint tx2) returns (uint) {
-		bytes concat = new bytes(64);
+		bytes memory concat = new bytes(64);
     uint pointer = ptr(concat);
+    uint tx1Flipped = flip32Bytes(tx1);
+    uint tx2Flipped = flip32Bytes(tx2);
     assembly {
-      mstore(pointer, flip32Bytes(tx1))
-      mstore(add(pointer, 32), flip32Bytes(tx2))
+      mstore(pointer, tx1Flipped)
+      mstore(add(pointer, 32), tx2Flipped)
     }
-	  return flip32Bytes(sha256(sha256(concat)));
+	  return flip32Bytes(uint(sha256(sha256(concat))));
 	}
 
 
 	function m_shiftRight(uint val, uint8 shift) returns (uint) {
-	    return val / 2**shift;
+	    return val / uint(2)**shift;
 	}
 	
 	function m_shiftLeft(uint val, uint8 shift) returns (uint) {
-	    return val * 2**shift;
+	    return val * uint(2)**shift;
 	}
 
 	// bit length of '$val'
 	function m_bitLen(uint val) returns (uint8 length) {
 	  uint int_type = val;
-	  while (int_type) {
+	  while (int_type > 0) {
 	    int_type = m_shiftRight(int_type, 1);
 	    length += 1;
 	  }
@@ -786,14 +789,14 @@ contract DogeRelay is DogeChain {
     UintWrapper memory uw = UintWrapper(word);
     uint pointer = ptr(uw);
     assembly {
-      mstore8(add(pointer, position        ), byte(24, fourBytes))
-      mstore8(add(pointer, add(position, 1)), byte(25, fourBytes))
-      mstore8(add(pointer, add(position, 2)), byte(26, fourBytes))
-      mstore8(add(pointer, add(position, 3)), byte(27, fourBytes))
-      mstore8(add(pointer, add(position, 4)), byte(28, fourBytes))
-      mstore8(add(pointer, add(position, 5)), byte(29, fourBytes))
-      mstore8(add(pointer, add(position, 6)), byte(30, fourBytes))
-      mstore8(add(pointer, add(position, 7)), byte(31, fourBytes))
+      mstore8(add(pointer, position        ), byte(24, eightBytes))
+      mstore8(add(pointer, add(position, 1)), byte(25, eightBytes))
+      mstore8(add(pointer, add(position, 2)), byte(26, eightBytes))
+      mstore8(add(pointer, add(position, 3)), byte(27, eightBytes))
+      mstore8(add(pointer, add(position, 4)), byte(28, eightBytes))
+      mstore8(add(pointer, add(position, 5)), byte(29, eightBytes))
+      mstore8(add(pointer, add(position, 6)), byte(30, eightBytes))
+      mstore8(add(pointer, add(position, 7)), byte(31, eightBytes))
     }
     return uw.value;
   }
@@ -839,7 +842,7 @@ contract DogeRelay is DogeChain {
 	}
 
 	function m_getHeight(uint blockHash) returns (uint64) {
-			return myblocks[blockHash]._info / BYTES_24;
+			return uint64(myblocks[blockHash]._info / BYTES_24);
 	}
 
 
@@ -852,7 +855,7 @@ contract DogeRelay is DogeChain {
 	 }
 
 	function m_getIbIndex(uint blockHash) returns (uint32) {
-			return myblocks[blockHash]._info * BYTES_8 / BYTES_24;
+			return uint32(myblocks[blockHash]._info * BYTES_8 / BYTES_24);
 	}
 
 
@@ -864,7 +867,7 @@ contract DogeRelay is DogeChain {
 	}
 
 	function m_getScore(uint blockHash) returns (uint128) {
-				return myblocks[blockHash]._info * BYTES_16 / BYTES_16;
+				return uint128(myblocks[blockHash]._info * BYTES_16 / BYTES_16);
 	}
 
 
