@@ -22,5 +22,27 @@ contract('DogeRelay', function(accounts) {
       assert.equal(concatenatedHashes.toString(16), "3412000000000000000000000000000000000000000000000000000000000000", "flip32Bytes is not the expected one");
     });
   });  
+  it("target from bits 1", function() {
+    return DogeRelay.deployed().then(function(instance) {      
+      return instance.targetFromBits.call("0x19015f53");
+    }).then(function(target) {
+      assert.equal(target.toNumber(), "8614444778121073626993210829679478604092861119379437256704", "target is not the expected one");
+    });
+  });  
+  it("target from bits 2", function() {
+    return DogeRelay.deployed().then(function(instance) {      
+      return instance.targetFromBits.call("453281356");
+    }).then(function(target) {
+      assert.equal(target.toString(16), "4864c000000000000000000000000000000000000000000000000", "target is not the expected one");
+    });
+  });  
+  it("target from bits 3", function() {
+    return DogeRelay.deployed().then(function(instance) {      
+      return instance.targetFromBits.call("0x1d00ffff"); // EASIEST_DIFFICULTY_TARGET
+    }).then(function(target) {
+      maxTargetRounded = (Math.pow(2,16) - 1) * Math.pow(2,208);  // http://bitcoin.stackexchange.com/questions/8806/what-is-difficulty-and-how-it-relates-to-target
+      assert.equal(target.toNumber(), maxTargetRounded, "target is not the expected one");
+    });
+  });  
 });
 
