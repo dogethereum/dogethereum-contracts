@@ -715,9 +715,10 @@ contract DogeRelay is DogeChain {
 	// Bitcoin-way of computing the target from the 'bits' field of a blockheader
 	// based on http://www.righto.com/2014/02/bitcoin-mining-hard-way-algorithms.html//ref3
 	function targetFromBits(uint32 bits) returns (uint) {
-	    uint exp = bits / 0x1000000;  // 2^24
+	    uint exp = bits / 0x1000000;  // 2**24
 	    uint mant = bits & 0xffffff;
-	    return mant * 256^(exp - 3);
+	    return mant * 256**(exp - 3);
+      //return mant;
   }
 
 
