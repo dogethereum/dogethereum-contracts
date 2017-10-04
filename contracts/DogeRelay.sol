@@ -15,7 +15,7 @@ contract DogeRelay is DogeChain {
 	// with a 32bit int
 	// This is not designed to be used for anything else, eg it contains all block
 	// hashes and nothing can be assumed about which blocks are on the main chain
-	uint[] internalBlock = new uint[](2**50);
+  mapping (uint32 => uint) internalBlock;
 
 	// counter for next available slot in internalBlock
 	// 0 means no blocks stored yet and is used for the special of storing 1st block
@@ -721,27 +721,18 @@ contract DogeRelay is DogeChain {
   }
 
 
-  // Returns a pointer to the supplied byte[]
-  function ptr(bytes memory array) internal constant returns (uint addr) {
-        assembly {
-            addr := array
-        }
-    }  
-
-
-
-	// Bitcoin-way merkle parent of transaction hashes $tx1 and $tx2
-	function concatHash(uint tx1, uint tx2) returns (uint) {
-		bytes memory concat = new bytes(64);
-    uint pointer = ptr(concat);
+  // Bitcoin-way merkle parent of transaction hashes $tx1 and $tx2
+  function concatHash(uint tx1, uint tx2) returns (uint) {
+    bytes memory concat = new bytes(64);
     uint tx1Flipped = flip32Bytes(tx1);
     uint tx2Flipped = flip32Bytes(tx2);
     assembly {
-      mstore(pointer, tx1Flipped)
-      mstore(add(pointer, 32), tx2Flipped)
+      // First 32 bytes are the byte array size
+      mstore(add(concat, 32), tx1Flipped)
+      mstore(add(concat, 64), tx2Flipped)
     }
-	  return flip32Bytes(uint(sha256(sha256(concat))));
-	}
+    return flip32Bytes(uint(sha256(sha256(concat))));
+  }
 
 
 	function m_shiftRight(uint val, uint8 shift) returns (uint) {
@@ -761,24 +752,22 @@ contract DogeRelay is DogeChain {
 	  }
 	}
 
-
-	// reverse 32 bytes given by '$b32'
-	function flip32Bytes(uint b32) returns (uint) {
-	  uint a = b32;  // important to force $a to only be examined once below
-	  uint8 i = 0;
-	  // unrolling this would decrease gas usage, but would increase
-	  // the gas cost for code size by over 700K and exceed the PI million block gas limit
-	  uint result;
-	  UintWrapper memory uw = UintWrapper(result);
+  // reverse 32 bytes given by '$b32'
+  function flip32Bytes(uint input) returns (uint) {
+    uint8 i = 0;
+    // unrolling this would decrease gas usage, but would increase
+    // the gas cost for code size by over 700K and exceed the PI million block gas limit
+    UintWrapper memory uw = UintWrapper(0);
     uint pointer = ptr(uw);
-	  while (i < 32) {
-	  	assembly {
-	    	mstore8(add(pointer, i), byte(sub(31 ,i), a))	  	
-	  	}
-	    i++;
-	  }  
-	  return result;
-	}
+    while (i < 32) {
+      assembly {
+        mstore8(add(pointer, i), byte(sub(31 ,i), input))
+      }
+      i++;
+    }  
+    return uw.value;
+  }
+
 
 
 	// write $int64 to memory at $addrLoc
