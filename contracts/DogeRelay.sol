@@ -640,6 +640,14 @@ contract DogeRelay is DogeChain {
         }
     }  
 
+  function ptr(bytes storage byteArray) internal constant returns (uint addr) {
+      uint pointer;
+      assembly {
+        pointer := byteArray_slot
+      }
+      addr = uint(keccak256(bytes32(pointer)));
+    }  
+
 
 
 	// get the parent of '$blockHash'
@@ -655,22 +663,20 @@ contract DogeRelay is DogeChain {
       // first 4bytes of the 2nd chunk,
       // where chunks are read in sizes of 32bytes via sload
 
-    	uint pointer = ptr(myblocks[blockHash]);
-      //BlockInformation pointer = myblocks[blockHash];
+      uint pointer = ptr(myblocks[blockHash]._blockHeader);
     	uint chunk1;
     	uint chunk2;
 	    assembly {
 	    	chunk1 := sload(pointer)
 	    	chunk2 := sload(add(pointer,1))
 	    }
-	    //return flip32Bytes(chunk1 * BYTES_4 + chunk2/BYTES_28);
-      return chunk2;
+	    return flip32Bytes(chunk1 * BYTES_4 + chunk2/BYTES_28);
 	}
 
 
 	// get the timestamp from a Bitcoin blockheader
 	function m_getTimestamp(uint blockHash) returns (uint32 result) { 
-    	uint pointer = ptr(myblocks[blockHash]);
+    	uint pointer = ptr(myblocks[blockHash]._blockHeader);      
 	    assembly {
 	    	// get the 3rd chunk
 	    	let tmp := sload(add(pointer,2))
@@ -681,7 +687,7 @@ contract DogeRelay is DogeChain {
 
 	// get the 'bits' field from a Bitcoin blockheader
 	function m_getBits(uint blockHash) returns (uint32 result) {
-    	uint pointer = ptr(myblocks[blockHash]);
+    	uint pointer = ptr(myblocks[blockHash]._blockHeader);
 	    assembly {
 	    	// get the 3rd chunk
 	    	let tmp := sload(add(pointer,2))
@@ -692,7 +698,7 @@ contract DogeRelay is DogeChain {
 
 	// get the merkle root of '$blockHash'
 	function getMerkleRoot(uint blockHash) returns (uint) {
-    	uint pointer = ptr(myblocks[blockHash]);
+    	uint pointer = ptr(myblocks[blockHash]._blockHeader);
     	uint chunk2;
     	uint chunk3;
 	    assembly {

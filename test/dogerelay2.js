@@ -7,7 +7,6 @@ contract('DogeRelay', function(accounts) {
     var block333000Hash;
     var block333001Hash;
     var block333001HeaderStr;
-    var block333001HeaderBytes;
     return DogeRelay.deployed().then(function(instance) {      
       dr = instance;
       block333000HashReturnValue = "000000000000000008360c20a2ceff91cc8c4f357932377f48659b37bb86c759";
@@ -24,7 +23,6 @@ contract('DogeRelay', function(accounts) {
       // blockNumber = 333001
       block333001HeaderStr = "0200000059c786bb379b65487f373279354f8ccc91ffcea2200c36080000000000000000dd9d7757a736fec629ab0ed0f602ba23c77afe7edec85a7026f641fd90bcf8f658ca8154747b1b1894fc742f";
       block333001HeaderStr2 = "0x" + block333001HeaderStr;
-      block333001HeaderBytes = parseHexString(block333001HeaderStr);
       return dr.setInitialParent(block333000Hash, 333000, 1, {from: accounts[0]}); 
     }).then(function(result) {
       //assert.equal(result, true, "result should be true");
@@ -34,38 +32,22 @@ contract('DogeRelay', function(accounts) {
       return dr.getBlockchainHead.call();
     }).then(function(result) {
       assert.equal(formatHexUint32(result.toString(16)), block333001HashReturnValue, "chain head hash is not the expected one");
-      console.log ("111111");
-//      return dr.getBlockHeader.call(block333001Hash);
-//    }).then(function(resultHeader) {
-//      assert.equal(result, block333001HeaderBytes, "chain head header is not the expected one");
-//      console.log ("2222");
+      return dr.getBlockHeader.call(block333001Hash);
+    }).then(function(result) {
+      assert.equal(result, block333001HeaderStr2, "chain head header is not the expected one");
       return dr.getPrevBlock.call(block333001Hash);
     }).then(function(result) {
       assert.equal(formatHexUint32(result.toString(16)), block333000HashReturnValue, "prev block hash is not the expected one");
-      console.log ("3333");
-      return dr.getTimestamp.call(block333001Hash);
+      return dr.m_getTimestamp.call(block333001Hash);
     }).then(function(result) {
       assert.equal(result.toNumber(), 1417792088, "timestamp is not the expected one");
-      console.log ("4444");
-      return dr.getBits.call(block333001Hash);
+      return dr.m_getBits.call(block333001Hash);
     }).then(function(result) {
       assert.equal(result.toNumber(), 0x181b7b74, "bits is not the expected one");
-      console.log ("5555");
     });
   });
 });
 
-
-function parseHexString(str) { 
-    var result = [];
-    while (str.length >= 2) { 
-        result.push(parseInt(str.substring(0, 2), 16));
-
-        str = str.substring(2, str.length);
-    }
-
-    return result;
-}
 
 
 function formatHexUint32(str) {
