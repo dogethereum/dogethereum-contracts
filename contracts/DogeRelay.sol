@@ -276,15 +276,12 @@ contract DogeRelay is DogeChain {
 			assembly {
 				hashPrevBlock := calldataload(add(sload(OFFSET_ABI_slot),4)) // 4 is offset for hashPrevBlock
 			}
-      log1(bytes32(0x00), bytes32(hashPrevBlock));
 	    hashPrevBlock = flip32Bytes(hashPrevBlock);  
 	    // blockHash should be a function parameter in dogecoin because the hash can not be calculated onchain.
 	    // Code here should call the Scrypt validator contract to make sure the supplied hash of the block is correct
 	    // If the block is merge mined, there are 2 Scrypts functions to execute, the one that checks PoW of the litecoin block
 	    // and the one that checks the block hash
-      log1(bytes32(0x01), bytes32(hashPrevBlock));
 	    uint blockHash = m_dblShaFlip(blockHeaderBytes);
-      log1(bytes32(0x02), bytes32(blockHash));
 
 
 	    uint128 scorePrevBlock = m_getScore(hashPrevBlock);
@@ -637,9 +634,9 @@ contract DogeRelay is DogeChain {
 
 
   // Returns a pointer to the supplied BlockInformation
-  function ptr(BlockInformation memory bi) internal constant returns (uint addr) {
+  function ptr(BlockInformation storage bi) internal constant returns (uint addr) {
         assembly {
-            addr := bi
+            addr := bi_slot
         }
     }  
 
@@ -657,14 +654,17 @@ contract DogeRelay is DogeChain {
       // get the last 28bytes of the 1st chunk and combine (add) it to the
       // first 4bytes of the 2nd chunk,
       // where chunks are read in sizes of 32bytes via sload
+
     	uint pointer = ptr(myblocks[blockHash]);
+      //BlockInformation pointer = myblocks[blockHash];
     	uint chunk1;
     	uint chunk2;
 	    assembly {
 	    	chunk1 := sload(pointer)
 	    	chunk2 := sload(add(pointer,1))
 	    }
-	    return flip32Bytes(chunk1 * BYTES_4 + chunk2/BYTES_28);
+	    //return flip32Bytes(chunk1 * BYTES_4 + chunk2/BYTES_28);
+      return chunk2;
 	}
 
 

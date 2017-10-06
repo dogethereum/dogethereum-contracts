@@ -10,8 +10,11 @@ contract('DogeRelay', function(accounts) {
     var block333001HeaderBytes;
     return DogeRelay.deployed().then(function(instance) {      
       dr = instance;
-      block333000Hash = "0x000000000000000008360c20a2ceff91cc8c4f357932377f48659b37bb86c759";
-      block333001Hash = "000000000000000010e318d0c61da0b84246481d9cc097fda9327fe90b1538c1"
+      block333000HashReturnValue = "000000000000000008360c20a2ceff91cc8c4f357932377f48659b37bb86c759";
+      block333000Hash = "0x" + block333000HashReturnValue;
+      block333001HashReturnValue = "000000000000000010e318d0c61da0b84246481d9cc097fda9327fe90b1538c1";
+      block333001Hash = "0x" + block333001HashReturnValue;
+
       // version = 2
       // hashPrevBlock = 0x000000000000000008360c20a2ceff91cc8c4f357932377f48659b37bb86c759
       // hashMerkleRoot = 0xf6f8bc90fd41f626705ac8de7efe7ac723ba02f6d00eab29c6fe36a757779ddd
@@ -22,37 +25,32 @@ contract('DogeRelay', function(accounts) {
       block333001HeaderStr = "0200000059c786bb379b65487f373279354f8ccc91ffcea2200c36080000000000000000dd9d7757a736fec629ab0ed0f602ba23c77afe7edec85a7026f641fd90bcf8f658ca8154747b1b1894fc742f";
       block333001HeaderStr2 = "0x" + block333001HeaderStr;
       block333001HeaderBytes = parseHexString(block333001HeaderStr);
-      console.log("block333001HeaderBytes " + block333001HeaderBytes);
-      console.log("block333001HeaderBytes " + block333001HeaderBytes[0]);
-      console.log("block333001HeaderBytes " + block333001HeaderBytes[79]);
-
       return dr.setInitialParent(block333000Hash, 333000, 1, {from: accounts[0]}); 
     }).then(function(result) {
-      console.log("");
-      console.log("setInitialParent result " + JSON.stringify(result, null, "\r"));
-      console.log("");
       //assert.equal(result, true, "result should be true");
       return dr.storeBlockHeader(block333001HeaderStr2, {from: accounts[0]}); 
     }).then(function(result) {
-      console.log("");
-      console.log("storeBlockHeader result " + JSON.stringify(result, null, "\r"));
-      console.log("");
       //assert res['output'] == 300000
       return dr.getBlockchainHead.call();
     }).then(function(result) {
-      assert.equal(result, block333001Hash, "chain head hash is not the expected one");
-      return dr.getBlockHeader.call(block333001Hash);
-    }).then(function(resultHeader) {
-      assert.equal(result, block333001HeaderBytes, "chain head header is not the expected one");
+      assert.equal(formatHexUint32(result.toString(16)), block333001HashReturnValue, "chain head hash is not the expected one");
+      console.log ("111111");
+//      return dr.getBlockHeader.call(block333001Hash);
+//    }).then(function(resultHeader) {
+//      assert.equal(result, block333001HeaderBytes, "chain head header is not the expected one");
+//      console.log ("2222");
       return dr.getPrevBlock.call(block333001Hash);
     }).then(function(result) {
-      assert.equal(result, block333000Hash, "prev block hash is not the expected one");
+      assert.equal(formatHexUint32(result.toString(16)), block333000HashReturnValue, "prev block hash is not the expected one");
+      console.log ("3333");
       return dr.getTimestamp.call(block333001Hash);
     }).then(function(result) {
       assert.equal(result.toNumber(), 1417792088, "timestamp is not the expected one");
+      console.log ("4444");
       return dr.getBits.call(block333001Hash);
     }).then(function(result) {
-      assert.equal(result, 0x181b7b74, "bits is not the expected one");
+      assert.equal(result.toNumber(), 0x181b7b74, "bits is not the expected one");
+      console.log ("5555");
     });
   });
 });
@@ -69,24 +67,10 @@ function parseHexString(str) {
     return result;
 }
 
-function syntaxHighlight(json) {
-    if (typeof json != 'string') {
-         json = JSON.stringify(json, undefined, 2);
-    }
-    json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
-        var cls = 'number';
-        if (/^"/.test(match)) {
-            if (/:$/.test(match)) {
-                cls = 'key';
-            } else {
-                cls = 'string';
-            }
-        } else if (/true|false/.test(match)) {
-            cls = 'boolean';
-        } else if (/null/.test(match)) {
-            cls = 'null';
-        }
-        return '<span class="' + cls + '">' + match + '</span>';
-    });
+
+function formatHexUint32(str) {
+    while (str.length < 64) { 
+        str = "0" + str;
+    }  
+    return str;
 }
