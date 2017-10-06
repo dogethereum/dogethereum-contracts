@@ -204,7 +204,7 @@ contract DogeRelay is DogeChain {
 	uint highScore;
 
 
-	event StoreHeader(uint indexed blockHash, uint indexed returnCode);
+	event StoreHeader(uint blockHash, uint returnCode);
 	event GetHeader(uint indexed blockHash, uint indexed returnCode);
 	event VerifyTransaction(uint indexed txHash, uint indexed returnCode);
 	event RelayTransaction(uint indexed txHash, uint indexed returnCode);
@@ -274,14 +274,17 @@ contract DogeRelay is DogeChain {
 	function storeBlockHeader(bytes blockHeaderBytes) returns (uint) {
 			uint hashPrevBlock;
 			assembly {
-				hashPrevBlock := calldataload(add(OFFSET_ABI_slot,4)) // 4 is offset for hashPrevBlock
+				hashPrevBlock := calldataload(add(sload(OFFSET_ABI_slot),4)) // 4 is offset for hashPrevBlock
 			}
+      log1(bytes32(0x00), bytes32(hashPrevBlock));
 	    hashPrevBlock = flip32Bytes(hashPrevBlock);  
 	    // blockHash should be a function parameter in dogecoin because the hash can not be calculated onchain.
 	    // Code here should call the Scrypt validator contract to make sure the supplied hash of the block is correct
 	    // If the block is merge mined, there are 2 Scrypts functions to execute, the one that checks PoW of the litecoin block
 	    // and the one that checks the block hash
+      log1(bytes32(0x01), bytes32(hashPrevBlock));
 	    uint blockHash = m_dblShaFlip(blockHeaderBytes);
+      log1(bytes32(0x02), bytes32(blockHash));
 
 
 	    uint128 scorePrevBlock = m_getScore(hashPrevBlock);
@@ -299,8 +302,8 @@ contract DogeRelay is DogeChain {
 			uint wordWithBits;
 			uint32 bits;
 			assembly {
-				wordWithBits := calldataload(add(OFFSET_ABI_slot,72))  // 72 is offset for 'bits'
-				bits := add( byte(0, wordWithBits) , add( mul(byte(1, wordWithBits),BYTES_1_slot) , add( mul(byte(2, wordWithBits),BYTES_2_slot) , mul(byte(3, wordWithBits),BYTES_3_slot) ) ) )
+				wordWithBits := calldataload(add(sload(OFFSET_ABI_slot),72))  // 72 is offset for 'bits'
+				bits := add( byte(0, wordWithBits) , add( mul(byte(1, wordWithBits),sload(BYTES_1_slot)) , add( mul(byte(2, wordWithBits),sload(BYTES_2_slot)) , mul(byte(3, wordWithBits),sload(BYTES_3_slot)) ) ) )
 			}
 	    uint target = targetFromBits(bits);
 
@@ -672,7 +675,7 @@ contract DogeRelay is DogeChain {
 	    	// get the 3rd chunk
 	    	let tmp := sload(add(pointer,2))
 	    	// the timestamp are the 4th to 7th bytes of the 3rd chunk, but we also have to flip them
-	    	result := add( mul(BYTES_3_slot,byte(7, tmp)) , add( mul(BYTES_2_slot,byte(6, tmp)) , add( mul(BYTES_1_slot,byte(5, tmp)) , byte(4, tmp) ) ) )
+	    	result := add( mul(sload(BYTES_3_slot),byte(7, tmp)) , add( mul(sload(BYTES_2_slot),byte(6, tmp)) , add( mul(sload(BYTES_1_slot),byte(5, tmp)) , byte(4, tmp) ) ) )
 	    }
 	 }
 
@@ -683,7 +686,7 @@ contract DogeRelay is DogeChain {
 	    	// get the 3rd chunk
 	    	let tmp := sload(add(pointer,2))
 	    	// the 'bits' are the 8th to 11th bytes of the 3rd chunk, but we also have to flip them
-	    	result := add( mul(BYTES_3_slot,byte(11, tmp)) , add( mul(BYTES_2_slot,byte(10, tmp)) , add( mul(BYTES_1_slot,byte(9, tmp)) , byte(8, tmp) ) ) )
+	    	result := add( mul(sload(BYTES_3_slot),byte(11, tmp)) , add( mul(sload(BYTES_2_slot),byte(10, tmp)) , add( mul(sload(BYTES_1_slot),byte(9, tmp)) , byte(8, tmp) ) ) )
 	    }
 	}
 

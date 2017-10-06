@@ -1,27 +1,16 @@
-pragma solidity ^0.4.2;
+pragma solidity ^0.4.15;
 
 import "truffle/Assert.sol";
 import "truffle/DeployedAddresses.sol";
 import "../contracts/DogeRelay.sol";
 
-contract TestDogerelay {
+contract TestDogeRelay {
 
-  /*
-  function testInitialBalanceUsingDeployedContract() {
-    MetaCoin meta = MetaCoin(DeployedAddresses.MetaCoin());
-
-    uint expected = 10000;
-
-    Assert.equal(meta.getBalance(tx.origin), expected, "Owner should have 10000 MetaCoin initially");
+  function testFlip32BytesLargeNumber() {
+    DogeRelay dr = DogeRelay(DeployedAddresses.DogeRelay());
+    //DogeRelay dr = new DogeRelay();
+    uint expected = 0x201f1e1d1c1b1a191817161514131211100f0e0d0c0b0a090807060504030201;
+    Assert.equal(dr.flip32Bytes(0x0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20), expected, "flip32Bytes failed");
   }
-
-  function testInitialBalanceWithNewMetaCoin() {
-    MetaCoin meta = new MetaCoin();
-
-    uint expected = 10000;
-
-    Assert.equal(meta.getBalance(tx.origin), expected, "Owner should have 10000 MetaCoin initially");
-  }
-  */
 
 }

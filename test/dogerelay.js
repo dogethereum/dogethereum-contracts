@@ -1,5 +1,6 @@
 var DogeRelay = artifacts.require("./DogeRelay.sol");
 
+
 contract('DogeRelay', function(accounts) {
   it("concatenate 2 hashes", function() {
     return DogeRelay.deployed().then(function(instance) {
@@ -43,6 +44,5 @@ contract('DogeRelay', function(accounts) {
       maxTargetRounded = (Math.pow(2,16) - 1) * Math.pow(2,208);  // http://bitcoin.stackexchange.com/questions/8806/what-is-difficulty-and-how-it-relates-to-target
       assert.equal(target.toNumber(), maxTargetRounded, "target is not the expected one");
     });
-  });  
+  });
 });
-
