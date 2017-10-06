@@ -6,7 +6,7 @@ contract('DogeRelay', function(accounts) {
     var dr;    
     var block333000Hash;
     var block333001Hash;
-    var block333001HeaderStr;
+    var block333001Header;
     return DogeRelay.deployed().then(function(instance) {      
       dr = instance;
       block333000HashReturnValue = "000000000000000008360c20a2ceff91cc8c4f357932377f48659b37bb86c759";
@@ -21,12 +21,11 @@ contract('DogeRelay', function(accounts) {
       // bits = 0x181b7b74
       // nonce = 796195988
       // blockNumber = 333001
-      block333001HeaderStr = "0200000059c786bb379b65487f373279354f8ccc91ffcea2200c36080000000000000000dd9d7757a736fec629ab0ed0f602ba23c77afe7edec85a7026f641fd90bcf8f658ca8154747b1b1894fc742f";
-      block333001HeaderStr2 = "0x" + block333001HeaderStr;
+      block333001Header = "0x0200000059c786bb379b65487f373279354f8ccc91ffcea2200c36080000000000000000dd9d7757a736fec629ab0ed0f602ba23c77afe7edec85a7026f641fd90bcf8f658ca8154747b1b1894fc742f";
       return dr.setInitialParent(block333000Hash, 333000, 1, {from: accounts[0]}); 
     }).then(function(result) {
       //assert.equal(result, true, "result should be true");
-      return dr.storeBlockHeader(block333001HeaderStr2, {from: accounts[0]}); 
+      return dr.storeBlockHeader(block333001Header, {from: accounts[0]}); 
     }).then(function(result) {
       //assert res['output'] == 300000
       return dr.getBlockchainHead.call();
@@ -34,7 +33,7 @@ contract('DogeRelay', function(accounts) {
       assert.equal(formatHexUint32(result.toString(16)), block333001HashReturnValue, "chain head hash is not the expected one");
       return dr.getBlockHeader.call(block333001Hash);
     }).then(function(result) {
-      assert.equal(result, block333001HeaderStr2, "chain head header is not the expected one");
+      assert.equal(result, block333001Header, "chain head header is not the expected one");
       return dr.getPrevBlock.call(block333001Hash);
     }).then(function(result) {
       assert.equal(formatHexUint32(result.toString(16)), block333000HashReturnValue, "prev block hash is not the expected one");
