@@ -274,13 +274,10 @@ contract DogeRelay is DogeChain {
 	// Callers must keep same signature since CALLDATALOAD is used to save gas.
 	function storeBlockHeader(bytes blockHeaderBytes) returns (uint) {
 			uint hashPrevBlock;
-      log1(0x100, bytes32(hashPrevBlock));
 			assembly {
 				hashPrevBlock := calldataload(add(sload(OFFSET_ABI_slot),4)) // 4 is offset for hashPrevBlock
 			}
-      log1(0x101, bytes32(hashPrevBlock));
 	    hashPrevBlock = flip32Bytes(hashPrevBlock);  
-      log1(0x102, bytes32(hashPrevBlock));
 
 	    // blockHash should be a function parameter in dogecoin because the hash can not be calculated onchain.
 	    // Code here should call the Scrypt validator contract to make sure the supplied hash of the block is correct
@@ -307,6 +304,7 @@ contract DogeRelay is DogeChain {
 				bits := add( byte(0, wordWithBits) , add( mul(byte(1, wordWithBits),sload(BYTES_1_slot)) , add( mul(byte(2, wordWithBits),sload(BYTES_2_slot)) , mul(byte(3, wordWithBits),sload(BYTES_3_slot)) ) ) )
 			}
 	    uint target = targetFromBits(bits);
+      log1(0x1212, bytes32(target));
 
 	    // we only check the target and do not do other validation (eg timestamp) to save gas
 	    if (blockHash < 0 || blockHash > target) {
