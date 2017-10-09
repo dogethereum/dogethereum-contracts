@@ -1,4 +1,5 @@
 pragma solidity ^0.4.15;
+//pragma experimental ABIEncoderV2;
 
 import "./DogeChain.sol";
 import "./Constants.sol";
@@ -273,16 +274,19 @@ contract DogeRelay is DogeChain {
 	// Callers must keep same signature since CALLDATALOAD is used to save gas.
 	function storeBlockHeader(bytes blockHeaderBytes) returns (uint) {
 			uint hashPrevBlock;
+      log1(0x100, bytes32(hashPrevBlock));
 			assembly {
 				hashPrevBlock := calldataload(add(sload(OFFSET_ABI_slot),4)) // 4 is offset for hashPrevBlock
 			}
+      log1(0x101, bytes32(hashPrevBlock));
 	    hashPrevBlock = flip32Bytes(hashPrevBlock);  
+      log1(0x102, bytes32(hashPrevBlock));
+
 	    // blockHash should be a function parameter in dogecoin because the hash can not be calculated onchain.
 	    // Code here should call the Scrypt validator contract to make sure the supplied hash of the block is correct
 	    // If the block is merge mined, there are 2 Scrypts functions to execute, the one that checks PoW of the litecoin block
 	    // and the one that checks the block hash
 	    uint blockHash = m_dblShaFlip(blockHeaderBytes);
-
 
 	    uint128 scorePrevBlock = m_getScore(hashPrevBlock);
 	    if (scorePrevBlock == 0) {
@@ -356,6 +360,40 @@ contract DogeRelay is DogeChain {
 
 
 
+// store a number of blockheaders
+// Return latest's block height
+function bulkStoreHeaders(bytes headersBytes, uint16 count) returns (uint result) {
+  uint8 HEADER_SIZE = 80;
+  uint32 offset = 0;
+  uint32 endIndex = HEADER_SIZE;
+  uint16 i = 0;
+  while (i < count) {
+    bytes memory currHeader = sliceArray(headersBytes, offset, endIndex);
+    result = this.storeBlockHeader(currHeader);
+    offset += HEADER_SIZE;
+    endIndex += HEADER_SIZE;
+    i += 1;
+  }
+
+  // If bytes[] function parameter would work
+  //for (uint i = 0; i < headersBytes.length; i++) {
+  //      result = storeBlockHeader(headersBytes[i]);
+  //}
+}
+
+
+function sliceArray(bytes memory original, uint32 offset, uint32 endIndex) internal returns (bytes) {
+  bytes memory result = new bytes(endIndex-offset);
+  //bytes storage result;
+  for (uint i = offset; i < endIndex; i++) {
+    result[i-offset] = original[i];
+  }
+  return result;
+}
+
+function pubSliceArray(bytes original, uint32 offset, uint32 endIndex) returns (bytes result) {
+  return sliceArray(original, offset, endIndex);
+}
 
 
 	// Returns the hash of tx (raw bytes) if the tx is in the block given by 'txBlockHash'
