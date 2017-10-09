@@ -2,7 +2,7 @@ var DogeRelay = artifacts.require("./DogeRelay.sol");
 
 
 contract('DogeRelay', function(accounts) {
-  it("testBulkStore5", function() {
+  it("testBulkStore7", function() {
     var dr;    
     var bloc100kPrevHash = "0x000000000002d01c1fccc21636b607dfd930d31d01c3a62104612a1719011250";
     // 7 here, but only storing 5 headers since OOG
@@ -11,22 +11,18 @@ contract('DogeRelay', function(accounts) {
                   + "0100000090f0a9f110702f808219ebea1173056042a714bad51b916cb6800000000000005275289558f51c9966699404ae2294730c3c9f9bda53523ce50e9b95e558da2fdb261b4d4c86041b1ab1bf93"
                   + "01000000aff7e0c7dc29d227480c2aa79521419640a161023b51cdb28a3b0100000000003779fc09d638c4c6da0840c41fa625a90b72b125015fd0273f706d61f3be175faa271b4d4c86041b142dca82"
                   + "01000000e1c5ba3a6817d53738409f5e7229ffd098d481147b002941a7a002000000000077ed2af87aa4f9f450f8dbd15284720c3fd96f565a13c9de42a3c1440b7fc6a50e281b4d4c86041b08aecda2"
+                  + "0100000079cda856b143d9db2c1caff01d1aecc8630d30625d10e8b4b8b0000000000000b50cc069d6a3e33e3ff84a5c41d9d3febe7c770fdcc96b2c3ff60abe184f196367291b4d4c86041b8fa45d63"
+                  + "0100000045dc58743362fe8d8898a7506faa816baed7d391c9bc0b13b0da00000000000021728a2f4f975cc801cb3c672747f1ead8a946b2702b7bd52f7b86dd1aa0c975c02a1b4d4c86041b7b47546d"
                   ; 
     return DogeRelay.deployed().then(function(instance) {      
       dr = instance;
       return dr.setInitialParent(bloc100kPrevHash, 99999, 1, {from: accounts[0]}); 
     }).then(function(result) {
-      //console.log("")
-      //console.log(JSON.stringify(result));
-      //console.log("")
-      return dr.bulkStoreHeaders(headers, 5, {from: accounts[0]}); 
+      return dr.bulkStoreHeaders(headers, 7, {from: accounts[0]}); 
     }).then(function(result) {
-      console.log("")
-      console.log(JSON.stringify(result));
-      console.log("")
       return dr.getLastBlockHeight.call();
     }).then(function(result) {
-      assert.equal(result.toNumber(), 100004, "blocks not stored as expected");
+      assert.equal(result.toNumber(), 100006, "blocks not stored as expected");
     });
   });
 });
