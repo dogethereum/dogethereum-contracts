@@ -9,6 +9,6 @@ module.exports = function(deployer) {
   //deployer.link(Constants, DogeRelay);
   //deployer.link(DogeChain, DogeRelay);
   deployer.deploy(DogeRelay).then(function(){
-	  deployer.deploy(BitcoinProcessor, DogeRelay.address);
+	  return deployer.deploy(BitcoinProcessor, DogeRelay.address);
   });
 };
