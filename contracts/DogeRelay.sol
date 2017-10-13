@@ -440,10 +440,10 @@ function pubSliceArray(bytes original, uint32 offset, uint32 endIndex) returns (
 	        return (ERR_CONFIRMATIONS);
 	    }    
 
-	    if (!priv_inMainChain__(txBlockHash)) {
-	        VerifyTransaction (txHash, ERR_CHAIN);
-	        return (ERR_CHAIN);
-	    }
+//	    if (!priv_inMainChain__(txBlockHash)) {
+//	        VerifyTransaction (txHash, ERR_CHAIN);
+//	        return (ERR_CHAIN);
+//	    }
 
 	    uint merkle = computeMerkle(txHash, txIndex, sibling);
 	    uint realMerkleRoot = getMerkleRoot(txBlockHash);
@@ -469,9 +469,9 @@ function pubSliceArray(bytes original, uint32 offset, uint32 endIndex) returns (
 	// aware of the contract that they are relaying transactions to and
 	// understand what that contract's processTransaction method returns.
 	function relayTx(bytes txBytes, uint txIndex, uint[] sibling, uint txBlockHash, TransactionProcessor targetContract) returns (uint) {
-	    uint txHash = verifyTx(txBytes, txIndex, sibling, txBlockHash);
+      uint txHash = verifyTx(txBytes, txIndex, sibling, txBlockHash);
 	    if (txHash != 0) {
-	        uint returnCode = targetContract.processTransaction(txBytes, txHash);
+          uint returnCode = targetContract.processTransaction(txBytes, txHash);
 	        RelayTransaction (txHash, returnCode);
 	        return (returnCode);
 			}
