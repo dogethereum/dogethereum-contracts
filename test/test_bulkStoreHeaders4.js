@@ -1,21 +1,18 @@
-var fs = require('fs');
-var readline = require('readline');
-var btcProof = require('bitcoin-proof');
 var DogeRelay = artifacts.require("./DogeRelay.sol");
-var BitcoinProcessor = artifacts.require("./BitcoinProcessor.sol");
+var DogeToken = artifacts.require("./token/DogeToken.sol");
 var utils = require('./utils');
 
 
-contract('DogeRelay', function(accounts) {
- it("testTx1In300K", function() {
+contract('DogeToken', function(accounts) {
+ it("testRelayToDogeToken", function() {
     var dr;
-    var bitcoinProcessor;    
+    var dogeToken;    
     var txHash;
     return DogeRelay.deployed().then(function(instance) {      
       dr = instance;      
-      return BitcoinProcessor.deployed();
+      return DogeToken.deployed();
     }).then(function(instance) {
-      bitcoinProcessor = instance;
+      dogeToken = instance;
       return utils.bulkStore10From300K(dr, accounts); 
     }).then(function(headerAndHashes) {
       var txIndex = 1;
@@ -25,14 +22,16 @@ contract('DogeRelay', function(accounts) {
       for(var i = 0; i < siblings.length; i++) {
         siblings[i] = "0x" + siblings[i];
       }
-      return dr.relayTx(txStr, txIndex, siblings, "0x" + headerAndHashes.header.hash, bitcoinProcessor.address);
+      return dr.relayTx(txStr, txIndex, siblings, "0x" + headerAndHashes.header.hash, dogeToken.address);
     }).then(function(result) {
-      return bitcoinProcessor.lastTxHash();
+      return dogeToken.balanceOf("0xcedacadacafe");
     }).then(function(result) {
-      assert.equal(utils.formatHexUint32(result.toString(16)), txHash, "BitcoinProcessor's last tx hash is not the expected one");
+      assert.equal(result.toNumber(), 150, "DogeToken's 0xcedacadacafe balance is not the expected one");
     });    
  });
 });
+
+
 
 
 
