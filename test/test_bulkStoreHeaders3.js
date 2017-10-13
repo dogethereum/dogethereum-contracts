@@ -3,45 +3,51 @@ var readline = require('readline');
 var btcProof = require('bitcoin-proof');
 var DogeRelay = artifacts.require("./DogeRelay.sol");
 var BitcoinProcessor = artifacts.require("./BitcoinProcessor.sol");
+var utils = require('./utils');
 
 
 contract('DogeRelay', function(accounts) {
- it("testTx1In300K", function {
+ it("testTx1In300K", function() {
     var dr;
     var bitcoinProcessor;    
+    var txHash;
     return DogeRelay.deployed().then(function(instance) {      
       dr = instance;      
       return BitcoinProcessor.deployed();
     }).then(function(instance) {
       bitcoinProcessor = instance;
-      return bulkStore10From300K(dr); 
+      return bulkStore10From300K(dr, accounts); 
     }).then(function(headerAndHashes) {
-     var txIndex = 1;
-     var txHash = '7301b595279ece985f0c415e420e425451fcf7f684fcce087ba14d10ffec1121';
-     var txStr = '0x01000000014dff4050dcee16672e48d755c6dd25d324492b5ea306f85a3ab23b4df26e16e9000000008c493046022100cb6dc911ef0bae0ab0e6265a45f25e081fc7ea4975517c9f848f82bc2b80a909022100e30fb6bb4fb64f414c351ed3abaed7491b8f0b1b9bcd75286036df8bfabc3ea5014104b70574006425b61867d2cbb8de7c26095fbc00ba4041b061cf75b85699cb2b449c6758741f640adffa356406632610efb267cb1efa0442c207059dd7fd652eeaffffffff020049d971020000001976a91461cf5af7bb84348df3fd695672e53c7d5b3f3db988ac30601c0c060000001976a914fd4ed114ef85d350d6d40ed3f6dc23743f8f99c488ac00000000'
-     var siblings = makeMerkleProof(headerAndHashes.hashes, txIndex);
-     return dr.relayTx(txStr, txIndex, siblings, "0x" + headerAndHashes.header.hash, bitcoinProcessor.address);
+      var txIndex = 1;
+      txHash = '7301b595279ece985f0c415e420e425451fcf7f684fcce087ba14d10ffec1121';
+      var txStr = '0x01000000014dff4050dcee16672e48d755c6dd25d324492b5ea306f85a3ab23b4df26e16e9000000008c493046022100cb6dc911ef0bae0ab0e6265a45f25e081fc7ea4975517c9f848f82bc2b80a909022100e30fb6bb4fb64f414c351ed3abaed7491b8f0b1b9bcd75286036df8bfabc3ea5014104b70574006425b61867d2cbb8de7c26095fbc00ba4041b061cf75b85699cb2b449c6758741f640adffa356406632610efb267cb1efa0442c207059dd7fd652eeaffffffff020049d971020000001976a91461cf5af7bb84348df3fd695672e53c7d5b3f3db988ac30601c0c060000001976a914fd4ed114ef85d350d6d40ed3f6dc23743f8f99c488ac00000000'
+      var siblings = makeMerkleProof(headerAndHashes.hashes, txIndex);
+      for(var i = 0; i < siblings.length; i++) {
+        siblings[i] = "0x" + siblings[i];
+      }
+      return dr.relayTx(txStr, txIndex, siblings, "0x" + headerAndHashes.header.hash, bitcoinProcessor.address);
     }).then(function(result) {
-      return bitcoinProcessor.getLastTxHash();
+      return bitcoinProcessor.lastTxHash();
     }).then(function(result) {
-      assert.equal(result.toNumber(), txHash, "BitcoinProcessor's last tx hash is not the expected one");
+      assert.equal(utils.formatHexUint32(result.toString(16)), txHash, "BitcoinProcessor's last tx hash is not the expected one");
     });    
  });
 });
 
 
 
-function bulkStore10From300K (dr) {
+function bulkStore10From300K (dr, accounts) {
   return new Promise((resolve, reject) => {
 
     var startBlockNum = 300000;
     var bloc300kPrevHash = "0x000000000002d01c1fccc21636b607dfd930d31d01c3a62104612a1719011250";
     var blocks = "0x";
+    var numBlock = 10;
+    var block300kPrev = "0x000000000000000067ecc744b5ae34eebbde14d21ca4db51652e4d67e155f07e";
 
-    r.setInitialParent(0, 0, 1, {from: accounts[0]}
+    dr.setInitialParent(block300kPrev, startBlockNum-1, 1, {from: accounts[0]}
     ).then(
       function(result) {
-        var numBlock = 10;
         i = 0
         return new Promise((resolve2, reject2) => {
           var lineReader = readline.createInterface({
@@ -63,7 +69,7 @@ function bulkStore10From300K (dr) {
     }).then(
 
       function(result) {
-        assert.equal(result.toNumber(), startBlockNum + numBlock, "latest block number is not the expected one"); // # +1 since setInitialParent was called with imaginary block
+        assert.equal(result.toNumber(), startBlockNum + numBlock - 1, "latest block number is not the expected one"); // # +1 since setInitialParent was called with imaginary block
         //return dr.getAverageChainWork.call();
         var headerAndHashes = {
           'header' : {'nonce': 222771801, 'hash': '000000000000000082ccf8f1557c5d40b21edabb18d2d691cfbf87118bac7254', 'timestamp': 1399703554, 'merkle_root': '915c887a2d9ec3f566a648bedcf4ed30d0988e22268cfe43ab5b0cf8638999d3', 'version': 2, 'prevhash': '000000000000000067ecc744b5ae34eebbde14d21ca4db51652e4d67e155f07e', 'bits': 419465580},
