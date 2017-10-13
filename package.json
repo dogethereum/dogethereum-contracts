@@ -1,0 +1,25 @@
+{
+  "name": "dogerelay",
+  "version": "1.0.0",
+  "description": "",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {  
+    "bitcoin-proof": "2.0.0"       
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/oscarguindzberg/dogerelay.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/oscarguindzberg/dogerelay/issues"
+  },
+  "homepage": "https://github.com/oscarguindzberg/dogerelay#readme"
+}
