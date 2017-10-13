@@ -1,12 +1,9 @@
-var fs = require('fs');
-var readline = require('readline');
-var btcProof = require('bitcoin-proof');
 var DogeRelay = artifacts.require("./DogeRelay.sol");
 var BitcoinProcessor = artifacts.require("./BitcoinProcessor.sol");
 var utils = require('./utils');
 
 
-contract('DogeRelay', function(accounts) {
+contract('BitcoinProcessor', function(accounts) {
  it("testTx1In300K", function() {
     var dr;
     var bitcoinProcessor;    
