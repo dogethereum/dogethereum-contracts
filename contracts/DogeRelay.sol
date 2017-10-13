@@ -304,7 +304,6 @@ contract DogeRelay is DogeChain {
 				bits := add( byte(0, wordWithBits) , add( mul(byte(1, wordWithBits),sload(BYTES_1_slot)) , add( mul(byte(2, wordWithBits),sload(BYTES_2_slot)) , mul(byte(3, wordWithBits),sload(BYTES_3_slot)) ) ) )
 			}
 	    uint target = targetFromBits(bits);
-      log1(0x1212, bytes32(target));
 
 	    // we only check the target and do not do other validation (eg timestamp) to save gas
 	    if (blockHash < 0 || blockHash > target) {
