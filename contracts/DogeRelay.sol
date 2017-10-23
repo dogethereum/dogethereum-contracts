@@ -481,7 +481,7 @@ function pubSliceArray(bytes original, uint32 offset, uint32 endIndex) returns (
 	}
 
 	// return the hash of the heaviest block aka the Tip
-	function getBlockchainHead() returns (uint) {
+	function getBlockchainHeadHash() returns (uint) {
 	    return heaviestBlock;
 	}
 
