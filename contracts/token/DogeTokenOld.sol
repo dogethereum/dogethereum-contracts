@@ -1,0 +1,52 @@
+
+import "./HumanStandardToken.sol";
+
+pragma solidity ^0.4.8;
+
+contract DogeToken is HumanStandardToken {
+
+    uint256[] public dogeTxHashesAlreadyProcessed;
+    uint256 minimumLockTxValue;
+    DogeBlockHeader[] dogeBlocks;
+    DogeBlockHeader dogeBestBlock;
+
+
+    function DogeToken() {
+        totalSupply = 2^256 - 1;                 // Update total supply
+        name = 'DogeToken';                      // Set the name for display purposes
+        decimals = 8;                            // Amount of decimals for display purposes
+        symbol = _tokenSymbol;                   // Set the symbol for display purposes
+        version = 'DOGE0.1';
+        minimumLockTxValue = 100000000;
+    }
+
+    struct DogeBlockHeader {
+        uint weight; // weight is accumulated by delegation
+        bool voted;  // if true, that person already voted
+        address delegate; // person delegated to
+        uint vote;   // index of the voted proposal
+    }
+
+    struct DogeTransaction {
+    }
+
+    struct DogePartialMerkleTree {
+    }
+
+    function addDogeBlockHeader(DogeBlockHeader header) {
+        // Validate block and add it to the doge blockchain
+    }
+
+    function registerDogeTransaction(DogeTransaction tx, DogePartialMerkleTree pmt, unit blockHeight) {
+        // Validate tx is valid and has enough confirmations, then assigns tokens to sender of the doge tx
+    }
+
+    function releaseDoge(uint256 _value) {
+        balances[msg.sender] -= _value;
+        // Send the tokens back to the doge blockchain. 
+    }
+
+    function getDogeBlockchainBlockLocator constant returns (uint256[] hashes) {
+        // Returns a block locator so agents know which blocks the contract is missing
+    }
+}
