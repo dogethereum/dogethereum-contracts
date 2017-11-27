@@ -6,7 +6,8 @@ var DogeRelay = artifacts.require("./DogeRelay.sol");
 contract('DogeRelay', function(accounts) {
  it("testDifficulty", function() {
     var dr;    
-    var blocks = "0x";
+    var headers = "0x";
+    var hashes = "0x";
     return DogeRelay.deployed().then(function(instance) {      
       dr = instance;
       return dr.setInitialParent(0, 0, 1, {from: accounts[0]}); 
@@ -17,10 +18,11 @@ contract('DogeRelay', function(accounts) {
             input: fs.createReadStream('test/headers/firstEleven.txt')
           });
           lineReader.on('line', function (line) {
-            blocks += line;
+            headers += line.split("|")[0];
+            hashes += line.split("|")[1];
           });
           lineReader.on('close', function () {
-            dr.bulkStoreHeaders(blocks, 11, {from: accounts[0]}).then(resolve);  
+            dr.bulkStoreHeaders(headers, hashes, 11, {from: accounts[0]}).then(resolve);  
           });
         });
       }

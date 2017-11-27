@@ -19,7 +19,7 @@ contract('DogeRelay', function(accounts) {
       return dr.setInitialParent(block333000Hash, 333000, 1, {from: accounts[0]}); 
     }).then(function(result) {
       //assert.equal(result, true, "result should be true");
-      return dr.storeBlockHeader(block333001Header, {from: accounts[0]}); 
+      return dr.storeBlockHeader(block333001Header, block333001Hash, {from: accounts[0]}); 
     }).then(function(result) {
       //assert res['output'] == 300000
       return dr.getBlockchainHeadHash.call();

@@ -22,6 +22,7 @@ contract Constants {
  uint constant ERR_NO_PREV_BLOCK = 10030;
  uint constant ERR_BLOCK_ALREADY_EXISTS = 10040;
  uint constant ERR_PROOF_OF_WORK = 10090;
+ uint constant ERR_BLOCK_HASH_DOES_NOT_MATCHES_CALCULATED_ONE = 10100;
  
  // error codes for verifyTx
  uint constant ERR_BAD_FEE = 20010;

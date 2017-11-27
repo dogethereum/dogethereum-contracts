@@ -264,15 +264,19 @@ contract DogeRelay is DogeChain {
 
 
 
-	// Where the header begins.
-	// 4 bytes function ID, then 2 32bytes before the header begins.
+	// Where the header begins:
+	// 4 bytes function ID + 
+  // 32 bytes pointer to header array data + 
+  // 32 bytes block hash
+  // 32 bytes header array size.
+  // To understand abi encoding, read https://medium.com/@hayeah/how-to-decipher-a-smart-contract-method-call-8ee980311603
 	// Not declared constant because inline assembly would not be able to use it. 
 	// Declared uint so it has no offset to access it from assebly
-	uint OFFSET_ABI = 68;
+	uint OFFSET_ABI = 100;
 
 	// store a Dogecoin block header that must be provided in bytes format 'blockHeaderBytes'
 	// Callers must keep same signature since CALLDATALOAD is used to save gas.
-	function storeBlockHeader(bytes blockHeaderBytes) returns (uint) {
+	function storeBlockHeader(bytes blockHeaderBytes, uint proposedBlockHash) returns (uint) {
 			uint hashPrevBlock;
 			assembly {
 				hashPrevBlock := calldataload(add(sload(OFFSET_ABI_slot),4)) // 4 is offset for hashPrevBlock
@@ -284,6 +288,10 @@ contract DogeRelay is DogeChain {
 	    // If the block is merge mined, there are 2 Scrypts functions to execute, the one that checks PoW of the litecoin block
 	    // and the one that checks the block hash
 	    uint blockHash = m_dblShaFlip(blockHeaderBytes);
+      if (blockHash != proposedBlockHash) {
+          StoreHeader(blockHash, ERR_BLOCK_HASH_DOES_NOT_MATCHES_CALCULATED_ONE);
+          return 0;
+      }
 
 	    uint128 scorePrevBlock = m_getScore(hashPrevBlock);
 	    if (scorePrevBlock == 0) {
@@ -359,16 +367,27 @@ contract DogeRelay is DogeChain {
 
 // store a number of blockheaders
 // Return latest's block height
-function bulkStoreHeaders(bytes headersBytes, uint16 count) returns (uint result) {
+// headersBytes are dogecoin block headers
+// hashesBytes are the hashes for those blocks
+// count is the number of headers sent
+function bulkStoreHeaders(bytes headersBytes, bytes hashesBytes, uint16 count) returns (uint result) {
   uint8 HEADER_SIZE = 80;
-  uint32 offset = 0;
-  uint32 endIndex = HEADER_SIZE;
+  uint8 HASH_SIZE = 32;
+  uint32 headersOffset = 0;
+  uint32 headersEndIndex = HEADER_SIZE;
+  uint32 hashesOffset = 0;
+  uint32 hashesEndIndex = HASH_SIZE;
   uint16 i = 0;
   while (i < count) {
-    bytes memory currHeader = sliceArray(headersBytes, offset, endIndex);
-    result = this.storeBlockHeader(currHeader);
-    offset += HEADER_SIZE;
-    endIndex += HEADER_SIZE;
+    bytes memory currHeader = sliceArray(headersBytes, headersOffset, headersEndIndex);
+    bytes memory currHash = sliceArray(hashesBytes, hashesOffset, hashesEndIndex);
+    uint currHashUint = uint(bytesToBytes32(currHash));
+    log2(bytes32(currHashUint), bytes32(hashesOffset), bytes32(hashesEndIndex));
+    result = this.storeBlockHeader(currHeader, currHashUint);
+    headersOffset += HEADER_SIZE;
+    headersEndIndex += HEADER_SIZE;
+    hashesOffset += HASH_SIZE;
+    hashesEndIndex += HASH_SIZE;
     i += 1;
   }
 
@@ -376,6 +395,15 @@ function bulkStoreHeaders(bytes headersBytes, uint16 count) returns (uint result
   //for (uint i = 0; i < headersBytes.length; i++) {
   //      result = storeBlockHeader(headersBytes[i]);
   //}
+}
+
+
+function bytesToBytes32(bytes b) public pure returns (bytes32) {
+    bytes32 out;
+    for (uint i = 0; i < 32; i++) {
+        out |= bytes32(b[i] & 0xFF) >> (i * 8);
+    }
+    return out;
 }
 
 
@@ -758,7 +786,7 @@ function pubSliceArray(bytes original, uint32 offset, uint32 endIndex) returns (
 
 	// Bitcoin-way of computing the target from the 'bits' field of a blockheader
 	// based on http://www.righto.com/2014/02/bitcoin-mining-hard-way-algorithms.html//ref3
-	function targetFromBits(uint32 bits) returns (uint) {
+	function targetFromBits(uint32 bits) pure returns (uint) {
 	    uint exp = bits / 0x1000000;  // 2**24
 	    uint mant = bits & 0xffffff;
 	    return mant * 256**(exp - 3);

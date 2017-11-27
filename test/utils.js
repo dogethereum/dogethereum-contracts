@@ -18,8 +18,9 @@ module.exports = {
 	  return new Promise((resolve, reject) => {
 
 	    var startBlockNum = 300000;
-	    var bloc300kPrevHash = "0x000000000002d01c1fccc21636b607dfd930d31d01c3a62104612a1719011250";
-	    var blocks = "0x";
+	    //var bloc300kPrevHash = "0x000000000002d01c1fccc21636b607dfd930d31d01c3a62104612a1719011250";
+	    var headers = "0x";
+	    var hashes = "0x";
 	    var numBlock = 10;
 	    var block300kPrev = "0x000000000000000067ecc744b5ae34eebbde14d21ca4db51652e4d67e155f07e";
 
@@ -33,19 +34,19 @@ module.exports = {
 	          });
 	          lineReader.on('line', function (line) {
 	            if (i < numBlock) {
-	              blocks += line;              
+		            headers += line.split("|")[0];
+		            hashes += line.split("|")[1];        
 	            }
 	            i++;
 	          });
 	          lineReader.on('close', function () {
-	            dr.bulkStoreHeaders(blocks, numBlock, {from: accounts[0]}).then(resolve2);  
+	            dr.bulkStoreHeaders(headers, hashes, numBlock, {from: accounts[0]}).then(resolve2);  
 	          });
 	        });
 	      }
 	    ).then(function(result) {
 	      return dr.getLastBlockHeight.call();
 	    }).then(
-
 	      function(result) {
 	        assert.equal(result.toNumber(), startBlockNum + numBlock - 1, "latest block number is not the expected one"); // # +1 since setInitialParent was called with imaginary block
 	        //return dr.getAverageChainWork.call();

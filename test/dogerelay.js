@@ -45,4 +45,13 @@ contract('DogeRelay', function(accounts) {
       assert.equal(target.toNumber(), maxTargetRounded, "target is not the expected one");
     });
   });
+  it("bytesToBytes32", function() {
+    return DogeRelay.deployed().then(function(instance) {      
+      return instance.bytesToBytes32.call("0x0102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f00"); 
+    }).then(function(target) {
+      assert.equal(target, "0x0102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f00", "converted bytes are not the expected ones");
+    });
+  });
+
 });
+

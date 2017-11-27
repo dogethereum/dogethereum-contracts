@@ -13,11 +13,19 @@ contract('DogeRelay', function(accounts) {
                   + "0100000079cda856b143d9db2c1caff01d1aecc8630d30625d10e8b4b8b0000000000000b50cc069d6a3e33e3ff84a5c41d9d3febe7c770fdcc96b2c3ff60abe184f196367291b4d4c86041b8fa45d63"
                   + "0100000045dc58743362fe8d8898a7506faa816baed7d391c9bc0b13b0da00000000000021728a2f4f975cc801cb3c672747f1ead8a946b2702b7bd52f7b86dd1aa0c975c02a1b4d4c86041b7b47546d"
                   ; 
+     var hashes = "0x000000000003ba27aa200b1cecaad478d2b00432346c3f1f3986da1afd33e506"
+                  + "00000000000080b66c911bd5ba14a74260057311eaeb1982802f7010f1a9f090"
+                  + "0000000000013b8ab2cd513b0261a14096412195a72a0c4827d229dcc7e0f7af"
+                  + "000000000002a0a74129007b1481d498d0ff29725e9f403837d517683abac5e1"
+                  + "000000000000b0b8b4e8105d62300d63c8ec1a1df0af1c2cdbd943b156a8cd79"
+                  + "000000000000dab0130bbcc991d3d7ae6b81aa6f50a798888dfe62337458dc45"
+                  + "0000000000009b958a82c10804bd667722799cc3b457bc061cd4b7779110cd60"
+                  ;
     return DogeRelay.deployed().then(function(instance) {      
       dr = instance;
       return dr.setInitialParent(bloc100kPrevHash, 99999, 1, {from: accounts[0]}); 
     }).then(function(result) {
-      return dr.bulkStoreHeaders(headers, 7, {from: accounts[0]}); 
+      return dr.bulkStoreHeaders(headers, hashes, 7, {from: accounts[0]}); 
     }).then(function(result) {
       return dr.getLastBlockHeight.call();
     }).then(function(result) {
