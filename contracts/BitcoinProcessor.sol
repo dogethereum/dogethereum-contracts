@@ -14,7 +14,7 @@ contract BitcoinProcessor is TransactionProcessor {
 
     address private _trustedBTCRelay;
 
-    function BitcoinProcessor(address trustedBTCRelay) {
+    function BitcoinProcessor(address trustedBTCRelay) public {
         _trustedBTCRelay = trustedBTCRelay;
     }
 
@@ -23,7 +23,7 @@ contract BitcoinProcessor is TransactionProcessor {
     //
     // this exact function signature is required as it has to match
     // the signature specified in BTCRelay (otherwise BTCRelay will not call it)
-    function processTransaction(bytes txn, uint256 txHash) returns (uint) {
+    function processTransaction(bytes txn, uint256 txHash) public returns (uint) {
         log0("processTransaction called");
 
         // only allow trustedBTCRelay, otherwise anyone can provide a fake txn
