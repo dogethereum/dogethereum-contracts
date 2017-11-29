@@ -23,7 +23,7 @@ contract DogeRelayForTests is DogeRelay {
   // return the chainWork of the Tip
   // http://bitcoin.stackexchange.com/questions/26869/what-is-chainwork
   function getChainWork() public view returns (uint128) {
-  return m_getScore(bestBlockHash);
+  	return m_getScore(bestBlockHash);
   }
 
 
@@ -33,7 +33,7 @@ contract DogeRelayForTests is DogeRelay {
   // this is not needed by the relay itself, but is provided in
   // case some contract wants to use the chainWork or Bitcoin network
   // difficulty (which can be derived) as a data feed for some purpose
-  function getAverageChainWork() returns (uint) {
+  function getAverageChainWork() public returns (uint) {
       uint blockHash = bestBlockHash;
 
       uint128 chainWorkTip = m_getScore(blockHash);
@@ -60,6 +60,32 @@ contract DogeRelayForTests is DogeRelay {
 	    GetHeader(blockHash, 1);
 	    return myblocks[blockHash]._blockHeader;
 	}
+
+	function getPrevBlockPublic(uint blockHash) public view returns (uint) {
+		return getPrevBlock(blockHash);
+	}
+
+	function m_getTimestampPublic(uint blockHash) public view returns (uint32 result) { 
+		return m_getTimestamp(blockHash);
+	}
+
+	function m_getBitsPublic(uint blockHash) public view returns (uint32 result) {
+		return m_getBits(blockHash);
+	}
+
+
+	function targetFromBitsPublic(uint32 bits) public pure returns (uint) {
+    	return targetFromBits(bits) ;
+	}
+
+    function concatHashPublic(uint tx1, uint tx2) public pure returns (uint) {
+    	return concatHash(tx1, tx2);
+    }
+
+  	function flip32BytesPublic(uint input) public pure returns (uint) {
+  		return flip32Bytes(input);
+  	}
+
 
 
 

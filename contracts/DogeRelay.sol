@@ -52,7 +52,7 @@ contract DogeRelay {
   event RelayTransaction(uint indexed txHash, uint indexed returnCode);
 
 
-  function DogeRelay() {
+  function DogeRelay() public {
     // gasPriceAndChangeRecipientFee in incentive.se
     // TODO incentive management
     // self.gasPriceAndChangeRecipientFee = 50 * 10**9 * BYTES_16 // 50 shannon and left-align
@@ -581,14 +581,11 @@ contract DogeRelay {
 	    return false;
 	}
 
-
-	function m_difficultyShouldBeAdjusted(uint blockHeight) returns (bool) {
+	function m_difficultyShouldBeAdjusted(uint blockHeight) private pure returns (bool) {
 	    return ((blockHeight % DIFFICULTY_ADJUSTMENT_INTERVAL) == 0);
 	}
 
-
-
-	function m_computeNewBits(uint prevTime, uint startTime, uint prevTarget) returns (uint32) {
+	function m_computeNewBits(uint prevTime, uint startTime, uint prevTarget) private pure returns (uint32) {
 		uint actualTimespan = prevTime - startTime;
     if (actualTimespan < TARGET_TIMESPAN_DIV_4) {
         actualTimespan = TARGET_TIMESPAN_DIV_4;
@@ -607,7 +604,7 @@ contract DogeRelay {
 
 	// Convert uint256 to compact encoding
 	// based on https://github.com/petertodd/python-bitcoinlib/blob/2a5dda45b557515fb12a0a18e5dd48d2f5cd13c2/bitcoin/core/serialize.py
-	function m_toCompactBits(uint val) returns (uint32) {
+	function m_toCompactBits(uint val) private pure returns (uint32) {
 	    uint8 nbytes = uint8 (m_shiftRight((m_bitLen(val) + 7), 3));
 	    uint32 compact = 0;
       if (nbytes <= 3) {
@@ -628,8 +625,8 @@ contract DogeRelay {
 	}
 
 
-	// get the parent of '$blockHash'
-	function getPrevBlock(uint blockHash) returns (uint) {
+	// get the parent blok hash of 'blockHash'
+	function getPrevBlock(uint blockHash) internal view returns (uint) {
       // sload($addr) gets first 32bytes
       // * BYTES_4 shifts over to skip the 4bytes of blockversion
       // At this point we have the first 28bytes of hashPrevBlock and we
@@ -653,7 +650,7 @@ contract DogeRelay {
 
 
 	// get the timestamp from a Bitcoin blockheader
-	function m_getTimestamp(uint blockHash) returns (uint32 result) { 
+	function m_getTimestamp(uint blockHash) internal view returns (uint32 result) { 
     	uint pointer = ptr(myblocks[blockHash]._blockHeader);      
 	    assembly {
 	    	// get the 3rd chunk
@@ -664,7 +661,7 @@ contract DogeRelay {
 	 }
 
 	// get the 'bits' field from a Bitcoin blockheader
-	function m_getBits(uint blockHash) returns (uint32 result) {
+	function m_getBits(uint blockHash) internal view returns (uint32 result) {
     	uint pointer = ptr(myblocks[blockHash]._blockHeader);
 	    assembly {
 	    	// get the 3rd chunk
@@ -675,7 +672,7 @@ contract DogeRelay {
 	}
 
 	// get the merkle root of '$blockHash'
-	function getMerkleRoot(uint blockHash) returns (uint) {
+	function getMerkleRoot(uint blockHash) private view returns (uint) {
     	uint pointer = ptr(myblocks[blockHash]._blockHeader);
     	uint chunk2;
     	uint chunk3;
@@ -688,7 +685,7 @@ contract DogeRelay {
 
 
 	// Bitcoin-way of hashing
-	function m_dblShaFlip(bytes dataBytes) returns (uint) {
+	function m_dblShaFlip(bytes dataBytes) private pure returns (uint) {
 	    return flip32Bytes(uint(sha256(sha256(dataBytes))));
 	}
 
@@ -696,7 +693,7 @@ contract DogeRelay {
 
 	// Bitcoin-way of computing the target from the 'bits' field of a blockheader
 	// based on http://www.righto.com/2014/02/bitcoin-mining-hard-way-algorithms.html//ref3
-	function targetFromBits(uint32 bits) pure returns (uint) {
+	function targetFromBits(uint32 bits) internal pure returns (uint) {
 	    uint exp = bits / 0x1000000;  // 2**24
 	    uint mant = bits & 0xffffff;
 	    return mant * 256**(exp - 3);
@@ -705,7 +702,7 @@ contract DogeRelay {
 
 
   // Bitcoin-way merkle parent of transaction hashes $tx1 and $tx2
-  function concatHash(uint tx1, uint tx2) pure returns (uint) {
+  function concatHash(uint tx1, uint tx2) internal pure returns (uint) {
     bytes memory concat = new bytes(64);
     uint tx1Flipped = flip32Bytes(tx1);
     uint tx2Flipped = flip32Bytes(tx2);
@@ -718,16 +715,16 @@ contract DogeRelay {
   }
 
 
-	function m_shiftRight(uint val, uint8 shift) returns (uint) {
+	function m_shiftRight(uint val, uint8 shift) private pure returns (uint) {
 	    return val / uint(2)**shift;
 	}
 	
-	function m_shiftLeft(uint val, uint8 shift) returns (uint) {
+	function m_shiftLeft(uint val, uint8 shift) private pure returns (uint) {
 	    return val * uint(2)**shift;
 	}
 
 	// bit length of '$val'
-	function m_bitLen(uint val) returns (uint8 length) {
+	function m_bitLen(uint val) private pure returns (uint8 length) {
 	  uint int_type = val;
 	  while (int_type > 0) {
 	    int_type = m_shiftRight(int_type, 1);
@@ -736,7 +733,7 @@ contract DogeRelay {
 	}
 
   // reverse 32 bytes given by '$b32'
-  function flip32Bytes(uint input) pure returns (uint) {
+  function flip32Bytes(uint input) internal pure returns (uint) {
     uint8 i = 0;
     // unrolling this would decrease gas usage, but would increase
     // the gas cost for code size by over 700K and exceed the PI million block gas limit
@@ -759,38 +756,38 @@ contract DogeRelay {
 	//
 
 	// block height is the first 8 bytes of _info
-	function m_setHeight(uint blockHash, uint64 blockHeight) {
+	function m_setHeight(uint blockHash, uint64 blockHeight) private {
 			uint info = myblocks[blockHash]._info;	    
 	    info = m_mwrite64(info, 0, blockHeight);
 	    myblocks[blockHash]._info = info;	
 	}
 
-	function m_getHeight(uint blockHash) returns (uint64) {
+	function m_getHeight(uint blockHash) internal view returns (uint64) {
 			return uint64(myblocks[blockHash]._info / BYTES_24);
 	}
 
 
 	// ibIndex is the index to self.internalBlock: it's the second 8 bytes of _info
-	function m_setIbIndex(uint blockHash, uint32 internalIndex) {
+	function m_setIbIndex(uint blockHash, uint32 internalIndex) private {
 			uint info = myblocks[blockHash]._info;	    
 			uint64 internalIndex64 = internalIndex;
 	    info = m_mwrite64(info, 8, internalIndex64);
 	    myblocks[blockHash]._info = info;	
 	 }
 
-	function m_getIbIndex(uint blockHash) returns (uint32) {
+	function m_getIbIndex(uint blockHash) private view returns (uint32) {
 			return uint32(myblocks[blockHash]._info * BYTES_8 / BYTES_24);
 	}
 
 
 	// score of the block is the last 16 bytes of _info
-	function m_setScore(uint blockHash, uint128 blockScore) {
+	function m_setScore(uint blockHash, uint128 blockScore) private {
 			uint info = myblocks[blockHash]._info;	    
 	    info = m_mwrite128(info, 16, blockScore);
 	    myblocks[blockHash]._info = info;	
 	}
 
-	function m_getScore(uint blockHash) returns (uint128) {
+	function m_getScore(uint blockHash) internal view returns (uint128) {
 				return uint128(myblocks[blockHash]._info * BYTES_16 / BYTES_16);
 	}
 

@@ -28,13 +28,13 @@ contract('DogeRelay', function(accounts) {
       return dr.getBlockHeader.call(block333001Hash);
     }).then(function(result) {
       assert.equal(result, block333001Header, "chain head header is not the expected one");
-      return dr.getPrevBlock.call(block333001Hash);
+      return dr.getPrevBlockPublic.call(block333001Hash);
     }).then(function(result) {
       assert.equal(formatHexUint32(result.toString(16)), remove0x(block333000Hash), "prev block hash is not the expected one");
-      return dr.m_getTimestamp.call(block333001Hash);
+      return dr.m_getTimestampPublic.call(block333001Hash);
     }).then(function(result) {
       assert.equal(result.toNumber(), 1417792088, "timestamp is not the expected one");
-      return dr.m_getBits.call(block333001Hash);
+      return dr.m_getBitsPublic.call(block333001Hash);
     }).then(function(result) {
       assert.equal(result.toNumber(), 0x181b7b74, "bits is not the expected one");
     });
