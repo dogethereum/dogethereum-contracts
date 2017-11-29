@@ -421,7 +421,7 @@ contract DogeRelay {
 
   // write $int64 to memory at $addrLoc
   // This is useful for writing 64bit ints inside one 32 byte word
-  function m_mwrite64(uint word, uint8 position, uint64 eightBytes) private returns (uint) {
+  function m_mwrite64(uint word, uint8 position, uint64 eightBytes) private pure returns (uint) {
     // Store uint in a struct wrapper because that is the only way to get a pointer to it
     UintWrapper memory uw = UintWrapper(word);
     uint pointer = ptr(uw);
@@ -442,7 +442,7 @@ contract DogeRelay {
 
   // write $int128 to memory at $addrLoc
   // This is useful for writing 128bit ints inside one 32 byte word
-  function m_mwrite128(uint word, uint8 position, uint128 sixteenBytes) private returns (uint) {
+  function m_mwrite128(uint word, uint8 position, uint128 sixteenBytes) private pure returns (uint) {
     // Store uint in a struct wrapper because that is the only way to get a pointer to it
     UintWrapper memory uw = UintWrapper(word);
     uint pointer = ptr(uw);
@@ -469,7 +469,7 @@ contract DogeRelay {
 
 	// writes fourBytes into word at position
 	// This is useful for writing 32bit ints inside one 32 byte word
-	function m_mwrite32(uint word, uint8 position, uint32 fourBytes) private returns (uint) {
+	function m_mwrite32(uint word, uint8 position, uint32 fourBytes) private pure returns (uint) {
     // Store uint in a struct wrapper because that is the only way to get a pointer to it
     UintWrapper memory uw = UintWrapper(word);
     uint pointer = ptr(uw);
@@ -484,7 +484,7 @@ contract DogeRelay {
 
 	// writes threeBytes into word at position
 	// This is useful for writing 24bit ints inside one 32 byte word
-	function m_mwrite24(uint word, uint8 position, uint24 threeBytes) private returns (uint) {
+	function m_mwrite24(uint word, uint8 position, uint24 threeBytes) private pure returns (uint) {
     // Store uint in a struct wrapper because that is the only way to get a pointer to it
     UintWrapper memory uw = UintWrapper(word);
     uint pointer = ptr(uw);
@@ -498,7 +498,7 @@ contract DogeRelay {
 
 	// writes twoBytes into word at position
 	// This is useful for writing 16bit ints inside one 32 byte word
-	function m_mwrite16(uint word, uint8 position, uint16 twoBytes) private returns (uint) {
+	function m_mwrite16(uint word, uint8 position, uint16 twoBytes) private pure returns (uint) {
     // Store uint in a struct wrapper because that is the only way to get a pointer to it
     UintWrapper memory uw = UintWrapper(word);
     uint pointer = ptr(uw);
