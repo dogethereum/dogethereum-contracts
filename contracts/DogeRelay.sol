@@ -51,31 +51,6 @@ contract DogeRelay {
   event VerifyTransaction(uint indexed txHash, uint indexed returnCode);
   event RelayTransaction(uint indexed txHash, uint indexed returnCode);
 
-  // UintWrapper
-  struct UintWrapper {
-      uint value;
-  }
-  // Returns a pointer to the supplied UintWrapper
-  function ptr(UintWrapper memory uw) private view returns (uint addr) {
-    assembly {
-      addr := uw
-    }
-  }  
-  // Returns a pointer to the supplied BlockInformation
-  function ptr(BlockInformation storage bi) internal constant returns (uint addr) {
-        assembly {
-            addr := bi_slot
-        }
-    }  
-  // Returns a pointer to the content of the supplied byte array in storage
-  function ptr(bytes storage byteArray) internal constant returns (uint addr) {
-      uint pointer;
-      assembly {
-        pointer := byteArray_slot
-      }
-      addr = uint(keccak256(bytes32(pointer)));
-    }  
-
 
   function DogeRelay() {
     // gasPriceAndChangeRecipientFee in incentive.se
@@ -104,7 +79,7 @@ contract DogeRelay {
   // error will happen when the first block divisible by 2016 is reached, because
   // difficulty computation requires looking up the 2016th parent, which will
   // NOT exist with setInitialParent(0, 0, 1) (only the 2015th parent exists)
-  function setInitialParent(uint blockHash, uint64 height, uint128 chainWork) returns (bool) {
+  function setInitialParent(uint blockHash, uint64 height, uint128 chainWork) public returns (bool) {
       // reuse highScore as the flag for whether setInitialParent() has already been called
       if (highScore != 0) {
           return false;     
@@ -145,7 +120,7 @@ contract DogeRelay {
 
   // store a Dogecoin block header that must be provided in bytes format 'blockHeaderBytes'
   // Callers must keep same signature since CALLDATALOAD is used to save gas.
-  function storeBlockHeader(bytes blockHeaderBytes, uint proposedBlockHash) returns (uint) {
+  function storeBlockHeader(bytes blockHeaderBytes, uint proposedBlockHash) public returns (uint) {
       uint hashPrevBlock;
       assembly {
         hashPrevBlock := calldataload(add(sload(OFFSET_ABI_slot),4)) // 4 is offset for hashPrevBlock
@@ -239,7 +214,7 @@ contract DogeRelay {
   // headersBytes are dogecoin block headers
   // hashesBytes are the hashes for those blocks
   // count is the number of headers sent
-  function bulkStoreHeaders(bytes headersBytes, bytes hashesBytes, uint16 count) returns (uint result) {
+  function bulkStoreHeaders(bytes headersBytes, bytes hashesBytes, uint16 count) public returns (uint result) {
     uint8 HEADER_SIZE = 80;
     uint8 HASH_SIZE = 32;
     uint32 headersOffset = 0;
@@ -276,7 +251,7 @@ contract DogeRelay {
   // the merkle proof is represented by 'txIndex', 'sibling', where:
   // - 'txIndex' is the index of the tx within the block
   // - 'sibling' are the merkle siblings of tx
-  function verifyTx(bytes txBytes, uint txIndex, uint[] sibling, uint txBlockHash) returns (uint) {
+  function verifyTx(bytes txBytes, uint txIndex, uint[] sibling, uint txBlockHash) public returns (uint) {
       uint txHash = m_dblShaFlip(txBytes);
       if (txBytes.length == 64) {  // todo: is check 32 also needed?
           VerifyTransaction(txHash, ERR_TX_64BYTE);
@@ -303,7 +278,7 @@ contract DogeRelay {
   // - 'txHash' is the hash of the tx
   // - 'txIndex' is the index of the tx within the block
   // - 'sibling' are the merkle siblings of tx
-  function helperVerifyHash__(uint256 txHash, uint txIndex, uint[] sibling, uint txBlockHash) returns (uint) {
+  function helperVerifyHash__(uint256 txHash, uint txIndex, uint[] sibling, uint txBlockHash) private returns (uint) {
       // TODO: implement when dealing with incentives
       // if (!feePaid(txBlockHash, m_getFeeAmount(txBlockHash))) {  // in incentive.se
       //    VerifyTransaction(txHash, ERR_BAD_FEE);
@@ -343,7 +318,7 @@ contract DogeRelay {
   // it may also have been returned by processTransaction(). callers should be
   // aware of the contract that they are relaying transactions to and
   // understand what that contract's processTransaction method returns.
-  function relayTx(bytes txBytes, uint txIndex, uint[] sibling, uint txBlockHash, TransactionProcessor targetContract) returns (uint) {
+  function relayTx(bytes txBytes, uint txIndex, uint[] sibling, uint txBlockHash, TransactionProcessor targetContract) public returns (uint) {
       uint txHash = verifyTx(txBytes, txIndex, sibling, txBlockHash);
       if (txHash != 0) {
           uint returnCode = targetContract.processTransaction(txBytes, txHash);
@@ -919,6 +894,33 @@ contract DogeRelay {
 	function m_getScore(uint blockHash) returns (uint128) {
 				return uint128(myblocks[blockHash]._info * BYTES_16 / BYTES_16);
 	}
+
+  // Util functions and wrappers to get pointers to memory and storage
+  struct UintWrapper {
+      uint value;
+  }
+  // Returns a pointer to the supplied UintWrapper
+  function ptr(UintWrapper memory uw) private view returns (uint addr) {
+    assembly {
+      addr := uw
+    }
+  }  
+  // Returns a pointer to the supplied BlockInformation
+  function ptr(BlockInformation storage bi) internal constant returns (uint addr) {
+      assembly {
+          addr := bi_slot
+      }
+  }  
+  // Returns a pointer to the content of the supplied byte array in storage
+  function ptr(bytes storage byteArray) internal constant returns (uint addr) {
+    uint pointer;
+    assembly {
+      pointer := byteArray_slot
+    }
+    addr = uint(keccak256(bytes32(pointer)));
+  }  
+
+
 
   // Constants
   
