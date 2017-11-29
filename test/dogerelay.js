@@ -1,4 +1,4 @@
-var DogeRelay = artifacts.require("./DogeRelay.sol");
+var DogeRelay = artifacts.require("./DogeRelayForTests.sol");
 
 
 contract('DogeRelay', function(accounts) {
@@ -47,7 +47,7 @@ contract('DogeRelay', function(accounts) {
   });
   it("bytesToBytes32", function() {
     return DogeRelay.deployed().then(function(instance) {      
-      return instance.bytesToBytes32.call("0x0102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f00"); 
+      return instance.bytesToBytes32Public.call("0x0102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f00"); 
     }).then(function(target) {
       assert.equal(target, "0x0102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f00", "converted bytes are not the expected ones");
     });

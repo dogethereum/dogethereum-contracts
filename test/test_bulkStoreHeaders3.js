@@ -1,4 +1,4 @@
-var DogeRelay = artifacts.require("./DogeRelay.sol");
+var DogeRelay = artifacts.require("./DogeRelayForTests.sol");
 var BitcoinProcessor = artifacts.require("./BitcoinProcessor.sol");
 var utils = require('./utils');
 

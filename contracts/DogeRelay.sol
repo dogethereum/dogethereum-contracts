@@ -365,7 +365,7 @@ contract DogeRelay {
 	// private (to prevent leeching)
 	// returns 1 if 'txBlockHash' is in the main chain, ie not a fork
 	// otherwise returns 0
-	function priv_inMainChain__(uint txBlockHash) private returns (bool) {
+	function priv_inMainChain__(uint txBlockHash) private view returns (bool) {
     require(msg.sender == address(this));
 
     uint txBlockHeight = m_getHeight(txBlockHash);
@@ -425,7 +425,7 @@ contract DogeRelay {
 
   // write $int64 to memory at $addrLoc
   // This is useful for writing 64bit ints inside one 32 byte word
-  function m_mwrite64(uint word, uint8 position, uint64 eightBytes) public constant returns (uint) {
+  function m_mwrite64(uint word, uint8 position, uint64 eightBytes) private returns (uint) {
     // Store uint in a struct wrapper because that is the only way to get a pointer to it
     UintWrapper memory uw = UintWrapper(word);
     uint pointer = ptr(uw);
@@ -446,7 +446,7 @@ contract DogeRelay {
 
   // write $int128 to memory at $addrLoc
   // This is useful for writing 128bit ints inside one 32 byte word
-  function m_mwrite128(uint word, uint8 position, uint128 sixteenBytes) public constant returns (uint) {
+  function m_mwrite128(uint word, uint8 position, uint128 sixteenBytes) private returns (uint) {
     // Store uint in a struct wrapper because that is the only way to get a pointer to it
     UintWrapper memory uw = UintWrapper(word);
     uint pointer = ptr(uw);
@@ -514,7 +514,8 @@ contract DogeRelay {
   }
 
 
-  function bytesToBytes32(bytes b) public pure returns (bytes32) {
+  // Should be private, made internal for testing
+  function bytesToBytes32(bytes b) internal pure returns (bytes32) {
       bytes32 out;
       for (uint i = 0; i < 32; i++) {
           out |= bytes32(b[i] & 0xFF) >> (i * 8);

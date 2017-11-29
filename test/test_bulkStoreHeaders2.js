@@ -1,6 +1,6 @@
 var fs = require('fs');
 var readline = require('readline');
-var DogeRelay = artifacts.require("./DogeRelay.sol");
+var DogeRelay = artifacts.require("./DogeRelayForTests.sol");
 
 
 contract('DogeRelay', function(accounts) {
