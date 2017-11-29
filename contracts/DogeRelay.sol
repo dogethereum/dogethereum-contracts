@@ -38,31 +38,44 @@ contract DogeRelay {
   }
   //BlockInformation[] myblocks = new BlockInformation[](2**256);
   // block hash => BlockInformation
-  mapping (uint => BlockInformation) myblocks;
+  mapping (uint => BlockInformation) private myblocks;
 
   // block with the highest score (aka the Tip of the blockchain)
-  uint heaviestBlock;
+  uint private heaviestBlock;
 
   // highest score among all blocks (so far)
-  uint highScore;
-
+  uint private highScore;
 
   event StoreHeader(uint blockHash, uint returnCode);
   event GetHeader(uint indexed blockHash, uint indexed returnCode);
   event VerifyTransaction(uint indexed txHash, uint indexed returnCode);
   event RelayTransaction(uint indexed txHash, uint indexed returnCode);
 
+  // UintWrapper
   struct UintWrapper {
       uint value;
   }
-    
-
   // Returns a pointer to the supplied UintWrapper
   function ptr(UintWrapper memory uw) private view returns (uint addr) {
     assembly {
       addr := uw
     }
   }  
+  // Returns a pointer to the supplied BlockInformation
+  function ptr(BlockInformation storage bi) internal constant returns (uint addr) {
+        assembly {
+            addr := bi_slot
+        }
+    }  
+  // Returns a pointer to the content of the supplied byte array in storage
+  function ptr(bytes storage byteArray) internal constant returns (uint addr) {
+      uint pointer;
+      assembly {
+        pointer := byteArray_slot
+      }
+      addr = uint(keccak256(bytes32(pointer)));
+    }  
+
 
   function DogeRelay() {
     // gasPriceAndChangeRecipientFee in incentive.se
@@ -734,23 +747,6 @@ contract DogeRelay {
 
       return compact | uint32(m_shiftLeft(nbytes, 24));
 	}
-
-
-  // Returns a pointer to the supplied BlockInformation
-  function ptr(BlockInformation storage bi) internal constant returns (uint addr) {
-        assembly {
-            addr := bi_slot
-        }
-    }  
-
-  function ptr(bytes storage byteArray) internal constant returns (uint addr) {
-      uint pointer;
-      assembly {
-        pointer := byteArray_slot
-      }
-      addr = uint(keccak256(bytes32(pointer)));
-    }  
-
 
 
 	// get the parent of '$blockHash'
