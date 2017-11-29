@@ -10,10 +10,20 @@ contract DogeRelayForTests is DogeRelay {
     return sliceArray(original, offset, endIndex);
   }
 
-	// return the hash of the heaviest block aka the Tip
-	function getBestBlockHash() public view returns (uint) {
-	    return bestBlockHash;
-	}
+  // return the hash of the heaviest block aka the Tip
+  function getBestBlockHash() public view returns (uint) {
+    return bestBlockHash;
+  }
 
+  // return the height of the best block aka the Tip
+  function getBestBlockHeight() public view returns (uint) {
+    return m_getHeight(bestBlockHash);
+  }
+
+  // return the chainWork of the Tip
+  // http://bitcoin.stackexchange.com/questions/26869/what-is-chainwork
+  function getChainWork() public view returns (uint128) {
+	return m_getScore(bestBlockHash);
+  }
 
 }

@@ -45,7 +45,7 @@ module.exports = {
 	        });
 	      }
 	    ).then(function(result) {
-	      return dr.getLastBlockHeight.call();
+	      return dr.getBestBlockHeight.call();
 	    }).then(
 	      function(result) {
 	        assert.equal(result.toNumber(), startBlockNum + numBlock - 1, "latest block number is not the expected one"); // # +1 since setInitialParent was called with imaginary block

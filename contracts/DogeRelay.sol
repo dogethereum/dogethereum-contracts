@@ -58,10 +58,6 @@ contract DogeRelay {
     // self.gasPriceAndChangeRecipientFee = 50 * 10**9 * BYTES_16 // 50 shannon and left-align
   }
 
-
-
-
-
   // setInitialParent can only be called once and allows testing of storing
   // arbitrary headers and verifying/relaying transactions,
   // say from block 1.900.000, instead of genesis block
@@ -73,7 +69,7 @@ contract DogeRelay {
   //
   // Note: If used to store the imaginary block before Dogecoin's
   // genesis, then it should be called as setInitialParent(0, 0, 1) and
-  // means that getLastBlockHeight() and getChainWork() will be
+  // means that getBestBlockHeight() and getChainWork() will be
   // 1 more than the usual: eg Dogecoin's genesis has height 1 instead of 0
   // setInitialParent(0, 0, 1) is only for testing purposes and a TransactionFailed
   // error will happen when the first block divisible by 2016 is reached, because
@@ -534,20 +530,6 @@ contract DogeRelay {
     return result;
   }
 
-	// return the height of the heaviest block aka the Tip
-	function getLastBlockHeight() returns (uint) {
-	    return m_lastBlockHeight();
-	}
-
-
-	// return the chainWork of the Tip
-	// http://bitcoin.stackexchange.com/questions/26869/what-is-chainwork
-	function getChainWork() returns (uint128) {
-	    return m_getScore(bestBlockHash);
-	}
-
-
-
 	// return the difference between the chainWork at
 	// the blockchain Tip and its 10th ancestor
 	//
@@ -770,11 +752,6 @@ contract DogeRelay {
 	    	chunk3 := sload(add(pointer,2))
 	    }
 	    return flip32Bytes(chunk2 * BYTES_4 + chunk3/BYTES_28);
-	}
-
-
-	function m_lastBlockHeight() returns (uint) {
-	    return m_getHeight(bestBlockHash);
 	}
 
 
