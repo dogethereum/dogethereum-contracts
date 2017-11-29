@@ -12,12 +12,12 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
     Set.Data dogeTxHashesAlreadyProcessed;
     uint256 minimumLockTxValue;
 
-    function DogeToken(address trustedBTCRelay) {
+    function DogeToken(address trustedBTCRelay) public {
         _trustedBTCRelay = trustedBTCRelay;
         minimumLockTxValue = 100000000;
     }
 
-    function processTransaction(bytes txn, uint256 txHash) returns (uint) {
+    function processTransaction(bytes txn, uint256 txHash) public returns (uint) {
         address harcodedDestinationAddress = 0xcedacadacafe;
 
         log0("processTransaction called");
@@ -37,11 +37,11 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
     }
 
 
-    function registerDogeTransaction(DogeTransaction tx, DogePartialMerkleTree pmt, uint blockHeight) private {
+    function registerDogeTransaction(DogeTransaction dogeTx, DogePartialMerkleTree pmt, uint blockHeight) private {
         // Validate tx is valid and has enough confirmations, then assigns tokens to sender of the doge tx
     }
 
-    function releaseDoge(uint256 _value) {
+    function releaseDoge(uint256 _value) public {
         balances[msg.sender] -= _value;
         // Send the tokens back to the doge blockchain. 
     }

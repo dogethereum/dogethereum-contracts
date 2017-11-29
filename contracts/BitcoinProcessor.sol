@@ -23,15 +23,15 @@ contract BitcoinProcessor is TransactionProcessor {
     //
     // this exact function signature is required as it has to match
     // the signature specified in BTCRelay (otherwise BTCRelay will not call it)
-    function processTransaction(bytes txn, uint256 txHash) public returns (uint) {
+    function processTransaction(bytes bitcoinTx, uint256 txHash) public returns (uint) {
         log0("processTransaction called");
 
-        // only allow trustedBTCRelay, otherwise anyone can provide a fake txn
+        // only allow trustedBTCRelay, otherwise anyone can provide a fake bitcoinTx
         if (msg.sender == _trustedBTCRelay) {
             log1("processTransaction txHash, ", bytes32(txHash));
             ethBlock = block.number;
             lastTxHash = txHash;
-            // parse & do whatever with txn
+            // parse & do whatever with bitcoinTx
             // For example, you should probably check if txHash has already
             // been processed, to prevent replay attacks.
             return 1;

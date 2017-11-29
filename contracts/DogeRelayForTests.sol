@@ -33,7 +33,7 @@ contract DogeRelayForTests is DogeRelay {
   // this is not needed by the relay itself, but is provided in
   // case some contract wants to use the chainWork or Bitcoin network
   // difficulty (which can be derived) as a data feed for some purpose
-  function getAverageChainWork() public returns (uint) {
+  function getAverageChainWork() public view returns (uint) {
       uint blockHash = bestBlockHash;
 
       uint128 chainWorkTip = m_getScore(blockHash);
