@@ -2,7 +2,7 @@ var DogeRelay = artifacts.require("./DogeRelayForTests.sol");
 
 
 contract('DogeRelay', function(accounts) {
-  it("setInitialParent, storeBlockHeader, getBlockchainHeadHash, getBlockHeader, getPrevBlock, m_getTimestamp, m_getBits", function() {
+  it("setInitialParent, storeBlockHeader, getBestBlockHash, getBlockHeader, getPrevBlock, m_getTimestamp, m_getBits", function() {
     var dr;    
     var block333000Hash = "0x000000000000000008360c20a2ceff91cc8c4f357932377f48659b37bb86c759";
     var block333001Hash = "0x000000000000000010e318d0c61da0b84246481d9cc097fda9327fe90b1538c1";
@@ -22,7 +22,7 @@ contract('DogeRelay', function(accounts) {
       return dr.storeBlockHeader(block333001Header, block333001Hash, {from: accounts[0]}); 
     }).then(function(result) {
       //assert res['output'] == 300000
-      return dr.getBlockchainHeadHash.call();
+      return dr.getBestBlockHash.call();
     }).then(function(result) {
       assert.equal(formatHexUint32(result.toString(16)), remove0x(block333001Hash), "chain head hash is not the expected one");
       return dr.getBlockHeader.call(block333001Hash);

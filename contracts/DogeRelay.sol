@@ -40,8 +40,8 @@ contract DogeRelay {
   // block hash => BlockInformation
   mapping (uint => BlockInformation) private myblocks;
 
-  // block with the highest score (aka the Tip of the blockchain)
-  uint private heaviestBlock;
+  // hash of the block with the highest score (aka the Tip of the blockchain)
+  uint internal bestBlockHash;
 
   // highest score among all blocks (so far)
   uint private highScore;
@@ -89,7 +89,7 @@ contract DogeRelay {
 
       // TODO: check height > 145000, that is when Digishield was activated. The problem is that is only for production
 
-      heaviestBlock = blockHash;
+      bestBlockHash = blockHash;
 
       // _height cannot be set to -1 because inMainChain() assumes that
       // a block with height 0 does NOT exist (thus we cannot allow the
@@ -199,7 +199,7 @@ contract DogeRelay {
       // equality allows block with same score to become an (alternate) Tip, so that
       // when an (existing) Tip becomes stale, the chain can continue with the alternate Tip
       if (scoreBlock >= highScore) {
-          heaviestBlock = blockHash;
+          bestBlockHash = blockHash;
           highScore = scoreBlock;
       }
 
@@ -387,12 +387,12 @@ contract DogeRelay {
 	// callers must ensure 2 things:
 	// * blockHeight is greater than 0 (otherwise infinite loop since
 	// minimum height is 1)
-	// * blockHeight is less than the height of heaviestBlock, otherwise the
-	// heaviestBlock is returned
+	// * blockHeight is less than the height of bestBlockHash, otherwise the
+	// bestBlockHash is returned
 	function priv_fastGetBlockHash__(uint blockHeight) private view returns (uint) {
     require(msg.sender == address(this));
 
-    uint blockHash = heaviestBlock;
+    uint blockHash = bestBlockHash;
     uint8 anc_index = NUM_ANCESTOR_DEPTHS - 1;
 
     while (m_getHeight(blockHash) > blockHeight) {
@@ -524,7 +524,8 @@ contract DogeRelay {
   }
 
 
-  function sliceArray(bytes memory original, uint32 offset, uint32 endIndex) internal returns (bytes) {
+  // Should be private, made internal for testing
+  function sliceArray(bytes memory original, uint32 offset, uint32 endIndex) internal pure returns (bytes) {
     bytes memory result = new bytes(endIndex-offset);
     //bytes storage result;
     for (uint i = offset; i < endIndex; i++) {
@@ -532,18 +533,6 @@ contract DogeRelay {
     }
     return result;
   }
-
-  function pubSliceArray(bytes original, uint32 offset, uint32 endIndex) returns (bytes result) {
-    return sliceArray(original, offset, endIndex);
-  }
-
-
-
-	// return the hash of the heaviest block aka the Tip
-	function getBlockchainHeadHash() returns (uint) {
-	    return heaviestBlock;
-	}
-
 
 	// return the height of the heaviest block aka the Tip
 	function getLastBlockHeight() returns (uint) {
@@ -554,7 +543,7 @@ contract DogeRelay {
 	// return the chainWork of the Tip
 	// http://bitcoin.stackexchange.com/questions/26869/what-is-chainwork
 	function getChainWork() returns (uint128) {
-	    return m_getScore(heaviestBlock);
+	    return m_getScore(bestBlockHash);
 	}
 
 
@@ -566,7 +555,7 @@ contract DogeRelay {
 	// case some contract wants to use the chainWork or Bitcoin network
 	// difficulty (which can be derived) as a data feed for some purpose
 	function getAverageChainWork() returns (uint) {
-	    uint blockHash = heaviestBlock;
+	    uint blockHash = bestBlockHash;
 
 	    uint128 chainWorkTip = m_getScore(blockHash);
 
@@ -618,12 +607,12 @@ contract DogeRelay {
 
 
 
-	// returns 1 if the 'txBlockHash' is within 6 blocks of self.heaviestBlock
+	// returns 1 if the 'txBlockHash' is within 6 blocks of self.bestBlockHash
 	// otherwise returns 0.
 	// note: return value of 0 does NOT mean 'txBlockHash' has more than 6
 	// confirmations; a non-existent 'txBlockHash' will lead to a return value of 0
 	function within6Confirms(uint txBlockHash) returns (bool) {
-	    uint blockHash = heaviestBlock;
+	    uint blockHash = bestBlockHash;
 	    uint8 i = 0;
 	    while (i < 6) {
 	        if (txBlockHash == blockHash) {
@@ -785,7 +774,7 @@ contract DogeRelay {
 
 
 	function m_lastBlockHeight() returns (uint) {
-	    return m_getHeight(heaviestBlock);
+	    return m_getHeight(bestBlockHash);
 	}
 
 
