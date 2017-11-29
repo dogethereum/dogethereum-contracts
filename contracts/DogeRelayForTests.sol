@@ -23,7 +23,7 @@ contract DogeRelayForTests is DogeRelay {
   // return the chainWork of the Tip
   // http://bitcoin.stackexchange.com/questions/26869/what-is-chainwork
   function getChainWork() public view returns (uint128) {
-  	return m_getScore(bestBlockHash);
+  return m_getScore(bestBlockHash);
   }
 
 
@@ -48,6 +48,19 @@ contract DogeRelayForTests is DogeRelay {
 
       return (chainWorkTip - chainWork10Ancestors);
   }
+
+	// returns the 80-byte header (zeros for a header that does not exist) when
+	// sufficient payment is provided.  If payment is insufficient, returns 1-byte of zero.
+	function getBlockHeader(uint blockHash) public returns (bytes) {
+	    // TODO: incentives
+	    // if (feePaid(blockHash, m_getFeeAmount(blockHash))) {  // in incentive.se
+	    //     GetHeader (blockHash, 0);
+	    //    return(text("\x00"):str);
+	    // }
+	    GetHeader(blockHash, 1);
+	    return myblocks[blockHash]._blockHeader;
+	}
+
 
 
 }

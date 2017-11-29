@@ -38,7 +38,7 @@ contract DogeRelay {
   }
   //BlockInformation[] myblocks = new BlockInformation[](2**256);
   // block hash => BlockInformation
-  mapping (uint => BlockInformation) private myblocks;
+  mapping (uint => BlockInformation) internal myblocks;
 
   // hash of the block with the highest score (aka the Tip of the blockchain)
   uint internal bestBlockHash;
@@ -530,13 +530,11 @@ contract DogeRelay {
     return result;
   }
 
-
-
 	// For a valid proof, returns the root of the Merkle tree.
 	// Otherwise the return value is meaningless if the proof is invalid.
 	// [see documentation for verifyTx() for the merkle proof
 	// format of 'txHash', 'txIndex', 'sibling' ]
-	function computeMerkle(uint txHash, uint txIndex, uint[] sibling) returns (uint) {
+	function computeMerkle(uint txHash, uint txIndex, uint[] sibling) private pure returns (uint) {
 	    uint resultHash = txHash;
 	    uint proofLen = sibling.length;
 	    uint i = 0;
@@ -565,13 +563,11 @@ contract DogeRelay {
 	}    
 
 
-
-
 	// returns 1 if the 'txBlockHash' is within 6 blocks of self.bestBlockHash
 	// otherwise returns 0.
 	// note: return value of 0 does NOT mean 'txBlockHash' has more than 6
 	// confirmations; a non-existent 'txBlockHash' will lead to a return value of 0
-	function within6Confirms(uint txBlockHash) returns (bool) {
+	function within6Confirms(uint txBlockHash) private view returns (bool) {
 	    uint blockHash = bestBlockHash;
 	    uint8 i = 0;
 	    while (i < 6) {
@@ -584,48 +580,6 @@ contract DogeRelay {
 	    }
 	    return false;
 	}
-
-
-	// returns the 80-byte header (zeros for a header that does not exist) when
-	// sufficient payment is provided.  If payment is insufficient, returns 1-byte of zero.
-	function getBlockHeader(uint blockHash) returns (bytes) {
-	    // TODO: incentives
-	    // if (feePaid(blockHash, m_getFeeAmount(blockHash))) {  // in incentive.se
-	    //     GetHeader (blockHash, 0);
-	    //    return(text("\x00"):str);
-	    // }
-
-	    GetHeader(blockHash, 1);
-	    return myblocks[blockHash]._blockHeader;
-	}
-
-
-
-
-	// The getBlockHash(blockHeight) method has been removed because it could be
-	// used by a leecher contract (test/btcrelay_leech.se for sample) to
-	// trustlessly provide the BTC Relay service, without rewarding the
-	// submitters of block headers, who provide a critical service.
-	// To iterate through the "blockchain" of BTC Relay, getBlockchainHead() can
-	// be used with getBlockHeader().  Once a header is obtained, its 4th byte
-	// contains the hash of the previous block, which can then be passed again
-	// to getBlockHeader().  This is how another contract can access BTC Relay's
-	// blockchain trustlessly, but each getBlockHeader() invocation potentially
-	// requires payment.
-	// As usual, UIs and eth_call with getBlockHeader() will not need any fees at all
-	// (even though sufficient 'value', by using getFeeAmount(blockHash),
-	// must still be provided).
-
-
-	// TODO is an API like getInitialParent() needed? it could be obtained using
-	// something like web3.eth.getStorageAt using index 0
-
-	//
-	// macros
-	// (when running tests, ensure the testing macro overrides have the
-	// same signatures as the actual macros, otherwise tests will fail with
-	// an obscure message such as tester.py:201: TransactionFailed)
-	//
 
 
 	function m_difficultyShouldBeAdjusted(uint blockHeight) returns (bool) {
@@ -751,7 +705,7 @@ contract DogeRelay {
 
 
   // Bitcoin-way merkle parent of transaction hashes $tx1 and $tx2
-  function concatHash(uint tx1, uint tx2) returns (uint) {
+  function concatHash(uint tx1, uint tx2) pure returns (uint) {
     bytes memory concat = new bytes(64);
     uint tx1Flipped = flip32Bytes(tx1);
     uint tx2Flipped = flip32Bytes(tx2);
@@ -782,7 +736,7 @@ contract DogeRelay {
 	}
 
   // reverse 32 bytes given by '$b32'
-  function flip32Bytes(uint input) returns (uint) {
+  function flip32Bytes(uint input) pure returns (uint) {
     uint8 i = 0;
     // unrolling this would decrease gas usage, but would increase
     // the gas cost for code size by over 700K and exceed the PI million block gas limit
@@ -845,19 +799,19 @@ contract DogeRelay {
       uint value;
   }
   // Returns a pointer to the supplied UintWrapper
-  function ptr(UintWrapper memory uw) private view returns (uint addr) {
+  function ptr(UintWrapper memory uw) private pure returns (uint addr) {
     assembly {
       addr := uw
     }
   }  
   // Returns a pointer to the supplied BlockInformation
-  function ptr(BlockInformation storage bi) internal constant returns (uint addr) {
+  function ptr(BlockInformation storage bi) private view returns (uint addr) {
       assembly {
           addr := bi_slot
       }
   }  
   // Returns a pointer to the content of the supplied byte array in storage
-  function ptr(bytes storage byteArray) internal constant returns (uint addr) {
+  function ptr(bytes storage byteArray) private view returns (uint addr) {
     uint pointer;
     assembly {
       pointer := byteArray_slot
