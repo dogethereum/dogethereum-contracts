@@ -20,7 +20,7 @@ contract DogeRelay {
     uint32 private ibIndex;
 
     // a Bitcoin block (header) is stored as:
-    // - _blockHeader 80 bytes
+    // - _blockHeader 80 bytes + AuxPow (merge mining field)
     // - _info who's 32 bytes are comprised of "_height" 8bytes, "_ibIndex" 8bytes, "_score" 16bytes
     // -   "_height" is 1 more than the typical Bitcoin term height/blocknumber [see setInitialParent()]
     // -   "_ibIndex" is the block's index to internalBlock (see btcChain)
@@ -148,11 +148,13 @@ contract DogeRelay {
         uint wordWithBits;
         uint32 bits;
         assembly {
-            wordWithBits := calldataload(add(sload(OFFSET_ABI_slot),72))  // 72 is offset for 'bits'
+            // "bits" field starts at position 72. Its size is 4 bytes.
+            // Read 32 bytes starting at position 72 from blockHeaderBytes. 
+            wordWithBits := calldataload(add(sload(OFFSET_ABI_slot),72))  
+            // Extract the 4 first bytes of wordWithBits
             bits := add( byte(0, wordWithBits) , add( mul(byte(1, wordWithBits),sload(BYTES_1_slot)) , add( mul(byte(2, wordWithBits),sload(BYTES_2_slot)) , mul(byte(3, wordWithBits),sload(BYTES_3_slot)) ) ) )
         }
         uint target = targetFromBits(bits);
-
         // we only check the target and do not do other validation (eg timestamp) to save gas
         if (blockHash < 0 || blockHash > target) {
             StoreHeader (blockHash, ERR_PROOF_OF_WORK);
