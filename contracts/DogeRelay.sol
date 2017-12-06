@@ -118,11 +118,14 @@ contract DogeRelay {
         // Code here should call the Scrypt validator contract to make sure the supplied hash of the block is correct
         // If the block is merge mined, there are 2 Scrypts functions to execute, the one that checks PoW of the litecoin block
         // and the one that checks the block hash
-        uint blockHash = m_dblShaFlip(blockHeaderBytes);
-        if (blockHash != proposedBlockHash) {
-            StoreHeader(blockHash, ERR_BLOCK_HASH_DOES_NOT_MATCHES_CALCULATED_ONE);
-            return 0;
-        }
+        
+        uint blockHash = proposedBlockHash;
+        // Comment out PoW validation until we implement doge specific code
+        //uint blockHash = m_dblShaFlip(blockHeaderBytes);
+        //if (blockHash != proposedBlockHash) {
+        //    StoreHeader(blockHash, ERR_BLOCK_HASH_DOES_NOT_MATCHES_CALCULATED_ONE);
+        //    return 0;
+        //}
 
         uint hashPrevBlock;
         assembly {
@@ -175,10 +178,11 @@ contract DogeRelay {
             uint32 newBits = m_computeNewBits(m_getTimestamp(hashPrevBlock), 
                                               m_getTimestamp(priv_fastGetBlockHash__(blockHeight - DIFFICULTY_ADJUSTMENT_INTERVAL)),
                                               targetFromBits(prevBits));
-            if (bits != newBits && newBits != 0) {  // newBits != 0 to allow first header
-                StoreHeader(blockHash, ERR_RETARGET);
-                return 0;
-            }
+            // Comment out difficulty adjustment verification until we implement doge algorithm
+            //if (bits != newBits && newBits != 0) {  // newBits != 0 to allow first header
+            //    StoreHeader(blockHash, ERR_RETARGET);
+            //    return 0;
+            //}
         }        
 
         m_saveAncestors(blockHash, hashPrevBlock);  // increments ibIndex
