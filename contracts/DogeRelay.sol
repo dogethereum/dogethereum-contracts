@@ -120,7 +120,7 @@ contract DogeRelay {
         // and the one that checks the block hash
         
         uint blockHash = proposedBlockHash;
-        // Comment out PoW validation until we implement doge specific code
+        // Comment out Doge header hash validation until we implement doge specific code
         //uint blockHash = m_dblShaFlip(blockHeaderBytes);
         //if (blockHash != proposedBlockHash) {
         //    StoreHeader(blockHash, ERR_BLOCK_HASH_DOES_NOT_MATCHES_CALCULATED_ONE);
@@ -156,10 +156,11 @@ contract DogeRelay {
         }
         uint target = targetFromBits(bits);
         // we only check the target and do not do other validation (eg timestamp) to save gas
-        if (blockHash < 0 || blockHash > target) {
-            StoreHeader (blockHash, ERR_PROOF_OF_WORK);
-            return 0;
-        }
+        // Comment out PoW validation until we implement doge specific code
+        //if (blockHash < 0 || blockHash > target) {
+        //    StoreHeader (blockHash, ERR_PROOF_OF_WORK);
+        //    return 0;
+        //}
 
 
         uint blockHeight = 1 + m_getHeight(hashPrevBlock);
