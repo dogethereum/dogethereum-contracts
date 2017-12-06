@@ -114,12 +114,6 @@ contract DogeRelay {
     // store a Dogecoin block header that must be provided in bytes format 'blockHeaderBytes'
     // Callers must keep same signature since CALLDATALOAD is used to save gas.
     function storeBlockHeader(bytes blockHeaderBytes, uint proposedBlockHash) public returns (uint) {
-        uint hashPrevBlock;
-        assembly {
-            hashPrevBlock := calldataload(add(sload(OFFSET_ABI_slot),4)) // 4 is offset for hashPrevBlock
-        }
-        hashPrevBlock = flip32Bytes(hashPrevBlock);  
-
         // blockHash should be a function parameter in dogecoin because the hash can not be calculated onchain.
         // Code here should call the Scrypt validator contract to make sure the supplied hash of the block is correct
         // If the block is merge mined, there are 2 Scrypts functions to execute, the one that checks PoW of the litecoin block
@@ -129,6 +123,12 @@ contract DogeRelay {
             StoreHeader(blockHash, ERR_BLOCK_HASH_DOES_NOT_MATCHES_CALCULATED_ONE);
             return 0;
         }
+
+        uint hashPrevBlock;
+        assembly {
+            hashPrevBlock := calldataload(add(sload(OFFSET_ABI_slot),4)) // 4 is offset for hashPrevBlock
+        }
+        hashPrevBlock = flip32Bytes(hashPrevBlock);  
 
         uint128 scorePrevBlock = m_getScore(hashPrevBlock);
         if (scorePrevBlock == 0) {
@@ -460,7 +460,7 @@ contract DogeRelay {
             mstore8(add(pointer, add(position,  13)), byte(29, sixteenBytes))
             mstore8(add(pointer, add(position,  14)), byte(30, sixteenBytes))
             mstore8(add(pointer, add(position,  15)), byte(31, sixteenBytes))
-        ß}
+        }
         return uw.value;
     }
 
