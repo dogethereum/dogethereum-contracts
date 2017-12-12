@@ -1,7 +1,14 @@
-pragma solidity ^0.4.15;
+pragma solidity ^0.4.19;
+//pragma experimental ABIEncoderV2;
+
 import "./DogeRelay.sol";
 
 contract DogeRelayForTests is DogeRelay {
+
+    function bytesToUint32Public(bytes memory input) public pure returns (uint32 result) {
+        return bytesToUint32(input);
+    }
+
     function bytesToBytes32Public(bytes b) public pure returns (bytes32) {
         return bytesToBytes32(b);
     }

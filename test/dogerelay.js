@@ -52,6 +52,13 @@ contract('DogeRelay', function(accounts) {
       assert.equal(target, "0x0102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f00", "converted bytes are not the expected ones");
     });
   });
+  it("bytesToUint32", function() {
+    return DogeRelay.deployed().then(function(instance) {      
+      return instance.bytesToUint32Public.call("0x01020304"); 
+    }).then(function(target) {
+      assert.equal(target.toNumber(), 16909060, "converted bytes are not the expected ones");
+    });
+  });
 
 });
 

@@ -1,4 +1,4 @@
-pragma solidity ^0.4.15;
+pragma solidity ^0.4.19;
 //pragma experimental ABIEncoderV2;
 
 import "./TransactionProcessor.sol";
@@ -43,10 +43,11 @@ contract DogeRelay {
     // highest score among all blocks (so far)
     uint private highScore;
 
+    // TODO: Make event parameters indexed so we can register filters on them
     event StoreHeader(uint blockHash, uint returnCode);
-    event GetHeader(uint indexed blockHash, uint indexed returnCode);
-    event VerifyTransaction(uint indexed txHash, uint indexed returnCode);
-    event RelayTransaction(uint indexed txHash, uint indexed returnCode);
+    event GetHeader(uint blockHash, uint returnCode);
+    event VerifyTransaction(uint txHash, uint returnCode);
+    event RelayTransaction(uint txHash, uint returnCode);
 
 
     function DogeRelay() public {
@@ -132,6 +133,7 @@ contract DogeRelay {
             hashPrevBlock := calldataload(add(sload(OFFSET_ABI_slot),4)) // 4 is offset for hashPrevBlock
         }
         hashPrevBlock = flip32Bytes(hashPrevBlock);  
+        //log0(bytes32(hashPrevBlock));
 
         uint128 scorePrevBlock = m_getScore(hashPrevBlock);
         if (scorePrevBlock == 0) {
@@ -165,7 +167,7 @@ contract DogeRelay {
 
         uint blockHeight = 1 + m_getHeight(hashPrevBlock);
         uint32 prevBits = m_getBits(hashPrevBlock);
-        if (!m_difficultyShouldBeAdjusted(blockHeight) || ibIndex == 1) {
+        if (!m_difficultyShouldBeAdjusted(blockHeight) || ibIndex == 0) {
             // since blockHeight is 1 more than blockNumber; OR clause is special case for 1st header
             // we need to check prevBits isn't 0 otherwise the 1st header
             // will always be rejected (since prevBits doesn't exist for the initial parent)
@@ -193,7 +195,14 @@ contract DogeRelay {
         myblocks[blockHash]._blockHeader = blockHeaderBytes;
 
         // https://en.bitcoin.it/wiki/Difficulty
-        uint128 scoreBlock = scorePrevBlock + uint128 (0x00000000FFFF0000000000000000000000000000000000000000000000000000 / target);
+        // Min difficulty for bitcoin is 0x1d00ffff
+        //uint128 scoreBlock = scorePrevBlock + uint128 (0x00000000FFFF0000000000000000000000000000000000000000000000000000 / target);
+        // Min difficulty for dogecoin is 0x1e0fffff
+        uint128 scoreBlock = scorePrevBlock + uint128 (0x00000FFFFF000000000000000000000000000000000000000000000000000000 / target);
+        //log2(bytes32(scoreBlock), bytes32(bits), bytes32(target));
+        // bitcoinj (so libdohj, dogecoin java implemntation) uses 2**256 as a dividend. 
+        // Investigate: May dogerelay best block be different than libdohj best block in some border cases?
+        // Does libdohj matches dogecoin core?
         m_setScore(blockHash, scoreBlock);
 
         // equality allows block with same score to become an (alternate) Tip, so that
@@ -211,25 +220,33 @@ contract DogeRelay {
 
     // store a number of blockheaders
     // Return latest's block height
-    // headersBytes are dogecoin block headers
+    // headersBytes are dogecoin block headers. 
+    //              Each header is encoded as: 
+    //              - header size (4 bytes, big-endian representation)
+    //              - the header (size is variable).
     // hashesBytes are the hashes for those blocks
     // count is the number of headers sent
     function bulkStoreHeaders(bytes headersBytes, bytes hashesBytes, uint16 count) public returns (uint result) {
-        uint8 HEADER_SIZE = 80;
+        //uint8 HEADER_SIZE = 80;
         uint8 HASH_SIZE = 32;
         uint32 headersOffset = 0;
-        uint32 headersEndIndex = HEADER_SIZE;
+        uint32 headersEndIndex = 4;
         uint32 hashesOffset = 0;
         uint32 hashesEndIndex = HASH_SIZE;
         uint16 i = 0;
         while (i < count) {
+            bytes memory currHeaderLengthBytes = sliceArray(headersBytes, headersOffset, headersEndIndex);
+            uint32 currHeaderLength = bytesToUint32(currHeaderLengthBytes);
+            headersOffset += 4;
+            headersEndIndex += currHeaderLength;
+            //log2(bytes32(currHeaderLength), bytes32(headersOffset), bytes32(headersEndIndex));
             bytes memory currHeader = sliceArray(headersBytes, headersOffset, headersEndIndex);
             bytes memory currHash = sliceArray(hashesBytes, hashesOffset, hashesEndIndex);
             uint currHashUint = uint(bytesToBytes32(currHash));
-            log2(bytes32(currHashUint), bytes32(hashesOffset), bytes32(hashesEndIndex));
+            //log2(bytes32(currHashUint), bytes32(hashesOffset), bytes32(hashesEndIndex));
             result = this.storeBlockHeader(currHeader, currHashUint);
-            headersOffset += HEADER_SIZE;
-            headersEndIndex += HEADER_SIZE;
+            headersOffset += currHeaderLength;
+            headersEndIndex += 4;
             hashesOffset += HASH_SIZE;
             hashesEndIndex += HASH_SIZE;
             i += 1;
@@ -237,10 +254,15 @@ contract DogeRelay {
 
         // If bytes[] function parameter would work
         //for (uint i = 0; i < headersBytes.length; i++) {
-        //      result = storeBlockHeader(headersBytes[i]);
+        //      result = storeBlockHeader(headers[i], hashes[i]);
         //}
     }
 
+    // Converts a bytes of size 4 to uint32
+    // Eg for input [0x01, 0x02, 0x03 0x04] returns 0x01020304
+    function bytesToUint32(bytes memory input) internal pure returns (uint32 result) {
+        result = uint32(input[0])*(2**24) + uint32(input[1])*(2**16) + uint32(input[2])*(2**8) + uint32(input[3]);
+    }
 
 
     // Returns the hash of tx (raw bytes) if the tx is in the block given by 'txBlockHash'
@@ -825,8 +847,15 @@ contract DogeRelay {
     // Constants
     
     // for verifying Bitcoin difficulty
-    uint constant DIFFICULTY_ADJUSTMENT_INTERVAL = 2016;  // Bitcoin adjusts every 2 weeks
-    uint constant TARGET_TIMESPAN = 14 * 24 * 60 * 60;  // 2 weeks
+    // uint constant DIFFICULTY_ADJUSTMENT_INTERVAL = 2016;  // Bitcoin adjusts every 2 weeks
+    // uint constant TARGET_TIMESPAN = 14 * 24 * 60 * 60;  // 2 weeks
+    // uint constant TARGET_TIMESPAN_DIV_4 = TARGET_TIMESPAN / 4;
+    // uint constant TARGET_TIMESPAN_MUL_4 = TARGET_TIMESPAN * 4;
+    // uint constant UNROUNDED_MAX_TARGET = 2**224 - 1;  // different from (2**16-1)*2**208 http =//bitcoin.stackexchange.com/questions/13803/how/ exactly-was-the-original-coefficient-for-difficulty-determined
+
+    // for verifying Dogecoin difficulty
+    uint constant DIFFICULTY_ADJUSTMENT_INTERVAL = 1;  // Bitcoin adjusts every block
+    uint constant TARGET_TIMESPAN =  60;  // 1 minute
     uint constant TARGET_TIMESPAN_DIV_4 = TARGET_TIMESPAN / 4;
     uint constant TARGET_TIMESPAN_MUL_4 = TARGET_TIMESPAN * 4;
     uint constant UNROUNDED_MAX_TARGET = 2**224 - 1;  // different from (2**16-1)*2**208 http =//bitcoin.stackexchange.com/questions/13803/how/ exactly-was-the-original-coefficient-for-difficulty-determined

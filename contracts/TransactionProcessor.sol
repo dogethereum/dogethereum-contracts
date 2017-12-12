@@ -1,4 +1,4 @@
-pragma solidity ^0.4.15;
+pragma solidity ^0.4.19;
 
 // Interface contract to be implemented by DogeRelay. This is all
 contract TransactionProcessor {
