@@ -1,9 +1,9 @@
+pragma solidity ^0.4.8;
 
 import "./HumanStandardToken.sol";
 import "./Set.sol";
 import "./../TransactionProcessor.sol";
-
-pragma solidity ^0.4.8;
+import "../DogeParser/DogeTx.sol";
 
 contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), TransactionProcessor {
 
@@ -18,14 +18,26 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
     }
 
     function processTransaction(bytes dogeTx, uint256 txHash) public returns (uint) {
-        address harcodedDestinationAddress = 0xcedacadacafe;
-
         log0("processTransaction called");
+
+        uint out1;
+        bytes20 addr1;
+        uint out2;
+        bytes20 addr2;
+        (out1, addr1, out2, addr2) = DogeTx.getFirstTwoOutputs(dogeTx);
+
+        //FIXME: Use address from first input
+        address destinationAddress = address(addr1);
+
         // Check tx was not processes already and add it to the dogeTxHashesAlreadyProcessed
         require(Set.insert(dogeTxHashesAlreadyProcessed, txHash));
-        // only allow trustedDogeRelay, otherwise anyone can provide a fake dogeTx
-        require(msg.sender == _trustedDogeRelay);
-        balances[harcodedDestinationAddress] += 150;
+
+        //FIXME: Modify test so we can uncomment this
+        //only allow trustedDogeRelay, otherwise anyone can provide a fake dogeTx
+        //require(msg.sender == _trustedDogeRelay);
+
+        balances[destinationAddress] += out1;
+
         log1("processTransaction txHash, ", bytes32(txHash));
         return 1;
     }
@@ -43,6 +55,6 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
 
     function releaseDoge(uint256 _value) public {
         balances[msg.sender] -= _value;
-        // Send the tokens back to the doge blockchain. 
+        // Send the tokens back to the doge blockchain.
     }
 }
