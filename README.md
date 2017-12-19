@@ -1,7 +1,7 @@
 # DogeRelay
 
 DogeRelay is a set of contracts that enable sending coins from the Dogecoin blockchain to ethereum blockchain.
-The core of this project are:
+The core components of this project are:
 * [DogeRelay contract](contracts/DogeRelay.sol)
   * Keeps a copy of the Dogecoin blockchain (just the headers)
   * Informs [DogeToken contract](contracts/token/DogeToken.sol) when a Dogecoin transaction locked funds
