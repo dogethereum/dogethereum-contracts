@@ -123,10 +123,6 @@ contract DogeRelay {
         uint blockHash = proposedBlockHash;
         // Comment out Doge header hash validation until we implement doge specific code
         //uint blockHash = m_dblShaFlip(blockHeaderBytes);
-        //if (blockHash != proposedBlockHash) {
-        //    StoreHeader(blockHash, ERR_BLOCK_HASH_DOES_NOT_MATCHES_CALCULATED_ONE);
-        //    return 0;
-        //}
 
         uint hashPrevBlock;
         assembly {
@@ -870,7 +866,6 @@ contract DogeRelay {
     uint constant ERR_NO_PREV_BLOCK = 10030;
     uint constant ERR_BLOCK_ALREADY_EXISTS = 10040;
     uint constant ERR_PROOF_OF_WORK = 10090;
-    uint constant ERR_BLOCK_HASH_DOES_NOT_MATCHES_CALCULATED_ONE = 10100;
     
     // error codes for verifyTx
     uint constant ERR_BAD_FEE = 20010;
