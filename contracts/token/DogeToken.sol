@@ -12,6 +12,9 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
     Set.Data dogeTxHashesAlreadyProcessed;
     uint256 minimumLockTxValue;
 
+    event NewToken(address user, uint value);
+
+
     function DogeToken(address trustedDogeRelay) public {
         _trustedDogeRelay = trustedDogeRelay;
         minimumLockTxValue = 100000000;
@@ -26,8 +29,13 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         bytes20 addr2;
         (out1, addr1, out2, addr2) = DogeTx.getFirstTwoOutputs(dogeTx);
 
-        //FIXME: Use address from first input
-        address destinationAddress = address(addr1);
+        //FIXME: Only accept funds to our address
+        //require(addr1 == "");
+
+        bytes32 pubKey;
+        bool odd;
+        (pubKey, odd) = DogeTx.getFirstInputPubKey(dogeTx);
+        address destinationAddress = pub2address(uint256(pubKey), odd);
 
         // Check tx was not processes already and add it to the dogeTxHashesAlreadyProcessed
         require(Set.insert(dogeTxHashesAlreadyProcessed, txHash));
@@ -37,15 +45,18 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         //require(msg.sender == _trustedDogeRelay);
 
         balances[destinationAddress] += out1;
+        NewToken(destinationAddress, out1);
 
         log1("processTransaction txHash, ", bytes32(txHash));
         return 1;
     }
 
+    //FIXME Move calculation of address to a separate library
+
     uint constant p = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f;  // secp256k1
     uint constant q = (p + 1) / 4;
 
-    function getAddress(bytes pubKey) view internal returns (address) {
+    function getAddress(bytes memory pubKey) view internal returns (address) {
         uint x;
         bool odd;
         require(pubKey.length == 33);
@@ -88,6 +99,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         if (((y & 1) == 1) != odd) {
           y = p - y;
         }
+        require(yy == mulmod(y, y, p));
         return address(keccak256(x, y));
     }
 
