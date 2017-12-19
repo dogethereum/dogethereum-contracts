@@ -26,7 +26,7 @@ The core of this project are:
     * Open a terminal and go to the truffle folder
       * e.g. If you are on a mac, using nvm and node 9.2.0 `cd ~/.nvm/versions/node/v9.2.0/lib/node_modules/truffle/`
     * Edit package.json and update solc dependency version
-      * ```
+      ```
         "dependencies": {
           ...
           "solc": "^0.4.19"
@@ -37,14 +37,14 @@ The core of this project are:
 * Clone this repo.
 * Install npm dependencies.
   * cd to the directory where the repo is cloned.
-  * ```
+  ```
     npm install
-    ```
+  ```
 * Run tests: 
-  * ```
+  ```
     # first start ganache-cli
     ganache-cli --gasLimit 4000000000000
     
     # run tests
     truffle test
-    ```
+  ```
