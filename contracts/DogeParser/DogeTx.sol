@@ -168,6 +168,27 @@ library DogeTx {
         return (output_values[0], output_addresses[0],
                 output_values[1], output_addresses[1]);
     }
+
+    function getFirstInputPubKey(bytes txBytes)
+             returns (bytes32, bool)
+    {
+        uint pos;
+        pos = 4;  // skip version
+        (, pos) = parseVarInt(txBytes, pos);
+        return getInputPubKey(txBytes, pos);
+    }
+
+    function getInputPubKey(bytes txBytes, uint pos)
+             returns (bytes32, bool)
+    {
+        pos += 36;  // skip outpoint
+        (, pos) = parseVarInt(txBytes, pos);
+        bytes32 pubKey;
+        bool odd;
+        (, pubKey, odd, pos) = parseScriptSig(txBytes, pos);
+        return (pubKey, odd);
+    }
+
     // Check whether `btcAddress` is in the transaction outputs *and*
     // whether *at least* `value` has been sent to it.
     function checkValueSent(bytes txBytes, bytes20 btcAddress, uint value)
@@ -293,5 +314,56 @@ library DogeTx {
         } else {
             return;
         }
+    }
+
+    // Parse a P2PKH scriptSig
+    function parseScriptSig(bytes txBytes, uint pos)
+             returns (bytes, bytes32, bool, uint)
+    {
+        bytes memory sig;
+        bytes32 pubKey;
+        bool odd;
+        (sig, pos) = parseSignature(txBytes, pos);
+        (pubKey, odd, pos) = parsePubKey(txBytes, pos);
+        return (sig, pubKey, odd, pos);
+    }
+
+    // Extract a signature
+    function parseSignature(bytes txBytes, uint pos)
+             returns (bytes, uint)
+    {
+        uint8 op;
+        bytes memory sig;
+        (op, pos) = getOpcode(txBytes, pos);
+        require(op >= 9 && op <= 73);
+        require(uint8(txBytes[pos]) == 0x30);
+        //FIXME: Copy signature
+        pos += op;
+        return (sig, pos);
+    }
+
+    // Extract public key
+    function parsePubKey(bytes txBytes, uint pos)
+             returns (bytes32, bool, uint)
+    {
+        uint8 op;
+        (op, pos) = getOpcode(txBytes, pos);
+        //FIXME: Add support for uncompressed public keys
+        require(op == 33);
+        bytes32 pubKey;
+        bool odd = txBytes[pos] == 0x03;
+        pos += 1;
+        assembly {
+            pubKey := mload(add(add(txBytes, 0x20), pos))
+        }
+        pos += 32;
+        return (pubKey, odd, pos);
+    }
+
+    // Read next opcode from script
+    function getOpcode(bytes txBytes, uint pos)
+             returns (uint8, uint)
+    {
+        return (uint8(txBytes[pos]), pos + 1);
     }
 }
