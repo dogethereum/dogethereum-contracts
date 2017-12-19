@@ -48,3 +48,7 @@ The core components of this project are:
     # run tests
     truffle test
   ```
+
+## License
+
+Copyright (c) 2017 Coinfabrik and Oscar Guindzberg. You will need to get a written authorization from them to use this code.
