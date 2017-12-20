@@ -102,6 +102,10 @@ pragma solidity ^0.4.11;
 
 // parse a raw bitcoin transaction byte array
 library DogeTx {
+
+    uint constant p = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f;  // secp256k1
+    uint constant q = (p + 1) / 4;
+
     // Convert a variable integer into something useful and return it and
     // the index to after it.
     function parseVarInt(bytes txBytes, uint pos) returns (uint, uint) {
@@ -142,16 +146,17 @@ library DogeTx {
                  + uint64(data[pos + 7]) * 2 ** 56;
         }
     }
+
     // scan the full transaction bytes and return the first two output
     // values (in satoshis) and addresses (in binary)
     function getFirstTwoOutputs(bytes txBytes)
              returns (uint, bytes20, uint, bytes20)
     {
         uint pos;
-        uint[] memory input_script_lens = new uint[](2);
-        uint[] memory output_script_lens = new uint[](2);
-        uint[] memory script_starts = new uint[](2);
-        uint[] memory output_values = new uint[](2);
+        uint[] memory input_script_lens;
+        uint[] memory output_script_lens;
+        uint[] memory script_starts;
+        uint[] memory output_values;
         bytes20[] memory output_addresses = new bytes20[](2);
 
         pos = 4;  // skip version
@@ -173,7 +178,10 @@ library DogeTx {
              returns (bytes32, bool)
     {
         uint pos;
+        uint[] memory input_script_lens;
+
         pos = 4;  // skip version
+
         (, pos) = parseVarInt(txBytes, pos);
         return getInputPubKey(txBytes, pos);
     }
@@ -365,5 +373,36 @@ library DogeTx {
              returns (uint8, uint)
     {
         return (uint8(txBytes[pos]), pos + 1);
+    }
+
+    function expmod(uint256 base, uint256 e, uint256 m) internal constant returns (uint256 o) {
+        assembly {
+            // pointer to free memory
+            let p := mload(0x40)
+            mstore(p, 0x20)             // Length of Base
+            mstore(add(p, 0x20), 0x20)  // Length of Exponent
+            mstore(add(p, 0x40), 0x20)  // Length of Modulus
+            mstore(add(p, 0x60), base)  // Base
+            mstore(add(p, 0x80), e)     // Exponent
+            mstore(add(p, 0xa0), m)     // Modulus
+            // call modexp precompile!
+            if iszero(call(not(0), 0x05, 0, p, 0xc0, p, 0x20)) {
+                revert(0, 0)
+            }
+            // data
+            o := mload(p)
+        }
+    }
+
+    function pub2address(uint x, bool odd) internal returns (address) {
+        uint yy = mulmod(x, x, p);
+        yy = mulmod(yy, x, p);
+        yy = addmod(yy, 7, p);
+        uint y = expmod(yy, q, p);
+        if (((y & 1) == 1) != odd) {
+          y = p - y;
+        }
+        require(yy == mulmod(y, y, p));
+        return address(keccak256(x, y));
     }
 }

@@ -12,7 +12,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
     Set.Data dogeTxHashesAlreadyProcessed;
     uint256 minimumLockTxValue;
 
-    event NewToken(address user, uint value);
+    event NewToken(address indexed user, uint value);
 
 
     function DogeToken(address trustedDogeRelay) public {
@@ -21,86 +21,30 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
     }
 
     function processTransaction(bytes dogeTx, uint256 txHash) public returns (uint) {
-        log0("processTransaction called");
+        require(msg.sender == _trustedDogeRelay);
 
-        uint out1;
-        bytes20 addr1;
-        uint out2;
-        bytes20 addr2;
-        (out1, addr1, out2, addr2) = DogeTx.getFirstTwoOutputs(dogeTx);
+        uint out;
+        bytes20 addr;
+        bytes32 pubKey;
+        bool odd;
+        //(out, addr, pubKey, odd) = DogeTx.parseTransaction(dogeTx);
+
+        //FIXME: Accept a single output
+        (out, addr,,) = DogeTx.getFirstTwoOutputs(dogeTx);
 
         //FIXME: Only accept funds to our address
         //require(addr1 == "");
 
-        bytes32 pubKey;
-        bool odd;
         (pubKey, odd) = DogeTx.getFirstInputPubKey(dogeTx);
-        address destinationAddress = pub2address(uint256(pubKey), odd);
+        address destinationAddress = DogeTx.pub2address(uint256(pubKey), odd);
 
         // Check tx was not processes already and add it to the dogeTxHashesAlreadyProcessed
         require(Set.insert(dogeTxHashesAlreadyProcessed, txHash));
 
-        //FIXME: Modify test so we can uncomment this
-        //only allow trustedDogeRelay, otherwise anyone can provide a fake dogeTx
-        //require(msg.sender == _trustedDogeRelay);
+        balances[destinationAddress] += out;
+        NewToken(destinationAddress, out);
 
-        balances[destinationAddress] += out1;
-        NewToken(destinationAddress, out1);
-
-        log1("processTransaction txHash, ", bytes32(txHash));
-        return 1;
-    }
-
-    //FIXME Move calculation of address to a separate library
-
-    uint constant p = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f;  // secp256k1
-    uint constant q = (p + 1) / 4;
-
-    function getAddress(bytes memory pubKey) view internal returns (address) {
-        uint x;
-        bool odd;
-        require(pubKey.length == 33);
-        require(pubKey[0] == 2 || pubKey[0] == 3);
-        odd = pubKey[0] == 3;
-        assembly {
-            x := mload(add(pubKey, 33))
-        }
-        //FIXME: Check Legendre operator to ensure x is valid
-        return pub2address(x, odd);
-    }
-
-    function expmod(uint256 base, uint256 e, uint256 m) internal constant returns (uint256 o) {
-        // are all of these inside the precompile now?
-
-        assembly {
-            // define pointer
-            let p := mload(0x40)
-            // store data assembly-favouring ways
-            mstore(p, 0x20)             // Length of Base
-            mstore(add(p, 0x20), 0x20)  // Length of Exponent
-            mstore(add(p, 0x40), 0x20)  // Length of Modulus
-            mstore(add(p, 0x60), base)  // Base
-            mstore(add(p, 0x80), e)     // Exponent
-            mstore(add(p, 0xa0), m)     // Modulus
-            // call modexp precompile!
-            if iszero(call(not(0), 0x05, 0, p, 0xc0, p, 0x20)) {
-                revert(0, 0)
-            }
-            // data
-            o := mload(p)
-        }
-    }
-
-    function pub2address(uint x, bool odd) internal returns (address) {
-        uint yy = mulmod(x, x, p);
-        yy = mulmod(yy, x, p);
-        yy = addmod(yy, 7, p);
-        uint y = expmod(yy, q, p);
-        if (((y & 1) == 1) != odd) {
-          y = p - y;
-        }
-        require(yy == mulmod(y, y, p));
-        return address(keccak256(x, y));
+        return out;
     }
 
     struct DogeTransaction {
