@@ -27,15 +27,11 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         bytes20 addr;
         bytes32 pubKey;
         bool odd;
-        //(out, addr, pubKey, odd) = DogeTx.parseTransaction(dogeTx);
-
-        //FIXME: Accept a single output
-        (out, addr,,) = DogeTx.getFirstTwoOutputs(dogeTx);
+        (out, addr, pubKey, odd) = DogeTx.parseTransaction(dogeTx);
 
         //FIXME: Only accept funds to our address
         //require(addr1 == "");
 
-        (pubKey, odd) = DogeTx.getFirstInputPubKey(dogeTx);
         address destinationAddress = DogeTx.pub2address(uint256(pubKey), odd);
 
         // Check tx was not processes already and add it to the dogeTxHashesAlreadyProcessed

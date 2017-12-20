@@ -147,6 +147,30 @@ library DogeTx {
         }
     }
 
+    function parseTransaction(bytes txBytes)
+             returns (uint, bytes20, bytes32, bool)
+    {
+        uint pos;
+        uint[] memory input_script_lens;
+        uint[] memory input_script_starts;
+        uint[] memory output_script_lens;
+        uint[] memory output_script_starts;
+        uint[] memory output_values;
+        bytes20 output_address;
+
+        pos = 4;  // skip version
+        (input_script_starts, input_script_lens, pos) = scanInputs(txBytes, pos, 0);
+
+        bytes32 inputPubKey;
+        bool inputPubKeyOdd;
+        (inputPubKey, inputPubKeyOdd) = getInputPubKey(txBytes, input_script_starts[0]);
+
+        (output_values, output_script_starts, output_script_lens, pos) = scanOutputs(txBytes, pos, 1);
+        output_address = parseOutputScript(txBytes, output_script_starts[0], output_script_lens[0]);
+
+        return (output_values[0], output_address, inputPubKey, inputPubKeyOdd);
+    }
+
     // scan the full transaction bytes and return the first two output
     // values (in satoshis) and addresses (in binary)
     function getFirstTwoOutputs(bytes txBytes)
@@ -161,7 +185,7 @@ library DogeTx {
 
         pos = 4;  // skip version
 
-        (input_script_lens, pos) = scanInputs(txBytes, pos, 0);
+        (, input_script_lens, pos) = scanInputs(txBytes, pos, 0);
 
         (output_values, script_starts, output_script_lens, pos) = scanOutputs(txBytes, pos, 2);
 
@@ -203,7 +227,7 @@ library DogeTx {
              returns (bool)
     {
         uint pos = 4;  // skip version
-        (, pos) = scanInputs(txBytes, pos, 0);  // find end of inputs
+        (,, pos) = scanInputs(txBytes, pos, 0);  // find end of inputs
 
         // scan *all* the outputs and find where they are
         var (output_values, script_starts, output_script_lens,) = scanOutputs(txBytes, pos, 0);
@@ -222,7 +246,7 @@ library DogeTx {
     // takes a 'stop' argument which sets the maximum number of
     // outputs to scan through. stop=0 => scan all.
     function scanInputs(bytes txBytes, uint pos, uint stop)
-             returns (uint[], uint)
+             returns (uint[], uint[], uint)
     {
         uint n_inputs;
         uint halt;
@@ -236,16 +260,18 @@ library DogeTx {
             halt = stop;
         }
 
+        uint[] memory script_starts = new uint[](halt);
         uint[] memory script_lens = new uint[](halt);
 
         for (var i = 0; i < halt; i++) {
+            script_starts[i] = pos;
             pos += 36;  // skip outpoint
             (script_len, pos) = parseVarInt(txBytes, pos);
             script_lens[i] = script_len;
             pos += script_len + 4;  // skip sig_script, seq
         }
 
-        return (script_lens, pos);
+        return (script_starts, script_lens, pos);
     }
     // scan the outputs and find the values and script lengths.
     // return array of values, array of script lengths and the
