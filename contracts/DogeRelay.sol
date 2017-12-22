@@ -120,9 +120,7 @@ contract DogeRelay {
         // If the block is merge mined, there are 2 Scrypts functions to execute, the one that checks PoW of the litecoin block
         // and the one that checks the block hash
 
-        uint blockSha256Hash = proposedScryptBlockHash;
-        // Comment out Doge header hash validation until we implement doge specific code
-        //uint blockSha256Hash = m_dblShaFlip(blockHeaderBytes);
+        uint blockSha256Hash = m_dblShaFlip(sliceArray(blockHeaderBytes, 0, 80));
 
         uint hashPrevBlock;
         assembly {
