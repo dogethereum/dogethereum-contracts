@@ -6,7 +6,7 @@ import "./TransactionProcessor.sol";
 contract DogeRelay {
 
     // Number of block ancestors stored in BlockInformation._ancestor
-    uint8 constant private NUM_ANCESTOR_DEPTHS = 8; 
+    uint8 constant private NUM_ANCESTOR_DEPTHS = 8;
 
     // list for internal usage only that allows a 32 byte blockHash to be looked up
     // with a 32bit int
@@ -32,7 +32,7 @@ contract DogeRelay {
           uint _info;
           uint _ancestor;
           // bytes _feeInfo;
-    }  
+    }
     //BlockInformation[] myblocks = new BlockInformation[](2**256);
     // block hash => BlockInformation
     mapping (uint => BlockInformation) internal myblocks;
@@ -76,9 +76,9 @@ contract DogeRelay {
     function setInitialParent(uint blockHash, uint64 height, uint128 chainWork) public returns (bool) {
         // reuse highScore as the flag for whether setInitialParent() has already been called
         if (highScore != 0) {
-            return false;     
+            return false;
         } else {
-            highScore = 1;  // matches the score that is set below in this function     
+            highScore = 1;  // matches the score that is set below in this function
         }
 
         // TODO: check height > 145000, that is when Digishield was activated. The problem is that is only for production
@@ -103,43 +103,43 @@ contract DogeRelay {
 
 
     // Where the header begins:
-    // 4 bytes function ID + 
-    // 32 bytes pointer to header array data + 
+    // 4 bytes function ID +
+    // 32 bytes pointer to header array data +
     // 32 bytes block hash
     // 32 bytes header array size.
     // To understand abi encoding, read https://medium.com/@hayeah/how-to-decipher-a-smart-contract-method-call-8ee980311603
-    // Not declared constant because inline assembly would not be able to use it. 
+    // Not declared constant because inline assembly would not be able to use it.
     // Declared uint so it has no offset to access it from assebly
     uint OFFSET_ABI = 100;
 
     // store a Dogecoin block header that must be provided in bytes format 'blockHeaderBytes'
     // Callers must keep same signature since CALLDATALOAD is used to save gas.
-    function storeBlockHeader(bytes blockHeaderBytes, uint proposedBlockHash) public returns (uint) {
+    function storeBlockHeader(bytes blockHeaderBytes, uint proposedScryptBlockHash) public returns (uint) {
         // blockHash should be a function parameter in dogecoin because the hash can not be calculated onchain.
         // Code here should call the Scrypt validator contract to make sure the supplied hash of the block is correct
         // If the block is merge mined, there are 2 Scrypts functions to execute, the one that checks PoW of the litecoin block
         // and the one that checks the block hash
-        
-        uint blockHash = proposedBlockHash;
+
+        uint blockSha256Hash = proposedScryptBlockHash;
         // Comment out Doge header hash validation until we implement doge specific code
-        //uint blockHash = m_dblShaFlip(blockHeaderBytes);
+        //uint blockSha256Hash = m_dblShaFlip(blockHeaderBytes);
 
         uint hashPrevBlock;
         assembly {
             hashPrevBlock := calldataload(add(sload(OFFSET_ABI_slot),4)) // 4 is offset for hashPrevBlock
         }
-        hashPrevBlock = flip32Bytes(hashPrevBlock);  
+        hashPrevBlock = flip32Bytes(hashPrevBlock);
         //log0(bytes32(hashPrevBlock));
 
         uint128 scorePrevBlock = m_getScore(hashPrevBlock);
         if (scorePrevBlock == 0) {
-            StoreHeader(blockHash, ERR_NO_PREV_BLOCK);
+            StoreHeader(blockSha256Hash, ERR_NO_PREV_BLOCK);
             return 0;
         }
 
-        if (m_getScore(blockHash) != 0) {
+        if (m_getScore(blockSha256Hash) != 0) {
             // block already stored/exists
-            StoreHeader(blockHash, ERR_BLOCK_ALREADY_EXISTS);
+            StoreHeader(blockSha256Hash, ERR_BLOCK_ALREADY_EXISTS);
             return 0;
         }
 
@@ -147,8 +147,8 @@ contract DogeRelay {
         uint32 bits;
         assembly {
             // "bits" field starts at position 72. Its size is 4 bytes.
-            // Read 32 bytes starting at position 72 from blockHeaderBytes. 
-            wordWithBits := calldataload(add(sload(OFFSET_ABI_slot),72))  
+            // Read 32 bytes starting at position 72 from blockHeaderBytes.
+            wordWithBits := calldataload(add(sload(OFFSET_ABI_slot),72))
             // Extract the 4 first bytes of wordWithBits
             bits := add( byte(0, wordWithBits) , add( mul(byte(1, wordWithBits),sload(BYTES_1_slot)) , add( mul(byte(2, wordWithBits),sload(BYTES_2_slot)) , mul(byte(3, wordWithBits),sload(BYTES_3_slot)) ) ) )
         }
@@ -171,12 +171,12 @@ contract DogeRelay {
             // the initial parent, but as these forks will have lower score than
             // the main chain, they will not have impact.
             if (bits != prevBits && prevBits != 0) {
-                StoreHeader(blockHash, ERR_DIFFICULTY);
-                return 0;          
+                StoreHeader(blockSha256Hash, ERR_DIFFICULTY);
+                return 0;
             }
         } else {
             // (blockHeight - DIFFICULTY_ADJUSTMENT_INTERVAL) is same as [getHeight(hashPrevBlock) - (DIFFICULTY_ADJUSTMENT_INTERVAL - 1)]
-            uint32 newBits = m_computeNewBits(m_getTimestamp(hashPrevBlock), 
+            uint32 newBits = m_computeNewBits(m_getTimestamp(hashPrevBlock),
                                               m_getTimestamp(priv_fastGetBlockHash__(blockHeight - DIFFICULTY_ADJUSTMENT_INTERVAL)),
                                               targetFromBits(prevBits));
             // Comment out difficulty adjustment verification until we implement doge algorithm
@@ -184,11 +184,11 @@ contract DogeRelay {
             //    StoreHeader(blockHash, ERR_RETARGET);
             //    return 0;
             //}
-        }        
+        }
 
-        m_saveAncestors(blockHash, hashPrevBlock);  // increments ibIndex
+        m_saveAncestors(blockSha256Hash, hashPrevBlock);  // increments ibIndex
 
-        myblocks[blockHash]._blockHeader = blockHeaderBytes;
+        myblocks[blockSha256Hash]._blockHeader = blockHeaderBytes;
 
         // https://en.bitcoin.it/wiki/Difficulty
         // Min difficulty for bitcoin is 0x1d00ffff
@@ -196,19 +196,19 @@ contract DogeRelay {
         // Min difficulty for dogecoin is 0x1e0fffff
         uint128 scoreBlock = scorePrevBlock + uint128 (0x00000FFFFF000000000000000000000000000000000000000000000000000000 / target);
         //log2(bytes32(scoreBlock), bytes32(bits), bytes32(target));
-        // bitcoinj (so libdohj, dogecoin java implemntation) uses 2**256 as a dividend. 
+        // bitcoinj (so libdohj, dogecoin java implemntation) uses 2**256 as a dividend.
         // Investigate: May dogerelay best block be different than libdohj best block in some border cases?
         // Does libdohj matches dogecoin core?
-        m_setScore(blockHash, scoreBlock);
+        m_setScore(blockSha256Hash, scoreBlock);
 
         // equality allows block with same score to become an (alternate) Tip, so that
         // when an (existing) Tip becomes stale, the chain can continue with the alternate Tip
         if (scoreBlock >= highScore) {
-            bestBlockHash = blockHash;
+            bestBlockHash = blockSha256Hash;
             highScore = scoreBlock;
         }
 
-        StoreHeader(blockHash, blockHeight);
+        StoreHeader(blockSha256Hash, blockHeight);
         return blockHeight;
     }
 
@@ -216,8 +216,8 @@ contract DogeRelay {
 
     // store a number of blockheaders
     // Return latest's block height
-    // headersBytes are dogecoin block headers. 
-    //              Each header is encoded as: 
+    // headersBytes are dogecoin block headers.
+    //              Each header is encoded as:
     //              - header size (4 bytes, big-endian representation)
     //              - the header (size is variable).
     // hashesBytes are the hashes for those blocks
@@ -274,14 +274,14 @@ contract DogeRelay {
         if (txBytes.length == 64) {  // todo: is check 32 also needed?
             VerifyTransaction(txHash, ERR_TX_64BYTE);
             return 0;
-        }    
+        }
         uint res = helperVerifyHash__(txHash, txIndex, sibling, txBlockHash);
         if (res == 1) {
             return txHash;
         } else {
             // log is done via helperVerifyHash__
             return 0;
-        }    
+        }
     }
 
 
@@ -306,7 +306,7 @@ contract DogeRelay {
         if (within6Confirms(txBlockHash)) {
             VerifyTransaction(txHash, ERR_CONFIRMATIONS);
             return (ERR_CONFIRMATIONS);
-        }    
+        }
 
   //      if (!priv_inMainChain__(txBlockHash)) {
   //          VerifyTransaction (txHash, ERR_CHAIN);
@@ -393,7 +393,7 @@ contract DogeRelay {
         // However, the consequence is that
         // the genesis block must be at height 1 instead of 0 [see setInitialParent()]
         if (txBlockHeight == 0) {
-          return false;   
+          return false;
         }
 
         return (priv_fastGetBlockHash__(txBlockHeight) == txBlockHash);
@@ -415,12 +415,12 @@ contract DogeRelay {
 
         while (m_getHeight(blockHash) > blockHeight) {
             while (m_getHeight(blockHash) - blockHeight < m_getAncDepth(anc_index) && anc_index > 0) {
-                anc_index -= 1;          
+                anc_index -= 1;
             }
-            blockHash = internalBlock[m_getAncestor(blockHash, anc_index)];      
+            blockHash = internalBlock[m_getAncestor(blockHash, anc_index)];
           }
 
-        return blockHash;  
+        return blockHash;
     }
 
 
@@ -582,7 +582,7 @@ contract DogeRelay {
         }
 
         return resultHash;
-    }    
+    }
 
 
     // returns 1 if the 'txBlockHash' is within 6 blocks of self.bestBlockHash
@@ -614,13 +614,13 @@ contract DogeRelay {
         }
         if (actualTimespan > TARGET_TIMESPAN_MUL_4) {
             actualTimespan = TARGET_TIMESPAN_MUL_4;
-        } 
+        }
         uint newTarget = actualTimespan * prevTarget / TARGET_TIMESPAN;
         if (newTarget > UNROUNDED_MAX_TARGET) {
             newTarget = UNROUNDED_MAX_TARGET;
         }
         return m_toCompactBits(newTarget);
-    }              
+    }
 
 
 
@@ -672,8 +672,8 @@ contract DogeRelay {
 
 
     // get the timestamp from a Bitcoin blockheader
-    function m_getTimestamp(uint blockHash) internal view returns (uint32 result) { 
-        uint pointer = ptr(myblocks[blockHash]._blockHeader);      
+    function m_getTimestamp(uint blockHash) internal view returns (uint32 result) {
+        uint pointer = ptr(myblocks[blockHash]._blockHeader);
         assembly {
             // get the 3rd chunk
             let tmp := sload(add(pointer,2))
@@ -740,7 +740,7 @@ contract DogeRelay {
     function m_shiftRight(uint val, uint8 shift) private pure returns (uint) {
         return val / uint(2)**shift;
     }
-    
+
     function m_shiftLeft(uint val, uint8 shift) private pure returns (uint) {
         return val * uint(2)**shift;
     }
@@ -766,7 +766,7 @@ contract DogeRelay {
                 mstore8(add(pointer, i), byte(sub(31 ,i), input))
             }
             i++;
-        }  
+        }
         return uw.value;
     }
 
@@ -779,9 +779,9 @@ contract DogeRelay {
 
     // block height is the first 8 bytes of _info
     function m_setHeight(uint blockHash, uint64 blockHeight) private {
-        uint info = myblocks[blockHash]._info;      
+        uint info = myblocks[blockHash]._info;
         info = m_mwrite64(info, 0, blockHeight);
-        myblocks[blockHash]._info = info;  
+        myblocks[blockHash]._info = info;
     }
 
     function m_getHeight(uint blockHash) internal view returns (uint64) {
@@ -791,10 +791,10 @@ contract DogeRelay {
 
     // ibIndex is the index to self.internalBlock: it's the second 8 bytes of _info
     function m_setIbIndex(uint blockHash, uint32 internalIndex) private {
-        uint info = myblocks[blockHash]._info;      
+        uint info = myblocks[blockHash]._info;
         uint64 internalIndex64 = internalIndex;
         info = m_mwrite64(info, 8, internalIndex64);
-        myblocks[blockHash]._info = info;  
+        myblocks[blockHash]._info = info;
      }
 
     function m_getIbIndex(uint blockHash) private view returns (uint32) {
@@ -804,9 +804,9 @@ contract DogeRelay {
 
     // score of the block is the last 16 bytes of _info
     function m_setScore(uint blockHash, uint128 blockScore) private {
-        uint info = myblocks[blockHash]._info;      
+        uint info = myblocks[blockHash]._info;
         info = m_mwrite128(info, 16, blockScore);
-        myblocks[blockHash]._info = info;  
+        myblocks[blockHash]._info = info;
     }
 
     function m_getScore(uint blockHash) internal view returns (uint128) {
@@ -822,13 +822,13 @@ contract DogeRelay {
         assembly {
             addr := uw
         }
-    }  
+    }
     // Returns a pointer to the supplied BlockInformation
     function ptr(BlockInformation storage bi) private view returns (uint addr) {
         assembly {
             addr := bi_slot
         }
-    }  
+    }
     // Returns a pointer to the content of the supplied byte array in storage
     function ptr(bytes storage byteArray) private view returns (uint addr) {
         uint pointer;
@@ -836,12 +836,12 @@ contract DogeRelay {
             pointer := byteArray_slot
         }
         addr = uint(keccak256(bytes32(pointer)));
-    }  
+    }
 
 
 
     // Constants
-    
+
     // for verifying Bitcoin difficulty
     // uint constant DIFFICULTY_ADJUSTMENT_INTERVAL = 2016;  // Bitcoin adjusts every 2 weeks
     // uint constant TARGET_TIMESPAN = 14 * 24 * 60 * 60;  // 2 weeks
@@ -855,28 +855,28 @@ contract DogeRelay {
     uint constant TARGET_TIMESPAN_DIV_4 = TARGET_TIMESPAN / 4;
     uint constant TARGET_TIMESPAN_MUL_4 = TARGET_TIMESPAN * 4;
     uint constant UNROUNDED_MAX_TARGET = 2**224 - 1;  // different from (2**16-1)*2**208 http =//bitcoin.stackexchange.com/questions/13803/how/ exactly-was-the-original-coefficient-for-difficulty-determined
-    
+
     //
     // Error / failure codes
     //
-    
+
     // error codes for storeBlockHeader
     uint constant ERR_DIFFICULTY =  10010;  // difficulty didn't match current difficulty
     uint constant ERR_RETARGET = 10020;  // difficulty didn't match retarget
     uint constant ERR_NO_PREV_BLOCK = 10030;
     uint constant ERR_BLOCK_ALREADY_EXISTS = 10040;
     uint constant ERR_PROOF_OF_WORK = 10090;
-    
+
     // error codes for verifyTx
     uint constant ERR_BAD_FEE = 20010;
     uint constant ERR_CONFIRMATIONS = 20020;
     uint constant ERR_CHAIN = 20030;
     uint constant ERR_MERKLE_ROOT = 20040;
     uint constant ERR_TX_64BYTE = 20050;
-    
+
     // error codes for relayTx
     uint constant ERR_RELAY_VERIFY = 30010;
-    
+
     // Not declared constant because they won't be readable from inline assembly
     uint BYTES_1 = 2**8;
     uint BYTES_2 = 2**16;
