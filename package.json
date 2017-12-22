@@ -5,8 +5,9 @@
   "directories": {
     "test": "test"
   },
-  "dependencies": {  
-    "bitcoin-proof": "2.0.0"       
+  "dependencies": {
+    "bitcoin-proof": "2.0.0",
+    "scryptsy": "^2.0.0"
   },
   "devDependencies": {},
   "scripts": {
