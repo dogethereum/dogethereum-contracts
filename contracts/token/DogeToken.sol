@@ -8,39 +8,42 @@ import "../DogeParser/DogeTx.sol";
 contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), TransactionProcessor {
 
     address private _trustedDogeRelay;
+    address private _recipientDogethereum;
 
     Set.Data dogeTxHashesAlreadyProcessed;
     uint256 minimumLockTxValue;
 
-    event NewToken(address indexed user, uint value);
+    event NewToken(address indexed user, uint value, address recipient);
 
 
-    function DogeToken(address trustedDogeRelay) public {
+    function DogeToken(address trustedDogeRelay, address recipientDogethereum) public {
         _trustedDogeRelay = trustedDogeRelay;
+        _recipientDogethereum = recipientDogethereum;
         minimumLockTxValue = 100000000;
     }
 
     function processTransaction(bytes dogeTx, uint256 txHash) public returns (uint) {
         require(msg.sender == _trustedDogeRelay);
 
-        uint out;
-        bytes20 addr;
+        uint value;
+        bytes20 recipient;
         bytes32 pubKey;
         bool odd;
-        (out, addr, pubKey, odd) = DogeTx.parseTransaction(dogeTx);
+        (value, recipient, pubKey, odd) = DogeTx.parseTransaction(dogeTx);
 
-        //FIXME: Only accept funds to our address
-        //require(addr1 == "");
-
-        address destinationAddress = DogeTx.pub2address(uint256(pubKey), odd);
+        // Accept outputs to the dedicated address
+        require(address(recipient) == _recipientDogethereum);
 
         // Check tx was not processes already and add it to the dogeTxHashesAlreadyProcessed
         require(Set.insert(dogeTxHashesAlreadyProcessed, txHash));
 
-        balances[destinationAddress] += out;
-        NewToken(destinationAddress, out);
+        // Calculate ethereum address from dogecoin public key
+        address destinationAddress = DogeTx.pub2address(uint256(pubKey), odd);
 
-        return out;
+        balances[destinationAddress] += value;
+        NewToken(destinationAddress, value, address(recipient));
+
+        return value;
     }
 
     struct DogeTransaction {

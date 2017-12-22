@@ -5,8 +5,9 @@ var utils = require('./utils');
 
 contract('DogeToken', function(accounts) {
   let dogeToken;
+  const dogethereumRecipient = '0x4d905b4b815d483cdfabcd292c6f86509d0fad82';
   before(async () => {
-    dogeToken = await DogeToken.new(accounts[0]);
+    dogeToken = await DogeToken.new(accounts[0], dogethereumRecipient);
   })
   it("Test parsing transaction", async () => {
     const txHash = '0x718add98dca8f54288b244dde3b0e797e8fe541477a08ef4b570ea2b07dccd3f';
