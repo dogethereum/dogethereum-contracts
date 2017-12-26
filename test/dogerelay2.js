@@ -1,5 +1,6 @@
 // This is a copy of dogerelay2.js that works with doge blocks
 const DogeRelay = artifacts.require("./DogeRelayForTests.sol");
+var utils = require('./utils');
 const scryptsy = require('scryptsy');
 
 
@@ -66,9 +67,9 @@ contract('DogeRelay', function(accounts) {
     //assert res['output'] == 300000
     const bestBlockHash = await dr.getBestBlockHash.call();
     // Old bitcoin code
-    //assert.equal(formatHexUint32(result.toString(16)), remove0x(block333001Hash), "chain head hash is not the expected one");
+    //assert.equal(utils.formatHexUint32(result.toString(16)), utils.remove0x(block333001Hash), "chain head hash is not the expected one");
     //return dr.getBlockHeader.call(block333001Hash);
-    assert.equal(formatHexUint32(bestBlockHash.toString(16)), remove0x(block974401Hash), "chain head hash is not the expected one");
+    assert.equal(utils.formatHexUint32(bestBlockHash.toString(16)), utils.remove0x(block974401Hash), "chain head hash is not the expected one");
     const blockHeader = await dr.getBlockHeader.call(block974401Hash);
     // Old bitcoin code
     //assert.equal(result, block333001Header, "chain head header is not the expected one");
@@ -76,9 +77,9 @@ contract('DogeRelay', function(accounts) {
     assert.equal(blockHeader, block974401Header, "chain head header is not the expected one");
     const prevBlockPublic = await dr.getPrevBlockPublic.call(block974401Hash);
     // Old bitcoin code
-    //assert.equal(formatHexUint32(result.toString(16)), remove0x(block333000Hash), "prev block hash is not the expected one");
+    //assert.equal(utils.formatHexUint32(result.toString(16)), utils.remove0x(block333000Hash), "prev block hash is not the expected one");
     //return dr.m_getTimestampPublic.call(block333001Hash);
-    assert.equal(formatHexUint32(prevBlockPublic.toString(16)), remove0x(block974400Hash), "prev block hash is not the expected one");
+    assert.equal(utils.formatHexUint32(prevBlockPublic.toString(16)), utils.remove0x(block974400Hash), "prev block hash is not the expected one");
     const timestamp = await dr.m_getTimestampPublic.call(block974401Hash);
     // Old bitcoin code
     //assert.equal(result.toNumber(), 1417792088, "timestamp is not the expected one");
@@ -91,18 +92,6 @@ contract('DogeRelay', function(accounts) {
   });
 });
 
-
-
-function formatHexUint32(str) {
-    while (str.length < 64) {
-        str = "0" + str;
-    }
-    return str;
-}
-
-function remove0x(str) {
-    return str.substring(2);
-}
 
 function scryptBlockHeader(data) {
   let buff;

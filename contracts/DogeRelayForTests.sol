@@ -22,6 +22,11 @@ contract DogeRelayForTests is DogeRelay {
         return bestBlockHash;
     }
 
+    function getBlockHash(uint blockHeight) public view returns (uint) {
+        return priv_fastGetBlockHash__(blockHeight);
+    }
+
+
     // return the height of the best block aka the Tip
     function getBestBlockHeight() public view returns (uint) {
         return m_getHeight(bestBlockHash);
@@ -56,7 +61,7 @@ contract DogeRelayForTests is DogeRelay {
         return (chainWorkTip - chainWork10Ancestors);
     }
 
-    // returns the 80-byte header (zeros for a header that does not exist) when
+    // returns the block header (zeros for a header that does not exist) when
     // sufficient payment is provided.  If payment is insufficient, returns 1-byte of zero.
     function getBlockHeader(uint blockHash) public returns (bytes) {
         // TODO: incentives
