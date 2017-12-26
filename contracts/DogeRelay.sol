@@ -416,7 +416,7 @@ contract DogeRelay {
                 anc_index -= 1;
             }
             blockHash = internalBlock[m_getAncestor(blockHash, anc_index)];
-          }
+        }
 
         return blockHash;
     }
