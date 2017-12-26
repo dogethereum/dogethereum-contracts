@@ -379,22 +379,22 @@ contract DogeRelay {
 
 
     // private (to prevent leeching)
-    // returns 1 if 'txBlockHash' is in the main chain, ie not a fork
+    // returns 1 if 'blockHash' is in the main chain, ie not a fork
     // otherwise returns 0
-    function priv_inMainChain__(uint txBlockHash) private view returns (bool) {
+    function priv_inMainChain__(uint blockHash) private view returns (bool) {
         require(msg.sender == address(this));
 
-        uint txBlockHeight = m_getHeight(txBlockHash);
+        uint blockHeight = m_getHeight(blockHash);
 
         // By assuming that a block with height 0 does not exist, we can do
-        // this optimization and immediate say that txBlockHash is not in the main chain.
+        // this optimization and immediate say that blockHash is not in the main chain.
         // However, the consequence is that
         // the genesis block must be at height 1 instead of 0 [see setInitialParent()]
-        if (txBlockHeight == 0) {
+        if (blockHeight == 0) {
           return false;
         }
 
-        return (priv_fastGetBlockHash__(txBlockHeight) == txBlockHash);
+        return (priv_fastGetBlockHash__(blockHeight) == blockHash);
     }
 
 
