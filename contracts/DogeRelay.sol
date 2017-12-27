@@ -350,7 +350,7 @@ contract DogeRelay {
     // Returns a list of block hashes (9 hashes maximum) that helps an agent find out what
     // doge blocks DogeRelay is missing.
     // The first position contains bestBlock, then bestBlock-5, then bestBlock-25 ... until bestBlock-78125
-    function getBlockLocator() public returns (uint[9] locator) {
+    function getBlockLocator() public view returns (uint[9] locator) {
         uint blockHash = bestBlockHash;
         //locator.push(blockHash);
         locator[0] = blockHash;
