@@ -30,7 +30,7 @@ module.exports = {
   }
   ,
   remove0x: function (str) {
-    return str.substring(2);
+    return (str.indexOf("0x")==0) ? str.substring(2) : str;
   }
   ,
   bulkStore10From974401: function (dr, accounts) {
