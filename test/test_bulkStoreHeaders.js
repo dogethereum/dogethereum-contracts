@@ -84,6 +84,18 @@ contract('DogeRelay', function(accounts) {
       return dr.getBlockHash.call(974401);
     }).then(function(result) {
       assert.equal(utils.formatHexUint32(result.toString(16)), block974401Hash, "hash is not the expected one");
+      return dr.getBlockLocator.call();
+    }).then(function(result) {
+      assert.equal(utils.formatHexUint32(result[0].toString(16)), block974407Hash, "locator[0] is not the expected one");
+      assert.equal(utils.formatHexUint32(result[1].toString(16)), block974406Hash, "locator[1] is not the expected one");
+      assert.equal(utils.formatHexUint32(result[2].toString(16)), block974405Hash, "locator[2] is not the expected one");
+      assert.equal(utils.formatHexUint32(result[3].toString(16)), block974401Hash, "locator[3] is not the expected one");
+      assert.equal(utils.formatHexUint32(result[4].toString(16)), block974401Hash, "locator[4] is not the expected one");
+      assert.equal(utils.formatHexUint32(result[5].toString(16)), block974401Hash, "locator[5] is not the expected one");
+      assert.equal(utils.formatHexUint32(result[6].toString(16)), block974401Hash, "locator[6] is not the expected one");
+      assert.equal(utils.formatHexUint32(result[7].toString(16)), block974401Hash, "locator[7] is not the expected one");
+      assert.equal(utils.formatHexUint32(result[8].toString(16)), block974401Hash, "locator[8] is not the expected one");
+      //assert.equal(result.toString(), [block974407Hash, block974406Hash, block974405Hash, 0, 0, 0, 0, 0, 0].toString(), "locator is not the expected one");
     })
     ;
   });

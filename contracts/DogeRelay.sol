@@ -346,6 +346,25 @@ contract DogeRelay {
         return(ERR_RELAY_VERIFY);
     }
 
+
+    // Returns a list of block hashes (9 hashes maximum) that helps an agent find out what
+    // doge blocks DogeRelay is missing.
+    // The first position contains bestBlock, then bestBlock-5, then bestBlock-25 ... until bestBlock-78125
+    function getBlockLocator() public returns (uint[9] locator) {
+        uint blockHash = bestBlockHash;
+        //locator.push(blockHash);
+        locator[0] = blockHash;
+        for (uint8 i = 0 ; i < NUM_ANCESTOR_DEPTHS ; i++) {
+            uint blockHash2 = internalBlock[m_getAncestor(blockHash, i)];
+            //if (blockHash2 != 0) {
+            //    locator.push(blockHash2);
+            //}
+            locator[i+1] = blockHash2;
+        }
+        return locator;
+    }
+
+
     // save the ancestors for a block, as well as updating the height
     // note: this is internal/private
     function m_saveAncestors(uint blockHash, uint hashPrevBlock) private {
@@ -371,7 +390,7 @@ contract DogeRelay {
                 ancWord = m_mwrite32(ancWord, 4*i, m_getAncestor(hashPrevBlock, i));
             }
         }
-        //log1(bytes32(blockHash), bytes32(ancWord));
+        log1(bytes32(blockHash), bytes32(ancWord));
 
         // write the ancestor word to storage
         myblocks[blockHash]._ancestor = ancWord;
