@@ -18,7 +18,7 @@ contract('DogeRelay', function(accounts) {
       function(result) {
         return new Promise((resolve, reject) => {
           var lineReader = readline.createInterface({
-            input: fs.createReadStream('./headers/elevenDogeTestnet.txt')
+            input: fs.createReadStream('test/headers/elevenDogeTestnet.txt')
           });
           lineReader.on('line', function (line) {
             //console.log("aa : " + line.split("|")[0]);
