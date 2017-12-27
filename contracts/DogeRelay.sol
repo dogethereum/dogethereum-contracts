@@ -851,13 +851,13 @@ contract DogeRelay {
         }
     }
     // Returns a pointer to the supplied BlockInformation
-    function ptr(BlockInformation storage bi) private view returns (uint addr) {
+    function ptr(BlockInformation storage bi) private pure returns (uint addr) {
         assembly {
             addr := bi_slot
         }
     }
     // Returns a pointer to the content of the supplied byte array in storage
-    function ptr(bytes storage byteArray) private view returns (uint addr) {
+    function ptr(bytes storage byteArray) private pure returns (uint addr) {
         uint pointer;
         assembly {
             pointer := byteArray_slot

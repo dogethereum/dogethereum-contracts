@@ -53,8 +53,9 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
     }
 
 
-    function registerDogeTransaction(DogeTransaction dogeTx, DogePartialMerkleTree pmt, uint blockHeight) private {
+    function registerDogeTransaction(DogeTransaction dogeTx, DogePartialMerkleTree pmt, uint blockHeight) private pure {
         // Validate tx is valid and has enough confirmations, then assigns tokens to sender of the doge tx
+        // This fires a warning that is NOT going to be fixed for now because the function is yet to be implemented!
     }
 
     function releaseDoge(uint256 _value) public {

@@ -2,3 +2,4 @@
 /node_modules
 /output
 ._.DS_Store
+*.swp

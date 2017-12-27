@@ -108,7 +108,7 @@ library DogeTx {
 
     // Convert a variable integer into something useful and return it and
     // the index to after it.
-    function parseVarInt(bytes txBytes, uint pos) returns (uint, uint) {
+    function parseVarInt(bytes txBytes, uint pos) private pure returns (uint, uint) {
         // the first byte tells us how big the integer is
         var ibit = uint8(txBytes[pos]);
         pos += 1;  // skip ibit
@@ -124,7 +124,7 @@ library DogeTx {
         }
     }
     // convert little endian bytes to uint
-    function getBytesLE(bytes data, uint pos, uint bits) returns (uint) {
+    function getBytesLE(bytes data, uint pos, uint bits) private pure returns (uint) {
         if (bits == 8) {
             return uint8(data[pos]);
         } else if (bits == 16) {
@@ -147,7 +147,7 @@ library DogeTx {
         }
     }
 
-    function parseTransaction(bytes txBytes)
+    function parseTransaction(bytes txBytes) internal pure
              returns (uint, bytes20, bytes32, bool)
     {
         uint pos;
@@ -173,7 +173,7 @@ library DogeTx {
 
     // scan the full transaction bytes and return the first two output
     // values (in satoshis) and addresses (in binary)
-    function getFirstTwoOutputs(bytes txBytes)
+    function getFirstTwoOutputs(bytes txBytes) internal pure
              returns (uint, bytes20, uint, bytes20)
     {
         uint pos;
@@ -198,11 +198,13 @@ library DogeTx {
                 output_values[1], output_addresses[1]);
     }
 
-    function getFirstInputPubKey(bytes txBytes)
+    function getFirstInputPubKey(bytes txBytes) private pure
              returns (bytes32, bool)
     {
         uint pos;
         uint[] memory input_script_lens;
+        // The line above fires a warning because the variable hasn't been used.
+        // It's probably NOT a good idea to comment it until the function is more or less finished because the warning could be useful for debugging.
 
         pos = 4;  // skip version
 
@@ -210,7 +212,7 @@ library DogeTx {
         return getInputPubKey(txBytes, pos);
     }
 
-    function getInputPubKey(bytes txBytes, uint pos)
+    function getInputPubKey(bytes txBytes, uint pos) private pure
              returns (bytes32, bool)
     {
         pos += 36;  // skip outpoint
@@ -223,7 +225,7 @@ library DogeTx {
 
     // Check whether `btcAddress` is in the transaction outputs *and*
     // whether *at least* `value` has been sent to it.
-    function checkValueSent(bytes txBytes, bytes20 btcAddress, uint value)
+    function checkValueSent(bytes txBytes, bytes20 btcAddress, uint value) private pure
              returns (bool)
     {
         uint pos = 4;  // skip version
@@ -245,7 +247,7 @@ library DogeTx {
     // of the inputs.
     // takes a 'stop' argument which sets the maximum number of
     // outputs to scan through. stop=0 => scan all.
-    function scanInputs(bytes txBytes, uint pos, uint stop)
+    function scanInputs(bytes txBytes, uint pos, uint stop) private pure
              returns (uint[], uint[], uint)
     {
         uint n_inputs;
@@ -263,7 +265,7 @@ library DogeTx {
         uint[] memory script_starts = new uint[](halt);
         uint[] memory script_lens = new uint[](halt);
 
-        for (var i = 0; i < halt; i++) {
+        for (uint256 i = 0; i < halt; i++) {
             script_starts[i] = pos;
             pos += 36;  // skip outpoint
             (script_len, pos) = parseVarInt(txBytes, pos);
@@ -278,7 +280,7 @@ library DogeTx {
     // end position of the outputs.
     // takes a 'stop' argument which sets the maximum number of
     // outputs to scan through. stop=0 => scan all.
-    function scanOutputs(bytes txBytes, uint pos, uint stop)
+    function scanOutputs(bytes txBytes, uint pos, uint stop) private pure
              returns (uint[], uint[], uint[], uint)
     {
         uint n_outputs;
@@ -297,7 +299,7 @@ library DogeTx {
         uint[] memory script_lens = new uint[](halt);
         uint[] memory output_values = new uint[](halt);
 
-        for (var i = 0; i < halt; i++) {
+        for (uint256 i = 0; i < halt; i++) {
             output_values[i] = getBytesLE(txBytes, pos, 64);
             pos += 8;
 
@@ -310,7 +312,7 @@ library DogeTx {
         return (output_values, script_starts, script_lens, pos);
     }
     // Slice 20 contiguous bytes from bytes `data`, starting at `start`
-    function sliceBytes20(bytes data, uint start) returns (bytes20) {
+    function sliceBytes20(bytes data, uint start) private pure returns (bytes20) {
         uint160 slice = 0;
         for (uint160 i = 0; i < 20; i++) {
             slice += uint160(data[i + start]) << (8 * (19 - i));
@@ -319,7 +321,7 @@ library DogeTx {
     }
     // returns true if the bytes located in txBytes by pos and
     // script_len represent a P2PKH script
-    function isP2PKH(bytes txBytes, uint pos, uint script_len) returns (bool) {
+    function isP2PKH(bytes txBytes, uint pos, uint script_len) private pure returns (bool) {
         return (script_len == 25)           // 20 byte pubkeyhash + 5 bytes of script
             && (txBytes[pos] == 0x76)       // OP_DUP
             && (txBytes[pos + 1] == 0xa9)   // OP_HASH160
@@ -329,7 +331,7 @@ library DogeTx {
     }
     // returns true if the bytes located in txBytes by pos and
     // script_len represent a P2SH script
-    function isP2SH(bytes txBytes, uint pos, uint script_len) returns (bool) {
+    function isP2SH(bytes txBytes, uint pos, uint script_len) private pure returns (bool) {
         return (script_len == 23)           // 20 byte scripthash + 3 bytes of script
             && (txBytes[pos + 0] == 0xa9)   // OP_HASH160
             && (txBytes[pos + 1] == 0x14)   // bytes to push
@@ -338,7 +340,7 @@ library DogeTx {
     // Get the pubkeyhash / scripthash from an output script. Assumes
     // pay-to-pubkey-hash (P2PKH) or pay-to-script-hash (P2SH) outputs.
     // Returns the pubkeyhash/ scripthash, or zero if unknown output.
-    function parseOutputScript(bytes txBytes, uint pos, uint script_len)
+    function parseOutputScript(bytes txBytes, uint pos, uint script_len) private pure
              returns (bytes20)
     {
         if (isP2PKH(txBytes, pos, script_len)) {
@@ -351,7 +353,7 @@ library DogeTx {
     }
 
     // Parse a P2PKH scriptSig
-    function parseScriptSig(bytes txBytes, uint pos)
+    function parseScriptSig(bytes txBytes, uint pos) private pure
              returns (bytes, bytes32, bool, uint)
     {
         bytes memory sig;
@@ -363,7 +365,7 @@ library DogeTx {
     }
 
     // Extract a signature
-    function parseSignature(bytes txBytes, uint pos)
+    function parseSignature(bytes txBytes, uint pos) private pure
              returns (bytes, uint)
     {
         uint8 op;
@@ -377,7 +379,7 @@ library DogeTx {
     }
 
     // Extract public key
-    function parsePubKey(bytes txBytes, uint pos)
+    function parsePubKey(bytes txBytes, uint pos) private pure
              returns (bytes32, bool, uint)
     {
         uint8 op;
@@ -395,13 +397,13 @@ library DogeTx {
     }
 
     // Read next opcode from script
-    function getOpcode(bytes txBytes, uint pos)
+    function getOpcode(bytes txBytes, uint pos) private pure
              returns (uint8, uint)
     {
         return (uint8(txBytes[pos]), pos + 1);
     }
 
-    function expmod(uint256 base, uint256 e, uint256 m) internal constant returns (uint256 o) {
+    function expmod(uint256 base, uint256 e, uint256 m) internal returns (uint256 o) {
         assembly {
             // pointer to free memory
             let p := mload(0x40)
