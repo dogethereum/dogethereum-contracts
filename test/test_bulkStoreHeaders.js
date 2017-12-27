@@ -56,7 +56,7 @@ contract('DogeRelay', function(accounts) {
     }).then(function(result) {
       return dr.bulkStoreHeaders(headers, hashes, 7, {from: accounts[0]}); 
     }).then(function(result) {
-      console.log(result.receipt.logs);
+      //console.log(result.receipt.logs);
       return dr.getBestBlockHeight.call();
     }).then(function(result) {
       assert.equal(result.toNumber(), 974407, "blocks not stored as expected");

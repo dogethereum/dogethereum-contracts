@@ -390,7 +390,7 @@ contract DogeRelay {
                 ancWord = m_mwrite32(ancWord, 4*i, m_getAncestor(hashPrevBlock, i));
             }
         }
-        log1(bytes32(blockHash), bytes32(ancWord));
+        //log1(bytes32(blockHash), bytes32(ancWord));
 
         // write the ancestor word to storage
         myblocks[blockHash]._ancestor = ancWord;
