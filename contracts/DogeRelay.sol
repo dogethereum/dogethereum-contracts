@@ -364,6 +364,15 @@ contract DogeRelay {
         return locator;
     }
 
+    // return the height of the best block aka the Tip
+    function getBestBlockHeight() public view returns (uint) {
+        return m_getHeight(bestBlockHash);
+    }
+
+    // return the hash of the heaviest block aka the Tip
+    function getBestBlockHash() public view returns (uint) {
+        return bestBlockHash;
+    }
 
     // save the ancestors for a block, as well as updating the height
     // note: this is internal/private
