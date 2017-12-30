@@ -5,9 +5,9 @@ module.exports = function(callback) {
   var dr;
   DogeRelayForTests.deployed().then(function(instance) {      
     dr = instance;
-    var block974400Hash = "0xa84956d6535a1be26b77379509594bdb8f186b29c3b00143dcb468015bdd16da";  
+    var block2020000Hash = "0x9c1cdf5d0ce3676dc0551a81215d9fed0e45e12f3f7e5b18372a81130b963a2e";  
     //return dr.setInitialParent(block974400Hash, 974400, 1, {from: accounts[0]}); 
-    return dr.setInitialParent(block974400Hash, 974400, 1); 
+    return dr.setInitialParent(block2020000Hash, 2020000, 1); 
   }).then(function(result) {
     // If this callback is called, the transaction was successfully processed.
     console.log("Transaction successful!");

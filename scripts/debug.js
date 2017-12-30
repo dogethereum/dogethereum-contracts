@@ -7,7 +7,10 @@ module.exports = function(callback) {
     dr = instance;
     return dr.getBestBlockHash.call(); 
   }).then(function(result) {
-    console.log(result.toString(16));
+    console.log("Best block hash : " + result.toString(16));
+    return dr.getBestBlockHeight.call(); 
+  }).then(function(result) {
+    console.log("Best block height : " + result.toString(10));
     callback();
   }).catch(function(e) {
     // There was an error! Handle it.
