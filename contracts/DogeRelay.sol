@@ -264,16 +264,16 @@ contract DogeRelay {
     // Returns 0 if the tx is exactly 64 bytes long (to guard against a Merkle tree
     // collision) or fails verification.
     //
-    // the merkle proof is represented by 'txIndex', 'sibling', where:
+    // the merkle proof is represented by 'txIndex', 'siblings', where:
     // - 'txIndex' is the index of the tx within the block
-    // - 'sibling' are the merkle siblings of tx
-    function verifyTx(bytes txBytes, uint txIndex, uint[] sibling, uint txBlockHash) public returns (uint) {
+    // - '`s' are the merkle siblings of tx
+    function verifyTx(bytes txBytes, uint txIndex, uint[] siblings, uint txBlockHash) public returns (uint) {
         uint txHash = m_dblShaFlip(txBytes);
         if (txBytes.length == 64) {  // todo: is check 32 also needed?
             VerifyTransaction(txHash, ERR_TX_64BYTE);
             return 0;
         }
-        uint res = helperVerifyHash__(txHash, txIndex, sibling, txBlockHash);
+        uint res = helperVerifyHash__(txHash, txIndex, siblings, txBlockHash);
         if (res == 1) {
             return txHash;
         } else {
@@ -290,11 +290,11 @@ contract DogeRelay {
     // internal hash in the Merkle tree. Thus this helper method should NOT be used
     // directly and is intended to be private.
     //
-    // the merkle proof is represented by 'txHash', 'txIndex', 'sibling', where:
+    // the merkle proof is represented by 'txHash', 'txIndex', 'siblings', where:
     // - 'txHash' is the hash of the tx
     // - 'txIndex' is the index of the tx within the block
-    // - 'sibling' are the merkle siblings of tx
-    function helperVerifyHash__(uint256 txHash, uint txIndex, uint[] sibling, uint txBlockHash) private returns (uint) {
+    // - 'siblings' are the merkle siblings of tx
+    function helperVerifyHash__(uint256 txHash, uint txIndex, uint[] siblings, uint txBlockHash) private returns (uint) {
         // TODO: implement when dealing with incentives
         // if (!feePaid(txBlockHash, m_getFeeAmount(txBlockHash))) {  // in incentive.se
         //    VerifyTransaction(txHash, ERR_BAD_FEE);
@@ -311,7 +311,7 @@ contract DogeRelay {
   //          return (ERR_CHAIN);
   //      }
 
-        uint merkle = computeMerkle(txHash, txIndex, sibling);
+        uint merkle = computeMerkle(txHash, txIndex, siblings);
         uint realMerkleRoot = getMerkleRoot(txBlockHash);
 
         if (merkle != realMerkleRoot) {
@@ -334,8 +334,8 @@ contract DogeRelay {
     // it may also have been returned by processTransaction(). callers should be
     // aware of the contract that they are relaying transactions to and
     // understand what that contract's processTransaction method returns.
-    function relayTx(bytes txBytes, uint txIndex, uint[] sibling, uint txBlockHash, TransactionProcessor targetContract) public returns (uint) {
-        uint txHash = verifyTx(txBytes, txIndex, sibling, txBlockHash);
+    function relayTx(bytes txBytes, uint txIndex, uint[] siblings, uint txBlockHash, TransactionProcessor targetContract) public returns (uint) {
+        uint txHash = verifyTx(txBytes, txIndex, siblings, txBlockHash);
         if (txHash != 0) {
             uint returnCode = targetContract.processTransaction(txBytes, txHash);
             RelayTransaction (txHash, returnCode);
@@ -582,22 +582,22 @@ contract DogeRelay {
     // For a valid proof, returns the root of the Merkle tree.
     // Otherwise the return value is meaningless if the proof is invalid.
     // [see documentation for verifyTx() for the merkle proof
-    // format of 'txHash', 'txIndex', 'sibling' ]
-    function computeMerkle(uint txHash, uint txIndex, uint[] sibling) private pure returns (uint) {
+    // format of 'txHash', 'txIndex', 'siblings' ]
+    function computeMerkle(uint txHash, uint txIndex, uint[] siblings) private pure returns (uint) {
         uint resultHash = txHash;
-        uint proofLen = sibling.length;
+        uint proofLen = siblings.length;
         uint i = 0;
         while (i < proofLen) {
-            uint proofHex = sibling[i];
+            uint proofHex = siblings[i];
 
-            uint sideOfSibling = txIndex % 2;  // 0 means sibling is on the right; 1 means left
+            uint sideOfSiblings = txIndex % 2;  // 0 means siblings is on the right; 1 means left
 
             uint left;
             uint right;
-            if (sideOfSibling == 1) {
+            if (sideOfSiblings == 1) {
                 left = proofHex;
                 right = resultHash;
-            } else if (sideOfSibling == 0) {
+            } else if (sideOfSiblings == 0) {
                 left = resultHash;
                 right = proofHex;
             }
