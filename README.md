@@ -93,3 +93,6 @@ Some operations require gas to be spent. Here are the incentives for doing that.
 ## License
 
 Copyright (c) 2017 Coinfabrik and Oscar Guindzberg. You will need to get a written authorization from them to use this code.
+
+## Doge-Eth bounty
+This is our eth address: 0x1ed3e252dcb6d540947d2d63a911f56733d55681
