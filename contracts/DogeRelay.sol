@@ -266,7 +266,7 @@ contract DogeRelay {
     //
     // the merkle proof is represented by 'txIndex', 'siblings', where:
     // - 'txIndex' is the index of the tx within the block
-    // - '`s' are the merkle siblings of tx
+    // - 'siblings' are the merkle siblings of tx
     function verifyTx(bytes txBytes, uint txIndex, uint[] siblings, uint txBlockHash) public returns (uint) {
         uint txHash = m_dblShaFlip(txBytes);
         if (txBytes.length == 64) {  // todo: is check 32 also needed?
