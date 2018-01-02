@@ -45,4 +45,8 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
 
         return value;
     }
+
+    function wasLockTxProcessed(uint txHash) public view returns (bool) {
+        return Set.contains(dogeTxHashesAlreadyProcessed, txHash);
+    }
 }
