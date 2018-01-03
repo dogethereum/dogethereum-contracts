@@ -252,6 +252,7 @@ contract DogeRelay {
     }
 
 
+
     // store a number of blockheaders
     // Return latest's block height
     // headersBytes are dogecoin block headers.
