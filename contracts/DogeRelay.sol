@@ -138,7 +138,7 @@ contract DogeRelay {
 
         uint32 bits = f_bits(blockHeaderBytes);
         uint target = targetFromBits(bits);
-        
+
         // URGENT: FIGURE OUT HOW TO CALCULATE THE BLOCK'S ACTUAL TIMESPAN
         uint64 actualTimespan = m_getTimestamp(blockSha256Hash) - m_getTimestamp(hashPrevBlock);
         uint64 difficulty = calculateDigishieldDifficulty(actualTimespan, bits);
@@ -222,7 +222,7 @@ contract DogeRelay {
         // I guess it's to prevent integer overflows?
         nMinTimespan = retargetTimespan - (retargetTimespan / 4);
         nMaxTimespan = retargetTimespan + (retargetTimespan / 2);
-        
+
         // This should yield the same result as bnNew.setCompact(pIndexLast->nBits)
         // in the C++ implementations, assuming nBits indeed corresponds
         // to the previous block header's bits. Make sure this is correct.
@@ -237,17 +237,6 @@ contract DogeRelay {
         // Again, this should correspond to bnNew.GetCompact() from the Dogecoin
         // C++ implementation. Double check everything!
         return m_toCompactBits(bnNew);
-    }
-
-
-    // Implementation of DigiShield, almost directly translated from
-    // C++ implementation of Dogecoin. See function CalculateDogecoinNextWorkRequired
-    // on dogecoin/src/dogecoin.cpp for more details.
-    // Calculates the next block's difficulty based on the current block's elapsed time
-    // and the time it took to mine it.
-    function calculateDigishieldDifficulty(uint64 nActualTimespan, uint64 retargetTimespan) private pure returns (uint64 result) {
-	// nActualTimespan: time elapsed from genesis block til current block creation
-	uint64 nModulatedTimespan = nActualTimespan;
     }
 
 
