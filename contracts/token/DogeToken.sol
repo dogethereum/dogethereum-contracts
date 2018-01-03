@@ -8,7 +8,7 @@ import "../DogeParser/DogeTx.sol";
 contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), TransactionProcessor {
 
     address private _trustedDogeRelay;
-    address private _recipientDogethereum;
+    bytes20 private _recipientDogethereum;
 
     Set.Data dogeTxHashesAlreadyProcessed;
     uint256 minimumLockTxValue;
@@ -16,7 +16,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
     event NewToken(address indexed user, uint value, address recipient);
 
 
-    function DogeToken(address trustedDogeRelay, address recipientDogethereum) public {
+    function DogeToken(address trustedDogeRelay, bytes20 recipientDogethereum) public {
         _trustedDogeRelay = trustedDogeRelay;
         _recipientDogethereum = recipientDogethereum;
         minimumLockTxValue = 100000000;
@@ -32,7 +32,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         (value, recipient, pubKey, odd) = DogeTx.parseTransaction(dogeTx);
 
         // Accept outputs to the dedicated address
-        require(address(recipient) == _recipientDogethereum);
+        require(recipient == _recipientDogethereum);
 
         // Check tx was not processes already and add it to the dogeTxHashesAlreadyProcessed
         require(Set.insert(dogeTxHashesAlreadyProcessed, txHash));
