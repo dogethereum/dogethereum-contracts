@@ -18,7 +18,7 @@ contract('DogeRelay', function(accounts) {
       return utils.parseDataFile('test/headers/elevenDogeTestnet.txt');
     }).then(function ({ headers: rawHeaders, hashes: rawHashes }) {
       headers += rawHeaders.map(utils.addSizeToHeader).join('');
-      hashes += rawHashes.join('');
+      hashes += rawHeaders.map(utils.calcHeaderPoW).join('');
       return dr.bulkStoreHeaders(headers, hashes, 11, {from: accounts[0]});
     }).then(function(result) {
       //console.log(result.receipt.logs);

@@ -218,7 +218,7 @@ contract DogeRelay {
     //              Each header is encoded as:
     //              - header size (4 bytes, big-endian representation)
     //              - the header (size is variable).
-    // hashesBytes are the hashes for those blocks
+    // hashesBytes are the scrypt hashes for those blocks
     // count is the number of headers sent
     function bulkStoreHeaders(bytes headersBytes, bytes hashesBytes, uint16 count) public returns (uint result) {
         //uint8 HEADER_SIZE = 80;

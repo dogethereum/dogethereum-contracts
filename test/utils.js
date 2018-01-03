@@ -47,7 +47,7 @@ module.exports = {
       .then(async (result) => {
           const { headers: rawHeaders, hashes: rawHashes } = await parseDataFile('test/headers/11from974401DogeMain.txt');
           headers += rawHeaders.map(module.exports.addSizeToHeader).join('');
-          hashes += rawHashes.join('');
+          hashes += rawHeaders.map(module.exports.calcHeaderPoW).join('');
           return dr.bulkStoreHeaders(headers, hashes, numBlock, {from: accounts[0]});
       }).then(function(result) {
       	//console.log(result.receipt.logs);
@@ -86,7 +86,7 @@ module.exports = {
   },
   // Convert an hexadecimal string to buffer
   fromHex: function (data) {
-    return Buffer.from(module.exports.remove0x(data));
+    return Buffer.from(module.exports.remove0x(data), 'hex');
   },
   // Calculate the scrypt hash from a buffer
   // hash = scryptHash(data, start, length)
@@ -96,4 +96,9 @@ module.exports = {
   },
   // Parse a data file returns a struct with headers and hashes
   parseDataFile,
+  // Calculate PoW hash from dogecoin header
+  calcHeaderPoW: function (header) {
+    //FIXME: Use AuxProofOfWork when merge minning
+    return module.exports.scryptHash(module.exports.fromHex(header)).toString('hex');
+  }
 };
