@@ -1,6 +1,7 @@
 var fs = require('fs');
 var readline = require('readline');
 var btcProof = require('bitcoin-proof');
+var scryptsy = require('scryptsy');
 
 async function parseDataFile(filename) {
   const headers = [];
@@ -82,5 +83,15 @@ module.exports = {
       size = "0" + size;
     }
     return size + input;
+  },
+  // Convert an hexadecimal string to buffer
+  fromHex: function (data) {
+    return Buffer.from(module.exports.remove0x(data));
+  },
+  // Calculate the scrypt hash from a buffer
+  // hash = scryptHash(data, start, length)
+  scryptHash: function (data, start = 0, length = 80) {
+    let buff = Buffer.from(data, start, length);
+    return scryptsy(buff, buff, 1024, 1, 1, 32)
   }
 };

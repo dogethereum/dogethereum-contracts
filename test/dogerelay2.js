@@ -1,7 +1,6 @@
 // This is a copy of dogerelay2.js that works with doge blocks
 const DogeRelay = artifacts.require("./DogeRelayForTests.sol");
 var utils = require('./utils');
-const scryptsy = require('scryptsy');
 
 
 contract('DogeRelay', function(accounts) {
@@ -62,7 +61,7 @@ contract('DogeRelay', function(accounts) {
     // Old bitcoin code
     //return dr.storeBlockHeader(block333001Header, block333001Hash, {from: accounts[0]});
     //const block974401LitecoinHeader = '0x03000000c63abe4881f9c765925fffb15c88cdb861e86a32f4c493a36c3e29c54dc62cf45ba4401d07d6d760e3b84fb0b9222b855c3b7c04a174f17c6e7df07d472d0126fe455556358c011b6017f799';
-    const blockScryptHash = `0x${scryptBlockHeader(block974401Header.slice(2, 2 + 2 * 80)).toString('hex')}`;
+    const blockScryptHash = `0x${utils.scryptHash(utils.fromHex(block974401Header)).toString('hex')}`;
     await dr.storeBlockHeader(block974401Header, blockScryptHash, {from: accounts[0]});
     //assert res['output'] == 300000
     const bestBlockHash = await dr.getBestBlockHash.call();
@@ -91,14 +90,3 @@ contract('DogeRelay', function(accounts) {
     assert.equal(bits.toNumber(), 0x1B041A48, "bits is not the expected one");
   });
 });
-
-
-function scryptBlockHeader(data) {
-  let buff;
-  if (typeof data === 'string') {
-    buff = new Buffer(data, 'hex');
-  } else {
-    buff = new Buffer(data);
-  }
-  return scryptsy(buff, buff, 1024, 1, 1, 32)
-}
