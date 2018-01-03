@@ -151,6 +151,10 @@ contract DogeRelay {
             bits := add( byte(0, wordWithBits) , add( mul(byte(1, wordWithBits),sload(BYTES_1_slot)) , add( mul(byte(2, wordWithBits),sload(BYTES_2_slot)) , mul(byte(3, wordWithBits),sload(BYTES_3_slot)) ) ) )
         }
         uint target = targetFromBits(bits);
+        
+        // URGENT: FIGURE OUT HOW TO CALCULATE THE BLOCK'S ACTUAL TIMESPAN
+        uint64 actualTimespan = m_getTimestamp(blockSha256Hash) - m_getTimestamp(hashPrevBlock);
+        uint64 difficulty = calculateDigishieldDifficulty(actualTimespan, bits);
         // we only check the target and do not do other validation (eg timestamp) to save gas
         // Comment out PoW validation until we implement doge specific code
         //if (blockHash < 0 || blockHash > target) {
@@ -215,10 +219,36 @@ contract DogeRelay {
     // C++ implementation of Dogecoin. See function CalculateDogecoinNextWorkRequired
     // on dogecoin/src/dogecoin.cpp for more details.
     // Calculates the next block's difficulty based on the current block's elapsed time
-    // and the time it took to mine it.
-    function calculateDigishieldDifficulty(uint64 nActualTimespan, uint64 retargetTimespan) private pure returns (uint64 result) {
-	// nActualTimespan: time elapsed from genesis block til current block creation
-	uint64 nModulatedTimespan = nActualTimespan;
+    // and the desired mining time for a block, which is 60 seconds after block 145k.
+    function calculateDigishieldDifficulty(uint64 nActualTimespan, uint32 nBits) private pure returns (uint64 result) {
+    	// nActualTimespan: time elapsed from previous block creation til current block creation
+        // i.e., how much time it took to mine the current block
+        // nBits: previous block header bits
+    	uint64 nModulatedTimespan = nActualTimespan;
+        // TARGET_TIMESPAN is declared as uint instead of uint64,
+        // make sure this doesn't cause any errors
+        // Given the range, it should be OK
+        uint64 retargetTimespan = TARGET_TIMESPAN;
+        nModulatedTimespan = retargetTimespan + (nModulatedTimespan - retargetTimespan) / 8; //amplitude filter
+        // not sure why it doesn't just multiply them by 3/4 and 1/2 respectively.
+        // I guess it's to prevent integer overflows?
+        nMinTimespan = retargetTimespan - (retargetTimespan / 4);
+        nMaxTimespan = retargetTimespan + (retargetTimespan / 2);
+        
+        // This should yield the same result as bnNew.setCompact(pIndexLast->nBits)
+        // in the C++ implementations, assuming nBits indeed corresponds
+        // to the previous block header's bits. Make sure this is correct.
+        uint256 bnNew = m_toCompactBits(nBits);
+        bnNew *= nModulatedTimespan;
+        bnNew /= retargetTimespan;
+
+        if (bnNew > POW_LIMIT) {
+            bnNew = POW_LIMIT;
+        }
+
+        // Again, this should correspond to bnNew.GetCompact() from the Dogecoin
+        // C++ implementation. Double check everything!
+        return m_toCompactBits(bnNew);
     }
 
 
@@ -893,6 +923,7 @@ contract DogeRelay {
     uint constant TARGET_TIMESPAN_DIV_4 = TARGET_TIMESPAN / 4;
     uint constant TARGET_TIMESPAN_MUL_4 = TARGET_TIMESPAN * 4;
     uint constant UNROUNDED_MAX_TARGET = 2**224 - 1;  // different from (2**16-1)*2**208 http =//bitcoin.stackexchange.com/questions/13803/how/ exactly-was-the-original-coefficient-for-difficulty-determined
+    uint256 constant POW_LIMIT = 0x00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff; // not sure if this is the right way to declare a hex constant, read the docs!!!
 
     //
     // Error / failure codes
