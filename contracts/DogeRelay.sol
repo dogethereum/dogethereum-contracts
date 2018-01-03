@@ -252,18 +252,6 @@ contract DogeRelay {
     }
 
 
-    // Implementation of DigiShield, almost directly translated from
-    // C++ implementation of Dogecoin. See function CalculateDogecoinNextWorkRequired
-    // on dogecoin/src/dogecoin.cpp for more details.
-    // Calculates the next block's difficulty based on the current block's elapsed time
-    // and the time it took to mine it.
-    function calculateDigishieldDifficulty(uint64 nActualTimespan, uint64 retargetTimespan) private pure returns (uint64 result) {
-	// nActualTimespan: time elapsed from genesis block til current block creation
-	uint64 nModulatedTimespan = nActualTimespan;
-    }
-
-
-
     // store a number of blockheaders
     // Return latest's block height
     // headersBytes are dogecoin block headers.
