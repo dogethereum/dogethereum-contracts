@@ -93,5 +93,7 @@ module.exports = {
   scryptHash: function (data, start = 0, length = 80) {
     let buff = Buffer.from(data, start, length);
     return scryptsy(buff, buff, 1024, 1, 1, 32)
-  }
+  },
+  // Parse a data file returns a struct with headers and hashes
+  parseDataFile,
 };
