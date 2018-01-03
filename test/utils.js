@@ -98,7 +98,15 @@ module.exports = {
   parseDataFile,
   // Calculate PoW hash from dogecoin header
   calcHeaderPoW: function (header) {
-    //FIXME: Use AuxProofOfWork when merge minning
-    return module.exports.scryptHash(module.exports.fromHex(header)).toString('hex');
+    const headerBin = module.exports.fromHex(header);
+    if (module.exports.isHeaderAuxPoW(headerBin)) {
+      const length = headerBin.length;
+      return module.exports.scryptHash(headerBin.slice(length - 80, length)).toString('hex');
+    }
+    return module.exports.scryptHash(headerBin).toString('hex');
+  },
+  // Return true when the block header contains a AuxPoW
+  isHeaderAuxPoW: function (headerBin) {
+    return (headerBin[1] & 0x01) != 0;
   }
 };
