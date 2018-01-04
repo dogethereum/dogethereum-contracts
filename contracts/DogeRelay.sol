@@ -186,7 +186,7 @@ contract DogeRelay {
 
         m_saveAncestors(blockSha256Hash, hashPrevBlock);  // increments ibIndex
 
-        myblocks[blockSha256Hash]._blockHeader = blockHeaderBytes;
+        myblocks[blockSha256Hash]._blockHeader = sliceArray(blockHeaderBytes, 0, 80);
 
         // https://en.bitcoin.it/wiki/Difficulty
         // Min difficulty for bitcoin is 0x1d00ffff
