@@ -14,6 +14,6 @@ contract('Utils', function(accounts) {
     const hash2 = utils.calcHeaderPoW(header2);
     assert.equal(hash2, result2);;
     const hash3 = utils.calcHeaderPoW(header3);
-    assert.equal(hash2, result2);
+    assert.equal(hash3, result3);
   });
 });
