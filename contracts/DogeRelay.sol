@@ -558,11 +558,14 @@ contract DogeRelay {
 
 
     // Should be private, made internal for testing
-    function sliceArray(bytes memory original, uint32 offset, uint32 endIndex) internal pure returns (bytes) {
-        bytes memory result = new bytes(endIndex-offset);
-        //bytes storage result;
-        for (uint i = offset; i < endIndex; i++) {
-            result[i-offset] = original[i];
+    function sliceArray(bytes memory original, uint32 offset, uint32 endIndex) internal view returns (bytes) {
+        uint len = endIndex - offset;
+        bytes memory result = new bytes(len);
+        assembly {
+            // Call precompiled contract to copy data
+            if iszero(call(not(0), 0x04, 0, add(add(original, 0x20), offset), len, add(result, 0x20), len)) {
+                revert(0, 0)
+            }
         }
         return result;
     }
