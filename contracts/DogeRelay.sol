@@ -122,12 +122,7 @@ contract DogeRelay {
 
         uint blockSha256Hash = m_dblShaFlip(sliceArray(blockHeaderBytes, 0, 80));
 
-        uint hashPrevBlock;
-        assembly {
-            hashPrevBlock := calldataload(add(sload(OFFSET_ABI_slot),4)) // 4 is offset for hashPrevBlock
-        }
-        hashPrevBlock = flip32Bytes(hashPrevBlock);
-        //log0(bytes32(hashPrevBlock));
+        uint hashPrevBlock = f_hashPrevBlock(blockHeaderBytes);
 
         uint128 scorePrevBlock = m_getScore(hashPrevBlock);
         if (scorePrevBlock == 0) {
@@ -141,15 +136,7 @@ contract DogeRelay {
             return 0;
         }
 
-        uint wordWithBits;
-        uint32 bits;
-        assembly {
-            // "bits" field starts at position 72. Its size is 4 bytes.
-            // Read 32 bytes starting at position 72 from blockHeaderBytes.
-            wordWithBits := calldataload(add(sload(OFFSET_ABI_slot),72))
-            // Extract the 4 first bytes of wordWithBits
-            bits := add( byte(0, wordWithBits) , add( mul(byte(1, wordWithBits),sload(BYTES_1_slot)) , add( mul(byte(2, wordWithBits),sload(BYTES_2_slot)) , mul(byte(3, wordWithBits),sload(BYTES_3_slot)) ) ) )
-        }
+        uint32 bits = f_bits(blockHeaderBytes);
         uint target = targetFromBits(bits);
         // we only check the target and do not do other validation (eg timestamp) to save gas
         // Comment out PoW validation until we implement doge specific code
@@ -161,6 +148,7 @@ contract DogeRelay {
 
         uint blockHeight = 1 + m_getHeight(hashPrevBlock);
         uint32 prevBits = m_getBits(hashPrevBlock);
+
         if (!m_difficultyShouldBeAdjusted(blockHeight) || ibIndex == 0) {
             // since blockHeight is 1 more than blockNumber; OR clause is special case for 1st header
             // we need to check prevBits isn't 0 otherwise the 1st header
@@ -186,7 +174,7 @@ contract DogeRelay {
 
         m_saveAncestors(blockSha256Hash, hashPrevBlock);  // increments ibIndex
 
-        myblocks[blockSha256Hash]._blockHeader = blockHeaderBytes;
+        myblocks[blockSha256Hash]._blockHeader = sliceArray(blockHeaderBytes, 0, 80);
 
         // https://en.bitcoin.it/wiki/Difficulty
         // Min difficulty for bitcoin is 0x1d00ffff
@@ -238,7 +226,7 @@ contract DogeRelay {
             bytes memory currHash = sliceArray(hashesBytes, hashesOffset, hashesEndIndex);
             uint currHashUint = uint(bytesToBytes32(currHash));
             //log2(bytes32(currHashUint), bytes32(hashesOffset), bytes32(hashesEndIndex));
-            result = this.storeBlockHeader(currHeader, currHashUint);
+            result = storeBlockHeader(currHeader, currHashUint);
             headersOffset += currHeaderLength;
             headersEndIndex += 4;
             hashesOffset += HASH_SIZE;
@@ -570,11 +558,14 @@ contract DogeRelay {
 
 
     // Should be private, made internal for testing
-    function sliceArray(bytes memory original, uint32 offset, uint32 endIndex) internal pure returns (bytes) {
-        bytes memory result = new bytes(endIndex-offset);
-        //bytes storage result;
-        for (uint i = offset; i < endIndex; i++) {
-            result[i-offset] = original[i];
+    function sliceArray(bytes memory original, uint32 offset, uint32 endIndex) internal view returns (bytes) {
+        uint len = endIndex - offset;
+        bytes memory result = new bytes(len);
+        assembly {
+            // Call precompiled contract to copy data
+            if iszero(call(not(0), 0x04, 0, add(add(original, 0x20), offset), len, add(result, 0x20), len)) {
+                revert(0, 0)
+            }
         }
         return result;
     }
@@ -865,7 +856,30 @@ contract DogeRelay {
         addr = uint(keccak256(bytes32(pointer)));
     }
 
+    // 0x00 version
+    // 0x04 prev block hash
+    // 0x24 merkle root
+    // 0x44 timestamp
+    // 0x48 bits
+    // 0x4c nonce
 
+    function f_hashPrevBlock(bytes memory blockHeader) internal pure returns (uint) {
+        uint hashPrevBlock;
+        assembly {
+            hashPrevBlock := mload(add(blockHeader, 0x24))
+        }
+        return flip32Bytes(hashPrevBlock);
+    }
+
+    function f_bits(bytes memory blockHeader) internal pure returns (uint32 bits) {
+        assembly {
+            let word := mload(add(blockHeader, 0x50))
+            bits := add(byte(24, word),
+                add(mul(byte(25, word), 0x100),
+                    add(mul(byte(26, word), 0x10000),
+                        mul(byte(27, word), 0x1000000))))
+        }
+    }
 
     // Constants
 

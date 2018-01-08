@@ -13,7 +13,7 @@ contract DogeRelayForTests is DogeRelay {
         return bytesToBytes32(b);
     }
 
-    function sliceArrayPublic(bytes original, uint32 offset, uint32 endIndex) public pure returns (bytes result) {
+    function sliceArrayPublic(bytes original, uint32 offset, uint32 endIndex) public view returns (bytes result) {
         return sliceArray(original, offset, endIndex);
     }
 
@@ -67,7 +67,7 @@ contract DogeRelayForTests is DogeRelay {
         return getPrevBlock(blockHash);
     }
 
-    function m_getTimestampPublic(uint blockHash) public view returns (uint32 result) { 
+    function m_getTimestampPublic(uint blockHash) public view returns (uint32 result) {
         return m_getTimestamp(blockHash);
     }
 
