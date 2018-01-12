@@ -34,19 +34,19 @@ module.exports = {
     return (str.indexOf("0x")==0) ? str.substring(2) : str;
   }
   ,
-  bulkStore10From974401: async function (dr, accounts) {
+  bulkStore10From974401: async function (dr, sender) {
     var startBlockNum = 974401;
     var headers = "0x";
     var hashes = "0x";
     var numBlock = 10;
     var block974401Prev = "0xa84956d6535a1be26b77379509594bdb8f186b29c3b00143dcb468015bdd16da";
 
-    await dr.setInitialParent(block974401Prev, startBlockNum-1, 1, {from: accounts[0]});
+    await dr.setInitialParent(block974401Prev, startBlockNum-1, 1, { from: sender });
     const { headers: rawHeaders, hashes: rawHashes } = await parseDataFile('test/headers/11from974401DogeMain.txt');
 
     headers += rawHeaders.slice(0, 10).map(module.exports.addSizeToHeader).join('');
     hashes += rawHeaders.slice(0, 10).map(module.exports.calcHeaderPoW).join('');
-    await dr.bulkStoreHeaders(headers, hashes, 10, {from: accounts[0]});
+    await dr.bulkStoreHeaders(headers, hashes, 10, { from: sender });
 
     const blockHeight = await dr.getBestBlockHeight.call();
     assert.equal(blockHeight.toNumber(), startBlockNum + numBlock - 1, "latest block number is not the expected one"); // # +1 since setInitialParent was called with imaginary block
