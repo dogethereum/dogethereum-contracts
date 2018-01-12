@@ -7,7 +7,8 @@
   },
   "dependencies": {
     "bitcoin-proof": "2.0.0",
-    "scryptsy": "^2.0.0"
+    "scryptsy": "^2.0.0",
+    "truffle-hdwallet-provider": "0.0.3"
   },
   "devDependencies": {},
   "scripts": {
