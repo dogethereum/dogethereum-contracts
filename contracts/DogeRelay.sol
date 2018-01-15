@@ -260,7 +260,6 @@ contract DogeRelay {
         // in the C++ implementation, assuming nBits indeed corresponds
         // to the previous block header's bits. Make sure this is correct.
         uint bnNew = targetFromBits(nBits);
-        uint add1;
         bnNew = bnNew * uint(nModulatedTimespan);
         bnNew = uint(bnNew) / uint(retargetTimespan);
         log0(bytes32(bnNew));
@@ -268,8 +267,6 @@ contract DogeRelay {
         if (bnNew > POW_LIMIT) {
             bnNew = POW_LIMIT;
         }
-
-        log1(bytes32(bnNew), bytes32(m_toCompactBits(bnNew)));
 
         // Again, this should correspond to bnNew.GetCompact() from the Dogecoin
         // C++ implementation. Double check everything!
