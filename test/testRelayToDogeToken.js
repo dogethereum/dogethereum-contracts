@@ -4,12 +4,12 @@ var utils = require('./utils');
 
 
 contract('DogeRelay', function(accounts) {
-  let dogeToken;
-  let dogeRelay;
-  before(async () => {
-    dogeRelay =  await DogeRelay.deployed();
-    dogeToken = await DogeToken.deployed();
-  });
+    let dogeToken;
+    let dogeRelay;
+    before(async () => {
+        dogeRelay =  await DogeRelay.deployed();
+        dogeToken = await DogeToken.deployed();
+    });
   it('Relay tx to token', async () => {
     const headerAndHashes = await utils.bulkStore10From974401(dogeRelay, accounts);
     const txIndex = 2; // Third tx in the block
