@@ -21,7 +21,7 @@ contract('DogeRelay', function(accounts) {
             hashes += rawHeaders.map(utils.calcHeaderPoW).join('');
             return dr.bulkStoreHeaders(headers, hashes, 11, {from: accounts[0]});
         }).then(function(result) {
-            console.log(result.receipt.logs);
+            //console.log(result.receipt.logs);
             return dr.getChainWork.call();
         }).then(function(result) {
             assert.equal(result.toNumber(), 11 + 1, "difficulty is not the expected one"); // # +1 since setInitialParent was called with imaginary block

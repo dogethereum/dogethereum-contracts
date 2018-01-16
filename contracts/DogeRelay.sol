@@ -156,8 +156,6 @@ contract DogeRelay {
         uint blockHeight = 1 + m_getHeight(hashPrevBlock);
         uint32 prevBits = m_getBits(hashPrevBlock);
 
-        //log0(bytes32(blockHeight));
-
         if (blockHeight == 0xb478c) {
             assert(m_getTimestamp(blockSha256Hash) < m_getTimestamp(hashPrevBlock));
         }
@@ -169,8 +167,6 @@ contract DogeRelay {
             // This allows blocks with arbitrary difficulty from being added to
             // the initial parent, but as these forks will have lower score than
             // the main chain, they will not have impact.
-            //log0(bytes32(blockHeight));
-            //log1(bytes32(prevBits), bytes32(bits));
             if (bits != prevBits && prevBits != 0) {
                 StoreHeader(blockSha256Hash, ERR_DIFFICULTY);
                 return 0;
@@ -179,26 +175,17 @@ contract DogeRelay {
             // In order to avoid the 'grandparent block bug', we don't check anything
             // for the 2nd stored block now. This should be implemented later!!!
 
-            //log1(bytes32(blockHeight), bytes32(m_getTimestamp(hashPrevBlock)));
-            //log1(bytes32(prevBits), bytes32(bits));
         } else {
             // (blockHeight - DIFFICULTY_ADJUSTMENT_INTERVAL) is same as [getHeight(hashPrevBlock) - (DIFFICULTY_ADJUSTMENT_INTERVAL - 1)]
 
-            //log2(bytes32(blockHeight), bytes32(m_getTimestamp(hashPrevBlock)), bytes32(m_getTimestamp(internalBlock[m_getAncestor(hashPrevBlock, 0)])));
+            uint32 newBits = m_calculateDigishieldDifficulty(m_getTimestamp(hashPrevBlock) - m_getTimestamp(internalBlock[m_getAncestor(hashPrevBlock, 0)]),
+                                                           prevBits);
 
-            uint32 newBits = m_computeNewBits(m_getTimestamp(hashPrevBlock), m_getTimestamp(internalBlock[m_getAncestor(hashPrevBlock, 0)]),
-                                              targetFromBits(prevBits));
-
-            //assert(blockHeight != 793209 || m_getTimestamp(blockSha256Hash) > m_getTimestamp(hashPrevBlock) + 120);
-            //if (m_getTimestamp(hashPrevBlock) > m_getTimestamp(internalBlock[m_getAncestor(hashPrevBlock, 0)]) + 120) {
-            //if (blockHeight == 0xb4789 && m_getTimestamp(blockSha256Hash) > m_getTimestamp(hashPrevBlock) + 120) {
             if (net == Network.TESTNET && m_getTimestamp(hashPrevBlock) - m_getTimestamp(blockSha256Hash) > 120) {
-                log1(bytes32(blockHeight), bytes32("DOGE"));
                 newBits = 0x1e0fffff;
             }
-            //log3(bytes32(blockHeight), bytes32(prevBits), bytes32(bits), bytes32(newBits));
 
-            // Comment out difficulty adjustment verification until we implement doge algorithm
+            // Difficulty adjustment verification
             if (bits != newBits && newBits != 0) {  // newBits != 0 to allow first header
                 StoreHeader(blockSha256Hash, ERR_RETARGET);
                 return 0;
@@ -236,7 +223,7 @@ contract DogeRelay {
     // on dogecoin/src/dogecoin.cpp for more details.
     // Calculates the next block's difficulty based on the current block's elapsed time
     // and the desired mining time for a block, which is 60 seconds after block 145k.
-    function calculateDigishieldDifficulty(uint nActualTimespan, uint32 nBits) private returns (uint32 result) {
+    function m_calculateDigishieldDifficulty(uint nActualTimespan, uint32 nBits) private returns (uint32 result) {
         // nActualTimespan: time elapsed from previous block creation til current block creation
         // i.e., how much time it took to mine the current block
         // nBits: previous block header difficulty (in bits)
@@ -698,21 +685,11 @@ contract DogeRelay {
         return ((blockHeight % DIFFICULTY_ADJUSTMENT_INTERVAL) == 0);
     }
 
-    function m_computeNewBits(uint prevTime, uint startTime, uint prevTarget) private returns (uint32) {
-        uint actualTimespan = prevTime - startTime;
-//        if (actualTimespan < TARGET_TIMESPAN_DIV_4) {
-//            actualTimespan = TARGET_TIMESPAN_DIV_4;
-//        }
-//        if (actualTimespan > TARGET_TIMESPAN_MUL_4) {
-//            actualTimespan = TARGET_TIMESPAN_MUL_4;
-//        }
-//        uint newTarget = actualTimespan * prevTarget / TARGET_TIMESPAN;
-//        if (newTarget > UNROUNDED_MAX_TARGET) {
-//            newTarget = UNROUNDED_MAX_TARGET;
-//        }
-        uint32 bits = m_toCompactBits(prevTarget);
-        return calculateDigishieldDifficulty(actualTimespan, bits);
-    }
+    //function m_computeNewBits(uint prevTime, uint startTime, uint prevTarget) private returns (uint32) {
+    //    uint actualTimespan = prevTime - startTime;
+    //    uint32 bits = m_toCompactBits(prevTarget);
+    //    return m_calculateDigishieldDifficulty(actualTimespan, bits);
+    //}
 
 
 
@@ -738,10 +715,6 @@ contract DogeRelay {
 
         return compact | uint32(m_shiftLeft(nbytes, 24));
     }
-
-
-    // Analogous to arith_uint256::SetCompact from C++ implementation
-    function m_setCompact(uint32 nCompact, bool pfNegative, bool pfOverflow) {}
 
 
     // get the parent blok hash of 'blockHash'
