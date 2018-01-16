@@ -23,7 +23,7 @@ contract DogeRelay {
 
     // a Bitcoin block (header) is stored as:
     // - _blockHeader 80 bytes + AuxPow (merge mining field)
-    // - _info who's 32 bytes are comprised of "_height" 8bytes, "_ibIndex" 8F==bytes, "_score" 16bytes
+    // - _info who's 32 bytes are comprised of "_height" 8bytes, "_ibIndex" 8bytes, "_score" 16bytes
     // -   "_height" is 1 more than the typical Bitcoin term height/blocknumber [see setInitialParent()]
     // -   "_ibIndex" is the block's index to internalBlock (see btcChain)
     // -   "_score" is 1 more than the chainWork [see setInitialParent()]
@@ -155,10 +155,6 @@ contract DogeRelay {
 
         uint blockHeight = 1 + m_getHeight(hashPrevBlock);
         uint32 prevBits = m_getBits(hashPrevBlock);
-
-        if (blockHeight == 0xb478c) {
-            assert(m_getTimestamp(blockSha256Hash) < m_getTimestamp(hashPrevBlock));
-        }
 
         if (!m_difficultyShouldBeAdjusted(blockHeight) || ibIndex == 0) {
             // since blockHeight is 1 more than blockNumber; OR clause is special case for 1st header
@@ -684,13 +680,6 @@ contract DogeRelay {
     function m_difficultyShouldBeAdjusted(uint blockHeight) private pure returns (bool) {
         return ((blockHeight % DIFFICULTY_ADJUSTMENT_INTERVAL) == 0);
     }
-
-    //function m_computeNewBits(uint prevTime, uint startTime, uint prevTarget) private returns (uint32) {
-    //    uint actualTimespan = prevTime - startTime;
-    //    uint32 bits = m_toCompactBits(prevTarget);
-    //    return m_calculateDigishieldDifficulty(actualTimespan, bits);
-    //}
-
 
 
     // Convert uint256 to compact encoding
