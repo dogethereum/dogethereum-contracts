@@ -5,6 +5,8 @@ import "./TransactionProcessor.sol";
 
 contract DogeRelay {
 
+    enum Network { MAINNET, TESTNET }
+
     // Number of block ancestors stored in BlockInformation._ancestor
     uint8 constant private NUM_ANCESTOR_DEPTHS = 8;
 
@@ -43,6 +45,9 @@ contract DogeRelay {
     // highest score among all blocks (so far)
     uint private highScore;
 
+    // network the block was mined in
+    Network private net;
+
     // TODO: Make event parameters indexed so we can register filters on them
     event StoreHeader(uint blockHash, uint returnCode);
     event GetHeader(uint blockHash, uint returnCode);
@@ -50,10 +55,11 @@ contract DogeRelay {
     event RelayTransaction(uint txHash, uint returnCode);
 
 
-    function DogeRelay() public {
+    function DogeRelay(Network network) public {
         // gasPriceAndChangeRecipientFee in incentive.se
         // TODO incentive management
         // self.gasPriceAndChangeRecipientFee = 50 * 10**9 * BYTES_16 // 50 shannon and left-align
+        net = network;
     }
 
     // setInitialParent can only be called once and allows testing of storing
@@ -138,6 +144,7 @@ contract DogeRelay {
 
         uint32 bits = f_bits(blockHeaderBytes);
         uint target = targetFromBits(bits);
+
         // we only check the target and do not do other validation (eg timestamp) to save gas
         // Comment out PoW validation until we implement doge specific code
         //if (blockHash < 0 || blockHash > target) {
@@ -160,16 +167,25 @@ contract DogeRelay {
                 StoreHeader(blockSha256Hash, ERR_DIFFICULTY);
                 return 0;
             }
+        } else if (ibIndex == 1) {
+            // In order to avoid the 'grandparent block bug', we don't check anything
+            // for the 2nd stored block now. This should be implemented later!!!
+
         } else {
             // (blockHeight - DIFFICULTY_ADJUSTMENT_INTERVAL) is same as [getHeight(hashPrevBlock) - (DIFFICULTY_ADJUSTMENT_INTERVAL - 1)]
-            uint32 newBits = m_computeNewBits(m_getTimestamp(hashPrevBlock),
-                                              m_getTimestamp(priv_fastGetBlockHash__(blockHeight - DIFFICULTY_ADJUSTMENT_INTERVAL)),
-                                              targetFromBits(prevBits));
-            // Comment out difficulty adjustment verification until we implement doge algorithm
-            //if (bits != newBits && newBits != 0) {  // newBits != 0 to allow first header
-            //    StoreHeader(blockHash, ERR_RETARGET);
-            //    return 0;
-            //}
+
+            uint32 newBits = m_calculateDigishieldDifficulty(m_getTimestamp(hashPrevBlock) - m_getTimestamp(internalBlock[m_getAncestor(hashPrevBlock, 0)]),
+                                                           prevBits);
+
+            if (net == Network.TESTNET && m_getTimestamp(hashPrevBlock) - m_getTimestamp(blockSha256Hash) > 120) {
+                newBits = 0x1e0fffff;
+            }
+
+            // Difficulty adjustment verification
+            if (bits != newBits && newBits != 0) {  // newBits != 0 to allow first header
+                StoreHeader(blockSha256Hash, ERR_RETARGET);
+                return 0;
+            }
         }
 
         m_saveAncestors(blockSha256Hash, hashPrevBlock);  // increments ibIndex
@@ -198,7 +214,47 @@ contract DogeRelay {
         return blockHeight;
     }
 
+    // Implementation of DigiShield, almost directly translated from
+    // C++ implementation of Dogecoin. See function CalculateDogecoinNextWorkRequired
+    // on dogecoin/src/dogecoin.cpp for more details.
+    // Calculates the next block's difficulty based on the current block's elapsed time
+    // and the desired mining time for a block, which is 60 seconds after block 145k.
+    function m_calculateDigishieldDifficulty(uint nActualTimespan, uint32 nBits) private returns (uint32 result) {
+        // nActualTimespan: time elapsed from previous block creation til current block creation
+        // i.e., how much time it took to mine the current block
+        // nBits: previous block header difficulty (in bits)
+        int64 retargetTimespan = int64(TARGET_TIMESPAN);
+        int64 nModulatedTimespan = int64(nActualTimespan);
 
+        nModulatedTimespan = retargetTimespan + int64(nModulatedTimespan - retargetTimespan) / int64(8); //amplitude filter
+        int64 nMinTimespan = retargetTimespan - (int64(retargetTimespan) / int64(4));
+        int64 nMaxTimespan = retargetTimespan + (int64(retargetTimespan) / int64(2));
+
+        // Limit adjustment step
+        if (nModulatedTimespan < nMinTimespan) {
+            nModulatedTimespan = nMinTimespan;
+        } else if (nModulatedTimespan > nMaxTimespan) {
+            nModulatedTimespan = nMaxTimespan;
+        }
+
+        // Retarget
+
+        // This should yield the same result as bnNew.setCompact(pIndexLast->nBits)
+        // in the C++ implementation, assuming nBits indeed corresponds
+        // to the previous block header's bits. Make sure this is correct.
+        uint bnNew = targetFromBits(nBits);
+        bnNew = bnNew * uint(nModulatedTimespan);
+        bnNew = uint(bnNew) / uint(retargetTimespan);
+        log0(bytes32(bnNew));
+
+        if (bnNew > POW_LIMIT) {
+            bnNew = POW_LIMIT;
+        }
+
+        // Again, this should correspond to bnNew.GetCompact() from the Dogecoin
+        // C++ implementation. Double check everything!
+        return m_toCompactBits(bnNew);
+    }
 
     // store a number of blockheaders
     // Return latest's block height
@@ -625,25 +681,10 @@ contract DogeRelay {
         return ((blockHeight % DIFFICULTY_ADJUSTMENT_INTERVAL) == 0);
     }
 
-    function m_computeNewBits(uint prevTime, uint startTime, uint prevTarget) private pure returns (uint32) {
-        uint actualTimespan = prevTime - startTime;
-        if (actualTimespan < TARGET_TIMESPAN_DIV_4) {
-            actualTimespan = TARGET_TIMESPAN_DIV_4;
-        }
-        if (actualTimespan > TARGET_TIMESPAN_MUL_4) {
-            actualTimespan = TARGET_TIMESPAN_MUL_4;
-        }
-        uint newTarget = actualTimespan * prevTarget / TARGET_TIMESPAN;
-        if (newTarget > UNROUNDED_MAX_TARGET) {
-            newTarget = UNROUNDED_MAX_TARGET;
-        }
-        return m_toCompactBits(newTarget);
-    }
-
-
 
     // Convert uint256 to compact encoding
     // based on https://github.com/petertodd/python-bitcoinlib/blob/2a5dda45b557515fb12a0a18e5dd48d2f5cd13c2/bitcoin/core/serialize.py
+    // Analogous to arith_uint256::GetCompact from C++ implementation
     function m_toCompactBits(uint val) private pure returns (uint32) {
         uint8 nbytes = uint8 (m_shiftRight((m_bitLen(val) + 7), 3));
         uint32 compact = 0;
@@ -896,6 +937,7 @@ contract DogeRelay {
     uint constant TARGET_TIMESPAN_DIV_4 = TARGET_TIMESPAN / 4;
     uint constant TARGET_TIMESPAN_MUL_4 = TARGET_TIMESPAN * 4;
     uint constant UNROUNDED_MAX_TARGET = 2**224 - 1;  // different from (2**16-1)*2**208 http =//bitcoin.stackexchange.com/questions/13803/how/ exactly-was-the-original-coefficient-for-difficulty-determined
+    uint256 constant POW_LIMIT = 0x00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
 
     //
     // Error / failure codes

@@ -14,7 +14,7 @@ module.exports = function(deployer) {
   deployer.deploy(DogeTx);
   deployer.link(DogeTx, DogeToken)
   //deployer.link(DogeChain, DogeRelay);
-  deployer.deploy(DogeRelayForTests).then(function(){
+  deployer.deploy(DogeRelayForTests, 0).then(function(){
     return deployer.deploy(DogeProcessor, DogeRelayForTests.address);
   }).then(function(){
     return deployer.deploy(DogeToken, DogeRelayForTests.address, dogethereumRecipient);
