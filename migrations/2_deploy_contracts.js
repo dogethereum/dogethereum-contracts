@@ -29,10 +29,13 @@ module.exports = function(deployer, network, accounts) {
       return dogeRelay.setScryptChecker(ScryptCheckerDummy.address);
     });
   } else {
-    return deployer.deploy(DogeRelay, 0, scryptCheckerAddress).then(function () {
+    return deployer.deploy(DogeRelay, 0).then(function () {
       return deployer.deploy(DogeProcessor, DogeRelay.address);
     }).then(function () {
       return deployer.deploy(DogeToken, DogeRelay.address, dogethereumRecipient);
+    }).then(function () {
+      const dogeRelay = DogeRelay.at(DogeRelay.address);
+      return dogeRelay.setScryptChecker(scryptCheckerAddress);
     });
   }
 };
