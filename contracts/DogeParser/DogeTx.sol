@@ -147,8 +147,8 @@ library DogeTx {
         }
     }
 
-    function parseTransaction(bytes txBytes) internal pure
-             returns (uint, bytes20, bytes32, bool)
+    function parseTransaction(bytes txBytes, bytes20 expected_output_address) internal pure
+             returns (uint, bytes32, bool)
     {
         uint pos;
         uint[] memory input_script_lens;
@@ -157,6 +157,7 @@ library DogeTx {
         uint[] memory output_script_starts;
         uint[] memory output_values;
         bytes20 output_address;
+        uint output_value;
 
         pos = 4;  // skip version
         (input_script_starts, input_script_lens, pos) = scanInputs(txBytes, pos, 0);
@@ -165,10 +166,18 @@ library DogeTx {
         bool inputPubKeyOdd;
         (inputPubKey, inputPubKeyOdd) = getInputPubKey(txBytes, input_script_starts[0]);
 
-        (output_values, output_script_starts, output_script_lens, pos) = scanOutputs(txBytes, pos, 1);
+        (output_values, output_script_starts, output_script_lens, pos) = scanOutputs(txBytes, pos, 2);
+        // The output we are looking for should be the first or the second output
         output_address = parseOutputScript(txBytes, output_script_starts[0], output_script_lens[0]);
+        output_value = output_values[0];
 
-        return (output_values[0], output_address, inputPubKey, inputPubKeyOdd);
+        if (output_address != expected_output_address) {
+            output_address = parseOutputScript(txBytes, output_script_starts[1], output_script_lens[1]);
+            output_value = output_values[1];
+        }
+        require(output_address == expected_output_address);
+
+        return (output_value, inputPubKey, inputPubKeyOdd);
     }
 
     // scan the full transaction bytes and return the first two output

@@ -13,7 +13,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
     Set.Data dogeTxHashesAlreadyProcessed;
     uint256 minimumLockTxValue;
 
-    event NewToken(address indexed user, uint value, address recipient);
+    event NewToken(address indexed user, uint value);
 
 
     function DogeToken(address trustedDogeRelay, bytes20 recipientDogethereum) public {
@@ -26,13 +26,10 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         require(msg.sender == _trustedDogeRelay);
 
         uint value;
-        bytes20 recipient;
         bytes32 pubKey;
         bool odd;
-        (value, recipient, pubKey, odd) = DogeTx.parseTransaction(dogeTx);
+        (value, pubKey, odd) = DogeTx.parseTransaction(dogeTx, _recipientDogethereum);
 
-        // Accept outputs to the dedicated address
-        require(recipient == _recipientDogethereum);
 
         // Check tx was not processes already and add it to the dogeTxHashesAlreadyProcessed
         require(Set.insert(dogeTxHashesAlreadyProcessed, txHash));
@@ -41,7 +38,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         address destinationAddress = DogeTx.pub2address(uint256(pubKey), odd);
 
         balances[destinationAddress] += value;
-        NewToken(destinationAddress, value, address(recipient));
+        NewToken(destinationAddress, value);
 
         return value;
     }
