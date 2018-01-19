@@ -1,5 +1,3 @@
-var fs = require('fs');
-var readline = require('readline');
 var DogeRelay = artifacts.require('./DogeRelayForTests.sol');
 var ScryptCheckerDummy = artifacts.require('./ScryptCheckerDummy.sol');
 var utils = require('./utils');
