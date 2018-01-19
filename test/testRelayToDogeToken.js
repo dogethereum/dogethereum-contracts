@@ -11,7 +11,7 @@ contract('DogeRelay', function(accounts) {
         dogeToken = await DogeToken.deployed();
     });
   it('Relay tx to token', async () => {
-    const headerAndHashes = await utils.bulkStore10From974401(dogeRelay, accounts);
+    const headerAndHashes = await utils.bulkStore10From974401(dogeRelay, accounts[0]);
     const txIndex = 2; // Third tx in the block
     const txHash = '718add98dca8f54288b244dde3b0e797e8fe541477a08ef4b570ea2b07dccd3f';
     const txData = [

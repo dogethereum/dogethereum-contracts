@@ -81,14 +81,34 @@ Some operations require gas to be spent. Here are the incentives for doing that.
   ```
     npm install
   ```
-* Run tests: 
+* Run tests:
   ```
     # first start ganache-cli
     ganache-cli --gasLimit 4000000000000
-    
+
     # run tests
     truffle test
   ```
+
+## Deployment
+
+To deploy the contracts
+
+### Requirements
+
+* A ropsten client running with rpc enabled
+
+### Preparation
+
+* Copy `local_config.json.example` to `local_config.json`
+* Replace _seed_ and _address_ fields in the configuration
+* Verify _rpcpath_ in `config.js` points to a ropsten RPC client
+
+### Deployment
+
+* Run `truffle migrate --network ropsten`
+
+**Note**: Do not commit `local_config.json` file!
 
 ## License
 

@@ -1,5 +1,4 @@
 pragma solidity ^0.4.19;
-//pragma experimental ABIEncoderV2;
 
 import "./DogeRelay.sol";
 

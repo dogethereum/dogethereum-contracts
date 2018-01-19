@@ -1,6 +1,7 @@
 var fs = require('fs');
 var readline = require('readline');
-var DogeRelay = artifacts.require("./DogeRelayForTests.sol");
+var DogeRelay = artifacts.require('./DogeRelayForTests.sol');
+var ScryptCheckerDummy = artifacts.require('./ScryptCheckerDummy.sol');
 var utils = require('./utils');
 
 
@@ -8,6 +9,8 @@ contract('DogeRelay', function(accounts) {
     let dr;
     before(async () => {
         dr = await DogeRelay.new(1);
+        const scryptChecker = await ScryptCheckerDummy.new(dr.address, true);
+        await dr.setScryptChecker(scryptChecker.address);
     });
     it("testDifficulty", function() {
         var headers = "0x";

@@ -1,7 +1,7 @@
 pragma solidity ^0.4.19;
-//pragma experimental ABIEncoderV2;
 
 import "./TransactionProcessor.sol";
+import "./IScryptChecker.sol";
 
 contract DogeRelay {
 
@@ -48,18 +48,30 @@ contract DogeRelay {
     // network the block was mined in
     Network private net;
 
+    // blocks with pending scrypt hash verification
+    mapping (uint => BlockInformation) internal pendingBlocks;
+
+    uint internal pendingIdx;
+
+    // Scrypt checker
+    IScryptChecker public scryptChecker;
+
     // TODO: Make event parameters indexed so we can register filters on them
     event StoreHeader(uint blockHash, uint returnCode);
     event GetHeader(uint blockHash, uint returnCode);
     event VerifyTransaction(uint txHash, uint returnCode);
     event RelayTransaction(uint txHash, uint returnCode);
 
-
     function DogeRelay(Network network) public {
         // gasPriceAndChangeRecipientFee in incentive.se
         // TODO incentive management
         // self.gasPriceAndChangeRecipientFee = 50 * 10**9 * BYTES_16 // 50 shannon and left-align
         net = network;
+    }
+
+    function setScryptChecker(address _scryptChecker) public {
+        require(address(scryptChecker) == 0x0);
+        scryptChecker = IScryptChecker(_scryptChecker);
     }
 
     // setInitialParent can only be called once and allows testing of storing
@@ -106,8 +118,6 @@ contract DogeRelay {
         return true;
     }
 
-
-
     // Where the header begins:
     // 4 bytes function ID +
     // 32 bytes pointer to header array data +
@@ -116,7 +126,6 @@ contract DogeRelay {
     // To understand abi encoding, read https://medium.com/@hayeah/how-to-decipher-a-smart-contract-method-call-8ee980311603
     // Not declared constant because inline assembly would not be able to use it.
     // Declared uint so it has no offset to access it from assebly
-    uint OFFSET_ABI = 100;
 
     // store a Dogecoin block header that must be provided in bytes format 'blockHeaderBytes'
     // Callers must keep same signature since CALLDATALOAD is used to save gas.
@@ -125,10 +134,40 @@ contract DogeRelay {
         // Code here should call the Scrypt validator contract to make sure the supplied hash of the block is correct
         // If the block is merge mined, there are 2 Scrypts functions to execute, the one that checks PoW of the litecoin block
         // and the one that checks the block hash
+        if (blockHeaderBytes.length < 80) {
+            StoreHeader(0, ERR_INVALID_HEADER);
+            return 0;
+        }
 
-        uint blockSha256Hash = m_dblShaFlip(sliceArray(blockHeaderBytes, 0, 80));
+        bytes memory rawBlockHeader = sliceArray(blockHeaderBytes, 0, 80);
+        ++pendingIdx;
+        BlockInformation storage bi = pendingBlocks[pendingIdx];
+        bi._blockHeader = rawBlockHeader;
 
-        uint hashPrevBlock = f_hashPrevBlock(blockHeaderBytes);
+        if ((blockHeaderBytes[1] & 0x01) != 0) {
+            // Merge mined block
+            uint length = blockHeaderBytes.length;
+            bytes memory mergedMinedBlockHeader = sliceArray(blockHeaderBytes, length - 80, length);
+            scryptChecker.checkScrypt(mergedMinedBlockHeader, bytes32(proposedScryptBlockHash), this, bytes32(pendingIdx));
+        } else {
+            // Normal block
+            scryptChecker.checkScrypt(rawBlockHeader, bytes32(proposedScryptBlockHash), this, bytes32(pendingIdx));
+        }
+
+        return 1;
+    }
+
+    function scryptVerified(bytes32 _requestId) public returns (uint) {
+        if (msg.sender != address(scryptChecker)) {
+            StoreHeader(0, ERR_INVALID_HEADER);
+            return 0;
+        }
+
+        BlockInformation storage bi = pendingBlocks[uint(_requestId)];
+
+        uint blockSha256Hash = m_dblShaFlip(bi._blockHeader);
+
+        uint hashPrevBlock = f_hashPrevBlock(bi._blockHeader);
 
         uint128 scorePrevBlock = m_getScore(hashPrevBlock);
         if (scorePrevBlock == 0) {
@@ -142,7 +181,7 @@ contract DogeRelay {
             return 0;
         }
 
-        uint32 bits = f_bits(blockHeaderBytes);
+        uint32 bits = f_bits(bi._blockHeader);
         uint target = targetFromBits(bits);
 
         // we only check the target and do not do other validation (eg timestamp) to save gas
@@ -151,7 +190,6 @@ contract DogeRelay {
         //    StoreHeader (blockHash, ERR_PROOF_OF_WORK);
         //    return 0;
         //}
-
 
         uint blockHeight = 1 + m_getHeight(hashPrevBlock);
         uint32 prevBits = m_getBits(hashPrevBlock);
@@ -188,9 +226,10 @@ contract DogeRelay {
             }
         }
 
+        myblocks[blockSha256Hash] = bi;
         m_saveAncestors(blockSha256Hash, hashPrevBlock);  // increments ibIndex
 
-        myblocks[blockSha256Hash]._blockHeader = sliceArray(blockHeaderBytes, 0, 80);
+        delete pendingBlocks[uint(_requestId)];
 
         // https://en.bitcoin.it/wiki/Difficulty
         // Min difficulty for bitcoin is 0x1d00ffff
@@ -325,8 +364,6 @@ contract DogeRelay {
             return 0;
         }
     }
-
-
 
     // Returns 1 if txHash is in the block given by 'txBlockHash' and the block is
     // in Bitcoin's main chain (ie not a fork)
@@ -614,7 +651,7 @@ contract DogeRelay {
 
 
     // Should be private, made internal for testing
-    function sliceArray(bytes memory original, uint32 offset, uint32 endIndex) internal view returns (bytes) {
+    function sliceArray(bytes memory original, uint offset, uint endIndex) internal view returns (bytes) {
         uint len = endIndex - offset;
         bytes memory result = new bytes(len);
         assembly {
@@ -948,6 +985,7 @@ contract DogeRelay {
     uint constant ERR_RETARGET = 10020;  // difficulty didn't match retarget
     uint constant ERR_NO_PREV_BLOCK = 10030;
     uint constant ERR_BLOCK_ALREADY_EXISTS = 10040;
+    uint constant ERR_INVALID_HEADER = 10050;
     uint constant ERR_PROOF_OF_WORK = 10090;
 
     // error codes for verifyTx
