@@ -6,15 +6,18 @@ var DogeToken = artifacts.require("./token/DogeToken.sol");
 var DogeTx = artifacts.require("./DogeParser/DogeTx.sol");
 var ScryptCheckerDummy = artifacts.require("./ScryptCheckerDummy.sol");
 
-const dogethereumRecipient = '0x4d905b4b815d483cdfabcd292c6f86509d0fad82';
 const scryptCheckerAddress = '0xfeedbeeffeedbeeffeedbeeffeedbeeffeedbeef';
+const dogethereumRecipientUnitTest = '0x4d905b4b815d483cdfabcd292c6f86509d0fad82';
+//const dogethereumRecipient = '0xda8271ee26545028ca332368c60358a4c550d7a1';
+const dogethereumRecipientIntegrationTest = '0x0000000000000000000000000000000000000001';
 
 module.exports = function(deployer, network, accounts) {
+  const dogethereumRecipient = (network === 'development') ? dogethereumRecipientUnitTest : dogethereumRecipientIntegrationTest;
   deployer.deploy(Set);
   deployer.link(Set, DogeToken);
   deployer.deploy(DogeTx);
   deployer.link(DogeTx, DogeToken);
-  if (network === 'development') {
+  if (network === 'development' || network === 'integration') {
     deployer.deploy(DogeRelayForTests, 0).then(function () {
       return deployer.deploy(ScryptCheckerDummy, DogeRelayForTests.address, true)
     }).then(function () {
