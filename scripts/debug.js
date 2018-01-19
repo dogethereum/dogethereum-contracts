@@ -4,6 +4,7 @@ var utils = require('../test/utils');
 
 module.exports = function(callback) {
   var dr;
+  var dt;  
   DogeRelayForTests.deployed().then(function(instance) {      
     dr = instance;
     return dr.getBestBlockHash.call(); 
@@ -19,6 +20,12 @@ module.exports = function(callback) {
       formattedResult.push(utils.formatHexUint32(element.toString(16)));
     });    
     console.log("Locator : " + formattedResult);
+    return DogeToken.deployed();
+  }).then(function(instance) {
+    dt = instance;
+    return dt.balanceOf.call("0x3a6f55724e01fa66a315bd05bff7d382461867c5"); 
+  }).then(function(result) {
+    console.log("Balance of 0x3a6f55724e01fa66a315bd05bff7d382461867c5 : " + result);
     callback();
   }).catch(function(e) {
     // There was an error! Handle it.
