@@ -220,10 +220,11 @@ contract DogeRelay {
             }
 
             // Difficulty adjustment verification
-            if (bits != newBits && newBits != 0) {  // newBits != 0 to allow first header
-                StoreHeader(blockSha256Hash, ERR_RETARGET);
-                return 0;
-            }
+            // Comment out until we fix bug adding block https://dogechain.info/block/2054961
+            //if (bits != newBits && newBits != 0) {  // newBits != 0 to allow first header
+            //    StoreHeader(blockSha256Hash, ERR_RETARGET);
+            //    return 0;
+            //}
         }
 
         myblocks[blockSha256Hash] = bi;
