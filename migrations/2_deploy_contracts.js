@@ -30,12 +30,13 @@ module.exports = function(deployer, network, accounts) {
     });
   } else {
     return deployer.deploy(DogeRelay, 0).then(function () {
-      return deployer.deploy(DogeProcessor, DogeRelay.address);
-    }).then(function () {
       return deployer.deploy(DogeToken, DogeRelay.address, dogethereumRecipient);
     }).then(function () {
+      return deployer.deploy(ScryptCheckerDummy, DogeRelay.address, true)
+    }).then(function () {
       const dogeRelay = DogeRelay.at(DogeRelay.address);
-      return dogeRelay.setScryptChecker(scryptCheckerAddress);
+      //return dogeRelay.setScryptChecker(scryptCheckerAddress);
+      return dogeRelay.setScryptChecker(ScryptCheckerDummy.address);
     });
   }
 };
