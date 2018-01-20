@@ -284,7 +284,7 @@ contract DogeRelay {
         uint bnNew = targetFromBits(nBits);
         bnNew = bnNew * uint(nModulatedTimespan);
         bnNew = uint(bnNew) / uint(retargetTimespan);
-        log0(bytes32(bnNew));
+        //log0(bytes32(bnNew));
 
         if (bnNew > POW_LIMIT) {
             bnNew = POW_LIMIT;
