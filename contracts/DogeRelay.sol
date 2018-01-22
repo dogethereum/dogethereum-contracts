@@ -212,8 +212,10 @@ contract DogeRelay {
         } else {
             // (blockHeight - DIFFICULTY_ADJUSTMENT_INTERVAL) is same as [getHeight(hashPrevBlock) - (DIFFICULTY_ADJUSTMENT_INTERVAL - 1)]
 
-            uint32 newBits = m_calculateDigishieldDifficulty(m_getTimestamp(hashPrevBlock) - m_getTimestamp(internalBlock[m_getAncestor(hashPrevBlock, 0)]),
-                                                           prevBits);
+            int64 prevTimestamp = m_getTimestamp(hashPrevBlock);
+            int64 grandTimestamp = m_getTimestamp(getPrevBlock(hashPrevBlock));
+
+            uint32 newBits = m_calculateDigishieldDifficulty(prevTimestamp - grandTimestamp, prevBits);
 
             if (net == Network.TESTNET && m_getTimestamp(hashPrevBlock) - m_getTimestamp(blockSha256Hash) > 120) {
                 newBits = 0x1e0fffff;
@@ -221,10 +223,10 @@ contract DogeRelay {
 
             // Difficulty adjustment verification
             // Comment out until we fix bug adding block https://dogechain.info/block/2054961
-            //if (bits != newBits && newBits != 0) {  // newBits != 0 to allow first header
-            //    StoreHeader(blockSha256Hash, ERR_RETARGET);
-            //    return 0;
-            //}
+            if (bits != newBits && newBits != 0) {  // newBits != 0 to allow first header
+                StoreHeader(blockSha256Hash, ERR_RETARGET);
+                return 0;
+            }
         }
 
         myblocks[blockSha256Hash] = bi;
@@ -259,7 +261,7 @@ contract DogeRelay {
     // on dogecoin/src/dogecoin.cpp for more details.
     // Calculates the next block's difficulty based on the current block's elapsed time
     // and the desired mining time for a block, which is 60 seconds after block 145k.
-    function m_calculateDigishieldDifficulty(uint nActualTimespan, uint32 nBits) private returns (uint32 result) {
+    function m_calculateDigishieldDifficulty(int64 nActualTimespan, uint32 nBits) private returns (uint32 result) {
         // nActualTimespan: time elapsed from previous block creation til current block creation
         // i.e., how much time it took to mine the current block
         // nBits: previous block header difficulty (in bits)

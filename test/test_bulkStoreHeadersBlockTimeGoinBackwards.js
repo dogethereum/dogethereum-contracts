@@ -13,7 +13,7 @@ contract('DogeRelay', function(accounts) {
     it("testDifficulty", function() {
         var headers = "0x";
         var hashes = "0x";
-        // Dogecoin testnet
+        // Dogecoin mainnet
         var block2054957Hash = "0x6622287c6e6638b3d087941fc062c09a53625138f33e12c8f9850503c52d2075";
         return dr.setInitialParent(block2054957Hash, 2054957, 1, {from: accounts[0]}).then(function(instance) {
             return utils.parseDataFile('test/headers/2054958to2054963Main.txt');
