@@ -26,6 +26,9 @@ module.exports = function(callback) {
     return dt.balanceOf.call("0x3a6f55724e01fa66a315bd05bff7d382461867c5"); 
   }).then(function(result) {
     console.log("Balance of 0x3a6f55724e01fa66a315bd05bff7d382461867c5 : " + result);
+    return dt.balanceOf.call("0x25b9950e568651f4326cad3542fd46e64f73eafb"); 
+  }).then(function(result) {
+    console.log("Balance of 0x25b9950e568651f4326cad3542fd46e64f73eafb : " + result);
     callback();
   }).catch(function(e) {
     // There was an error! Handle it.
