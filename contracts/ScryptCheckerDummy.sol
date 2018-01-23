@@ -23,10 +23,14 @@ contract ScryptCheckerDummy {
     mapping (bytes32 => ScryptHashRequest) public pendingRequests;
 
 
-
     function ScryptCheckerDummy(address _dogeRelay, bool _acceptAll) public {
         dogeRelay = IDogeRelay(_dogeRelay);
         acceptAll = _acceptAll;
+    }
+
+    function setDogeRelay(address _dogeRelay) public {
+      require(address(dogeRelay) == 0);
+      dogeRelay = IDogeRelay(_dogeRelay);
     }
 
     // Mark to accept _hash as the scrypt hash of _data
