@@ -129,7 +129,7 @@ contract DogeRelay {
 
     // store a Dogecoin block header that must be provided in bytes format 'blockHeaderBytes'
     // Callers must keep same signature since CALLDATALOAD is used to save gas.
-    function storeBlockHeader(bytes blockHeaderBytes, uint proposedScryptBlockHash) public returns (uint) {
+    function storeBlockHeader(bytes blockHeaderBytes, uint proposedScryptBlockHash) public payable returns (uint) {
         // blockHash should be a function parameter in dogecoin because the hash can not be calculated onchain.
         // Code here should call the Scrypt validator contract to make sure the supplied hash of the block is correct
         // If the block is merge mined, there are 2 Scrypts functions to execute, the one that checks PoW of the litecoin block
@@ -148,10 +148,10 @@ contract DogeRelay {
             // Merge mined block
             uint length = blockHeaderBytes.length;
             bytes memory mergedMinedBlockHeader = sliceArray(blockHeaderBytes, length - 80, length);
-            scryptChecker.checkScrypt(mergedMinedBlockHeader, bytes32(proposedScryptBlockHash), this, bytes32(pendingIdx));
+            scryptChecker.checkScrypt.value(msg.value)(mergedMinedBlockHeader, bytes32(proposedScryptBlockHash), msg.sender, bytes32(pendingIdx));
         } else {
             // Normal block
-            scryptChecker.checkScrypt(rawBlockHeader, bytes32(proposedScryptBlockHash), this, bytes32(pendingIdx));
+            scryptChecker.checkScrypt.value(msg.value)(rawBlockHeader, bytes32(proposedScryptBlockHash), msg.sender, bytes32(pendingIdx));
         }
 
         return 1;
