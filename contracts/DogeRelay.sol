@@ -699,10 +699,10 @@ contract DogeRelay {
     }
 
 
-    // returns 1 if the 'txBlockHash' is within 6 blocks of self.bestBlockHash
-    // otherwise returns 0.
-    // note: return value of 0 does NOT mean 'txBlockHash' has more than 6
-    // confirmations; a non-existent 'txBlockHash' will lead to a return value of 0
+    // returns true if the 'txBlockHash' is within 6 blocks of bestBlockHash
+    // otherwise returns false.
+    // note: return value of false does NOT mean 'txBlockHash' has more than 6
+    // confirmations; a non-existent 'txBlockHash' will lead to a return value of false
     function within6Confirms(uint txBlockHash) private view returns (bool) {
         uint blockHash = bestBlockHash;
         uint8 i = 0;
