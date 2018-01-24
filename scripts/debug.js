@@ -1,11 +1,11 @@
-var DogeRelayForTests = artifacts.require("./DogeRelayForTests.sol");
+var DogeRelay = artifacts.require("./DogeRelay.sol");
 var DogeToken = artifacts.require("./token/DogeToken.sol");
 var utils = require('../test/utils');
 
 module.exports = function(callback) {
   var dr;
   var dt;  
-  DogeRelayForTests.deployed().then(function(instance) {      
+  DogeRelay.deployed().then(function(instance) {      
     dr = instance;
     return dr.getBestBlockHash.call(); 
   }).then(function(result) {

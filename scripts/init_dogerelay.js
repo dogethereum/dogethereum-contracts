@@ -1,9 +1,9 @@
-var DogeRelayForTests = artifacts.require("./DogeRelayForTests.sol");
+var DogeRelay = artifacts.require("./DogeRelay.sol");
 var DogeToken = artifacts.require("./token/DogeToken.sol");
 
 module.exports = function(callback) {
   var dr;
-  DogeRelayForTests.deployed().then(function(instance) {      
+  DogeRelay.deployed().then(function(instance) {      
     dr = instance;
     //return dr.setInitialParent(block974400Hash, 974400, 1, {from: accounts[0]}); 
     //var block2020000Hash = "0x9c1cdf5d0ce3676dc0551a81215d9fed0e45e12f3f7e5b18372a81130b963a2e";  

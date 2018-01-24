@@ -17,8 +17,8 @@ module.exports = function(deployer, network, accounts) {
   deployer.link(Set, DogeToken);
   deployer.deploy(DogeTx);
   deployer.link(DogeTx, DogeToken);
-  if (network === 'development' || network === 'integration') {
-    deployer.deploy(DogeRelayForTests, 0).then(function () {
+  if (network === 'development') {
+    return deployer.deploy(DogeRelayForTests, 0).then(function () {
       return deployer.deploy(ScryptCheckerDummy, DogeRelayForTests.address, true)
     }).then(function () {
       return deployer.deploy(DogeProcessor, DogeRelayForTests.address);
