@@ -23,7 +23,7 @@ module.exports = {
     ropsten: {
       provider: engine,
       network_id: "3", // Ropsten
-      gas: 4700000,
+      gas: 1000000,
       gasPrice: "20000000000"
     }
   }
