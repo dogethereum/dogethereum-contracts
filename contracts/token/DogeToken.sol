@@ -39,6 +39,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
 
         balances[destinationAddress] += value;
         NewToken(destinationAddress, value);
+        Transfer(0, destinationAddress, value);
 
         return value;
     }
