@@ -13,30 +13,30 @@ const dogethereumRecipientIntegrationTest = '0x000000000000000000000000000000000
 
 module.exports = function(deployer, network, accounts) {
   const dogethereumRecipient = (network === 'development') ? dogethereumRecipientUnitTest : dogethereumRecipientIntegrationTest;
-  deployer.deploy(Set);
+  deployer.deploy(Set, {gas: 300000});
   deployer.link(Set, DogeToken);
-  deployer.deploy(DogeTx);
+  deployer.deploy(DogeTx, {gas: 100000});
   deployer.link(DogeTx, DogeToken);
   if (network === 'development') {
-    return deployer.deploy(DogeRelayForTests, 0).then(function () {
-      return deployer.deploy(ScryptCheckerDummy, DogeRelayForTests.address, true)
+    return deployer.deploy(DogeRelayForTests, 0, {gas: 3600000}).then(function () {
+      return deployer.deploy(ScryptCheckerDummy, DogeRelayForTests.address, true, {gas: 1000000})
     }).then(function () {
-      return deployer.deploy(DogeProcessor, DogeRelayForTests.address);
+      return deployer.deploy(DogeProcessor, DogeRelayForTests.address, {gas: 3600000});
     }).then(function () {
-      return deployer.deploy(DogeToken, DogeRelayForTests.address, dogethereumRecipient);
+      return deployer.deploy(DogeToken, DogeRelayForTests.address, dogethereumRecipient, {gas: 3500000});
     }).then(function () {
       const dogeRelay = DogeRelayForTests.at(DogeRelayForTests.address);
-      return dogeRelay.setScryptChecker(ScryptCheckerDummy.address);
+      return dogeRelay.setScryptChecker(ScryptCheckerDummy.address, {gas: 1000000});
     });
   } else {
-    return deployer.deploy(DogeRelay, 0).then(function () {
-      return deployer.deploy(DogeToken, DogeRelay.address, dogethereumRecipient);
+    return deployer.deploy(DogeRelay, 0, {gas: 3600000}).then(function () {
+      return deployer.deploy(DogeToken, DogeRelay.address, dogethereumRecipient, {gas: 3500000});
     }).then(function () {
-      return deployer.deploy(ScryptCheckerDummy, DogeRelay.address, true)
+      return deployer.deploy(ScryptCheckerDummy, DogeRelay.address, true, {gas: 1000000})
     }).then(function () {
       const dogeRelay = DogeRelay.at(DogeRelay.address);
-      //return dogeRelay.setScryptChecker(scryptCheckerAddress);
-      return dogeRelay.setScryptChecker(ScryptCheckerDummy.address);
+      //return dogeRelay.setScryptChecker(scryptCheckerAddress, {gas: 100000});
+      return dogeRelay.setScryptChecker(ScryptCheckerDummy.address, {gas: 100000});
     });
   }
 };
