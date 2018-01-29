@@ -50,7 +50,7 @@ Some operations require gas to be spent. Here are the incentives for doing that.
   * A user opens her Dogecoin-qt and sends a doge tx with N dogecoins to the “lock” doge address.
   * The doge tx is included in a doge block and 100 doge blocks are mined on top of it.
   * DogeSubmitter Agent notices a doge “lock” tx that has 100 confirmations.
-  * DogeSubmitter Agentsends an eth tx to DogeRelay containing the doge “lock” tx with a partial merkle tree showing it was included in a doge block.
+  * DogeSubmitter Agent sends an eth tx to DogeRelay containing the doge “lock” tx with a partial merkle tree showing it was included in a doge block.
   * DogeRelay checks the SPV proof (valid doge tx, tx included in the partial merkle tree, partial merkle tree root included in a block, the tx has at least 100 confirmations).
   * DogeRelay relays the doge tx to DogeToken contract.
   * DogeToken checks the doge tx sends funds to the “lock” doge address.
