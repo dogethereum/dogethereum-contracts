@@ -8,7 +8,6 @@ var ScryptCheckerDummy = artifacts.require("./ScryptCheckerDummy.sol");
 
 const scryptCheckerAddress = '0xfeedbeeffeedbeeffeedbeeffeedbeeffeedbeef';
 const dogethereumRecipientUnitTest = '0x4d905b4b815d483cdfabcd292c6f86509d0fad82';
-//const dogethereumRecipient = '0xda8271ee26545028ca332368c60358a4c550d7a1';
 const dogethereumRecipientIntegrationTest = '0x0000000000000000000000000000000000000002';
 
 module.exports = function(deployer, network, accounts) {
