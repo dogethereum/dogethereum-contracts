@@ -23,12 +23,12 @@ module.exports = function(callback) {
     return DogeToken.deployed();
   }).then(function(instance) {
     dt = instance;
-    return dt.balanceOf.call("0x3a6f55724e01fa66a315bd05bff7d382461867c5"); 
+    return dt.balanceOf.call("0xff4526e049d0ed7da69b16d6fde53a69a545e7c3"); 
   }).then(function(result) {
-    console.log("Balance of 0x3a6f55724e01fa66a315bd05bff7d382461867c5 : " + result);
-    return dt.balanceOf.call("0x25b9950e568651f4326cad3542fd46e64f73eafb"); 
+    console.log("Balance of 0xff4526e049d0ed7da69b16d6fde53a69a545e7c3 : " + result);
+    return dt.balanceOf.call("0xff4526e049d0ed7da69b16d6fde53a69a545e7c3"); 
   }).then(function(result) {
-    console.log("Balance of 0x25b9950e568651f4326cad3542fd46e64f73eafb : " + result);
+    console.log("Balance of 0xff4526e049d0ed7da69b16d6fde53a69a545e7c3 : " + result);
     callback();
   }).catch(function(e) {
     // There was an error! Handle it.
