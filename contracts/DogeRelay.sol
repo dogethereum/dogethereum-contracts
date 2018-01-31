@@ -48,10 +48,10 @@ contract DogeRelay {
     // network the block was mined in
     Network private net;
 
-    // blocks with pending scrypt hash verification
-    mapping (uint => BlockInformation) internal pendingBlocks;
+    // blocks with "on hold" scrypt hash verification
+    mapping (uint => BlockInformation) internal onholdBlocks;
 
-    uint internal pendingIdx;
+    uint internal onholdIdx;
 
     // Scrypt checker
     IScryptChecker public scryptChecker;
@@ -140,18 +140,18 @@ contract DogeRelay {
         }
 
         bytes memory rawBlockHeader = sliceArray(blockHeaderBytes, 0, 80);
-        ++pendingIdx;
-        BlockInformation storage bi = pendingBlocks[pendingIdx];
+        ++onholdIdx;
+        BlockInformation storage bi = onholdBlocks[onholdIdx];
         bi._blockHeader = rawBlockHeader;
 
         if ((blockHeaderBytes[1] & 0x01) != 0) {
             // Merge mined block
             uint length = blockHeaderBytes.length;
             bytes memory mergedMinedBlockHeader = sliceArray(blockHeaderBytes, length - 80, length);
-            scryptChecker.checkScrypt(mergedMinedBlockHeader, bytes32(proposedScryptBlockHash), truebitClaimantAddress, bytes32(pendingIdx));
+            scryptChecker.checkScrypt(mergedMinedBlockHeader, bytes32(proposedScryptBlockHash), truebitClaimantAddress, bytes32(onholdIdx));
         } else {
             // Normal block
-            scryptChecker.checkScrypt(rawBlockHeader, bytes32(proposedScryptBlockHash), truebitClaimantAddress, bytes32(pendingIdx));
+            scryptChecker.checkScrypt(rawBlockHeader, bytes32(proposedScryptBlockHash), truebitClaimantAddress, bytes32(onholdIdx));
         }
 
         return 1;
@@ -163,7 +163,7 @@ contract DogeRelay {
             return 0;
         }
 
-        BlockInformation storage bi = pendingBlocks[uint(_requestId)];
+        BlockInformation storage bi = onholdBlocks[uint(_requestId)];
 
         uint blockSha256Hash = m_dblShaFlip(bi._blockHeader);
 
@@ -232,7 +232,7 @@ contract DogeRelay {
         myblocks[blockSha256Hash] = bi;
         m_saveAncestors(blockSha256Hash, hashPrevBlock);  // increments ibIndex
 
-        delete pendingBlocks[uint(_requestId)];
+        delete onholdBlocks[uint(_requestId)];
 
         // https://en.bitcoin.it/wiki/Difficulty
         // Min difficulty for bitcoin is 0x1d00ffff
