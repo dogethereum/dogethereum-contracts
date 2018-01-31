@@ -129,7 +129,7 @@ contract DogeRelay {
 
     // store a Dogecoin block header that must be provided in bytes format 'blockHeaderBytes'
     // Callers must keep same signature since CALLDATALOAD is used to save gas.
-    function storeBlockHeader(bytes blockHeaderBytes, uint proposedScryptBlockHash) public payable returns (uint) {
+    function storeBlockHeader(bytes blockHeaderBytes, uint proposedScryptBlockHash, address truebitClaimantAddress) public payable returns (uint) {
         // blockHash should be a function parameter in dogecoin because the hash can not be calculated onchain.
         // Code here should call the Scrypt validator contract to make sure the supplied hash of the block is correct
         // If the block is merge mined, there are 2 Scrypts functions to execute, the one that checks PoW of the litecoin block
@@ -148,10 +148,10 @@ contract DogeRelay {
             // Merge mined block
             uint length = blockHeaderBytes.length;
             bytes memory mergedMinedBlockHeader = sliceArray(blockHeaderBytes, length - 80, length);
-            scryptChecker.checkScrypt.value(msg.value)(mergedMinedBlockHeader, bytes32(proposedScryptBlockHash), msg.sender, bytes32(pendingIdx));
+            scryptChecker.checkScrypt.value(msg.value)(mergedMinedBlockHeader, bytes32(proposedScryptBlockHash), truebitClaimantAddress, bytes32(pendingIdx));
         } else {
             // Normal block
-            scryptChecker.checkScrypt.value(msg.value)(rawBlockHeader, bytes32(proposedScryptBlockHash), msg.sender, bytes32(pendingIdx));
+            scryptChecker.checkScrypt.value(msg.value)(rawBlockHeader, bytes32(proposedScryptBlockHash), truebitClaimantAddress, bytes32(pendingIdx));
         }
 
         return 1;
@@ -298,6 +298,8 @@ contract DogeRelay {
         return m_toCompactBits(bnNew);
     }
 
+    uint8 constant HASH_SIZE = 32;
+
     // store a number of blockheaders
     // Return latest's block height
     // headersBytes are dogecoin block headers.
@@ -306,9 +308,8 @@ contract DogeRelay {
     //              - the header (size is variable).
     // hashesBytes are the scrypt hashes for those blocks
     // count is the number of headers sent
-    function bulkStoreHeaders(bytes headersBytes, bytes hashesBytes, uint16 count) public returns (uint result) {
+    function bulkStoreHeaders(bytes headersBytes, bytes hashesBytes, uint16 count, address truebitClaimantAddress) public returns (uint result) {
         //uint8 HEADER_SIZE = 80;
-        uint8 HASH_SIZE = 32;
         uint32 headersOffset = 0;
         uint32 headersEndIndex = 4;
         uint32 hashesOffset = 0;
@@ -324,7 +325,7 @@ contract DogeRelay {
             bytes memory currHash = sliceArray(hashesBytes, hashesOffset, hashesEndIndex);
             uint currHashUint = uint(bytesToBytes32(currHash));
             //log2(bytes32(currHashUint), bytes32(hashesOffset), bytes32(hashesEndIndex));
-            result = storeBlockHeader(currHeader, currHashUint);
+            result = storeBlockHeader(currHeader, currHashUint, truebitClaimantAddress);
             headersOffset += currHeaderLength;
             headersEndIndex += 4;
             hashesOffset += HASH_SIZE;

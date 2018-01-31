@@ -32,7 +32,7 @@ contract('DogeRelay', function(accounts) {
           });
           lineReader.on('close', function () {
             //console.log("headers : " + headers);
-            dr.bulkStoreHeaders(headers, hashes, 50, {from: accounts[0]}).then(resolve);  
+            dr.bulkStoreHeaders(headers, hashes, 50, accounts[2], {from: accounts[0]}).then(resolve);  
           });
         });
       }

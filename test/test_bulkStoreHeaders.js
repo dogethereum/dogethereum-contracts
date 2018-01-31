@@ -47,7 +47,7 @@ contract('DogeRelay', function(accounts) {
       dr = instance;
       return dr.setInitialParent(block974400Hash, 974400, 1, {from: accounts[0]});
     }).then(function(result) {
-      return dr.bulkStoreHeaders(headers, hashes, 7, {from: accounts[0]});
+      return dr.bulkStoreHeaders(headers, hashes, 7, accounts[2], {from: accounts[0]});
     }).then(function(result) {
       //console.log(result.receipt.logs);
       return dr.getBestBlockHeight.call();

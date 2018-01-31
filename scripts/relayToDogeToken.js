@@ -38,7 +38,7 @@ async function runTest() {
 
     if (blockHeight.toNumber() === 0) {
       // Initialize contract
-      await utils.bulkStore10From974401(dogeRelay, senderAddress);
+      await utils.bulkStore10From974401(dogeRelay, senderAddress, ?????????);
     } else {
       console.log(`BlockHeight: ${blockHeight}`);
     }

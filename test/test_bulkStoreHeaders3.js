@@ -13,7 +13,7 @@ contract('DogeProcessor', function(accounts) {
       return DogeProcessor.deployed();
     }).then(function(instance) {
       dogeProcessor = instance;
-      return utils.bulkStore10From974401(dr, accounts[0]);
+      return utils.bulkStore10From974401(dr, accounts[0], accounts[2]);
     }).then(function(headerAndHashes) {
       var txIndex = 1; // Second tx in the block
       txHash = 'af12afe762daf75815db0097e16445dbba45ce9140f3da37b86f00b45bd627b2';

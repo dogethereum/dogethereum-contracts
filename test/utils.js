@@ -36,7 +36,7 @@ module.exports = {
     return (str.indexOf("0x")==0) ? str.substring(2) : str;
   }
   ,
-  bulkStore10From974401: async function (dr, sender) {
+  bulkStore10From974401: async function (dr, sender, truebitClaimantAddress) {
     var startBlockNum = 974401;
     var headers = "0x";
     var hashes = "0x";
@@ -49,10 +49,10 @@ module.exports = {
     if (SEND_BATCH) {
       headers += rawHeaders.slice(0, 10).map(module.exports.addSizeToHeader).join('');
       hashes += rawHeaders.slice(0, 10).map(module.exports.calcHeaderPoW).join('');
-      await dr.bulkStoreHeaders(headers, hashes, 10, { from: sender });
+      await dr.bulkStoreHeaders(headers, hashes, 10, truebitClaimantAddress, { from: sender });
     } else {
       await rawHeaders.slice(0, 10).reduce(
-        (s, header) => s.then(() => dr.storeBlockHeader(`0x${header}`, `0x${module.exports.calcHeaderPoW(header)}`, { from:sender })),
+        (s, header) => s.then(() => dr.storeBlockHeader(`0x${header}`, `0x${module.exports.calcHeaderPoW(header)}`, truebitClaimantAddress, { from:sender })),
         Promise.resolve(),
       );
     }

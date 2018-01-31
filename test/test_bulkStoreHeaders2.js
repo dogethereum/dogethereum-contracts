@@ -20,7 +20,7 @@ contract('DogeRelay', function(accounts) {
         }).then(function ({ headers: rawHeaders, hashes: rawHashes }) {
             headers += rawHeaders.map(utils.addSizeToHeader).join('');
             hashes += rawHeaders.map(utils.calcHeaderPoW).join('');
-            return dr.bulkStoreHeaders(headers, hashes, 11, {from: accounts[0]});
+            return dr.bulkStoreHeaders(headers, hashes, 11, accounts[2], {from: accounts[0]});
         }).then(function(result) {
             //console.log(result.receipt.logs);
             return dr.getChainWork.call();
