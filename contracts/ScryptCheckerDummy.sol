@@ -1,11 +1,9 @@
 pragma solidity ^0.4.19;
 
-import "./IDogeRelay.sol";
+import "./IScryptDependent.sol";
 import "./IScryptChecker.sol";
 
 contract ScryptCheckerDummy is IScryptChecker {
-    // DogeRelay
-    IDogeRelay public dogeRelay;
 
     // Accept all checks
     bool public acceptAll;
@@ -18,20 +16,15 @@ contract ScryptCheckerDummy is IScryptChecker {
         bytes32 hash;
         address submitter;
         bytes32 id;
+        IScryptDependent scryptDependent;
     }
 
     // Mapping scryptHash => request
     mapping (bytes32 => ScryptHashRequest) public pendingRequests;
 
 
-    function ScryptCheckerDummy(address _dogeRelay, bool _acceptAll) public {
-        dogeRelay = IDogeRelay(_dogeRelay);
+    function ScryptCheckerDummy(bool _acceptAll) public {
         acceptAll = _acceptAll;
-    }
-
-    function setDogeRelay(address _dogeRelay) public {
-      require(address(dogeRelay) == 0);
-      dogeRelay = IDogeRelay(_dogeRelay);
     }
 
     // Mark to accept _hash as the scrypt hash of _data
@@ -44,15 +37,16 @@ contract ScryptCheckerDummy is IScryptChecker {
     // @param _hash – result of applying scrypt to data.
     // @param _submitter – the address of the submitter.
     // @param _requestId – request identifier of the call.
-    function checkScrypt(bytes _data, bytes32 _hash, address _submitter, bytes32 _proposalId) public payable {
+    function checkScrypt(bytes _data, bytes32 _hash, bytes32 _proposalId, IScryptDependent _scryptDependent) public payable {
         if (acceptAll || hashStorage[keccak256(_data)] == _hash) {
-            dogeRelay.scryptVerified(_proposalId);
+            IScryptDependent(_scryptDependent).scryptVerified(_proposalId);
         } else {
             pendingRequests[_hash] = ScryptHashRequest({
                 data: _data,
                 hash: _hash,
-                submitter: _submitter,
-                id: _proposalId
+                submitter: tx.origin,
+                id: _proposalId,
+                scryptDependent: _scryptDependent
             });
         }
     }
@@ -60,6 +54,6 @@ contract ScryptCheckerDummy is IScryptChecker {
     function sendVerification(bytes32 _hash) public {
         ScryptHashRequest storage request = pendingRequests[_hash];
         require(request.hash == _hash);
-        dogeRelay.scryptVerified(request.id);
+        IScryptDependent(request.scryptDependent).scryptVerified(request.id);
     }
 }

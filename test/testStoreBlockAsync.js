@@ -8,7 +8,7 @@ contract('DogeRelay Async', function(accounts) {
   let scryptChecker;
   before(async () => {
     dogeRelay = await DogeRelay.new(0);
-    scryptChecker = await ScryptCheckerDummy.new(dogeRelay.address, false);
+    scryptChecker = await ScryptCheckerDummy.new(false);
     await dogeRelay.setScryptChecker(scryptChecker.address);
   });
   it("Valid async call to DogeRelay", async () => {

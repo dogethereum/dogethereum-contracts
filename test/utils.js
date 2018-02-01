@@ -52,7 +52,7 @@ module.exports = {
       await dr.bulkStoreHeaders(headers, hashes, 10, truebitClaimantAddress, { from: sender });
     } else {
       await rawHeaders.slice(0, 10).reduce(
-        (s, header) => s.then(() => dr.storeBlockHeader(`0x${header}`, `0x${module.exports.calcHeaderPoW(header)}`, truebitClaimantAddress, { from:sender })),
+        (s, header) => s.then(() => dr.storeBlockHeader(`0x${header}`, `0x${module.exports.calcHeaderPoW(header)}`, truebitClaimantAddress, { from: sender })),
         Promise.resolve(),
       );
     }

@@ -1,10 +1,10 @@
 pragma solidity ^0.4.19;
 
 import "./TransactionProcessor.sol";
+import "./IScryptDependent.sol";
 import "./IScryptChecker.sol";
-import "./IDogeRelay.sol";
 
-contract DogeRelay is IDogeRelay {
+contract DogeRelay is IScryptDependent {
 
     enum Network { MAINNET, TESTNET }
 
@@ -149,10 +149,10 @@ contract DogeRelay is IDogeRelay {
             // Merge mined block
             uint length = blockHeaderBytes.length;
             bytes memory mergedMinedBlockHeader = sliceArray(blockHeaderBytes, length - 80, length);
-            scryptChecker.checkScrypt(mergedMinedBlockHeader, bytes32(proposedScryptBlockHash), truebitClaimantAddress, bytes32(onholdIdx));
+            scryptChecker.checkScrypt(mergedMinedBlockHeader, bytes32(proposedScryptBlockHash), bytes32(onholdIdx), this);
         } else {
             // Normal block
-            scryptChecker.checkScrypt(rawBlockHeader, bytes32(proposedScryptBlockHash), truebitClaimantAddress, bytes32(onholdIdx));
+            scryptChecker.checkScrypt(rawBlockHeader, bytes32(proposedScryptBlockHash), bytes32(onholdIdx), this);
         }
 
         return 1;
