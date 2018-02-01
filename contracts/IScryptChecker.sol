@@ -6,5 +6,5 @@ interface IScryptChecker {
     // @param _hash – result of applying scrypt to data.
     // @param _submitter – the address of the submitter.
     // @param _reqid – request identifier of the call.
-    function checkScrypt(bytes _data, bytes32 _hash, address _submitter, bytes32 _reqid) public payable returns (uint);
+    function checkScrypt(bytes _data, bytes32 _hash, address _submitter, bytes32 _proposalId) public payable;
 }
