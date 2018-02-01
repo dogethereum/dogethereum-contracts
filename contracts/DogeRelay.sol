@@ -2,8 +2,9 @@ pragma solidity ^0.4.19;
 
 import "./TransactionProcessor.sol";
 import "./IScryptChecker.sol";
+import "./IDogeRelay.sol";
 
-contract DogeRelay {
+contract DogeRelay is IDogeRelay {
 
     enum Network { MAINNET, TESTNET }
 
@@ -157,13 +158,13 @@ contract DogeRelay {
         return 1;
     }
 
-    function scryptVerified(bytes32 _requestId) public returns (uint) {
+    function scryptVerified(bytes32 _proposalId) public returns (uint) {
         if (msg.sender != address(scryptChecker)) {
             StoreHeader(0, ERR_INVALID_HEADER);
             return 0;
         }
 
-        BlockInformation storage bi = onholdBlocks[uint(_requestId)];
+        BlockInformation storage bi = onholdBlocks[uint(_proposalId)];
 
         uint blockSha256Hash = m_dblShaFlip(bi._blockHeader);
 
@@ -232,7 +233,7 @@ contract DogeRelay {
         myblocks[blockSha256Hash] = bi;
         m_saveAncestors(blockSha256Hash, hashPrevBlock);  // increments ibIndex
 
-        delete onholdBlocks[uint(_requestId)];
+        delete onholdBlocks[uint(_proposalId)];
 
         // https://en.bitcoin.it/wiki/Difficulty
         // Min difficulty for bitcoin is 0x1d00ffff
