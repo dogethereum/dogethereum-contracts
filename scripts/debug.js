@@ -20,6 +20,19 @@ module.exports = function(callback) {
       formattedResult.push(utils.formatHexUint32(element.toString(16)));
     });    
     console.log("Locator : " + formattedResult);
+    return dr.getOnholdHashes.call();     
+  }).then(function(result) {
+    var formattedResult = new Array();
+    result.forEach(function(element) {
+      formattedResult.push(utils.formatHexUint32(element.toString(16)));
+    });    
+    console.log("getOnholdHashes : " + formattedResult);
+    return dr.onholdIdx.call();     
+  }).then(function(result) {
+    console.log("onholdIdx : " + result);
+    return dr.onholdReceivedIdx.call();     
+  }).then(function(result) {
+    console.log("onholdReceivedIdx : " + result);
     return DogeToken.deployed();
   }).then(function(instance) {
     dt = instance;

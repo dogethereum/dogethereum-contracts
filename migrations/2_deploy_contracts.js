@@ -28,10 +28,10 @@ module.exports = function(deployer, network, accounts) {
       return dogeRelay.setScryptChecker(ScryptCheckerDummy.address, {gas: 1000000});
     });
   } else {
-    return deployer.deploy(DogeRelay, 0, {gas: 3600000}).then(function () {
+    return deployer.deploy(DogeRelay, 0, {gas: 3700000}).then(function () {
       return deployer.deploy(DogeToken, DogeRelay.address, dogethereumRecipient, {gas: 3500000});
     }).then(function () {
-      return deployer.deploy(ScryptCheckerDummy, DogeRelay.address, true, {gas: 1000000})
+      return deployer.deploy(ScryptCheckerDummy, DogeRelay.address, false, {gas: 1000000})
     }).then(function () {
       const dogeRelay = DogeRelay.at(DogeRelay.address);
       //return dogeRelay.setScryptChecker(scryptCheckerAddress, {gas: 100000});

@@ -50,9 +50,13 @@ contract DogeRelay is IDogeRelay {
     Network private net;
 
     // blocks with "on hold" scrypt hash verification
+    // keys are sequential numbers. Uses onholdIdx counter.
     mapping (uint => BlockInformation) internal onholdBlocks;
 
-    uint internal onholdIdx;
+    // Latest onhold index used
+    uint public onholdIdx;
+    // Latest onhold index that scrypt verification confirmed.      
+    uint public onholdReceivedIdx;
 
     // Scrypt checker
     IScryptChecker public scryptChecker;
@@ -159,12 +163,17 @@ contract DogeRelay is IDogeRelay {
     }
 
     function scryptVerified(bytes32 _proposalId) public returns (uint) {
+        uint uintProposalId = uint(_proposalId);
         if (msg.sender != address(scryptChecker)) {
             StoreHeader(0, ERR_INVALID_HEADER);
             return 0;
         }
 
-        BlockInformation storage bi = onholdBlocks[uint(_proposalId)];
+        if (uintProposalId > onholdReceivedIdx) {
+            onholdReceivedIdx = uintProposalId;
+        }
+
+        BlockInformation storage bi = onholdBlocks[uintProposalId];
 
         uint blockSha256Hash = m_dblShaFlip(bi._blockHeader);
 
@@ -233,7 +242,7 @@ contract DogeRelay is IDogeRelay {
         myblocks[blockSha256Hash] = bi;
         m_saveAncestors(blockSha256Hash, hashPrevBlock);  // increments ibIndex
 
-        delete onholdBlocks[uint(_proposalId)];
+        delete onholdBlocks[uintProposalId];
 
         // https://en.bitcoin.it/wiki/Difficulty
         // Min difficulty for bitcoin is 0x1d00ffff
@@ -449,6 +458,17 @@ contract DogeRelay is IDogeRelay {
         }
         return locator;
     }
+
+    function getOnholdHashes() public view returns (uint[]) {        
+        uint size = onholdIdx - onholdReceivedIdx;
+        uint[] memory onholdHashes = new uint[](size);
+        for (uint i = onholdReceivedIdx+1 ; i <= onholdIdx ; i++) {
+            //onholdHashes.push(m_dblShaFlip(onholdBlocks[i]._blockHeader));
+            onholdHashes[i-onholdReceivedIdx-1] = m_dblShaFlip(onholdBlocks[i]._blockHeader);
+        }
+        return onholdHashes;
+    }
+
 
     // return the height of the best block aka the Tip
     function getBestBlockHeight() public view returns (uint) {

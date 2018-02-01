@@ -23,6 +23,8 @@ contract ScryptCheckerDummy is IScryptChecker {
     // Mapping scryptHash => request
     mapping (bytes32 => ScryptHashRequest) public pendingRequests;
 
+    bytes32[] public pendingRequestKeys;
+    uint latestVerifiedIndex;    
 
     function ScryptCheckerDummy(address _dogeRelay, bool _acceptAll) public {
         dogeRelay = IDogeRelay(_dogeRelay);
@@ -54,6 +56,7 @@ contract ScryptCheckerDummy is IScryptChecker {
                 submitter: _submitter,
                 id: _proposalId
             });
+            pendingRequestKeys.push(_hash);
         }
     }
 
@@ -62,4 +65,12 @@ contract ScryptCheckerDummy is IScryptChecker {
         require(request.hash == _hash);
         dogeRelay.scryptVerified(request.id);
     }
+
+    
+    function sendNextVerification() public {
+        require(latestVerifiedIndex < pendingRequestKeys.length);
+        sendVerification(pendingRequestKeys[latestVerifiedIndex]);
+        latestVerifiedIndex++;
+    }
+
 }
