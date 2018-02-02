@@ -1,41 +1,39 @@
-var DogeRelay = artifacts.require("./DogeRelay.sol");
-var DogeRelayForTests = artifacts.require("./DogeRelayForTests.sol");
-var DogeProcessor = artifacts.require("./DogeProcessor.sol");
-var Set = artifacts.require("./token/Set.sol");
-var DogeToken = artifacts.require("./token/DogeToken.sol");
-var DogeTx = artifacts.require("./DogeParser/DogeTx.sol");
-var ScryptCheckerDummy = artifacts.require("./ScryptCheckerDummy.sol");
+const DogeRelay = artifacts.require('DogeRelay');
+const Set = artifacts.require('Set');
+const DogeToken = artifacts.require('DogeToken');
+const DogeTx = artifacts.require('DogeTx');
+const ClaimManager = artifacts.require('ClaimManager')
+const ScryptVerifier = artifacts.require('ScryptVerifier')
+const ScryptRunner = artifacts.require('ScryptRunner')
 
-const scryptCheckerAddress = '0xfeedbeeffeedbeeffeedbeeffeedbeeffeedbeef';
-const dogethereumRecipientUnitTest = '0x4d905b4b815d483cdfabcd292c6f86509d0fad82';
-const dogethereumRecipientIntegrationTest = '0x0000000000000000000000000000000000000003';
+const dogethereumRecipient = '0x0000000000000000000000000000000000000003';
 
-module.exports = function(deployer, network, accounts) {
-  const dogethereumRecipient = (network === 'development') ? dogethereumRecipientUnitTest : dogethereumRecipientIntegrationTest;
-  deployer.deploy(Set, {gas: 300000});
-  deployer.link(Set, DogeToken);
-  deployer.deploy(DogeTx, {gas: 100000});
-  deployer.link(DogeTx, DogeToken);
-  if (network === 'development') {
-    return deployer.deploy(DogeRelayForTests, 0, {gas: 4100000}).then(function () {
-      return deployer.deploy(ScryptCheckerDummy, DogeRelayForTests.address, true, {gas: 1000000})
-    }).then(function () {
-      return deployer.deploy(DogeProcessor, DogeRelayForTests.address, {gas: 3600000});
-    }).then(function () {
-      return deployer.deploy(DogeToken, DogeRelayForTests.address, dogethereumRecipient, {gas: 3500000});
-    }).then(function () {
-      const dogeRelay = DogeRelayForTests.at(DogeRelayForTests.address);
-      return dogeRelay.setScryptChecker(ScryptCheckerDummy.address, {gas: 1000000});
-    });
-  } else {
-    return deployer.deploy(DogeRelay, 0, {gas: 3600000}).then(function () {
-      return deployer.deploy(DogeToken, DogeRelay.address, dogethereumRecipient, {gas: 3500000});
-    }).then(function () {
-      return deployer.deploy(ScryptCheckerDummy, DogeRelay.address, true, {gas: 1000000})
-    }).then(function () {
-      const dogeRelay = DogeRelay.at(DogeRelay.address);
-      //return dogeRelay.setScryptChecker(scryptCheckerAddress, {gas: 100000});
-      return dogeRelay.setScryptChecker(ScryptCheckerDummy.address, {gas: 100000});
-    });
+async function makeDeploy(deployer, network, accounts) {
+  try {
+    await deployer.deploy(Set);
+    await deployer.link(Set, DogeToken);
+    await deployer.deploy(DogeTx);
+    await deployer.link(DogeTx, DogeToken);
+
+    await deployer.deploy(DogeRelay, 0);
+    await deployer.deploy(DogeToken, DogeRelay.address, dogethereumRecipient);
+
+    await deployer.deploy(ScryptVerifier);
+    await deployer.deploy(ClaimManager, ScryptVerifier.address);
+
+    const dogeRelay = DogeRelay.at(DogeRelay.address);
+    await dogeRelay.setScryptChecker(ClaimManager.address);
+
+    const claimManager = ClaimManager.at(ClaimManager.address);
+    await claimManager.setDogeRelay(DogeRelay.address);
+  } catch (err) {
+    console.log(err);
+    throw err;
   }
+}
+
+module.exports = (deployer, network, accounts) => {
+  deployer.then(async () => {
+    await makeDeploy(deployer, network, accounts);
+  });
 };
