@@ -469,6 +469,9 @@ contract DogeRelay is IDogeRelay {
         return onholdHashes;
     }
 
+    function getOnholdSize() public view returns (uint) {
+        returns onholdIdx - onholdReceivedIdx;
+    }
 
     // return the height of the best block aka the Tip
     function getBestBlockHeight() public view returns (uint) {
