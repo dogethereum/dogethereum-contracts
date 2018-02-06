@@ -22,7 +22,7 @@ contract('DogeRelay', function(accounts) {
             hashes += rawHeaders.map(utils.calcHeaderPoW).join('');
             return dr.bulkStoreHeaders(headers, hashes, 11, {from: accounts[0]});
         }).then(function(result) {
-            console.log(result.receipt.logs);
+            // console.log(result.receipt.logs);
             return dr.getBestBlockHeight.call();
         }).then(function(result) {
             assert.equal(result.toNumber(), 160000 + 11, "getBestBlockHeight is not the expected one");
