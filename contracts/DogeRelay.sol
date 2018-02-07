@@ -94,6 +94,7 @@ contract DogeRelay is IDogeRelay {
     // NOT exist with setInitialParent(0, 0, 1) (only the 2015th parent exists)
     function setInitialParent(uint blockHash, uint64 height, uint128 chainWork) public returns (bool) {
         // reuse highScore as the flag for whether setInitialParent() has already been called
+
         if (highScore != 0) {
             return false;
         } else {
@@ -145,6 +146,18 @@ contract DogeRelay is IDogeRelay {
         BlockInformation storage bi = onholdBlocks[onholdIdx];
         bi._blockHeader = rawBlockHeader;
 
+        uint32 bits = f_bits(bi._blockHeader);
+        uint target = targetFromBits(bits);
+
+        uint blockSha256Hash = m_dblShaFlip(bi._blockHeader);
+
+        // we only check the target and do not do other validation (eg timestamp) to save gas
+        // Comment out PoW validation until we implement doge specific code
+        if (flip32Bytes(proposedScryptBlockHash) > target) {
+            StoreHeader (blockSha256Hash, ERR_PROOF_OF_WORK);
+            return 0;
+        }
+
         if ((blockHeaderBytes[1] & 0x01) != 0) {
             // Merge mined block
             uint length = blockHeaderBytes.length;
@@ -185,13 +198,6 @@ contract DogeRelay is IDogeRelay {
         uint32 bits = f_bits(bi._blockHeader);
         uint target = targetFromBits(bits);
 
-        // we only check the target and do not do other validation (eg timestamp) to save gas
-        // Comment out PoW validation until we implement doge specific code
-        //if (blockHash < 0 || blockHash > target) {
-        //    StoreHeader (blockHash, ERR_PROOF_OF_WORK);
-        //    return 0;
-        //}
-
         uint blockHeight = 1 + m_getHeight(hashPrevBlock);
         uint32 prevBits = m_getBits(hashPrevBlock);
 
@@ -213,12 +219,9 @@ contract DogeRelay is IDogeRelay {
         } else {
             // (blockHeight - DIFFICULTY_ADJUSTMENT_INTERVAL) is same as [getHeight(hashPrevBlock) - (DIFFICULTY_ADJUSTMENT_INTERVAL - 1)]
 
-            int64 prevTimestamp = m_getTimestamp(hashPrevBlock);
-            int64 grandTimestamp = m_getTimestamp(getPrevBlock(hashPrevBlock));
+            uint32 newBits = m_calculateDigishieldDifficulty(int64(m_getTimestamp(hashPrevBlock)) - int64(m_getTimestamp(getPrevBlock(hashPrevBlock))), prevBits);
 
-            uint32 newBits = m_calculateDigishieldDifficulty(prevTimestamp - grandTimestamp, prevBits);
-
-            if (net == Network.TESTNET && m_getTimestamp(hashPrevBlock) - m_getTimestamp(blockSha256Hash) > 120) {
+            if (net == Network.TESTNET && f_getTimestamp(bi._blockHeader) - m_getTimestamp(hashPrevBlock) > 120 && blockHeight >= 157500) {
                 newBits = 0x1e0fffff;
             }
 
@@ -288,7 +291,6 @@ contract DogeRelay is IDogeRelay {
         uint bnNew = targetFromBits(nBits);
         bnNew = bnNew * uint(nModulatedTimespan);
         bnNew = uint(bnNew) / uint(retargetTimespan);
-        //log0(bytes32(bnNew));
 
         if (bnNew > POW_LIMIT) {
             bnNew = POW_LIMIT;
@@ -958,6 +960,16 @@ contract DogeRelay is IDogeRelay {
         assembly {
             let word := mload(add(blockHeader, 0x50))
             bits := add(byte(24, word),
+                add(mul(byte(25, word), 0x100),
+                    add(mul(byte(26, word), 0x10000),
+                        mul(byte(27, word), 0x1000000))))
+        }
+    }
+
+    function f_getTimestamp(bytes memory blockHeader) internal pure returns (uint32 time) {
+        assembly {
+            let word := mload(add(blockHeader, 0x4c))
+            time := add(byte(24, word),
                 add(mul(byte(25, word), 0x100),
                     add(mul(byte(26, word), 0x10000),
                         mul(byte(27, word), 0x1000000))))

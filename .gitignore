@@ -3,3 +3,5 @@
 /output
 ._.DS_Store
 *.swp
+contracts/Timestamp*
+test/testTimestamp.js*
