@@ -223,7 +223,7 @@ contract DogeRelay is IDogeRelay {
 
             uint32 newBits = m_calculateDigishieldDifficulty(int64(m_getTimestamp(hashPrevBlock)) - int64(m_getTimestamp(getPrevBlock(hashPrevBlock))), prevBits);
 
-            if (net == Network.TESTNET && m_getTimestamp(hashPrevBlock) - f_getTimestamp(bi._blockHeader) > 120) {
+            if (net == Network.TESTNET && f_getTimestamp(bi._blockHeader) - m_getTimestamp(hashPrevBlock) > 120 && blockHeight >= 157500) {
                 newBits = 0x1e0fffff;
             }
 
