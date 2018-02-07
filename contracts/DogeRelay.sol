@@ -59,11 +59,9 @@ contract DogeRelay is IDogeRelay {
 
     // TODO: Make event parameters indexed so we can register filters on them
     event StoreHeader(uint blockHash, uint returnCode);
-    event StoreHeaderDebug(bytes32 blockHeight, bytes32 hash, bytes32 target);
     event GetHeader(uint blockHash, uint returnCode);
     event VerifyTransaction(uint txHash, uint returnCode);
     event RelayTransaction(uint txHash, uint returnCode);
-    event Deadbeef(bytes32 d);
 
     function DogeRelay(Network network) public {
         // gasPriceAndChangeRecipientFee in incentive.se
