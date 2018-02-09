@@ -9,7 +9,7 @@ contract DogeRelay is IDogeRelay {
     enum Network { MAINNET, TESTNET }
 
     // Number of block ancestors stored in BlockInformation._ancestor
-    uint8 constant private NUM_ANCESTOR_DEPTHS = 8;
+    uint constant private NUM_ANCESTOR_DEPTHS = 8;
 
     // list for internal usage only that allows a 32 byte blockHash to be looked up
     // with a 32bit int
@@ -23,7 +23,7 @@ contract DogeRelay is IDogeRelay {
     uint32 private ibIndex;
 
     // a Bitcoin block (header) is stored as:
-    // - _blockHeader 80 bytes + AuxPow (merge mining field)
+    // - _blockHeader 80 bytes
     // - _info who's 32 bytes are comprised of "_height" 8bytes, "_ibIndex" 8bytes, "_score" 16bytes
     // -   "_height" is 1 more than the typical Bitcoin term height/blocknumber [see setInitialParent()]
     // -   "_ibIndex" is the block's index to internalBlock (see btcChain)
@@ -31,11 +31,22 @@ contract DogeRelay is IDogeRelay {
     // - _ancestor stores 8 32bit ancestor indices for more efficient backtracking (see btcChain)
     // - _feeInfo is used for incentive.se (see m_getFeeInfo)
     struct BlockInformation {
+        //   BlockHeader _blockHeader;
           bytes _blockHeader;
           uint _info;
           uint _ancestor;
           // bytes _feeInfo;
     }
+
+    // struct BlockHeader {
+    //     uint32 version;
+    //     bytes32 prevBlock;
+    //     bytes32 merkleRoot;
+    //     uint32 time;
+    //     uint32 bits;
+    //     uint32 nonce;
+    // }
+
     //BlockInformation[] myblocks = new BlockInformation[](2**256);
     // block hash => BlockInformation
     mapping (uint => BlockInformation) internal myblocks;
@@ -141,31 +152,31 @@ contract DogeRelay is IDogeRelay {
             return 0;
         }
 
-        bytes memory rawBlockHeader = sliceArray(blockHeaderBytes, 0, 80);
+        // bytes memory rawBlockHeader = sliceArray(blockHeaderBytes, 0, 80);
         ++onholdIdx;
         BlockInformation storage bi = onholdBlocks[onholdIdx];
-        bi._blockHeader = rawBlockHeader;
+        bi._blockHeader = sliceArray(blockHeaderBytes, 0, 80);
 
-        uint32 bits = f_bits(bi._blockHeader);
-        uint target = targetFromBits(bits);
+        // uint32 bits = f_bits(bi._blockHeader);
+        // uint target = targetFromBits(bits);
 
-        uint blockSha256Hash = m_dblShaFlip(bi._blockHeader);
+        // uint blockSha256Hash = m_dblShaFlip(bi._blockHeader);
 
         // we only check the target and do not do other validation (eg timestamp) to save gas
         // Comment out PoW validation until we implement doge specific code
-        if (flip32Bytes(proposedScryptBlockHash) > target) {
-            StoreHeader (blockSha256Hash, ERR_PROOF_OF_WORK);
+        if (flip32Bytes(proposedScryptBlockHash) > targetFromBits(f_bits(bi._blockHeader))) {
+            StoreHeader (m_dblShaFlip(bi._blockHeader), ERR_PROOF_OF_WORK);
             return 0;
         }
 
         if ((blockHeaderBytes[1] & 0x01) != 0) {
             // Merge mined block
-            uint length = blockHeaderBytes.length;
-            bytes memory mergedMinedBlockHeader = sliceArray(blockHeaderBytes, length - 80, length);
-            scryptChecker.checkScrypt(mergedMinedBlockHeader, bytes32(proposedScryptBlockHash), truebitClaimantAddress, bytes32(onholdIdx));
+            // uint length = blockHeaderBytes.length;
+            // bytes memory mergedMinedBlockHeader = sliceArray(blockHeaderBytes, length - 80, length);
+            scryptChecker.checkScrypt(sliceArray(blockHeaderBytes, blockHeaderBytes.length - 80, blockHeaderBytes.length), bytes32(proposedScryptBlockHash), truebitClaimantAddress, bytes32(onholdIdx)); //sliceArray(...) is a merge mined block header
         } else {
             // Normal block
-            scryptChecker.checkScrypt(rawBlockHeader, bytes32(proposedScryptBlockHash), truebitClaimantAddress, bytes32(onholdIdx));
+            scryptChecker.checkScrypt(sliceArray(blockHeaderBytes, 0, 80), bytes32(proposedScryptBlockHash), truebitClaimantAddress, bytes32(onholdIdx));
         }
 
         return 1;
@@ -184,6 +195,7 @@ contract DogeRelay is IDogeRelay {
         uint hashPrevBlock = f_hashPrevBlock(bi._blockHeader);
 
         uint128 scorePrevBlock = m_getScore(hashPrevBlock);
+
         if (scorePrevBlock == 0) {
             StoreHeader(blockSha256Hash, ERR_NO_PREV_BLOCK);
             return 0;
@@ -196,12 +208,11 @@ contract DogeRelay is IDogeRelay {
         }
 
         uint32 bits = f_bits(bi._blockHeader);
-        uint target = targetFromBits(bits);
 
         uint blockHeight = 1 + m_getHeight(hashPrevBlock);
         uint32 prevBits = m_getBits(hashPrevBlock);
 
-        if (!m_difficultyShouldBeAdjusted(blockHeight) || ibIndex == 0) {
+        if (ibIndex == 0) {
             // since blockHeight is 1 more than blockNumber; OR clause is special case for 1st header
             // we need to check prevBits isn't 0 otherwise the 1st header
             // will always be rejected (since prevBits doesn't exist for the initial parent)
@@ -242,7 +253,7 @@ contract DogeRelay is IDogeRelay {
         // Min difficulty for bitcoin is 0x1d00ffff
         //uint128 scoreBlock = scorePrevBlock + uint128 (0x00000000FFFF0000000000000000000000000000000000000000000000000000 / target);
         // Min difficulty for dogecoin is 0x1e0fffff
-        uint128 scoreBlock = scorePrevBlock + uint128 (0x00000FFFFF000000000000000000000000000000000000000000000000000000 / target);
+        uint128 scoreBlock = scorePrevBlock + uint128 (0x00000FFFFF000000000000000000000000000000000000000000000000000000 / targetFromBits(bits));
         //log2(bytes32(scoreBlock), bytes32(bits), bytes32(target));
         // bitcoinj (so libdohj, dogecoin java implemntation) uses 2**256 as a dividend.
         // Investigate: May dogerelay best block be different than libdohj best block in some border cases?
@@ -301,7 +312,7 @@ contract DogeRelay is IDogeRelay {
         return m_toCompactBits(bnNew);
     }
 
-    uint8 constant HASH_SIZE = 32;
+    uint constant HASH_SIZE = 32;
 
     // store a number of blockheaders
     // Return latest's block height
@@ -311,24 +322,24 @@ contract DogeRelay is IDogeRelay {
     //              - the header (size is variable).
     // hashesBytes are the scrypt hashes for those blocks
     // count is the number of headers sent
-    function bulkStoreHeaders(bytes headersBytes, bytes hashesBytes, uint16 count, address truebitClaimantAddress) public returns (uint result) {
+    function bulkStoreHeaders(bytes headersBytes, bytes hashesBytes, uint count, address truebitClaimantAddress) public returns (uint result) {
         //uint8 HEADER_SIZE = 80;
-        uint32 headersOffset = 0;
-        uint32 headersEndIndex = 4;
-        uint32 hashesOffset = 0;
-        uint32 hashesEndIndex = HASH_SIZE;
-        uint16 i = 0;
+        uint headersOffset = 0;
+        uint headersEndIndex = 4;
+        uint hashesOffset = 0;
+        uint hashesEndIndex = HASH_SIZE;
+        uint i = 0;
         while (i < count) {
-            bytes memory currHeaderLengthBytes = sliceArray(headersBytes, headersOffset, headersEndIndex);
-            uint32 currHeaderLength = bytesToUint32(currHeaderLengthBytes);
+            // bytes memory currHeaderLengthBytes = sliceArray(headersBytes, headersOffset, headersEndIndex);
+            uint currHeaderLength = bytesToUint32(sliceArray(headersBytes, headersOffset, headersEndIndex));
             headersOffset += 4;
             headersEndIndex += currHeaderLength;
             //log2(bytes32(currHeaderLength), bytes32(headersOffset), bytes32(headersEndIndex));
-            bytes memory currHeader = sliceArray(headersBytes, headersOffset, headersEndIndex);
-            bytes memory currHash = sliceArray(hashesBytes, hashesOffset, hashesEndIndex);
-            uint currHashUint = uint(bytesToBytes32(currHash));
+            // bytes memory currHeader = sliceArray(headersBytes, headersOffset, headersEndIndex);
+            // bytes memory currHash = sliceArray(hashesBytes, hashesOffset, hashesEndIndex);
+            // uint currHashUint = uint(bytesToBytes32(currHash));
             //log2(bytes32(currHashUint), bytes32(hashesOffset), bytes32(hashesEndIndex));
-            result = storeBlockHeader(currHeader, currHashUint, truebitClaimantAddress);
+            result = storeBlockHeader(sliceArray(headersBytes, headersOffset, headersEndIndex), uint(bytesToBytes32(sliceArray(hashesBytes, hashesOffset, hashesEndIndex))), truebitClaimantAddress);
             headersOffset += currHeaderLength;
             headersEndIndex += 4;
             hashesOffset += HASH_SIZE;
@@ -363,8 +374,8 @@ contract DogeRelay is IDogeRelay {
             VerifyTransaction(txHash, ERR_TX_64BYTE);
             return 0;
         }
-        uint res = helperVerifyHash__(txHash, txIndex, siblings, txBlockHash);
-        if (res == 1) {
+        // uint res = helperVerifyHash__(txHash, txIndex, siblings, txBlockHash);
+        if (helperVerifyHash__(txHash, txIndex, siblings, txBlockHash) == 1) {
             return txHash;
         } else {
             // log is done via helperVerifyHash__
@@ -399,10 +410,10 @@ contract DogeRelay is IDogeRelay {
   //          return (ERR_CHAIN);
   //      }
 
-        uint merkle = computeMerkle(txHash, txIndex, siblings);
-        uint realMerkleRoot = getMerkleRoot(txBlockHash);
+        // uint merkle = computeMerkle(txHash, txIndex, siblings);
+        // uint realMerkleRoot = getMerkleRoot(txBlockHash);
 
-        if (merkle != realMerkleRoot) {
+        if (computeMerkle(txHash, txIndex, siblings) != getMerkleRoot(txBlockHash)) {
           VerifyTransaction (txHash, ERR_MERKLE_ROOT);
           return (ERR_MERKLE_ROOT);
         }
@@ -442,12 +453,12 @@ contract DogeRelay is IDogeRelay {
         uint blockHash = bestBlockHash;
         //locator.push(blockHash);
         locator[0] = blockHash;
-        for (uint8 i = 0 ; i < NUM_ANCESTOR_DEPTHS ; i++) {
-            uint blockHash2 = internalBlock[m_getAncestor(blockHash, i)];
+        for (uint i = 0 ; i < NUM_ANCESTOR_DEPTHS ; i++) {
+            // uint blockHash2 = internalBlock[m_getAncestor(blockHash, i)];
             //if (blockHash2 != 0) {
             //    locator.push(blockHash2);
             //}
-            locator[i+1] = blockHash2;
+            locator[i+1] = internalBlock[m_getAncestor(blockHash, i)];
         }
         return locator;
     }
@@ -478,10 +489,12 @@ contract DogeRelay is IDogeRelay {
         uint32 prevIbIndex = m_getIbIndex(hashPrevBlock);
         ancWord = m_mwrite32(ancWord, 0, prevIbIndex);
 
+        uint blockHeight = m_getHeight(blockHash);
+
         // update ancWord with the remaining indexes
-        for (uint8 i = 1 ; i < NUM_ANCESTOR_DEPTHS ; i++) {
-            uint depth = m_getAncDepth(i);
-            if (m_getHeight(blockHash) % depth == 1) {
+        for (uint i = 1 ; i < NUM_ANCESTOR_DEPTHS ; i++) {
+            // uint depth = m_getAncDepth(i);
+            if (blockHeight % m_getAncDepth(i) == 1) {
                 ancWord = m_mwrite32(ancWord, 4*i, prevIbIndex);
             } else {
                 ancWord = m_mwrite32(ancWord, 4*i, m_getAncestor(hashPrevBlock, i));
@@ -526,7 +539,7 @@ contract DogeRelay is IDogeRelay {
         //require(msg.sender == address(this));
 
         uint blockHash = bestBlockHash;
-        uint8 anc_index = NUM_ANCESTOR_DEPTHS - 1;
+        uint anc_index = NUM_ANCESTOR_DEPTHS - 1;
 
         while (m_getHeight(blockHash) > blockHeight) {
             while (m_getHeight(blockHash) - blockHeight < m_getAncDepth(anc_index) && anc_index > 0) {
@@ -544,13 +557,13 @@ contract DogeRelay is IDogeRelay {
     // this function returns the index that can be used to lookup the desired ancestor
     // eg. for combined usage, internalBlock[m_getAncestor(someBlock, 2)] will
     // return the block hash of someBlock's 3rd ancestor
-    function m_getAncestor(uint blockHash, uint8 whichAncestor) private view returns (uint32) {
+    function m_getAncestor(uint blockHash, uint whichAncestor) private view returns (uint32) {
         return uint32 ((myblocks[blockHash]._ancestor * (2**(32*uint(whichAncestor)))) / BYTES_28);
     }
 
 
     // index should be 0 to 7, so this returns 1, 5, 25 ... 78125
-    function m_getAncDepth(uint8 index) private pure returns (uint) {
+    function m_getAncDepth(uint index) private pure returns (uint) {
         return 5**(uint(index));
     }
 
@@ -606,7 +619,7 @@ contract DogeRelay is IDogeRelay {
 
     // writes fourBytes into word at position
     // This is useful for writing 32bit ints inside one 32 byte word
-    function m_mwrite32(uint word, uint8 position, uint32 fourBytes) private pure returns (uint) {
+    function m_mwrite32(uint word, uint position, uint32 fourBytes) private pure returns (uint) {
         // Store uint in a struct wrapper because that is the only way to get a pointer to it
         UintWrapper memory uw = UintWrapper(word);
         uint pointer = ptr(uw);
@@ -676,9 +689,9 @@ contract DogeRelay is IDogeRelay {
     // format of 'txHash', 'txIndex', 'siblings' ]
     function computeMerkle(uint txHash, uint txIndex, uint[] siblings) private pure returns (uint) {
         uint resultHash = txHash;
-        uint proofLen = siblings.length;
+        // uint proofLen = siblings.length;
         uint i = 0;
-        while (i < proofLen) {
+        while (i < siblings.length) {
             uint proofHex = siblings[i];
 
             uint sideOfSiblings = txIndex % 2;  // 0 means siblings is on the right; 1 means left
@@ -709,7 +722,7 @@ contract DogeRelay is IDogeRelay {
     // confirmations; a non-existent 'txBlockHash' will lead to a return value of false
     function within6Confirms(uint txBlockHash) private view returns (bool) {
         uint blockHash = bestBlockHash;
-        uint8 i = 0;
+        uint i = 0;
         while (i < 6) {
             if (txBlockHash == blockHash) {
                 return true;
@@ -721,16 +734,16 @@ contract DogeRelay is IDogeRelay {
         return false;
     }
 
-    function m_difficultyShouldBeAdjusted(uint blockHeight) private pure returns (bool) {
-        return ((blockHeight % DIFFICULTY_ADJUSTMENT_INTERVAL) == 0);
-    }
+    // function m_difficultyShouldBeAdjusted(uint blockHeight) private pure returns (bool) {
+    //     return ((blockHeight % DIFFICULTY_ADJUSTMENT_INTERVAL) == 0);
+    // }
 
 
     // Convert uint256 to compact encoding
     // based on https://github.com/petertodd/python-bitcoinlib/blob/2a5dda45b557515fb12a0a18e5dd48d2f5cd13c2/bitcoin/core/serialize.py
     // Analogous to arith_uint256::GetCompact from C++ implementation
     function m_toCompactBits(uint val) private pure returns (uint32) {
-        uint8 nbytes = uint8 (m_shiftRight((m_bitLen(val) + 7), 3));
+        uint nbytes = uint (m_shiftRight((m_bitLen(val) + 7), 3));
         uint32 compact = 0;
         if (nbytes <= 3) {
             compact = uint32 (m_shiftLeft((val & 0xFFFFFF), 8 * (3 - nbytes)));
@@ -840,16 +853,16 @@ contract DogeRelay is IDogeRelay {
     }
 
 
-    function m_shiftRight(uint val, uint8 shift) private pure returns (uint) {
+    function m_shiftRight(uint val, uint shift) private pure returns (uint) {
         return val / uint(2)**shift;
     }
 
-    function m_shiftLeft(uint val, uint8 shift) private pure returns (uint) {
+    function m_shiftLeft(uint val, uint shift) private pure returns (uint) {
         return val * uint(2)**shift;
     }
 
     // bit length of '$val'
-    function m_bitLen(uint val) private pure returns (uint8 length) {
+    function m_bitLen(uint val) private pure returns (uint length) {
         uint int_type = val;
         while (int_type > 0) {
           int_type = m_shiftRight(int_type, 1);
@@ -859,7 +872,7 @@ contract DogeRelay is IDogeRelay {
 
     // reverse 32 bytes given by '$b32'
     function flip32Bytes(uint input) internal pure returns (uint) {
-        uint8 i = 0;
+        uint i = 0;
         // unrolling this would decrease gas usage, but would increase
         // the gas cost for code size by over 700K and exceed the PI million block gas limit
         UintWrapper memory uw = UintWrapper(0);
@@ -991,7 +1004,7 @@ contract DogeRelay is IDogeRelay {
     uint constant TARGET_TIMESPAN_DIV_4 = TARGET_TIMESPAN / 4;
     uint constant TARGET_TIMESPAN_MUL_4 = TARGET_TIMESPAN * 4;
     uint constant UNROUNDED_MAX_TARGET = 2**224 - 1;  // different from (2**16-1)*2**208 http =//bitcoin.stackexchange.com/questions/13803/how/ exactly-was-the-original-coefficient-for-difficulty-determined
-    uint256 constant POW_LIMIT = 0x00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
+    uint constant POW_LIMIT = 0x00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
 
     //
     // Error / failure codes

@@ -47,9 +47,9 @@ contract DogeRelayForTests is DogeRelay {
             i += 1;
         }
 
-        uint128 chainWork10Ancestors = m_getScore(blockHash);
+        // uint128 chainWork10Ancestors = m_getScore(blockHash);
 
-        return (chainWorkTip - chainWork10Ancestors);
+        return (chainWorkTip - m_getScore(blockHash));
     }
 
     // returns the block header (zeros for a header that does not exist) when
