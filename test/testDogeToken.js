@@ -3,7 +3,7 @@ var DogeToken = artifacts.require("./token/DogeToken.sol");
 var utils = require('./utils');
 
 
-contract('DogeToken', function(accounts) {
+contract('testDogeToken', function(accounts) {
   let dogeToken;
   const dogethereumRecipient = '0x4d905b4b815d483cdfabcd292c6f86509d0fad82';
   before(async () => {

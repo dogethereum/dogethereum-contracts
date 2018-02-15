@@ -54,7 +54,7 @@ contract DogeRelayForTests is DogeRelay {
 
     // returns the block header (zeros for a header that does not exist) when
     // sufficient payment is provided.  If payment is insufficient, returns 1-byte of zero.
-    function getBlockHeader(uint blockHash) public returns (bytes) {
+    function getBlockHeader(uint blockHash) public returns (BlockHeader) {
         // TODO: incentives
         // if (feePaid(blockHash, m_getFeeAmount(blockHash))) {  // in incentive.se
         //     GetHeader (blockHash, 0);
@@ -75,7 +75,6 @@ contract DogeRelayForTests is DogeRelay {
     function m_getBitsPublic(uint blockHash) public view returns (uint32 result) {
         return m_getBits(blockHash);
     }
-
 
     function targetFromBitsPublic(uint32 bits) public pure returns (uint) {
         return targetFromBits(bits) ;

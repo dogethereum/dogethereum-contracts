@@ -1,6 +1,6 @@
 var DogeRelay = artifacts.require("./DogeRelayForTests.sol");
 
-contract('DogeRelay', function(accounts) {
+contract('sliceArray', function(accounts) {
   it("slice middle", function() {
     return DogeRelay.deployed().then(function(instance) {
       return instance.sliceArrayPublic.call("0x000102030405060708090a", 2, 5);
