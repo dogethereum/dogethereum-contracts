@@ -31,21 +31,21 @@ contract DogeRelay is IDogeRelay {
     // - _ancestor stores 8 32bit ancestor indices for more efficient backtracking (see btcChain)
     // - _feeInfo is used for incentive.se (see m_getFeeInfo)
     struct BlockInformation {
-        //   BlockHeader _blockHeader;
-          bytes _blockHeader;
+          BlockHeader _blockHeader;
           uint _info;
           uint _ancestor;
           // bytes _feeInfo;
     }
 
-    // struct BlockHeader {
-    //     uint32 version;
-    //     bytes32 prevBlock;
-    //     bytes32 merkleRoot;
-    //     uint32 time;
-    //     uint32 bits;
-    //     uint32 nonce;
-    // }
+    struct BlockHeader {
+        uint32 version;
+        uint32 time;
+        uint32 bits;
+        uint32 nonce;
+        uint blockHash;
+        uint prevBlock;
+        uint merkleRoot;
+    }
 
     //BlockInformation[] myblocks = new BlockInformation[](2**256);
     // block hash => BlockInformation
@@ -155,24 +155,19 @@ contract DogeRelay is IDogeRelay {
         // bytes memory rawBlockHeader = sliceArray(blockHeaderBytes, 0, 80);
         ++onholdIdx;
         BlockInformation storage bi = onholdBlocks[onholdIdx];
-        bi._blockHeader = sliceArray(blockHeaderBytes, 0, 80);
-
-        // uint32 bits = f_bits(bi._blockHeader);
-        // uint target = targetFromBits(bits);
+        bi._blockHeader = parseBytes(sliceArray(blockHeaderBytes, 0, 80));
 
         // uint blockSha256Hash = m_dblShaFlip(bi._blockHeader);
 
         // we only check the target and do not do other validation (eg timestamp) to save gas
         // Comment out PoW validation until we implement doge specific code
-        if (flip32Bytes(proposedScryptBlockHash) > targetFromBits(f_bits(bi._blockHeader))) {
-            StoreHeader (m_dblShaFlip(bi._blockHeader), ERR_PROOF_OF_WORK);
+        if (flip32Bytes(proposedScryptBlockHash) > targetFromBits(bi._blockHeader.bits)) {
+            StoreHeader (bi._blockHeader.blockHash, ERR_PROOF_OF_WORK);
             return 0;
         }
 
         if ((blockHeaderBytes[1] & 0x01) != 0) {
             // Merge mined block
-            // uint length = blockHeaderBytes.length;
-            // bytes memory mergedMinedBlockHeader = sliceArray(blockHeaderBytes, length - 80, length);
             scryptChecker.checkScrypt(sliceArray(blockHeaderBytes, blockHeaderBytes.length - 80, blockHeaderBytes.length), bytes32(proposedScryptBlockHash), truebitClaimantAddress, bytes32(onholdIdx)); //sliceArray(...) is a merge mined block header
         } else {
             // Normal block
@@ -190,9 +185,9 @@ contract DogeRelay is IDogeRelay {
 
         BlockInformation storage bi = onholdBlocks[uint(_proposalId)];
 
-        uint blockSha256Hash = m_dblShaFlip(bi._blockHeader);
+        uint blockSha256Hash = bi._blockHeader.blockHash;
 
-        uint hashPrevBlock = f_hashPrevBlock(bi._blockHeader);
+        uint hashPrevBlock = bi._blockHeader.prevBlock;
 
         uint128 scorePrevBlock = m_getScore(hashPrevBlock);
 
@@ -207,7 +202,7 @@ contract DogeRelay is IDogeRelay {
             return 0;
         }
 
-        uint32 bits = f_bits(bi._blockHeader);
+        uint32 bits = bi._blockHeader.bits;
 
         uint blockHeight = 1 + m_getHeight(hashPrevBlock);
         uint32 prevBits = m_getBits(hashPrevBlock);
@@ -232,7 +227,7 @@ contract DogeRelay is IDogeRelay {
 
             uint32 newBits = m_calculateDigishieldDifficulty(int64(m_getTimestamp(hashPrevBlock)) - int64(m_getTimestamp(getPrevBlock(hashPrevBlock))), prevBits);
 
-            if (net == Network.TESTNET && f_getTimestamp(bi._blockHeader) - m_getTimestamp(hashPrevBlock) > 120 && blockHeight >= 157500) {
+            if (net == Network.TESTNET && bi._blockHeader.time - m_getTimestamp(hashPrevBlock) > 120 && blockHeight >= 157500) {
                 newBits = 0x1e0fffff;
             }
 
@@ -295,10 +290,6 @@ contract DogeRelay is IDogeRelay {
         }
 
         // Retarget
-
-        // This should yield the same result as bnNew.setCompact(pIndexLast->nBits)
-        // in the C++ implementation, assuming nBits indeed corresponds
-        // to the previous block header's bits. Make sure this is correct.
         uint bnNew = targetFromBits(nBits);
         bnNew = bnNew * uint(nModulatedTimespan);
         bnNew = uint(bnNew) / uint(retargetTimespan);
@@ -307,8 +298,6 @@ contract DogeRelay is IDogeRelay {
             bnNew = POW_LIMIT;
         }
 
-        // Again, this should correspond to bnNew.GetCompact() from the Dogecoin
-        // C++ implementation. Double check everything!
         return m_toCompactBits(bnNew);
     }
 
@@ -335,10 +324,6 @@ contract DogeRelay is IDogeRelay {
             headersOffset += 4;
             headersEndIndex += currHeaderLength;
             //log2(bytes32(currHeaderLength), bytes32(headersOffset), bytes32(headersEndIndex));
-            // bytes memory currHeader = sliceArray(headersBytes, headersOffset, headersEndIndex);
-            // bytes memory currHash = sliceArray(hashesBytes, hashesOffset, hashesEndIndex);
-            // uint currHashUint = uint(bytesToBytes32(currHash));
-            //log2(bytes32(currHashUint), bytes32(hashesOffset), bytes32(hashesEndIndex));
             result = storeBlockHeader(sliceArray(headersBytes, headersOffset, headersEndIndex), uint(bytesToBytes32(sliceArray(hashesBytes, hashesOffset, hashesEndIndex))), truebitClaimantAddress);
             headersOffset += currHeaderLength;
             headersEndIndex += 4;
@@ -370,6 +355,7 @@ contract DogeRelay is IDogeRelay {
     // - 'siblings' are the merkle siblings of tx
     function verifyTx(bytes txBytes, uint txIndex, uint[] siblings, uint txBlockHash) public returns (uint) {
         uint txHash = m_dblShaFlip(txBytes);
+        
         if (txBytes.length == 64) {  // todo: is check 32 also needed?
             VerifyTransaction(txHash, ERR_TX_64BYTE);
             return 0;
@@ -409,9 +395,6 @@ contract DogeRelay is IDogeRelay {
   //          VerifyTransaction (txHash, ERR_CHAIN);
   //          return (ERR_CHAIN);
   //      }
-
-        // uint merkle = computeMerkle(txHash, txIndex, siblings);
-        // uint realMerkleRoot = getMerkleRoot(txBlockHash);
 
         if (computeMerkle(txHash, txIndex, siblings) != getMerkleRoot(txBlockHash)) {
           VerifyTransaction (txHash, ERR_MERKLE_ROOT);
@@ -683,6 +666,15 @@ contract DogeRelay is IDogeRelay {
         return result;
     }
 
+    function parseBytes(bytes rawBytes) internal returns (BlockHeader bh) {
+        bh.version = f_version(rawBytes);
+        bh.time = f_getTimestamp(rawBytes);
+        bh.bits = f_bits(rawBytes);
+        bh.blockHash = m_dblShaFlip(rawBytes);
+        bh.prevBlock = f_hashPrevBlock(rawBytes);
+        bh.merkleRoot = f_merkleRoot(rawBytes);
+    }
+
     // For a valid proof, returns the root of the Merkle tree.
     // Otherwise the return value is meaningless if the proof is invalid.
     // [see documentation for verifyTx() for the merkle proof
@@ -765,60 +757,22 @@ contract DogeRelay is IDogeRelay {
 
     // get the parent blok hash of 'blockHash'
     function getPrevBlock(uint blockHash) internal view returns (uint) {
-        // sload($addr) gets first 32bytes
-        // * BYTES_4 shifts over to skip the 4bytes of blockversion
-        // At this point we have the first 28bytes of hashPrevBlock and we
-        // want to get the remaining 4bytes so we:
-        // sload($addr+1) get the second 32bytes
-        //     but we only want the first 4bytes so div 28bytes
-        // The single line statement can be interpreted as:
-        // get the last 28bytes of the 1st chunk and combine (add) it to the
-        // first 4bytes of the 2nd chunk,
-        // where chunks are read in sizes of 32bytes via sload
-
-        uint pointer = ptr(myblocks[blockHash]._blockHeader);
-        uint chunk1;
-        uint chunk2;
-        assembly {
-            chunk1 := sload(pointer)
-            chunk2 := sload(add(pointer,1))
-        }
-        return flip32Bytes(chunk1 * BYTES_4 + chunk2/BYTES_28);
+        return myblocks[blockHash]._blockHeader.prevBlock;
     }
-
 
     // get the timestamp from a Bitcoin blockheader
     function m_getTimestamp(uint blockHash) internal view returns (uint32 result) {
-        uint pointer = ptr(myblocks[blockHash]._blockHeader);
-        assembly {
-            // get the 3rd chunk
-            let tmp := sload(add(pointer,2))
-            // the timestamp are the 4th to 7th bytes of the 3rd chunk, but we also have to flip them
-            result := add( mul(sload(BYTES_3_slot),byte(7, tmp)) , add( mul(sload(BYTES_2_slot),byte(6, tmp)) , add( mul(sload(BYTES_1_slot),byte(5, tmp)) , byte(4, tmp) ) ) )
-        }
+        return myblocks[blockHash]._blockHeader.time;
      }
 
     // get the 'bits' field from a Bitcoin blockheader
     function m_getBits(uint blockHash) internal view returns (uint32 result) {
-        uint pointer = ptr(myblocks[blockHash]._blockHeader);
-        assembly {
-            // get the 3rd chunk
-            let tmp := sload(add(pointer,2))
-            // the 'bits' are the 8th to 11th bytes of the 3rd chunk, but we also have to flip them
-            result := add( mul(sload(BYTES_3_slot),byte(11, tmp)) , add( mul(sload(BYTES_2_slot),byte(10, tmp)) , add( mul(sload(BYTES_1_slot),byte(9, tmp)) , byte(8, tmp) ) ) )
-        }
+        return myblocks[blockHash]._blockHeader.bits;        
     }
 
     // get the merkle root of '$blockHash'
     function getMerkleRoot(uint blockHash) private view returns (uint) {
-        uint pointer = ptr(myblocks[blockHash]._blockHeader);
-        uint chunk2;
-        uint chunk3;
-        assembly {
-            chunk2 := sload(add(pointer,1))
-            chunk3 := sload(add(pointer,2))
-        }
-        return flip32Bytes(chunk2 * BYTES_4 + chunk3/BYTES_28);
+        return myblocks[blockHash]._blockHeader.merkleRoot;        
     }
 
 
@@ -961,12 +915,30 @@ contract DogeRelay is IDogeRelay {
     // 0x48 bits
     // 0x4c nonce
 
+    function f_version(bytes memory blockHeader) internal pure returns (uint32 version) {
+        assembly {
+            let word := mload(add(blockHeader, 0x4))
+            version := add(byte(24, word),
+                add(mul(byte(25, word), 0x100),
+                    add(mul(byte(26, word), 0x10000),
+                        mul(byte(27, word), 0x1000000))))
+        }
+    }
+
     function f_hashPrevBlock(bytes memory blockHeader) internal pure returns (uint) {
         uint hashPrevBlock;
         assembly {
             hashPrevBlock := mload(add(blockHeader, 0x24))
         }
         return flip32Bytes(hashPrevBlock);
+    }
+
+    function f_merkleRoot(bytes blockHeader) private view returns (uint) {
+        uint merkle;
+        assembly {
+            merkle := mload(add(blockHeader, 0x44))
+        }
+        return flip32Bytes(merkle);        
     }
 
     function f_bits(bytes memory blockHeader) internal pure returns (uint32 bits) {

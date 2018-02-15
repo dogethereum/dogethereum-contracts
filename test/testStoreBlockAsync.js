@@ -3,7 +3,7 @@ const ScryptCheckerDummy = artifacts.require('./ScryptCheckerDummy.sol');
 const utils = require('./utils');
 
 
-contract('DogeRelay Async', function(accounts) {
+contract('testStoreBlockAsync', function(accounts) {
   let dogeRelay;
   let scryptChecker;
   before(async () => {
