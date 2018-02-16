@@ -3,7 +3,7 @@ var DogeProcessor = artifacts.require("./DogeProcessor.sol");
 var utils = require('./utils');
 
 
-contract('DogeProcessor', function(accounts) {
+contract('test_bulkStoreHeaders3', function(accounts) {
  it("testTx1In974402", function() {
     var dr;
     var dogeProcessor;
@@ -24,6 +24,7 @@ contract('DogeProcessor', function(accounts) {
       }
       return dr.relayTx(txStr, txIndex, siblings, "0x" + headerAndHashes.header.hash, dogeProcessor.address);
     }).then(function(result) {
+      // console.log(result.receipt.logs);
       return dogeProcessor.lastTxHash();
     }).then(function(result) {
       assert.equal(utils.formatHexUint32(result.toString(16)), txHash, "DogeProcessor's last tx hash is not the expected one");

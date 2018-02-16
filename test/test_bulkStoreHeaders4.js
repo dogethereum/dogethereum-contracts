@@ -3,7 +3,7 @@ var ScryptCheckerDummy = artifacts.require('./ScryptCheckerDummy.sol');
 var utils = require('./utils');
 
 
-contract('DogeRelay', function(accounts) {
+contract('test_bulkStoreHeaders4', function(accounts) {
     let dr;
     before(async () => {
         dr = await DogeRelay.new(1);
