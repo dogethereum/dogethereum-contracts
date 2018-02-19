@@ -13,7 +13,7 @@ contract DogeRelay is IDogeRelay {
 
     // list for internal usage only that allows a 32 byte blockHash to be looked up
     // with a 32bit int
-    // This is not designed to be used for anything else, eg it contains all block
+    // This is not designed to be used for anything else; it contains all block
     // hashes and nothing can be assumed about which blocks are on the main chain
     mapping (uint32 => uint) private internalBlock;
 
@@ -51,18 +51,19 @@ contract DogeRelay is IDogeRelay {
     // block hash => BlockInformation
     mapping (uint => BlockInformation) internal myblocks;
 
-    // hash of the block with the highest score (aka the Tip of the blockchain)
+    // hash of the block with the highest score, i.e. most work put into it (tip of the blockchain)
     uint internal bestBlockHash;
 
-    // highest score among all blocks (so far)
+    // highest score among all blocks (so far); tip of the blockchain's score
     uint private highScore;
 
-    // network the block was mined in
+    // network that the stored blocks belong to
     Network private net;
 
     // blocks with "on hold" scrypt hash verification
     mapping (uint => BlockInformation) internal onholdBlocks;
 
+    // counter for next on-hold block
     uint internal onholdIdx;
 
     // Scrypt checker
@@ -74,27 +75,32 @@ contract DogeRelay is IDogeRelay {
     event VerifyTransaction(uint txHash, uint returnCode);
     event RelayTransaction(uint txHash, uint returnCode);
 
-    function DogeRelay(Network network) public {
+    // @dev - the constructor
+    // @param _network - Dogecoin network whose blocks DogeRelay is receiving (either mainnet or testnet)
+    function DogeRelay(Network _network) public {
         // gasPriceAndChangeRecipientFee in incentive.se
         // TODO incentive management
         // self.gasPriceAndChangeRecipientFee = 50 * 10**9 * BYTES_16 // 50 shannon and left-align
-        net = network;
+        net = _network;
     }
 
+    // @dev - sets ScryptChecker instance associated with this DogeRelay contract.
+    // Once scryptChecker has been set, it cannot be changed.
+    // An address of 0x0 means scryptChecker hasn't been set yet.
+    //
+    // @param _scryptChecker - address of the ScryptChecker contract to be associated with DogeRelay
     function setScryptChecker(address _scryptChecker) public {
-        require(address(scryptChecker) == 0x0);
+        require(address(scryptChecker) == 0x0 && _scryptChecker != 0x0);
         scryptChecker = IScryptChecker(_scryptChecker);
     }
 
-    // setInitialParent can only be called once and allows testing of storing
+    // @dev - setInitialParent can only be called once and allows testing of storing
     // arbitrary headers and verifying/relaying transactions,
     // say from block 1.900.000, instead of genesis block
-    //
     // setInitialParent should be called using a real block on the Dogecoin blockchain.
     // http://bitcoin.stackexchange.com/questions/26869/what-is-chainwork
     // chainWork can be computed using test/script.chainwork.py or
     // https://chainquery.com/bitcoin-api/getblock or local dogecoind
-    //
     // Note: If used to store the imaginary block before Dogecoin's
     // genesis, then it should be called as setInitialParent(0, 0, 1) and
     // means that getBestBlockHeight() and getChainWork() will be
@@ -103,7 +109,11 @@ contract DogeRelay is IDogeRelay {
     // error will happen when the first block divisible by 2016 is reached, because
     // difficulty computation requires looking up the 2016th parent, which will
     // NOT exist with setInitialParent(0, 0, 1) (only the 2015th parent exists)
-    function setInitialParent(uint blockHash, uint64 height, uint128 chainWork) public returns (bool) {
+    //
+    // @param _blockHash - SHA-256 hash of the block being stored
+    // @param _height = block's height on the Dogecoin blockchain
+    // @param _chainWork - amount of work put into Dogecoin blockchain when this block was created
+    function setInitialParent(uint _blockHash, uint64 _height, uint128 _chainWork) public returns (bool) {
         // reuse highScore as the flag for whether setInitialParent() has already been called
 
         if (highScore != 0) {
@@ -114,16 +124,16 @@ contract DogeRelay is IDogeRelay {
 
         // TODO: check height > 145000, that is when Digishield was activated. The problem is that is only for production
 
-        bestBlockHash = blockHash;
+        bestBlockHash = _blockHash;
 
-        // _height cannot be set to -1 because inMainChain() assumes that
+        // height cannot be set to -1 because inMainChain() assumes that
         // a block with height 0 does NOT exist (thus we cannot allow the
         // real genesis block to be at height 0)
-        m_setHeight(blockHash, height);
+        m_setHeight(_blockHash, _height);
 
-        // do NOT pass chainWork of 0, since score 0 means
+        // do NOT pass _chainWork of 0, since score 0 means
         // block does NOT exist. see check in storeBlockHeader()
-        m_setScore(blockHash, chainWork);
+        m_setScore(_blockHash, _chainWork);
 
         // other fields do not need to be set, for example:
         // _ancestor can remain zeros because internalBlock[0] already points to blockHash
@@ -131,52 +141,61 @@ contract DogeRelay is IDogeRelay {
         return true;
     }
 
-    // Where the header begins:
+    // @dev - Where the header begins:
     // 4 bytes function ID +
     // 32 bytes pointer to header array data +
     // 32 bytes block hash
     // 32 bytes header array size.
     // To understand abi encoding, read https://medium.com/@hayeah/how-to-decipher-a-smart-contract-method-call-8ee980311603
     // Not declared constant because inline assembly would not be able to use it.
-    // Declared uint so it has no offset to access it from assebly
-
+    // Declared uint so it has no offset to access it from assembly
     // store a Dogecoin block header that must be provided in bytes format 'blockHeaderBytes'
     // Callers must keep same signature since CALLDATALOAD is used to save gas.
-    function storeBlockHeader(bytes blockHeaderBytes, uint proposedScryptBlockHash, address truebitClaimantAddress) public returns (uint) {
+    //
+    // @param _blockHeaderBytes - raw block header bytes
+    // @param _proposedScryptBlockHash - not-yet-validated scrypt hash
+    // @param _truebitClaimantAddress - 
+    // @return - 1 if the parent has been properly set, 0 otherwise
+    function storeBlockHeader(bytes _blockHeaderBytes, uint _proposedScryptBlockHash, address _truebitClaimantAddress) public returns (uint) {
         // blockHash should be a function parameter in dogecoin because the hash can not be calculated onchain.
         // Code here should call the Scrypt validator contract to make sure the supplied hash of the block is correct
         // If the block is merge mined, there are 2 Scrypts functions to execute, the one that checks PoW of the litecoin block
         // and the one that checks the block hash
-        if (blockHeaderBytes.length < 80) {
+        if (_blockHeaderBytes.length < 80) {
             StoreHeader(0, ERR_INVALID_HEADER);
             return 0;
         }
 
-        // bytes memory rawBlockHeader = sliceArray(blockHeaderBytes, 0, 80);
         ++onholdIdx;
         BlockInformation storage bi = onholdBlocks[onholdIdx];
-        bi._blockHeader = parseBytes(sliceArray(blockHeaderBytes, 0, 80));
-
-        // uint blockSha256Hash = m_dblShaFlip(bi._blockHeader);
+        bi._blockHeader = parseHeaderBytes(sliceArray(_blockHeaderBytes, 0, 80));
 
         // we only check the target and do not do other validation (eg timestamp) to save gas
-        // Comment out PoW validation until we implement doge specific code
-        if (flip32Bytes(proposedScryptBlockHash) > targetFromBits(bi._blockHeader.bits)) {
+        if (flip32Bytes(_proposedScryptBlockHash) > targetFromBits(bi._blockHeader.bits)) {
             StoreHeader (bi._blockHeader.blockHash, ERR_PROOF_OF_WORK);
             return 0;
         }
 
-        if ((blockHeaderBytes[1] & 0x01) != 0) {
+        if ((_blockHeaderBytes[1] & 0x01) != 0) { // I think this has something to do with the version. Ask!
             // Merge mined block
-            scryptChecker.checkScrypt(sliceArray(blockHeaderBytes, blockHeaderBytes.length - 80, blockHeaderBytes.length), bytes32(proposedScryptBlockHash), truebitClaimantAddress, bytes32(onholdIdx)); //sliceArray(...) is a merge mined block header
+            scryptChecker.checkScrypt(sliceArray(_blockHeaderBytes, _blockHeaderBytes.length - 80, _blockHeaderBytes.length), bytes32(_proposedScryptBlockHash), _truebitClaimantAddress, bytes32(onholdIdx)); //sliceArray(...) is a merge mined block header, therefore longer than a regular block header
         } else {
             // Normal block
-            scryptChecker.checkScrypt(sliceArray(blockHeaderBytes, 0, 80), bytes32(proposedScryptBlockHash), truebitClaimantAddress, bytes32(onholdIdx));
+            scryptChecker.checkScrypt(sliceArray(_blockHeaderBytes, 0, 80), bytes32(_proposedScryptBlockHash), _truebitClaimantAddress, bytes32(onholdIdx)); //For normal blocks, we just need to slice the first 80 bytes
         }
 
         return 1;
     }
 
+    // @dev - once a pending block's scrypt hash has been verified as correct, this function is executed as a callback.
+    // Checks whether:
+    //      - it is valid to store the pending block at all (i.e. there's a parent block
+    //        and the pending block hasn't already been submitted)
+    //      - the block's difficulty is correct
+    // If these checks pass, it stores the pending block in `myblocks` and updates high score if it becomes the new chain tip.
+    //
+    // @param _proposalId - request identifier of the call
+    // @return - newly stored block's height if all checks pass, 0 otherwise.
     function scryptVerified(bytes32 _proposalId) public returns (uint) {
         if (msg.sender != address(scryptChecker)) {
             StoreHeader(0, ERR_INVALID_HEADER);
@@ -225,14 +244,13 @@ contract DogeRelay is IDogeRelay {
         } else {
             // (blockHeight - DIFFICULTY_ADJUSTMENT_INTERVAL) is same as [getHeight(hashPrevBlock) - (DIFFICULTY_ADJUSTMENT_INTERVAL - 1)]
 
-            uint32 newBits = m_calculateDigishieldDifficulty(int64(m_getTimestamp(hashPrevBlock)) - int64(m_getTimestamp(getPrevBlock(hashPrevBlock))), prevBits);
+            uint32 newBits = calculateDigishieldDifficulty(int64(m_getTimestamp(hashPrevBlock)) - int64(m_getTimestamp(getPrevBlock(hashPrevBlock))), prevBits);
 
             if (net == Network.TESTNET && bi._blockHeader.time - m_getTimestamp(hashPrevBlock) > 120 && blockHeight >= 157500) {
                 newBits = 0x1e0fffff;
             }
 
             // Difficulty adjustment verification
-            // Comment out until we fix bug adding block https://dogechain.info/block/2054961
             if (bits != newBits && newBits != 0) {  // newBits != 0 to allow first header
                 StoreHeader(blockSha256Hash, ERR_RETARGET);
                 return 0;
@@ -266,17 +284,19 @@ contract DogeRelay is IDogeRelay {
         return blockHeight;
     }
 
-    // Implementation of DigiShield, almost directly translated from
+    // @dev - Implementation of DigiShield, almost directly translated from
     // C++ implementation of Dogecoin. See function CalculateDogecoinNextWorkRequired
     // on dogecoin/src/dogecoin.cpp for more details.
     // Calculates the next block's difficulty based on the current block's elapsed time
     // and the desired mining time for a block, which is 60 seconds after block 145k.
-    function m_calculateDigishieldDifficulty(int64 nActualTimespan, uint32 nBits) private returns (uint32 result) {
-        // nActualTimespan: time elapsed from previous block creation til current block creation
-        // i.e., how much time it took to mine the current block
-        // nBits: previous block header difficulty (in bits)
+    //
+    // @param _actualTimespan - time elapsed from previous block creation til current block creation;
+    // i.e., how much time it took to mine the current block
+    // @param _bits - previous block header difficulty (in bits)
+    // @return - expected difficulty for the next block
+    function calculateDigishieldDifficulty(int64 _actualTimespan, uint32 _bits) private returns (uint32 result) {
         int64 retargetTimespan = int64(TARGET_TIMESPAN);
-        int64 nModulatedTimespan = int64(nActualTimespan);
+        int64 nModulatedTimespan = int64(_actualTimespan);
 
         nModulatedTimespan = retargetTimespan + int64(nModulatedTimespan - retargetTimespan) / int64(8); //amplitude filter
         int64 nMinTimespan = retargetTimespan - (int64(retargetTimespan) / int64(4));
@@ -290,7 +310,7 @@ contract DogeRelay is IDogeRelay {
         }
 
         // Retarget
-        uint bnNew = targetFromBits(nBits);
+        uint bnNew = targetFromBits(_bits);
         bnNew = bnNew * uint(nModulatedTimespan);
         bnNew = uint(bnNew) / uint(retargetTimespan);
 
@@ -303,15 +323,17 @@ contract DogeRelay is IDogeRelay {
 
     uint constant HASH_SIZE = 32;
 
-    // store a number of blockheaders
+    // @dev - store a number of blockheaders by calling storeBlockHeader multiple times.
     // Return latest's block height
-    // headersBytes are dogecoin block headers.
-    //              Each header is encoded as:
-    //              - header size (4 bytes, big-endian representation)
-    //              - the header (size is variable).
-    // hashesBytes are the scrypt hashes for those blocks
-    // count is the number of headers sent
-    function bulkStoreHeaders(bytes headersBytes, bytes hashesBytes, uint count, address truebitClaimantAddress) public returns (uint result) {
+    //
+    // @param _headersBytes - Dogecoin block headers, all concatenated together and encoding in the following format:
+    //      - header size (4 bytes, big-endian representation)
+    //      - actual header (size is variable.)
+    // @param _hashesBytes - concatenated scrypt hashes corresponding to concatenated headers;
+    // _hashesBytes[i] should be _headersBytes[i]'s scrypt hash
+    // @param count - number of headers sent
+    // @return - height of last stored block
+    function bulkStoreHeaders(bytes _headersBytes, bytes _hashesBytes, uint count, address truebitClaimantAddress) public returns (uint result) {
         //uint8 HEADER_SIZE = 80;
         uint headersOffset = 0;
         uint headersEndIndex = 4;
@@ -319,12 +341,12 @@ contract DogeRelay is IDogeRelay {
         uint hashesEndIndex = HASH_SIZE;
         uint i = 0;
         while (i < count) {
-            // bytes memory currHeaderLengthBytes = sliceArray(headersBytes, headersOffset, headersEndIndex);
-            uint currHeaderLength = bytesToUint32(sliceArray(headersBytes, headersOffset, headersEndIndex));
+            // bytes memory currHeaderLengthBytes = sliceArray(_headersBytes, headersOffset, headersEndIndex);
+            uint currHeaderLength = bytesToUint32(sliceArray(_headersBytes, headersOffset, headersEndIndex));
             headersOffset += 4;
             headersEndIndex += currHeaderLength;
             //log2(bytes32(currHeaderLength), bytes32(headersOffset), bytes32(headersEndIndex));
-            result = storeBlockHeader(sliceArray(headersBytes, headersOffset, headersEndIndex), uint(bytesToBytes32(sliceArray(hashesBytes, hashesOffset, hashesEndIndex))), truebitClaimantAddress);
+            result = storeBlockHeader(sliceArray(_headersBytes, headersOffset, headersEndIndex), uint(bytesToBytes32(sliceArray(_hashesBytes, hashesOffset, hashesEndIndex))), truebitClaimantAddress);
             headersOffset += currHeaderLength;
             headersEndIndex += 4;
             hashesOffset += HASH_SIZE;
@@ -333,35 +355,46 @@ contract DogeRelay is IDogeRelay {
         }
 
         // If bytes[] function parameter would work
-        //for (uint i = 0; i < headersBytes.length; i++) {
+        //for (uint i = 0; i < _headersBytes.length; i++) {
         //      result = storeBlockHeader(headers[i], hashes[i]);
         //}
     }
 
-    // Converts a bytes of size 4 to uint32
-    // Eg for input [0x01, 0x02, 0x03 0x04] returns 0x01020304
+    // @dev - Converts a bytes of size 4 to uint32,
+    // e.g. for input [0x01, 0x02, 0x03 0x04] returns 0x01020304
     function bytesToUint32(bytes memory input) internal pure returns (uint32 result) {
         result = uint32(input[0])*(2**24) + uint32(input[1])*(2**16) + uint32(input[2])*(2**8) + uint32(input[3]);
     }
 
-
-    // Returns the hash of tx (raw bytes) if the tx is in the block given by 'txBlockHash'
-    // and the block is in Bitcoin's main chain (ie not a fork).
+    // @dev - Returns the hash of tx (raw bytes) if the tx is in the block given by 'txBlockHash'
+    // and the block is in Bitcoin's main chain (i.e. not a fork).
     // Returns 0 if the tx is exactly 64 bytes long (to guard against a Merkle tree
     // collision) or fails verification.
     //
-    // the merkle proof is represented by 'txIndex', 'siblings', where:
-    // - 'txIndex' is the index of the tx within the block
+    // the merkle proof is represented by '_txIndex', 'siblings', where:
+    // - '_txIndex' is the index of the tx within the block
     // - 'siblings' are the merkle siblings of tx
-    function verifyTx(bytes txBytes, uint txIndex, uint[] siblings, uint txBlockHash) public returns (uint) {
-        uint txHash = m_dblShaFlip(txBytes);
+
+
+
+    // @dev - Checks whether the transaction given by `_txBytes` is in the block identified by `_txBlockHash`.
+    // First it guards against a Merkle tree collision attack by raising an error if the transaction is exactly 64 bytes long,
+    // then it calls helperVerifyHash__ to do the actual check.
+    //
+    // @param _txBytes - transaction bytes
+    // @param _txIndex - transaction's index within the block
+    // @param _siblings - transaction's Merkle siblings
+    // @param _txBlockHash - hash of the block that might contain the transaction
+    // @return - SHA-256 hash of _txBytes if the transaction is in the block, 0 otherwise 
+    function verifyTx(bytes _txBytes, uint _txIndex, uint[] _siblings, uint _txBlockHash) public returns (uint) {
+        uint txHash = m_dblShaFlip(_txBytes);
         
-        if (txBytes.length == 64) {  // todo: is check 32 also needed?
+        if (_txBytes.length == 64) {  // todo: is check 32 also needed?
             VerifyTransaction(txHash, ERR_TX_64BYTE);
             return 0;
         }
-        // uint res = helperVerifyHash__(txHash, txIndex, siblings, txBlockHash);
-        if (helperVerifyHash__(txHash, txIndex, siblings, txBlockHash) == 1) {
+
+        if (helperVerifyHash__(txHash, _txIndex, _siblings, _txBlockHash) == 1) {
             return txHash;
         } else {
             // log is done via helperVerifyHash__
@@ -375,33 +408,42 @@ contract DogeRelay is IDogeRelay {
     // internal hash in the Merkle tree. Thus this helper method should NOT be used
     // directly and is intended to be private.
     //
-    // the merkle proof is represented by 'txHash', 'txIndex', 'siblings', where:
+    // the merkle proof is represented by 'txHash', '_txIndex', 'siblings', where:
     // - 'txHash' is the hash of the tx
-    // - 'txIndex' is the index of the tx within the block
+    // - '_txIndex' is the index of the tx within the block
     // - 'siblings' are the merkle siblings of tx
-    function helperVerifyHash__(uint256 txHash, uint txIndex, uint[] siblings, uint txBlockHash) private returns (uint) {
+
+    // @dev - Checks whether the transaction identified by `_txHash` is in the block identified by `_txBlockHash`
+    // via a Merkle proof.
+    //
+    // @param _txHash - transaction hash
+    // @param _txIndex - transaction's index within the block
+    // @param _siblings - transaction's Merkle siblings
+    // @param _txBlockHash - hash of the block that might contain the transaction
+    // @return 1 if the transaction is in the block, 0 otherwise.
+    function helperVerifyHash__(uint256 _txHash, uint _txIndex, uint[] _siblings, uint _txBlockHash) private returns (uint) {
         // TODO: implement when dealing with incentives
-        // if (!feePaid(txBlockHash, m_getFeeAmount(txBlockHash))) {  // in incentive.se
-        //    VerifyTransaction(txHash, ERR_BAD_FEE);
+        // if (!feePaid(_txBlockHash, m_getFeeAmount(_txBlockHash))) {  // in incentive.se
+        //    VerifyTransaction(_txHash, ERR_BAD_FEE);
         //    return (ERR_BAD_FEE);
         // }
 
-        if (within6Confirms(txBlockHash)) {
-            VerifyTransaction(txHash, ERR_CONFIRMATIONS);
+        if (within6Confirms(_txBlockHash)) {
+            VerifyTransaction(_txHash, ERR_CONFIRMATIONS);
             return (ERR_CONFIRMATIONS);
         }
 
-  //      if (!priv_inMainChain__(txBlockHash)) {
-  //          VerifyTransaction (txHash, ERR_CHAIN);
+  //      if (!priv_inMainChain__(_txBlockHash)) {
+  //          VerifyTransaction (_txHash, ERR_CHAIN);
   //          return (ERR_CHAIN);
   //      }
 
-        if (computeMerkle(txHash, txIndex, siblings) != getMerkleRoot(txBlockHash)) {
-          VerifyTransaction (txHash, ERR_MERKLE_ROOT);
+        if (computeMerkle(_txHash, _txIndex, _siblings) != getMerkleRoot(_txBlockHash)) {
+          VerifyTransaction (_txHash, ERR_MERKLE_ROOT);
           return (ERR_MERKLE_ROOT);
         }
 
-        VerifyTransaction (txHash, 1);
+        VerifyTransaction (_txHash, 1);
         return (1);
     }
 
@@ -416,10 +458,10 @@ contract DogeRelay is IDogeRelay {
     // it may also have been returned by processTransaction(). callers should be
     // aware of the contract that they are relaying transactions to and
     // understand what that contract's processTransaction method returns.
-    function relayTx(bytes txBytes, uint txIndex, uint[] siblings, uint txBlockHash, TransactionProcessor targetContract) public returns (uint) {
-        uint txHash = verifyTx(txBytes, txIndex, siblings, txBlockHash);
+    function relayTx(bytes _txBytes, uint _txIndex, uint[] siblings, uint txBlockHash, TransactionProcessor targetContract) public returns (uint) {
+        uint txHash = verifyTx(_txBytes, _txIndex, siblings, txBlockHash);
         if (txHash != 0) {
-            uint returnCode = targetContract.processTransaction(txBytes, txHash);
+            uint returnCode = targetContract.processTransaction(_txBytes, txHash);
             RelayTransaction (txHash, returnCode);
             return (returnCode);
         }
@@ -429,9 +471,11 @@ contract DogeRelay is IDogeRelay {
     }
 
 
-    // Returns a list of block hashes (9 hashes maximum) that helps an agent find out what
+    // @dev - Returns a list of block hashes (9 hashes maximum) that helps an agent find out what
     // doge blocks DogeRelay is missing.
     // The first position contains bestBlock, then bestBlock-5, then bestBlock-25 ... until bestBlock-78125
+    //
+    // @return - list of 9 or less block hashes
     function getBlockLocator() public view returns (uint[9] locator) {
         uint blockHash = bestBlockHash;
         //locator.push(blockHash);
@@ -446,12 +490,12 @@ contract DogeRelay is IDogeRelay {
         return locator;
     }
 
-    // return the height of the best block aka the Tip
+    // @dev - return the height of the best block (chain tip)
     function getBestBlockHeight() public view returns (uint) {
         return m_getHeight(bestBlockHash);
     }
 
-    // return the hash of the heaviest block aka the Tip
+    // @dev - return the hash of the best block (chain tip)
     function getBestBlockHash() public view returns (uint) {
         return bestBlockHash;
     }
@@ -615,34 +659,6 @@ contract DogeRelay is IDogeRelay {
         return uw.value;
     }
 
-    // writes threeBytes into word at position
-    // This is useful for writing 24bit ints inside one 32 byte word
-    function m_mwrite24(uint word, uint8 position, uint24 threeBytes) private pure returns (uint) {
-        // Store uint in a struct wrapper because that is the only way to get a pointer to it
-        UintWrapper memory uw = UintWrapper(word);
-        uint pointer = ptr(uw);
-        assembly {
-            mstore8(add(pointer, position), byte(29, threeBytes))
-            mstore8(add(pointer, add(position,1)), byte(30, threeBytes))
-            mstore8(add(pointer, add(position,2)), byte(31, threeBytes))
-        }
-        return uw.value;
-    }
-
-    // writes twoBytes into word at position
-    // This is useful for writing 16bit ints inside one 32 byte word
-    function m_mwrite16(uint word, uint8 position, uint16 twoBytes) private pure returns (uint) {
-        // Store uint in a struct wrapper because that is the only way to get a pointer to it
-        UintWrapper memory uw = UintWrapper(word);
-        uint pointer = ptr(uw);
-        assembly {
-            mstore8(add(pointer, position), byte(30, twoBytes))
-            mstore8(add(pointer, add(position,1)), byte(31, twoBytes))
-        }
-        return uw.value;
-    }
-
-
     // Should be private, made internal for testing
     function bytesToBytes32(bytes b) internal pure returns (bytes32) {
         bytes32 out;
@@ -666,7 +682,7 @@ contract DogeRelay is IDogeRelay {
         return result;
     }
 
-    function parseBytes(bytes rawBytes) internal returns (BlockHeader bh) {
+    function parseHeaderBytes(bytes rawBytes) internal returns (BlockHeader bh) {
         bh.version = f_version(rawBytes);
         bh.time = f_getTimestamp(rawBytes);
         bh.bits = f_bits(rawBytes);
@@ -678,15 +694,15 @@ contract DogeRelay is IDogeRelay {
     // For a valid proof, returns the root of the Merkle tree.
     // Otherwise the return value is meaningless if the proof is invalid.
     // [see documentation for verifyTx() for the merkle proof
-    // format of 'txHash', 'txIndex', 'siblings' ]
-    function computeMerkle(uint txHash, uint txIndex, uint[] siblings) private pure returns (uint) {
+    // format of 'txHash', '_txIndex', 'siblings' ]
+    function computeMerkle(uint txHash, uint _txIndex, uint[] siblings) private pure returns (uint) {
         uint resultHash = txHash;
         // uint proofLen = siblings.length;
         uint i = 0;
         while (i < siblings.length) {
             uint proofHex = siblings[i];
 
-            uint sideOfSiblings = txIndex % 2;  // 0 means siblings is on the right; 1 means left
+            uint sideOfSiblings = _txIndex % 2;  // 0 means siblings is on the right; 1 means left
 
             uint left;
             uint right;
@@ -700,7 +716,7 @@ contract DogeRelay is IDogeRelay {
 
             resultHash = concatHash(left, right);
 
-            txIndex /= 2;
+            _txIndex /= 2;
             i += 1;
         }
 
