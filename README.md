@@ -110,6 +110,13 @@ To deploy the contracts
 
 **Note**: Do not commit `local_config.json` file!
 
+## Team
+
+[Ismael Bejarano](https://github.com/ismaelbej)
+[Catalina Juarros](https://github.com/cat-j)
+[Pablo Yabo](https://github.com/pipaman)
+[Oscar Guindzberg](https://github.com/oscarguindzberg)
+
 ## License
 
 Copyright (c) 2017 Coinfabrik and Oscar Guindzberg. You will need to get a written authorization from them to use this code.
