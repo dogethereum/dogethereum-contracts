@@ -112,10 +112,10 @@ To deploy the contracts
 
 ## Team
 
-[Ismael Bejarano](https://github.com/ismaelbej)
-[Catalina Juarros](https://github.com/cat-j)
-[Pablo Yabo](https://github.com/pipaman)
-[Oscar Guindzberg](https://github.com/oscarguindzberg)
+* [Ismael Bejarano](https://github.com/ismaelbej)
+* [Catalina Juarros](https://github.com/cat-j)
+* [Pablo Yabo](https://github.com/pipaman)
+* [Oscar Guindzberg](https://github.com/oscarguindzberg)
 
 ## License
 
