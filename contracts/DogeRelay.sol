@@ -106,10 +106,12 @@ contract DogeRelay is IDogeRelay {
     // @dev - setInitialParent can only be called once and allows testing of storing
     // arbitrary headers and verifying/relaying transactions,
     // say from block 1.900.000, instead of genesis block
+    //
     // setInitialParent should be called using a real block on the Dogecoin blockchain.
     // http://bitcoin.stackexchange.com/questions/26869/what-is-chainwork
     // chainWork can be computed using test/script.chainwork.py or
     // https://chainquery.com/bitcoin-api/getblock or local dogecoind
+    //
     // Note: If used to store the imaginary block before Dogecoin's
     // genesis, then it should be called as setInitialParent(0, 0, 1) and
     // means that getBestBlockHeight() and getChainWork() will be
