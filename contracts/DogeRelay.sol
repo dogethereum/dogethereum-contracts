@@ -896,19 +896,14 @@ contract DogeRelay is IDogeRelay {
     //
     // @param _input - little-endian value
     // @return - input value in big-endian format
-    function flip32Bytes(uint _input) internal pure returns (uint) {
-        uint i = 0;
-        // unrolling this would decrease gas usage, but would increase
-        // the gas cost for code size by over 700K and exceed the PI million block gas limit
-        UintWrapper memory uw = UintWrapper(0);
-        uint pointer = ptr(uw);
-        while (i < 32) {
-            assembly {
-                mstore8(add(pointer, i), byte(sub(31 ,i), _input))
+    function flip32Bytes(uint _input) internal pure returns (uint result) {
+        assembly {
+            let pos := mload(0x40)
+            for { let i := 0 } lt(i, 32) { i := add(i, 1) } {
+                mstore8(add(pos, i), byte(sub(31, i), _input))
             }
-            i++;
+            result := mload(pos)
         }
-        return uw.value;
     }
 
     //
