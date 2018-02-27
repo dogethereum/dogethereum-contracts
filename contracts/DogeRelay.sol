@@ -857,17 +857,9 @@ contract DogeRelay is IDogeRelay {
     // @param _tx1 - Merkle node (either root or internal node)
     // @param _tx2 - Merkle node (either root or internal node), has to be `_tx1`'s sibling
     // @return - `_tx1` and `_tx2`'s parent, i.e. the result of concatenating them,
-    // hashing that twice and flipping the bytes.    
+    // hashing that twice and flipping the bytes.
     function concatHash(uint _tx1, uint _tx2) internal pure returns (uint) {
-        bytes memory concat = new bytes(64);
-        uint tx1Flipped = flip32Bytes(_tx1);
-        uint tx2Flipped = flip32Bytes(_tx2);
-        assembly {
-          // First 32 bytes are the byte array size
-          mstore(add(concat, 32), tx1Flipped)
-          mstore(add(concat, 64), tx2Flipped)
-        }
-        return flip32Bytes(uint(sha256(sha256(concat))));
+        return flip32Bytes(uint(sha256(sha256(flip32Bytes(_tx1), flip32Bytes(_tx2)))));
     }
 
     // @dev - shift information to the right by a specified number of bits
