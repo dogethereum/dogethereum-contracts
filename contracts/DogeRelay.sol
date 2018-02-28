@@ -6,7 +6,7 @@ import "./IDogeRelay.sol";
 
 contract DogeRelay is IDogeRelay {
 
-    enum Network { MAINNET, TESTNET }
+    enum Network { MAINNET, TESTNET, REGTEST }
 
     // Number of block ancestors stored in BlockInformation._ancestor
     uint constant private NUM_ANCESTOR_DEPTHS = 8;
@@ -237,36 +237,39 @@ contract DogeRelay is IDogeRelay {
         uint blockHeight = 1 + m_getHeight(hashPrevBlock);
         uint32 prevBits = m_getBits(hashPrevBlock);
 
-        if (ibIndex == 0) {
-            // since blockHeight is 1 more than blockNumber; OR clause is special case for 1st header
-            // we need to check prevBits isn't 0 otherwise the 1st header
-            // will always be rejected (since prevBits doesn't exist for the initial parent)
-            // This allows blocks with arbitrary difficulty from being added to
-            // the initial parent, but as these forks will have lower score than
-            // the main chain, they will not have impact.
-            if (bits != prevBits && prevBits != 0) {
-                StoreHeader(blockSha256Hash, ERR_DIFFICULTY);
-                return 0;
-            }
-        } else if (ibIndex == 1) {
-            // In order to avoid the 'grandparent block bug', we don't check anything
-            // for the 2nd stored block now. This should be implemented later!!!
+        // Ignore difficulty adjustment verification for regtest until we implement it
+        if (net != Network.REGTEST) {
+            if (ibIndex == 0) {
+                // since blockHeight is 1 more than blockNumber; OR clause is special case for 1st header
+                // we need to check prevBits isn't 0 otherwise the 1st header
+                // will always be rejected (since prevBits doesn't exist for the initial parent)
+                // This allows blocks with arbitrary difficulty from being added to
+                // the initial parent, but as these forks will have lower score than
+                // the main chain, they will not have impact.
+                if (bits != prevBits && prevBits != 0) {
+                    StoreHeader(blockSha256Hash, ERR_DIFFICULTY);
+                    return 0;
+                }
+            } else if (ibIndex == 1) {
+                // In order to avoid the 'grandparent block bug', we don't check anything
+                // for the 2nd stored block now. This should be implemented later!!!
 
-        } else {
-            // (blockHeight - DIFFICULTY_ADJUSTMENT_INTERVAL) is same as [getHeight(hashPrevBlock) - (DIFFICULTY_ADJUSTMENT_INTERVAL - 1)]
+            } else {
+                // (blockHeight - DIFFICULTY_ADJUSTMENT_INTERVAL) is same as [getHeight(hashPrevBlock) - (DIFFICULTY_ADJUSTMENT_INTERVAL - 1)]
 
-            uint32 newBits = calculateDigishieldDifficulty(int64(m_getTimestamp(hashPrevBlock)) - int64(m_getTimestamp(getPrevBlock(hashPrevBlock))), prevBits);
+                uint32 newBits = calculateDigishieldDifficulty(int64(m_getTimestamp(hashPrevBlock)) - int64(m_getTimestamp(getPrevBlock(hashPrevBlock))), prevBits);
 
-            if (net == Network.TESTNET && bi._blockHeader.time - m_getTimestamp(hashPrevBlock) > 120 && blockHeight >= 157500) {
-                newBits = 0x1e0fffff;
-            }
+                if (net == Network.TESTNET && bi._blockHeader.time - m_getTimestamp(hashPrevBlock) > 120 && blockHeight >= 157500) {
+                    newBits = 0x1e0fffff;
+                }
 
-            // Difficulty adjustment verification
-            if (bits != newBits && newBits != 0) {  // newBits != 0 to allow first header
-                StoreHeader(blockSha256Hash, ERR_RETARGET);
-                return 0;
-            }
-        }
+                // Difficulty adjustment verification
+                if (bits != newBits && newBits != 0) {  // newBits != 0 to allow first header
+                    StoreHeader(blockSha256Hash, ERR_RETARGET);
+                    return 0;
+                }
+            }        
+        } 
 
         myblocks[blockSha256Hash] = bi;
         m_saveAncestors(blockSha256Hash, hashPrevBlock);  // increments ibIndex
