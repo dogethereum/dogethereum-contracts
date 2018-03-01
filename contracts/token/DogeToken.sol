@@ -62,14 +62,14 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
     // Unlock section begin
 
     // Request ERC20 tokens to be burnt and dogecoins be received on the doge blockchain
-    function doUnlock(string dogeAddress, uint256 _value) public returns (bool success) {
-        require(balances[msg.sender] >= _value);
-        balances[msg.sender] -= _value;
+    function doUnlock(string dogeAddress, uint256 value) public returns (bool success) {
+        require(balances[msg.sender] >= value);
+        balances[msg.sender] -= value;
         // Hack to make etherscan show the event
-        Transfer(msg.sender, 0, _value);
+        Transfer(msg.sender, 0, value);
         ++unlockIdx;
-        UnlockRequest(unlockIdx, msg.sender, dogeAddress, _value, block.timestamp);
-        unlocksPendingInvestorProof[unlockIdx] = Unlock(unlockIdx, msg.sender, dogeAddress, _value, block.timestamp);
+        UnlockRequest(unlockIdx, msg.sender, dogeAddress, value, block.timestamp);
+        unlocksPendingInvestorProof[unlockIdx] = Unlock(unlockIdx, msg.sender, dogeAddress, value, block.timestamp);
         Set.insert(unlocksPendingInvestorProofKeySet, unlockIdx);
         return true;
     }
@@ -77,9 +77,9 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
     // Represents an unlock request
     struct Unlock {
           uint id;
-          address _from;
+          address from;
           string dogeAddress;
-          uint _value;
+          uint value;
           uint timestamp;
     }
 
