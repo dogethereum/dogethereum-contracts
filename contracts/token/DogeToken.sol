@@ -21,6 +21,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
           uint16 index;
     }
     Utxo[] public utxos;
+    uint nextUnspentUtxoIndex;
 
 
     function DogeToken(address trustedDogeRelay, bytes20 recipientDogethereum) public {
@@ -62,17 +63,44 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
     // Unlock section begin
 
     // Request ERC20 tokens to be burnt and dogecoins be received on the doge blockchain
-    function doUnlock(string dogeAddress, uint256 value) public returns (bool success) {
+    function doUnlock(string dogeAddress, uint value) public returns (bool success) {
         require(balances[msg.sender] >= value);
         balances[msg.sender] -= value;
+        uint[] memory selectedUtxos;
+        uint fee;
+        (selectedUtxos, fee) = selectUtxosAndFee(value);
         // Hack to make etherscan show the event
         Transfer(msg.sender, 0, value);
         ++unlockIdx;
         UnlockRequest(unlockIdx, msg.sender, dogeAddress, value, block.timestamp);
-        unlocksPendingInvestorProof[unlockIdx] = Unlock(unlockIdx, msg.sender, dogeAddress, value, block.timestamp);
+        unlocksPendingInvestorProof[unlockIdx] = Unlock(unlockIdx, msg.sender, dogeAddress, value, 
+                                                        block.timestamp, selectedUtxos, fee);
+
         Set.insert(unlocksPendingInvestorProofKeySet, unlockIdx);
         return true;
     }
+
+    uint constant MIN_FEE = 100000000;
+    uint constant BASE_FEE = 50000000;
+    uint constant FEE_PER_INPUT = 100000000;
+
+    function selectUtxosAndFee(uint valueToSend) private returns (uint[] memory selectedUtxos, uint fee) {
+        // There should be at least 1 utxo available
+        require(nextUnspentUtxoIndex < utxos.length);
+        fee = BASE_FEE;
+        uint selectedUtxosValue;
+        uint i;
+        while (selectedUtxosValue < (valueToSend + fee) && (nextUnspentUtxoIndex < utxos.length)) {
+            selectedUtxosValue += utxos[nextUnspentUtxoIndex].value;
+            fee += FEE_PER_INPUT;
+            selectedUtxos[i] = nextUnspentUtxoIndex;
+            nextUnspentUtxoIndex++;
+            i++;
+        }
+        require(selectedUtxosValue < (valueToSend + fee));
+        return (selectedUtxos, fee);
+    }
+
 
     // Represents an unlock request
     struct Unlock {
@@ -81,6 +109,9 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
           string dogeAddress;
           uint value;
           uint timestamp;
+          // Values are indexes in storage array "utxos"
+          uint[] selectedUtxos;
+          uint fee;
     }
 
     // counter for next unlock
