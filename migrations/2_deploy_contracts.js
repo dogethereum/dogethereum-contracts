@@ -37,14 +37,14 @@ module.exports = function(deployer, network, accounts) {
     }).then(function () {
       return deployer.deploy(DogeProcessor, DogeRelayForTests.address, {gas: 3600000});
     }).then(function () {
-      return deployer.deploy(DogeToken, DogeRelayForTests.address, dogethereumRecipient, {gas: 3500000});
+      return deployer.deploy(DogeToken, DogeRelayForTests.address, dogethereumRecipient, {gas: 4000000});
     }).then(function () {
       const dogeRelay = DogeRelayForTests.at(DogeRelayForTests.address);
       return dogeRelay.setScryptChecker(ScryptCheckerDummy.address, {gas: 1000000});
     });
   } else {
     return deployer.deploy(DogeRelay, dogeRelayNetwork, {gas: 3600000}).then(function () {
-      return deployer.deploy(DogeToken, DogeRelay.address, dogethereumRecipient, {gas: 3500000});
+      return deployer.deploy(DogeToken, DogeRelay.address, dogethereumRecipient, {gas: 4000000});
     }).then(function () {
       return deployer.deploy(ScryptCheckerDummy, DogeRelay.address, true, {gas: 1000000})
     }).then(function () {

@@ -147,37 +147,54 @@ library DogeTx {
         }
     }
 
-    function parseTransaction(bytes txBytes, bytes20 expected_output_address) internal pure
-             returns (uint, bytes32, bool)
-    {
+    // Parses a doge tx
+    // Inputs
+    // txBytes: tx byte arrar
+    // expected_output_address: lock address (expected to be on 1st or 2nd output, require() fails otherwise)
+    // Outputs
+    // output_value: amount sent to the lock address in satoshis
+    // inputPubKey: "x" axis value of the public key used to sign the first output
+    // inputPubKeyOdd: Indicates inputPubKey odd bit
+    // outputIndex: number of output where expected_output_address was found
+
+    struct ParseTransactionVariablesStruct {
         uint pos;
+        bytes20 output_address;
+        uint output_value;
+        uint16 outputIndex;
+        bytes32 inputPubKey;
+        bool inputPubKeyOdd;    
+    }
+
+    function parseTransaction(bytes txBytes, bytes20 expected_output_address) internal pure
+             returns (uint, bytes32, bool, uint16)
+    {
+        ParseTransactionVariablesStruct memory variables;
         uint[] memory input_script_lens;
         uint[] memory input_script_starts;
         uint[] memory output_script_lens;
         uint[] memory output_script_starts;
         uint[] memory output_values;
-        bytes20 output_address;
-        uint output_value;
 
-        pos = 4;  // skip version
-        (input_script_starts, input_script_lens, pos) = scanInputs(txBytes, pos, 0);
+        variables.pos = 4;  // skip version
+        (input_script_starts, input_script_lens, variables.pos) = scanInputs(txBytes, variables.pos, 0);
 
-        bytes32 inputPubKey;
-        bool inputPubKeyOdd;
-        (inputPubKey, inputPubKeyOdd) = getInputPubKey(txBytes, input_script_starts[0]);
+        (variables.inputPubKey, variables.inputPubKeyOdd) = getInputPubKey(txBytes, input_script_starts[0]);
 
-        (output_values, output_script_starts, output_script_lens, pos) = scanOutputs(txBytes, pos, 2);
+        (output_values, output_script_starts, output_script_lens, variables.pos) = scanOutputs(txBytes, variables.pos, 2);
         // The output we are looking for should be the first or the second output
-        output_address = parseOutputScript(txBytes, output_script_starts[0], output_script_lens[0]);
-        output_value = output_values[0];
+        variables.output_address = parseOutputScript(txBytes, output_script_starts[0], output_script_lens[0]);
+        variables.output_value = output_values[0];
+        variables.outputIndex = 0;
 
-        if (output_address != expected_output_address) {
-            output_address = parseOutputScript(txBytes, output_script_starts[1], output_script_lens[1]);
-            output_value = output_values[1];
+        if (variables.output_address != expected_output_address) {
+            variables.output_address = parseOutputScript(txBytes, output_script_starts[1], output_script_lens[1]);
+            variables.output_value = output_values[1];
+            variables.outputIndex = 1;
         }
-        require(output_address == expected_output_address);
+        require(variables.output_address == expected_output_address);
 
-        return (output_value, inputPubKey, inputPubKeyOdd);
+        return (variables.output_value, variables.inputPubKey, variables.inputPubKeyOdd, variables.outputIndex);
     }
 
     // scan the full transaction bytes and return the first two output

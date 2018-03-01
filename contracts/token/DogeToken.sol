@@ -7,13 +7,20 @@ import "../DogeParser/DogeTx.sol";
 
 contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), TransactionProcessor {
 
-    address private _trustedDogeRelay;
-    bytes20 private _recipientDogethereum;
+    address public _trustedDogeRelay;
+    bytes20 public _recipientDogethereum;
 
     Set.Data dogeTxHashesAlreadyProcessed;
-    uint256 minimumLockTxValue;
+    uint256 public minimumLockTxValue;
 
     event NewToken(address indexed user, uint value);
+
+    struct Utxo {
+          uint value;
+          uint txHash;
+          uint16 index;
+    }
+    Utxo[] public utxos;
 
 
     function DogeToken(address trustedDogeRelay, bytes20 recipientDogethereum) public {
@@ -22,17 +29,20 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         minimumLockTxValue = 100000000;
     }
 
-    function processTransaction(bytes dogeTx, uint256 txHash) public returns (uint) {
+    function processTransaction(bytes dogeTx, uint txHash) public returns (uint) {
         require(msg.sender == _trustedDogeRelay);
 
         uint value;
         bytes32 pubKey;
         bool odd;
-        (value, pubKey, odd) = DogeTx.parseTransaction(dogeTx, _recipientDogethereum);
-
+        uint16 outputIndex;
+        (value, pubKey, odd, outputIndex) = DogeTx.parseTransaction(dogeTx, _recipientDogethereum);
 
         // Check tx was not processes already and add it to the dogeTxHashesAlreadyProcessed
         require(Set.insert(dogeTxHashesAlreadyProcessed, txHash));
+
+        // Add utxo
+        utxos.push(Utxo(value, txHash, outputIndex));
 
         // Calculate ethereum address from dogecoin public key
         address destinationAddress = DogeTx.pub2address(uint256(pubKey), odd);

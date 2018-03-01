@@ -52,7 +52,11 @@ contract('testDogeToken', function(accounts) {
     await dogeToken.processTransaction(txData, txHash);
 
     const balance = await dogeToken.balanceOf(address);
+    const utxo = await dogeToken.utxos(0);
 
     assert.equal(balance.toString(16), value, `DogeToken's ${address} balance is not the expected one`);
+    assert.equal(utxo[0], 905853205327, `Utxo's value is not the expected one`);
+    assert.equal(utxo[1].toString(16), utils.remove0x(txHash), `Utxo's value is not the expected one`);
+    assert.equal(utxo[2], 0, `Utxo's index is not the expected one`);
   });
 });
