@@ -62,14 +62,14 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
     // Unlock section begin
 
     // Request ERC20 tokens to be burnt and dogecoins be received on the doge blockchain
-    function doUnlock(uint256 _value) public returns (bool success) {
+    function doUnlock(string dogeAddress, uint256 _value) public returns (bool success) {
         require(balances[msg.sender] >= _value);
         balances[msg.sender] -= _value;
         // Hack to make etherscan show the event
         Transfer(msg.sender, 0, _value);
         ++unlockIdx;
-        UnlockRequest(unlockIdx, msg.sender, _value, block.timestamp);
-        unlocksPendingInvestorProof[unlockIdx] = Unlock(unlockIdx, msg.sender, _value, block.timestamp);
+        UnlockRequest(unlockIdx, msg.sender, dogeAddress, _value, block.timestamp);
+        unlocksPendingInvestorProof[unlockIdx] = Unlock(unlockIdx, msg.sender, dogeAddress, _value, block.timestamp);
         Set.insert(unlocksPendingInvestorProofKeySet, unlockIdx);
         return true;
     }
@@ -78,6 +78,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
     struct Unlock {
           uint id;
           address _from;
+          string dogeAddress;
           uint _value;
           uint timestamp;
     }
@@ -90,7 +91,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
     // Set with keys of unlocksPendingInvestorProof.
     Set.Data unlocksPendingInvestorProofKeySet;
 
-    event UnlockRequest(uint id, address _from, uint _value, uint timestamp);
+    event UnlockRequest(uint id, address from, string dogeAddress, uint value, uint timestamp);
 
     // Unlock section end
 }
