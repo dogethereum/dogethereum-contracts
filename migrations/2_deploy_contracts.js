@@ -38,7 +38,7 @@ module.exports = function(deployer, network, accounts) {
     }).then(function () {
       return deployer.deploy(DogeProcessor, DogeRelayForTests.address, {gas: 3600000});
     }).then(function () {
-      return deployer.deploy(DogeTokenForTests, DogeRelayForTests.address, dogethereumRecipient, {gas: 4000000});
+      return deployer.deploy(DogeTokenForTests, DogeRelayForTests.address, dogethereumRecipient, {gas: 4100000});
     }).then(function () {
       const dogeRelay = DogeRelayForTests.at(DogeRelayForTests.address);
       return dogeRelay.setScryptChecker(ScryptCheckerDummy.address, {gas: 1000000});
@@ -47,7 +47,7 @@ module.exports = function(deployer, network, accounts) {
     deployer.link(Set, DogeToken);
     deployer.link(DogeTx, DogeToken);
     return deployer.deploy(DogeRelay, dogeRelayNetwork, {gas: 3600000}).then(function () {
-      return deployer.deploy(DogeToken, DogeRelay.address, dogethereumRecipient, {gas: 4000000});
+      return deployer.deploy(DogeToken, DogeRelay.address, dogethereumRecipient, {gas: 4100000});
     }).then(function () {
       return deployer.deploy(ScryptCheckerDummy, DogeRelay.address, true, {gas: 1000000})
     }).then(function () {
