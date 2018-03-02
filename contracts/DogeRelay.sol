@@ -78,10 +78,10 @@ contract DogeRelay is IDogeRelay {
     IScryptChecker public scryptChecker;
 
     // TODO: Make event parameters indexed so we can register filters on them
-    event StoreHeader(uint blockHash, uint returnCode);
-    event GetHeader(uint blockHash, uint returnCode);
-    event VerifyTransaction(uint txHash, uint returnCode);
-    event RelayTransaction(uint txHash, uint returnCode);
+    event StoreHeader(bytes32 blockHash, uint returnCode);
+    event GetHeader(bytes32 blockHash, uint returnCode);
+    event VerifyTransaction(bytes32 txHash, uint returnCode);
+    event RelayTransaction(bytes32 txHash, uint returnCode);
 
     // @dev - the constructor
     // @param _network - Dogecoin network whose blocks DogeRelay is receiving (either mainnet or testnet).
@@ -173,7 +173,7 @@ contract DogeRelay is IDogeRelay {
         // If the block is merge mined, there are 2 Scrypts functions to execute, the one that checks PoW of the litecoin block
         // and the one that checks the block hash
         if (_blockHeaderBytes.length < 80) {
-            StoreHeader(0, ERR_INVALID_HEADER);
+            StoreHeader(bytes32(0), ERR_INVALID_HEADER);
             return 0;
         }
 
@@ -183,7 +183,7 @@ contract DogeRelay is IDogeRelay {
 
         // we only check the target and do not do other validation (eg timestamp) to save gas
         if (flip32Bytes(_proposedScryptBlockHash) > targetFromBits(bi._blockHeader.bits)) {
-            StoreHeader (bi._blockHeader.blockHash, ERR_PROOF_OF_WORK);
+            StoreHeader(bytes32(bi._blockHeader.blockHash), ERR_PROOF_OF_WORK);
             return 0;
         }
 
@@ -209,7 +209,7 @@ contract DogeRelay is IDogeRelay {
     // @return - newly stored block's height if all checks pass, 0 otherwise.
     function scryptVerified(bytes32 _proposalId) public returns (uint) {
         if (msg.sender != address(scryptChecker)) {
-            StoreHeader(0, ERR_INVALID_HEADER);
+            StoreHeader(bytes32(0), ERR_INVALID_HEADER);
             return 0;
         }
 
@@ -222,13 +222,13 @@ contract DogeRelay is IDogeRelay {
         uint128 scorePrevBlock = m_getScore(hashPrevBlock);
 
         if (scorePrevBlock == 0) {
-            StoreHeader(blockSha256Hash, ERR_NO_PREV_BLOCK);
+            StoreHeader(bytes32(blockSha256Hash), ERR_NO_PREV_BLOCK);
             return 0;
         }
 
         if (m_getScore(blockSha256Hash) != 0) {
             // block already stored/exists
-            StoreHeader(blockSha256Hash, ERR_BLOCK_ALREADY_EXISTS);
+            StoreHeader(bytes32(blockSha256Hash), ERR_BLOCK_ALREADY_EXISTS);
             return 0;
         }
 
@@ -247,7 +247,7 @@ contract DogeRelay is IDogeRelay {
                 // the initial parent, but as these forks will have lower score than
                 // the main chain, they will not have impact.
                 if (bits != prevBits && prevBits != 0) {
-                    StoreHeader(blockSha256Hash, ERR_DIFFICULTY);
+                    StoreHeader(bytes32(blockSha256Hash), ERR_DIFFICULTY);
                     return 0;
                 }
             } else if (ibIndex == 1) {
@@ -265,11 +265,11 @@ contract DogeRelay is IDogeRelay {
 
                 // Difficulty adjustment verification
                 if (bits != newBits && newBits != 0) {  // newBits != 0 to allow first header
-                    StoreHeader(blockSha256Hash, ERR_RETARGET);
+                    StoreHeader(bytes32(blockSha256Hash), ERR_RETARGET);
                     return 0;
                 }
-            }        
-        } 
+            }
+        }
 
         myblocks[blockSha256Hash] = bi;
         m_saveAncestors(blockSha256Hash, hashPrevBlock);  // increments ibIndex
@@ -294,7 +294,7 @@ contract DogeRelay is IDogeRelay {
             highScore = scoreBlock;
         }
 
-        StoreHeader(blockSha256Hash, blockHeight);
+        StoreHeader(bytes32(blockSha256Hash), blockHeight);
         return blockHeight;
     }
 
@@ -392,7 +392,7 @@ contract DogeRelay is IDogeRelay {
         uint txHash = m_dblShaFlip(_txBytes);
         
         if (_txBytes.length == 64) {  // todo: is check 32 also needed?
-            VerifyTransaction(txHash, ERR_TX_64BYTE);
+            VerifyTransaction(bytes32(txHash), ERR_TX_64BYTE);
             return 0;
         }
 
@@ -420,26 +420,26 @@ contract DogeRelay is IDogeRelay {
     function helperVerifyHash__(uint256 _txHash, uint _txIndex, uint[] _siblings, uint _txBlockHash) private returns (uint) {
         // TODO: implement when dealing with incentives
         // if (!feePaid(_txBlockHash, m_getFeeAmount(_txBlockHash))) {  // in incentive.se
-        //    VerifyTransaction(_txHash, ERR_BAD_FEE);
+        //    VerifyTransaction(bytes32(_txHash), ERR_BAD_FEE);
         //    return (ERR_BAD_FEE);
         // }
 
         if (within6Confirms(_txBlockHash)) {
-            VerifyTransaction(_txHash, ERR_CONFIRMATIONS);
+            VerifyTransaction(bytes32(_txHash), ERR_CONFIRMATIONS);
             return (ERR_CONFIRMATIONS);
         }
 
   //      if (!priv_inMainChain__(_txBlockHash)) {
-  //          VerifyTransaction (_txHash, ERR_CHAIN);
+  //          VerifyTransaction(bytes32(_txHash), ERR_CHAIN);
   //          return (ERR_CHAIN);
   //      }
 
         if (computeMerkle(_txHash, _txIndex, _siblings) != getMerkleRoot(_txBlockHash)) {
-          VerifyTransaction (_txHash, ERR_MERKLE_ROOT);
+          VerifyTransaction(bytes32(_txHash), ERR_MERKLE_ROOT);
           return (ERR_MERKLE_ROOT);
         }
 
-        VerifyTransaction (_txHash, 1);
+        VerifyTransaction(bytes32(_txHash), 1);
         return (1);
     }
 
@@ -461,11 +461,11 @@ contract DogeRelay is IDogeRelay {
         uint txHash = verifyTx(_txBytes, _txIndex, _siblings, _txBlockHash);
         if (txHash != 0) {
             uint returnCode = _targetContract.processTransaction(_txBytes, txHash);
-            RelayTransaction (txHash, returnCode);
+            RelayTransaction(bytes32(txHash), returnCode);
             return (returnCode);
         }
 
-        RelayTransaction (0, ERR_RELAY_VERIFY);
+        RelayTransaction(bytes32(0), ERR_RELAY_VERIFY);
         return(ERR_RELAY_VERIFY);
     }
 

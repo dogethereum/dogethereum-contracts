@@ -60,7 +60,7 @@ contract DogeRelayForTests is DogeRelay {
         //     GetHeader (blockHash, 0);
         //    return(text("\x00"):str);
         // }
-        GetHeader(blockHash, 1);
+        GetHeader(bytes32(blockHash), 1);
         return myblocks[blockHash]._blockHeader;
     }
 
