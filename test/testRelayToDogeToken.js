@@ -1,5 +1,5 @@
 var DogeRelay = artifacts.require("./DogeRelayForTests.sol");
-var DogeToken = artifacts.require("./token/DogeToken.sol");
+var DogeToken = artifacts.require("./token/DogeTokenForTests.sol");
 var utils = require('./utils');
 
 
