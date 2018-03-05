@@ -608,11 +608,10 @@ contract DogeRelay is IDogeRelay {
     // @param _word - information to be partially overwritten
     // @param _position - position to start writing from
     // @param _eightBytes - information to be written
-    function m_mwrite64(uint _word, uint8 _position, uint64 _eightBytes) private pure returns (uint) {
-        // Store uint in a struct wrapper because that is the only way to get a pointer to it
-        UintWrapper memory uw = UintWrapper(_word);
-        uint pointer = ptr(uw);
+    function m_mwrite64(uint _word, uint8 _position, uint64 _eightBytes) private pure returns (uint result) {
         assembly {
+            let pointer := mload(0x40)
+            mstore(pointer, _word)
             mstore8(add(pointer, _position        ), byte(24, _eightBytes))
             mstore8(add(pointer, add(_position, 1)), byte(25, _eightBytes))
             mstore8(add(pointer, add(_position, 2)), byte(26, _eightBytes))
@@ -621,8 +620,8 @@ contract DogeRelay is IDogeRelay {
             mstore8(add(pointer, add(_position, 5)), byte(29, _eightBytes))
             mstore8(add(pointer, add(_position, 6)), byte(30, _eightBytes))
             mstore8(add(pointer, add(_position, 7)), byte(31, _eightBytes))
+            result := mload(pointer)
         }
-        return uw.value;
     }
 
     // @dev - write `_eightBytes` into `_word` starting from `_position`
@@ -631,11 +630,10 @@ contract DogeRelay is IDogeRelay {
     // @param _word - information to be partially overwritten
     // @param _position - position to start writing from
     // @param _eightBytes - information to be written
-    function m_mwrite128(uint _word, uint8 _position, uint128 _sixteenBytes) private pure returns (uint) {
-        // Store uint in a struct wrapper because that is the only way to get a pointer to it
-        UintWrapper memory uw = UintWrapper(_word);
-        uint pointer = ptr(uw);
+    function m_mwrite128(uint _word, uint8 _position, uint128 _sixteenBytes) private pure returns (uint result) {
         assembly {
+            let pointer := mload(0x40)
+            mstore(pointer, _word)
             mstore8(add(pointer, _position         ),  byte(16, _sixteenBytes))
             mstore8(add(pointer, add(_position,  1)),  byte(17, _sixteenBytes))
             mstore8(add(pointer, add(_position,  2)),  byte(18, _sixteenBytes))
@@ -652,8 +650,8 @@ contract DogeRelay is IDogeRelay {
             mstore8(add(pointer, add(_position,  13)), byte(29, _sixteenBytes))
             mstore8(add(pointer, add(_position,  14)), byte(30, _sixteenBytes))
             mstore8(add(pointer, add(_position,  15)), byte(31, _sixteenBytes))
+            result := mload(pointer)
         }
-        return uw.value;
     }
 
     // @dev - write `_fourBytes` into `_word` starting from `_position`
@@ -662,17 +660,16 @@ contract DogeRelay is IDogeRelay {
     // @param _word - information to be partially overwritten
     // @param _position - position to start writing from
     // @param _eightBytes - information to be written
-    function m_mwrite32(uint _word, uint _position, uint32 _fourBytes) private pure returns (uint) {
-        // Store uint in a struct wrapper because that is the only way to get a pointer to it
-        UintWrapper memory uw = UintWrapper(_word);
-        uint pointer = ptr(uw);
+    function m_mwrite32(uint _word, uint _position, uint32 _fourBytes) private pure returns (uint result) {
         assembly {
+            let pointer := mload(0x40)
+            mstore(pointer, _word)
             mstore8(add(pointer, _position), byte(28, _fourBytes))
             mstore8(add(pointer, add(_position,1)), byte(29, _fourBytes))
             mstore8(add(pointer, add(_position,2)), byte(30, _fourBytes))
             mstore8(add(pointer, add(_position,3)), byte(31, _fourBytes))
+            result := mload(pointer)
         }
-        return uw.value;
     }
 
     // @dev converts bytes of any length to bytes32.
@@ -967,35 +964,6 @@ contract DogeRelay is IDogeRelay {
     // @result - work put into the block identified by `_blockHash`
     function m_getScore(uint _blockHash) internal view returns (uint128) {
         return uint128(myblocks[_blockHash]._info * BYTES_16 / BYTES_16);
-    }
-
-    // Util functions and wrappers to get pointers to memory and storage
-
-    struct UintWrapper {
-        uint value;
-    }
-
-    // @dev - Returns a pointer to the supplied UintWrapper
-    function ptr(UintWrapper memory uw) private pure returns (uint addr) {
-        assembly {
-            addr := uw
-        }
-    }
-
-    // @dev - Returns a pointer to the supplied BlockInformation
-    function ptr(BlockInformation storage bi) private pure returns (uint addr) {
-        assembly {
-            addr := bi_slot
-        }
-    }
-
-    // @dev - Returns a pointer to the content of the supplied byte array in storage
-    function ptr(bytes storage byteArray) private pure returns (uint addr) {
-        uint pointer;
-        assembly {
-            pointer := byteArray_slot
-        }
-        addr = uint(keccak256(bytes32(pointer)));
     }
 
     // 0x00 version
