@@ -179,7 +179,7 @@ contract DogeRelay is IDogeRelay {
 
         ++onholdIdx;
         BlockInformation storage bi = onholdBlocks[onholdIdx];
-        bi._blockHeader = parseHeaderBytes(sliceArray(_blockHeaderBytes, 0, 80));
+        bi._blockHeader = parseHeaderBytes(_blockHeaderBytes, 0);
 
         // we only check the target and do not do other validation (eg timestamp) to save gas
         if (flip32Bytes(_proposedScryptBlockHash) > targetFromBits(bi._blockHeader.bits)) {
@@ -355,11 +355,11 @@ contract DogeRelay is IDogeRelay {
         uint hashesEndIndex = HASH_SIZE;
         uint i = 0;
         while (i < count) {
-            uint currHeaderLength = bytesToUint32(sliceArray(_headersBytes, headersOffset, headersEndIndex));
+            uint currHeaderLength = bytesToUint32(_headersBytes, headersOffset);
             headersOffset += 4;
             headersEndIndex += currHeaderLength;
             //log2(bytes32(currHeaderLength), bytes32(headersOffset), bytes32(headersEndIndex));
-            result = storeBlockHeader(sliceArray(_headersBytes, headersOffset, headersEndIndex), uint(bytesToBytes32(sliceArray(_hashesBytes, hashesOffset, hashesEndIndex))), truebitClaimantAddress);
+            result = storeBlockHeader(sliceArray(_headersBytes, headersOffset, headersEndIndex), uint(bytesToBytes32(_hashesBytes, hashesOffset)), truebitClaimantAddress);
             headersOffset += currHeaderLength;
             headersEndIndex += 4;
             hashesOffset += HASH_SIZE;
@@ -375,8 +375,8 @@ contract DogeRelay is IDogeRelay {
 
     // @dev - Converts a bytes of size 4 to uint32,
     // e.g. for input [0x01, 0x02, 0x03 0x04] returns 0x01020304
-    function bytesToUint32(bytes memory input) internal pure returns (uint32 result) {
-        result = uint32(input[0])*(2**24) + uint32(input[1])*(2**16) + uint32(input[2])*(2**8) + uint32(input[3]);
+    function bytesToUint32(bytes memory input, uint pos) internal pure returns (uint32 result) {
+        result = uint32(input[pos])*(2**24) + uint32(input[pos + 1])*(2**16) + uint32(input[pos + 2])*(2**8) + uint32(input[pos + 3]);
     }
 
     // @dev - Checks whether the transaction given by `_txBytes` is in the block identified by `_txBlockHash`.
@@ -679,10 +679,10 @@ contract DogeRelay is IDogeRelay {
     //
     // @param _rawBytes - arbitrary length bytes
     // @return - leftmost 32 or less bytes of input value; padded if less than 32
-    function bytesToBytes32(bytes _rawBytes) internal pure returns (bytes32) {
+    function bytesToBytes32(bytes _rawBytes, uint pos) internal pure returns (bytes32) {
         bytes32 out;
-        for (uint i = 0; i < 32; i++) {
-            out |= bytes32(_rawBytes[i]) >> (i * 8);
+        assembly {
+            out := mload(add(add(_rawBytes, 0x20), pos))
         }
         return out;
     }
@@ -707,17 +707,29 @@ contract DogeRelay is IDogeRelay {
         return result;
     }
 
+    function sha256mem(bytes memory _rawBytes, uint offset, uint len) internal view returns (bytes32 result) {
+        assembly {
+            // Call precompiled contract to copy data
+            let ptr := mload(0x40)
+            mstore(0x40, add(ptr, 0x20))
+            if iszero(call(gas, 0x02, 0, add(add(_rawBytes, 0x20), offset), len, ptr, 0x20)) {
+                revert(0, 0)
+            }
+            result := mload(ptr)
+        }
+    }
+
     // @dev - converts raw bytes representation of a Dogecoin block header to struct representation
     //
     // @param _rawBytes - first 80 bytes of a block header
     // @return - exact same header information in BlockHeader struct form
-    function parseHeaderBytes(bytes _rawBytes) internal returns (BlockHeader bh) {
-        bh.version = f_version(_rawBytes);
-        bh.time = f_getTimestamp(_rawBytes);
-        bh.bits = f_bits(_rawBytes);
-        bh.blockHash = m_dblShaFlip(_rawBytes);
-        bh.prevBlock = f_hashPrevBlock(_rawBytes);
-        bh.merkleRoot = f_merkleRoot(_rawBytes);
+    function parseHeaderBytes(bytes _rawBytes, uint pos) internal returns (BlockHeader bh) {
+        bh.version = f_version(_rawBytes, pos);
+        bh.time = f_getTimestamp(_rawBytes, pos);
+        bh.bits = f_bits(_rawBytes, pos);
+        bh.blockHash = flip32Bytes(uint(sha256(sha256mem(_rawBytes, pos, 80))));
+        bh.prevBlock = f_hashPrevBlock(_rawBytes, pos);
+        bh.merkleRoot = f_merkleRoot(_rawBytes, pos);
     }
 
     // @dev - For a valid proof, returns the root of the Merkle tree.
@@ -977,9 +989,9 @@ contract DogeRelay is IDogeRelay {
     //
     // @param _blockHeader - Dogecoin block header bytes
     // @return - block's version in big endian format
-    function f_version(bytes memory _blockHeader) internal pure returns (uint32 version) {
+    function f_version(bytes memory _blockHeader, uint pos) internal pure returns (uint32 version) {
         assembly {
-            let word := mload(add(_blockHeader, 0x4))
+            let word := mload(add(add(_blockHeader, 0x4), pos))
             version := add(byte(24, word),
                 add(mul(byte(25, word), 0x100),
                     add(mul(byte(26, word), 0x10000),
@@ -991,10 +1003,10 @@ contract DogeRelay is IDogeRelay {
     //
     // @param _blockHeader - Dogecoin block header bytes
     // @return - hash of block's parent in big endian format
-    function f_hashPrevBlock(bytes memory _blockHeader) internal pure returns (uint) {
+    function f_hashPrevBlock(bytes memory _blockHeader, uint pos) internal pure returns (uint) {
         uint hashPrevBlock;
         assembly {
-            hashPrevBlock := mload(add(_blockHeader, 0x24))
+            hashPrevBlock := mload(add(add(_blockHeader, 0x24), pos))
         }
         return flip32Bytes(hashPrevBlock);
     }
@@ -1003,10 +1015,10 @@ contract DogeRelay is IDogeRelay {
     //
     // @param _blockHeader - Dogecoin block header bytes
     // @return - block's Merkle root in big endian format
-    function f_merkleRoot(bytes _blockHeader) private view returns (uint) {
+    function f_merkleRoot(bytes _blockHeader, uint pos) private view returns (uint) {
         uint merkle;
         assembly {
-            merkle := mload(add(_blockHeader, 0x44))
+            merkle := mload(add(add(_blockHeader, 0x44), pos))
         }
         return flip32Bytes(merkle);        
     }
@@ -1015,9 +1027,9 @@ contract DogeRelay is IDogeRelay {
     //
     // @param _blockHeader - Dogecoin block header bytes
     // @return - block's difficulty in bits format, also big-endian
-    function f_bits(bytes memory _blockHeader) internal pure returns (uint32 bits) {
+    function f_bits(bytes memory _blockHeader, uint pos) internal pure returns (uint32 bits) {
         assembly {
-            let word := mload(add(_blockHeader, 0x50))
+            let word := mload(add(add(_blockHeader, 0x50), pos))
             bits := add(byte(24, word),
                 add(mul(byte(25, word), 0x100),
                     add(mul(byte(26, word), 0x10000),
@@ -1029,9 +1041,9 @@ contract DogeRelay is IDogeRelay {
     //
     // @param _blockHeader - Dogecoin block header bytes
     // @return - block's timestamp in big-endian format
-    function f_getTimestamp(bytes memory _blockHeader) internal pure returns (uint32 time) {
+    function f_getTimestamp(bytes memory _blockHeader, uint pos) internal pure returns (uint32 time) {
         assembly {
-            let word := mload(add(_blockHeader, 0x4c))
+            let word := mload(add(add(_blockHeader, 0x4c), pos))
             time := add(byte(24, word),
                 add(mul(byte(25, word), 0x100),
                     add(mul(byte(26, word), 0x10000),
