@@ -75,7 +75,6 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
 
     // Represents an unlock request
     struct Unlock {
-          uint id;
           address from;
           string dogeAddress;
           uint value;
@@ -101,7 +100,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         Transfer(msg.sender, 0, value);
         ++unlockIdx;
         UnlockRequest(unlockIdx, msg.sender, dogeAddress, value, block.timestamp);
-        unlocksPendingInvestorProof[unlockIdx] = Unlock(unlockIdx, msg.sender, dogeAddress, value, 
+        unlocksPendingInvestorProof[unlockIdx] = Unlock(msg.sender, dogeAddress, value, 
                                                         block.timestamp, selectedUtxos, fee);        
         return true;
     }
