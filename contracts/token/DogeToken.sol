@@ -72,8 +72,6 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
 
     // Unlocks the investor has not sent a proof of unlock yet.
     mapping (uint => Unlock) public unlocksPendingInvestorProof;
-    // Set with keys of unlocksPendingInvestorProof.
-    Set.Data unlocksPendingInvestorProofKeySet;
 
     // Represents an unlock request
     struct Unlock {
@@ -104,9 +102,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         ++unlockIdx;
         UnlockRequest(unlockIdx, msg.sender, dogeAddress, value, block.timestamp);
         unlocksPendingInvestorProof[unlockIdx] = Unlock(unlockIdx, msg.sender, dogeAddress, value, 
-                                                        block.timestamp, selectedUtxos, fee);
-        
-        Set.insert(unlocksPendingInvestorProofKeySet, unlockIdx);
+                                                        block.timestamp, selectedUtxos, fee);        
         return true;
     }
 
