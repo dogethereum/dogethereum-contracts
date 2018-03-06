@@ -21,7 +21,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
           uint16 index;
     }
     Utxo[] public utxos;
-    uint public nextUnspentUtxoIndex;
+    uint32 public nextUnspentUtxoIndex;
 
 
     function DogeToken(address trustedDogeRelay, bytes20 recipientDogethereum) public {
@@ -83,7 +83,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
           uint value;
           uint timestamp;
           // Values are indexes in storage array "utxos"
-          uint[] selectedUtxos;
+          uint32[] selectedUtxos;
           uint fee;
     }
 
@@ -93,14 +93,10 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
 
     // Request ERC20 tokens to be burnt and dogecoins be received on the doge blockchain
     function doUnlock(string dogeAddress, uint value) public returns (bool success) {
-        //uint[] memory selectedUtxos;
-        //unlocksPendingInvestorProof[1] = Unlock(1, msg.sender, "dogeAddress", 123, 
-        //                                                456, selectedUtxos, 789);
-
         require(value >= MIN_UNLOCK_VALUE);
         require(balances[msg.sender] >= value);
         balances[msg.sender] -= value;
-        uint[] memory selectedUtxos;
+        uint32[] memory selectedUtxos;
         uint fee;
         (selectedUtxos, fee) = selectUtxosAndFee(value);
         // Hack to make etherscan show the event
@@ -114,23 +110,26 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         return true;
     }
 
-    function selectUtxosAndFee(uint valueToSend) private returns (uint[] memory selectedUtxos, uint fee) {
+    function selectUtxosAndFee(uint valueToSend) private returns (uint32[] memory selectedUtxos, uint fee) {
         // There should be at least 1 utxo available
         require(nextUnspentUtxoIndex < utxos.length);
         fee = BASE_FEE;
         uint selectedUtxosValue;
-        uint i;
+        uint32 firstSelectedUtxo = nextUnspentUtxoIndex;
+        uint32 lastSelectedUtxo;
         while (selectedUtxosValue < valueToSend && (nextUnspentUtxoIndex < utxos.length)) {
             selectedUtxosValue += utxos[nextUnspentUtxoIndex].value;
             fee += FEE_PER_INPUT;
-            // Comment out this because it is trying to increase the size of a memory array
-            // Fix and uncomment it
-            //selectedUtxos[i] = nextUnspentUtxoIndex;
+            lastSelectedUtxo = nextUnspentUtxoIndex;
             nextUnspentUtxoIndex++;
-            i++;
         }
         require(selectedUtxosValue >= valueToSend);
         require(valueToSend > fee);
+        uint32 numberOfSelectedUtxos = lastSelectedUtxo - firstSelectedUtxo + 1;
+        selectedUtxos = new uint32[](numberOfSelectedUtxos);
+        for(uint32 i = 0; i < numberOfSelectedUtxos; i++) {
+            selectedUtxos[i] = i + firstSelectedUtxo;
+        }
         return (selectedUtxos, fee);
     }
 
