@@ -168,18 +168,22 @@ contract DogeRelay is IDogeRelay {
     // @param _truebitClaimantAddress - address of party who will be verifying scrypt hash
     // @return - 1 if the parent has been properly set, 0 otherwise
     function storeBlockHeader(bytes _blockHeaderBytes, uint _proposedScryptBlockHash, address _truebitClaimantAddress) public returns (uint) {
+        return storeBlockHeaderInternal(_blockHeaderBytes, 0, _blockHeaderBytes.length, _proposedScryptBlockHash, _truebitClaimantAddress);
+    }
+
+    function storeBlockHeaderInternal(bytes _blockHeaderBytes, uint pos, uint len, uint _proposedScryptBlockHash, address _truebitClaimantAddress) internal returns (uint) {
         // blockHash should be a function parameter in dogecoin because the hash can not be calculated onchain.
         // Code here should call the Scrypt validator contract to make sure the supplied hash of the block is correct
         // If the block is merge mined, there are 2 Scrypts functions to execute, the one that checks PoW of the litecoin block
         // and the one that checks the block hash
-        if (_blockHeaderBytes.length < 80) {
+        if (len < 80) {
             StoreHeader(bytes32(0), ERR_INVALID_HEADER);
             return 0;
         }
 
         ++onholdIdx;
         BlockInformation storage bi = onholdBlocks[onholdIdx];
-        bi._blockHeader = parseHeaderBytes(_blockHeaderBytes, 0);
+        bi._blockHeader = parseHeaderBytes(_blockHeaderBytes, pos);
 
         // we only check the target and do not do other validation (eg timestamp) to save gas
         if (flip32Bytes(_proposedScryptBlockHash) > targetFromBits(bi._blockHeader.bits)) {
@@ -187,9 +191,9 @@ contract DogeRelay is IDogeRelay {
             return 0;
         }
 
-        if ((_blockHeaderBytes[1] & 0x01) != 0) { // I think this has something to do with the version. Ask!
+        if ((_blockHeaderBytes[pos + 1] & 0x01) != 0) { // I think this has something to do with the version. Ask!
             // Merge mined block
-            scryptChecker.checkScrypt(sliceArray(_blockHeaderBytes, _blockHeaderBytes.length - 80, _blockHeaderBytes.length), bytes32(_proposedScryptBlockHash), _truebitClaimantAddress, bytes32(onholdIdx)); //sliceArray(...) is a merge mined block header, therefore longer than a regular block header
+            scryptChecker.checkScrypt(sliceArray(_blockHeaderBytes, pos + len - 80, pos + len), bytes32(_proposedScryptBlockHash), _truebitClaimantAddress, bytes32(onholdIdx)); //sliceArray(...) is a merge mined block header, therefore longer than a regular block header
         } else {
             // Normal block
             scryptChecker.checkScrypt(sliceArray(_blockHeaderBytes, 0, 80), bytes32(_proposedScryptBlockHash), _truebitClaimantAddress, bytes32(onholdIdx)); //For normal blocks, we just need to slice the first 80 bytes
@@ -350,20 +354,15 @@ contract DogeRelay is IDogeRelay {
     function bulkStoreHeaders(bytes _headersBytes, bytes _hashesBytes, uint count, address truebitClaimantAddress) public returns (uint result) {
         //uint8 HEADER_SIZE = 80;
         uint headersOffset = 0;
-        uint headersEndIndex = 4;
         uint hashesOffset = 0;
-        uint hashesEndIndex = HASH_SIZE;
         uint i = 0;
         while (i < count) {
             uint currHeaderLength = bytesToUint32(_headersBytes, headersOffset);
             headersOffset += 4;
-            headersEndIndex += currHeaderLength;
             //log2(bytes32(currHeaderLength), bytes32(headersOffset), bytes32(headersEndIndex));
-            result = storeBlockHeader(sliceArray(_headersBytes, headersOffset, headersEndIndex), uint(bytesToBytes32(_hashesBytes, hashesOffset)), truebitClaimantAddress);
+            result = storeBlockHeaderInternal(_headersBytes, headersOffset, currHeaderLength, uint(bytesToBytes32(_hashesBytes, hashesOffset)), truebitClaimantAddress);
             headersOffset += currHeaderLength;
-            headersEndIndex += 4;
             hashesOffset += HASH_SIZE;
-            hashesEndIndex += HASH_SIZE;
             i += 1;
         }
 
