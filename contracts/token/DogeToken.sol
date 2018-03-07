@@ -68,7 +68,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
     uint constant FEE_PER_INPUT = 100000000; // 1 doge
 
     // counter for next unlock
-    uint internal unlockIdx;
+    uint public unlockIdx;
 
     // Unlocks the investor has not sent a proof of unlock yet.
     mapping (uint => Unlock) public unlocksPendingInvestorProof;
