@@ -109,5 +109,12 @@ module.exports = {
   // Return true when the block header contains a AuxPoW
   isHeaderAuxPoW: function (headerBin) {
     return (headerBin[1] & 0x01) != 0;
+  },
+  bigNumberArrayToNumberArray: function (input) {
+    var output = [];
+    input.forEach(function(element) {
+      output.push(element.toNumber());
+    });
+    return output;
   }
 };
