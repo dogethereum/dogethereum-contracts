@@ -11,7 +11,7 @@ contract('testDogeTokenDoUnlock', function(accounts) {
   it('doUnlock does not fail', async () => {
 
     await dogeToken.assign(accounts[0], 2000000000);
-    const balance = await dogeToken.balanceOf(accounts[0]);
+    var balance = await dogeToken.balanceOf(accounts[0]);
     assert.equal(balance, 2000000000, `DogeToken's ${accounts[0]} balance is not the expected one`);
     //await dogeToken.assign(accounts[1], 200000000);
 
@@ -33,6 +33,8 @@ contract('testDogeTokenDoUnlock', function(accounts) {
     assert.equal(unlockPendingInvestorProof[4][0].toNumber(), 0, `Unlock selectedUtxos is not the expected one`);
     assert.equal(unlockPendingInvestorProof[5].toNumber(), 150000000, `Unlock fee is not the expected one`);
 
+    balance = await dogeToken.balanceOf(accounts[0]);
+    assert.equal(balance, 1000000000, `DogeToken's ${accounts[0]} balance after unlock is not the expected one`);
 
   });
 });
