@@ -85,7 +85,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
     }
 
 
-    event UnlockRequest(uint id, address from, string dogeAddress, uint value, uint timestamp);
+    event UnlockRequest(uint id, address from, string dogeAddress, uint value);
 
 
     // Request ERC20 tokens to be burnt and dogecoins be received on the doge blockchain
@@ -99,7 +99,8 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         // Hack to make etherscan show the event
         Transfer(msg.sender, 0, value);
         ++unlockIdx;
-        UnlockRequest(unlockIdx, msg.sender, dogeAddress, value, block.timestamp);
+        UnlockRequest(unlockIdx, msg.sender, dogeAddress, value);
+        //log1(bytes32(selectedUtxos.length), bytes32(selectedUtxos[0]));
         unlocksPendingInvestorProof[unlockIdx] = Unlock(msg.sender, dogeAddress, value, 
                                                         block.timestamp, selectedUtxos, fee);        
         return true;
@@ -127,8 +128,6 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         }
         return (selectedUtxos, fee);
     }
-
-
 
     // Unlock section end
 }
