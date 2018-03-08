@@ -13,37 +13,42 @@ contract('testDogeTokenDoUnlockRequires', function(accounts) {
     await dogeToken.assign(accounts[0], 3000000000);
     const dogeAddress = "DHx8ZyJJuiFM5xAHFypfz1k6bd2X85xNMy";
 
-    // Check unlock an amount below min value fails    
-    await dogeToken.doUnlock(dogeAddress, 200000000);
-    var unlockIdx = await dogeToken.unlockIdx();
-    assert.equal(unlockIdx.toNumber(), 0, `Unlock was created`);    
+    var didNotFail = false;
 
-    // Check unlock an amount greater than user value fails
-    await dogeToken.doUnlock(dogeAddress, 200000000000);
-    var unlockIdx = await dogeToken.unlockIdx();
-    assert.equal(unlockIdx.toNumber(), 0, `Unlock was created`);    
+    try {
+      await dogeToken.doUnlock(dogeAddress, 200000000);      
+      didNotFail = true;
+    } catch (ex) {}
+    assert.isFalse(didNotFail, "unlock an amount below min value. Expected to fail, but it didn't.");
 
-    // Check there is at least 1 utxo available
-    await dogeToken.doUnlock(dogeAddress, 1000000000);
-    var unlockIdx = await dogeToken.unlockIdx();
-    assert.equal(unlockIdx.toNumber(), 0, `Unlock was created`);    
+    try {
+      await dogeToken.doUnlock(dogeAddress, 200000000000);
+      didNotFail = true;
+    } catch (ex) {}
+    assert.isFalse(didNotFail, "unlock an amount greater than user value. Expected to fail, but it didn't.");
 
+    try {
+      await dogeToken.doUnlock(dogeAddress, 1000000000);
+      didNotFail = true;
+    } catch (ex) {}
+    assert.isFalse(didNotFail, "unlock where no utxos are available. Expected to fail, but it didn't.");
 
     await dogeToken.addUtxo(100000000, 1, 10);
+    try {
+      await dogeToken.doUnlock(dogeAddress, 2500000000);
+      didNotFail = true;
+    } catch (ex) {}
+    assert.isFalse(didNotFail, "unlock when available utxos does not cover value. Expected to fail, but it didn't.");
 
-    // Check available utxos cover value
-    await dogeToken.doUnlock(dogeAddress, 2500000000);
-    var unlockIdx = await dogeToken.unlockIdx();
-    assert.equal(unlockIdx.toNumber(), 0, `Unlock was created`);    
 
     for (i = 0; i < 9; i++) { 
       await dogeToken.addUtxo(100000000, 1, 10);
     }
-
-    // Check value to send is greater than fee
-    await dogeToken.doUnlock(dogeAddress, 1000000000);
-    var unlockIdx = await dogeToken.unlockIdx();
-    assert.equal(unlockIdx.toNumber(), 0, `Unlock was created`);    
+    try {
+      await dogeToken.doUnlock(dogeAddress, 1000000000)
+      didNotFail = true;
+    } catch (ex) {}
+    assert.isFalse(didNotFail, "unlock when value to send is greater than fee. Expected to fail, but it didn't.");
 
   });
 });
