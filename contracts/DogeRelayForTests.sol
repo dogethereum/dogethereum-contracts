@@ -7,11 +7,11 @@ contract DogeRelayForTests is DogeRelay {
     function DogeRelayForTests(Network network) public DogeRelay(network) {}
 
     function bytesToUint32Public(bytes memory input) public pure returns (uint32 result) {
-        return bytesToUint32(input);
+        return bytesToUint32(input, 0);
     }
 
     function bytesToBytes32Public(bytes b) public pure returns (bytes32) {
-        return bytesToBytes32(b);
+        return bytesToBytes32(b, 0);
     }
 
     function sliceArrayPublic(bytes original, uint32 offset, uint32 endIndex) public view returns (bytes result) {
@@ -60,7 +60,7 @@ contract DogeRelayForTests is DogeRelay {
         //     GetHeader (blockHash, 0);
         //    return(text("\x00"):str);
         // }
-        GetHeader(blockHash, 1);
+        GetHeader(bytes32(blockHash), 1);
         return myblocks[blockHash]._blockHeader;
     }
 

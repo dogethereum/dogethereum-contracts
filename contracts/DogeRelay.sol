@@ -78,10 +78,10 @@ contract DogeRelay is IDogeRelay {
     IScryptChecker public scryptChecker;
 
     // TODO: Make event parameters indexed so we can register filters on them
-    event StoreHeader(uint blockHash, uint returnCode);
-    event GetHeader(uint blockHash, uint returnCode);
-    event VerifyTransaction(uint txHash, uint returnCode);
-    event RelayTransaction(uint txHash, uint returnCode);
+    event StoreHeader(bytes32 blockHash, uint returnCode);
+    event GetHeader(bytes32 blockHash, uint returnCode);
+    event VerifyTransaction(bytes32 txHash, uint returnCode);
+    event RelayTransaction(bytes32 txHash, uint returnCode);
 
     // @dev - the constructor
     // @param _network - Dogecoin network whose blocks DogeRelay is receiving (either mainnet or testnet).
@@ -168,28 +168,32 @@ contract DogeRelay is IDogeRelay {
     // @param _truebitClaimantAddress - address of party who will be verifying scrypt hash
     // @return - 1 if the parent has been properly set, 0 otherwise
     function storeBlockHeader(bytes _blockHeaderBytes, uint _proposedScryptBlockHash, address _truebitClaimantAddress) public returns (uint) {
+        return storeBlockHeaderInternal(_blockHeaderBytes, 0, _blockHeaderBytes.length, _proposedScryptBlockHash, _truebitClaimantAddress);
+    }
+
+    function storeBlockHeaderInternal(bytes _blockHeaderBytes, uint pos, uint len, uint _proposedScryptBlockHash, address _truebitClaimantAddress) internal returns (uint) {
         // blockHash should be a function parameter in dogecoin because the hash can not be calculated onchain.
         // Code here should call the Scrypt validator contract to make sure the supplied hash of the block is correct
         // If the block is merge mined, there are 2 Scrypts functions to execute, the one that checks PoW of the litecoin block
         // and the one that checks the block hash
-        if (_blockHeaderBytes.length < 80) {
-            StoreHeader(0, ERR_INVALID_HEADER);
+        if (len < 80) {
+            StoreHeader(bytes32(0), ERR_INVALID_HEADER);
             return 0;
         }
 
         ++onholdIdx;
         BlockInformation storage bi = onholdBlocks[onholdIdx];
-        bi._blockHeader = parseHeaderBytes(sliceArray(_blockHeaderBytes, 0, 80));
+        bi._blockHeader = parseHeaderBytes(_blockHeaderBytes, pos);
 
         // we only check the target and do not do other validation (eg timestamp) to save gas
         if (flip32Bytes(_proposedScryptBlockHash) > targetFromBits(bi._blockHeader.bits)) {
-            StoreHeader (bi._blockHeader.blockHash, ERR_PROOF_OF_WORK);
+            StoreHeader(bytes32(bi._blockHeader.blockHash), ERR_PROOF_OF_WORK);
             return 0;
         }
 
-        if ((_blockHeaderBytes[1] & 0x01) != 0) { // I think this has something to do with the version. Ask!
+        if ((_blockHeaderBytes[pos + 1] & 0x01) != 0) { // I think this has something to do with the version. Ask!
             // Merge mined block
-            scryptChecker.checkScrypt(sliceArray(_blockHeaderBytes, _blockHeaderBytes.length - 80, _blockHeaderBytes.length), bytes32(_proposedScryptBlockHash), _truebitClaimantAddress, bytes32(onholdIdx)); //sliceArray(...) is a merge mined block header, therefore longer than a regular block header
+            scryptChecker.checkScrypt(sliceArray(_blockHeaderBytes, pos + len - 80, pos + len), bytes32(_proposedScryptBlockHash), _truebitClaimantAddress, bytes32(onholdIdx)); //sliceArray(...) is a merge mined block header, therefore longer than a regular block header
         } else {
             // Normal block
             scryptChecker.checkScrypt(sliceArray(_blockHeaderBytes, 0, 80), bytes32(_proposedScryptBlockHash), _truebitClaimantAddress, bytes32(onholdIdx)); //For normal blocks, we just need to slice the first 80 bytes
@@ -209,7 +213,7 @@ contract DogeRelay is IDogeRelay {
     // @return - newly stored block's height if all checks pass, 0 otherwise.
     function scryptVerified(bytes32 _proposalId) public returns (uint) {
         if (msg.sender != address(scryptChecker)) {
-            StoreHeader(0, ERR_INVALID_HEADER);
+            StoreHeader(bytes32(0), ERR_INVALID_HEADER);
             return 0;
         }
 
@@ -222,13 +226,13 @@ contract DogeRelay is IDogeRelay {
         uint128 scorePrevBlock = m_getScore(hashPrevBlock);
 
         if (scorePrevBlock == 0) {
-            StoreHeader(blockSha256Hash, ERR_NO_PREV_BLOCK);
+            StoreHeader(bytes32(blockSha256Hash), ERR_NO_PREV_BLOCK);
             return 0;
         }
 
         if (m_getScore(blockSha256Hash) != 0) {
             // block already stored/exists
-            StoreHeader(blockSha256Hash, ERR_BLOCK_ALREADY_EXISTS);
+            StoreHeader(bytes32(blockSha256Hash), ERR_BLOCK_ALREADY_EXISTS);
             return 0;
         }
 
@@ -247,7 +251,7 @@ contract DogeRelay is IDogeRelay {
                 // the initial parent, but as these forks will have lower score than
                 // the main chain, they will not have impact.
                 if (bits != prevBits && prevBits != 0) {
-                    StoreHeader(blockSha256Hash, ERR_DIFFICULTY);
+                    StoreHeader(bytes32(blockSha256Hash), ERR_DIFFICULTY);
                     return 0;
                 }
             } else if (ibIndex == 1) {
@@ -265,11 +269,11 @@ contract DogeRelay is IDogeRelay {
 
                 // Difficulty adjustment verification
                 if (bits != newBits && newBits != 0) {  // newBits != 0 to allow first header
-                    StoreHeader(blockSha256Hash, ERR_RETARGET);
+                    StoreHeader(bytes32(blockSha256Hash), ERR_RETARGET);
                     return 0;
                 }
-            }        
-        } 
+            }
+        }
 
         myblocks[blockSha256Hash] = bi;
         m_saveAncestors(blockSha256Hash, hashPrevBlock);  // increments ibIndex
@@ -294,7 +298,7 @@ contract DogeRelay is IDogeRelay {
             highScore = scoreBlock;
         }
 
-        StoreHeader(blockSha256Hash, blockHeight);
+        StoreHeader(bytes32(blockSha256Hash), blockHeight);
         return blockHeight;
     }
 
@@ -350,20 +354,15 @@ contract DogeRelay is IDogeRelay {
     function bulkStoreHeaders(bytes _headersBytes, bytes _hashesBytes, uint count, address truebitClaimantAddress) public returns (uint result) {
         //uint8 HEADER_SIZE = 80;
         uint headersOffset = 0;
-        uint headersEndIndex = 4;
         uint hashesOffset = 0;
-        uint hashesEndIndex = HASH_SIZE;
         uint i = 0;
         while (i < count) {
-            uint currHeaderLength = bytesToUint32(sliceArray(_headersBytes, headersOffset, headersEndIndex));
+            uint currHeaderLength = bytesToUint32(_headersBytes, headersOffset);
             headersOffset += 4;
-            headersEndIndex += currHeaderLength;
             //log2(bytes32(currHeaderLength), bytes32(headersOffset), bytes32(headersEndIndex));
-            result = storeBlockHeader(sliceArray(_headersBytes, headersOffset, headersEndIndex), uint(bytesToBytes32(sliceArray(_hashesBytes, hashesOffset, hashesEndIndex))), truebitClaimantAddress);
+            result = storeBlockHeaderInternal(_headersBytes, headersOffset, currHeaderLength, uint(bytesToBytes32(_hashesBytes, hashesOffset)), truebitClaimantAddress);
             headersOffset += currHeaderLength;
-            headersEndIndex += 4;
             hashesOffset += HASH_SIZE;
-            hashesEndIndex += HASH_SIZE;
             i += 1;
         }
 
@@ -375,8 +374,8 @@ contract DogeRelay is IDogeRelay {
 
     // @dev - Converts a bytes of size 4 to uint32,
     // e.g. for input [0x01, 0x02, 0x03 0x04] returns 0x01020304
-    function bytesToUint32(bytes memory input) internal pure returns (uint32 result) {
-        result = uint32(input[0])*(2**24) + uint32(input[1])*(2**16) + uint32(input[2])*(2**8) + uint32(input[3]);
+    function bytesToUint32(bytes memory input, uint pos) internal pure returns (uint32 result) {
+        result = uint32(input[pos])*(2**24) + uint32(input[pos + 1])*(2**16) + uint32(input[pos + 2])*(2**8) + uint32(input[pos + 3]);
     }
 
     // @dev - Checks whether the transaction given by `_txBytes` is in the block identified by `_txBlockHash`.
@@ -392,7 +391,7 @@ contract DogeRelay is IDogeRelay {
         uint txHash = m_dblShaFlip(_txBytes);
         
         if (_txBytes.length == 64) {  // todo: is check 32 also needed?
-            VerifyTransaction(txHash, ERR_TX_64BYTE);
+            VerifyTransaction(bytes32(txHash), ERR_TX_64BYTE);
             return 0;
         }
 
@@ -420,26 +419,26 @@ contract DogeRelay is IDogeRelay {
     function helperVerifyHash__(uint256 _txHash, uint _txIndex, uint[] _siblings, uint _txBlockHash) private returns (uint) {
         // TODO: implement when dealing with incentives
         // if (!feePaid(_txBlockHash, m_getFeeAmount(_txBlockHash))) {  // in incentive.se
-        //    VerifyTransaction(_txHash, ERR_BAD_FEE);
+        //    VerifyTransaction(bytes32(_txHash), ERR_BAD_FEE);
         //    return (ERR_BAD_FEE);
         // }
 
         if (within6Confirms(_txBlockHash)) {
-            VerifyTransaction(_txHash, ERR_CONFIRMATIONS);
+            VerifyTransaction(bytes32(_txHash), ERR_CONFIRMATIONS);
             return (ERR_CONFIRMATIONS);
         }
 
   //      if (!priv_inMainChain__(_txBlockHash)) {
-  //          VerifyTransaction (_txHash, ERR_CHAIN);
+  //          VerifyTransaction(bytes32(_txHash), ERR_CHAIN);
   //          return (ERR_CHAIN);
   //      }
 
         if (computeMerkle(_txHash, _txIndex, _siblings) != getMerkleRoot(_txBlockHash)) {
-          VerifyTransaction (_txHash, ERR_MERKLE_ROOT);
+          VerifyTransaction(bytes32(_txHash), ERR_MERKLE_ROOT);
           return (ERR_MERKLE_ROOT);
         }
 
-        VerifyTransaction (_txHash, 1);
+        VerifyTransaction(bytes32(_txHash), 1);
         return (1);
     }
 
@@ -461,11 +460,11 @@ contract DogeRelay is IDogeRelay {
         uint txHash = verifyTx(_txBytes, _txIndex, _siblings, _txBlockHash);
         if (txHash != 0) {
             uint returnCode = _targetContract.processTransaction(_txBytes, txHash);
-            RelayTransaction (txHash, returnCode);
+            RelayTransaction(bytes32(txHash), returnCode);
             return (returnCode);
         }
 
-        RelayTransaction (0, ERR_RELAY_VERIFY);
+        RelayTransaction(bytes32(0), ERR_RELAY_VERIFY);
         return(ERR_RELAY_VERIFY);
     }
 
@@ -608,11 +607,10 @@ contract DogeRelay is IDogeRelay {
     // @param _word - information to be partially overwritten
     // @param _position - position to start writing from
     // @param _eightBytes - information to be written
-    function m_mwrite64(uint _word, uint8 _position, uint64 _eightBytes) private pure returns (uint) {
-        // Store uint in a struct wrapper because that is the only way to get a pointer to it
-        UintWrapper memory uw = UintWrapper(_word);
-        uint pointer = ptr(uw);
+    function m_mwrite64(uint _word, uint8 _position, uint64 _eightBytes) private pure returns (uint result) {
         assembly {
+            let pointer := mload(0x40)
+            mstore(pointer, _word)
             mstore8(add(pointer, _position        ), byte(24, _eightBytes))
             mstore8(add(pointer, add(_position, 1)), byte(25, _eightBytes))
             mstore8(add(pointer, add(_position, 2)), byte(26, _eightBytes))
@@ -621,8 +619,8 @@ contract DogeRelay is IDogeRelay {
             mstore8(add(pointer, add(_position, 5)), byte(29, _eightBytes))
             mstore8(add(pointer, add(_position, 6)), byte(30, _eightBytes))
             mstore8(add(pointer, add(_position, 7)), byte(31, _eightBytes))
+            result := mload(pointer)
         }
-        return uw.value;
     }
 
     // @dev - write `_eightBytes` into `_word` starting from `_position`
@@ -631,11 +629,10 @@ contract DogeRelay is IDogeRelay {
     // @param _word - information to be partially overwritten
     // @param _position - position to start writing from
     // @param _eightBytes - information to be written
-    function m_mwrite128(uint _word, uint8 _position, uint128 _sixteenBytes) private pure returns (uint) {
-        // Store uint in a struct wrapper because that is the only way to get a pointer to it
-        UintWrapper memory uw = UintWrapper(_word);
-        uint pointer = ptr(uw);
+    function m_mwrite128(uint _word, uint8 _position, uint128 _sixteenBytes) private pure returns (uint result) {
         assembly {
+            let pointer := mload(0x40)
+            mstore(pointer, _word)
             mstore8(add(pointer, _position         ),  byte(16, _sixteenBytes))
             mstore8(add(pointer, add(_position,  1)),  byte(17, _sixteenBytes))
             mstore8(add(pointer, add(_position,  2)),  byte(18, _sixteenBytes))
@@ -652,8 +649,8 @@ contract DogeRelay is IDogeRelay {
             mstore8(add(pointer, add(_position,  13)), byte(29, _sixteenBytes))
             mstore8(add(pointer, add(_position,  14)), byte(30, _sixteenBytes))
             mstore8(add(pointer, add(_position,  15)), byte(31, _sixteenBytes))
+            result := mload(pointer)
         }
-        return uw.value;
     }
 
     // @dev - write `_fourBytes` into `_word` starting from `_position`
@@ -662,17 +659,16 @@ contract DogeRelay is IDogeRelay {
     // @param _word - information to be partially overwritten
     // @param _position - position to start writing from
     // @param _eightBytes - information to be written
-    function m_mwrite32(uint _word, uint _position, uint32 _fourBytes) private pure returns (uint) {
-        // Store uint in a struct wrapper because that is the only way to get a pointer to it
-        UintWrapper memory uw = UintWrapper(_word);
-        uint pointer = ptr(uw);
+    function m_mwrite32(uint _word, uint _position, uint32 _fourBytes) private pure returns (uint result) {
         assembly {
+            let pointer := mload(0x40)
+            mstore(pointer, _word)
             mstore8(add(pointer, _position), byte(28, _fourBytes))
             mstore8(add(pointer, add(_position,1)), byte(29, _fourBytes))
             mstore8(add(pointer, add(_position,2)), byte(30, _fourBytes))
             mstore8(add(pointer, add(_position,3)), byte(31, _fourBytes))
+            result := mload(pointer)
         }
-        return uw.value;
     }
 
     // @dev converts bytes of any length to bytes32.
@@ -682,10 +678,10 @@ contract DogeRelay is IDogeRelay {
     //
     // @param _rawBytes - arbitrary length bytes
     // @return - leftmost 32 or less bytes of input value; padded if less than 32
-    function bytesToBytes32(bytes _rawBytes) internal pure returns (bytes32) {
+    function bytesToBytes32(bytes _rawBytes, uint pos) internal pure returns (bytes32) {
         bytes32 out;
-        for (uint i = 0; i < 32; i++) {
-            out |= bytes32(_rawBytes[i]) >> (i * 8);
+        assembly {
+            out := mload(add(add(_rawBytes, 0x20), pos))
         }
         return out;
     }
@@ -710,17 +706,29 @@ contract DogeRelay is IDogeRelay {
         return result;
     }
 
+    function sha256mem(bytes memory _rawBytes, uint offset, uint len) internal view returns (bytes32 result) {
+        assembly {
+            // Call precompiled contract to copy data
+            let ptr := mload(0x40)
+            mstore(0x40, add(ptr, 0x20))
+            if iszero(call(gas, 0x02, 0, add(add(_rawBytes, 0x20), offset), len, ptr, 0x20)) {
+                revert(0, 0)
+            }
+            result := mload(ptr)
+        }
+    }
+
     // @dev - converts raw bytes representation of a Dogecoin block header to struct representation
     //
     // @param _rawBytes - first 80 bytes of a block header
     // @return - exact same header information in BlockHeader struct form
-    function parseHeaderBytes(bytes _rawBytes) internal returns (BlockHeader bh) {
-        bh.version = f_version(_rawBytes);
-        bh.time = f_getTimestamp(_rawBytes);
-        bh.bits = f_bits(_rawBytes);
-        bh.blockHash = m_dblShaFlip(_rawBytes);
-        bh.prevBlock = f_hashPrevBlock(_rawBytes);
-        bh.merkleRoot = f_merkleRoot(_rawBytes);
+    function parseHeaderBytes(bytes _rawBytes, uint pos) internal returns (BlockHeader bh) {
+        bh.version = f_version(_rawBytes, pos);
+        bh.time = f_getTimestamp(_rawBytes, pos);
+        bh.bits = f_bits(_rawBytes, pos);
+        bh.blockHash = flip32Bytes(uint(sha256(sha256mem(_rawBytes, pos, 80))));
+        bh.prevBlock = f_hashPrevBlock(_rawBytes, pos);
+        bh.merkleRoot = f_merkleRoot(_rawBytes, pos);
     }
 
     // @dev - For a valid proof, returns the root of the Merkle tree.
@@ -857,17 +865,9 @@ contract DogeRelay is IDogeRelay {
     // @param _tx1 - Merkle node (either root or internal node)
     // @param _tx2 - Merkle node (either root or internal node), has to be `_tx1`'s sibling
     // @return - `_tx1` and `_tx2`'s parent, i.e. the result of concatenating them,
-    // hashing that twice and flipping the bytes.    
+    // hashing that twice and flipping the bytes.
     function concatHash(uint _tx1, uint _tx2) internal pure returns (uint) {
-        bytes memory concat = new bytes(64);
-        uint tx1Flipped = flip32Bytes(_tx1);
-        uint tx2Flipped = flip32Bytes(_tx2);
-        assembly {
-          // First 32 bytes are the byte array size
-          mstore(add(concat, 32), tx1Flipped)
-          mstore(add(concat, 64), tx2Flipped)
-        }
-        return flip32Bytes(uint(sha256(sha256(concat))));
+        return flip32Bytes(uint(sha256(sha256(flip32Bytes(_tx1), flip32Bytes(_tx2)))));
     }
 
     // @dev - shift information to the right by a specified number of bits
@@ -904,19 +904,14 @@ contract DogeRelay is IDogeRelay {
     //
     // @param _input - little-endian value
     // @return - input value in big-endian format
-    function flip32Bytes(uint _input) internal pure returns (uint) {
-        uint i = 0;
-        // unrolling this would decrease gas usage, but would increase
-        // the gas cost for code size by over 700K and exceed the PI million block gas limit
-        UintWrapper memory uw = UintWrapper(0);
-        uint pointer = ptr(uw);
-        while (i < 32) {
-            assembly {
-                mstore8(add(pointer, i), byte(sub(31 ,i), _input))
+    function flip32Bytes(uint _input) internal pure returns (uint result) {
+        assembly {
+            let pos := mload(0x40)
+            for { let i := 0 } lt(i, 32) { i := add(i, 1) } {
+                mstore8(add(pos, i), byte(sub(31, i), _input))
             }
-            i++;
+            result := mload(pos)
         }
-        return uw.value;
     }
 
     //
@@ -982,35 +977,6 @@ contract DogeRelay is IDogeRelay {
         return uint128(myblocks[_blockHash]._info * BYTES_16 / BYTES_16);
     }
 
-    // Util functions and wrappers to get pointers to memory and storage
-
-    struct UintWrapper {
-        uint value;
-    }
-
-    // @dev - Returns a pointer to the supplied UintWrapper
-    function ptr(UintWrapper memory uw) private pure returns (uint addr) {
-        assembly {
-            addr := uw
-        }
-    }
-
-    // @dev - Returns a pointer to the supplied BlockInformation
-    function ptr(BlockInformation storage bi) private pure returns (uint addr) {
-        assembly {
-            addr := bi_slot
-        }
-    }
-
-    // @dev - Returns a pointer to the content of the supplied byte array in storage
-    function ptr(bytes storage byteArray) private pure returns (uint addr) {
-        uint pointer;
-        assembly {
-            pointer := byteArray_slot
-        }
-        addr = uint(keccak256(bytes32(pointer)));
-    }
-
     // 0x00 version
     // 0x04 prev block hash
     // 0x24 merkle root
@@ -1022,9 +988,9 @@ contract DogeRelay is IDogeRelay {
     //
     // @param _blockHeader - Dogecoin block header bytes
     // @return - block's version in big endian format
-    function f_version(bytes memory _blockHeader) internal pure returns (uint32 version) {
+    function f_version(bytes memory _blockHeader, uint pos) internal pure returns (uint32 version) {
         assembly {
-            let word := mload(add(_blockHeader, 0x4))
+            let word := mload(add(add(_blockHeader, 0x4), pos))
             version := add(byte(24, word),
                 add(mul(byte(25, word), 0x100),
                     add(mul(byte(26, word), 0x10000),
@@ -1036,10 +1002,10 @@ contract DogeRelay is IDogeRelay {
     //
     // @param _blockHeader - Dogecoin block header bytes
     // @return - hash of block's parent in big endian format
-    function f_hashPrevBlock(bytes memory _blockHeader) internal pure returns (uint) {
+    function f_hashPrevBlock(bytes memory _blockHeader, uint pos) internal pure returns (uint) {
         uint hashPrevBlock;
         assembly {
-            hashPrevBlock := mload(add(_blockHeader, 0x24))
+            hashPrevBlock := mload(add(add(_blockHeader, 0x24), pos))
         }
         return flip32Bytes(hashPrevBlock);
     }
@@ -1048,10 +1014,10 @@ contract DogeRelay is IDogeRelay {
     //
     // @param _blockHeader - Dogecoin block header bytes
     // @return - block's Merkle root in big endian format
-    function f_merkleRoot(bytes _blockHeader) private view returns (uint) {
+    function f_merkleRoot(bytes _blockHeader, uint pos) private view returns (uint) {
         uint merkle;
         assembly {
-            merkle := mload(add(_blockHeader, 0x44))
+            merkle := mload(add(add(_blockHeader, 0x44), pos))
         }
         return flip32Bytes(merkle);        
     }
@@ -1060,9 +1026,9 @@ contract DogeRelay is IDogeRelay {
     //
     // @param _blockHeader - Dogecoin block header bytes
     // @return - block's difficulty in bits format, also big-endian
-    function f_bits(bytes memory _blockHeader) internal pure returns (uint32 bits) {
+    function f_bits(bytes memory _blockHeader, uint pos) internal pure returns (uint32 bits) {
         assembly {
-            let word := mload(add(_blockHeader, 0x50))
+            let word := mload(add(add(_blockHeader, 0x50), pos))
             bits := add(byte(24, word),
                 add(mul(byte(25, word), 0x100),
                     add(mul(byte(26, word), 0x10000),
@@ -1074,9 +1040,9 @@ contract DogeRelay is IDogeRelay {
     //
     // @param _blockHeader - Dogecoin block header bytes
     // @return - block's timestamp in big-endian format
-    function f_getTimestamp(bytes memory _blockHeader) internal pure returns (uint32 time) {
+    function f_getTimestamp(bytes memory _blockHeader, uint pos) internal pure returns (uint32 time) {
         assembly {
-            let word := mload(add(_blockHeader, 0x4c))
+            let word := mload(add(add(_blockHeader, 0x4c), pos))
             time := add(byte(24, word),
                 add(mul(byte(25, word), 0x100),
                     add(mul(byte(26, word), 0x10000),
@@ -1124,36 +1090,36 @@ contract DogeRelay is IDogeRelay {
     uint constant ERR_RELAY_VERIFY = 30010;
 
     // Not declared constant because they won't be readable from inline assembly
-    uint BYTES_1 = 2**8;
-    uint BYTES_2 = 2**16;
-    uint BYTES_3 = 2**24;
-    uint BYTES_4 = 2**32;
-    uint BYTES_5 = 2**40;
-    uint BYTES_6 = 2**48;
-    uint BYTES_7 = 2**56;
-    uint BYTES_8 = 2**64;
-    uint BYTES_9 = 2**72;
-    uint BYTES_10 = 2**80;
-    uint BYTES_11 = 2**88;
-    uint BYTES_12 = 2**96;
-    uint BYTES_13 = 2**104;
-    uint BYTES_14 = 2**112;
-    uint BYTES_15 = 2**120;
-    uint BYTES_16 = 2**128;
-    uint BYTES_17 = 2**136;
-    uint BYTES_18 = 2**144;
-    uint BYTES_19 = 2**152;
-    uint BYTES_20 = 2**160;
-    uint BYTES_21 = 2**168;
-    uint BYTES_22 = 2**176;
-    uint BYTES_23 = 2**184;
-    uint BYTES_24 = 2**192;
-    uint BYTES_25 = 2**200;
-    uint BYTES_26 = 2**208;
-    uint BYTES_27 = 2**216;
-    uint BYTES_28 = 2**224;
-    uint BYTES_29 = 2**232;
-    uint BYTES_30 = 2**240;
-    uint BYTES_31 = 2**248;
+    uint constant BYTES_1 = 2**8;
+    uint constant BYTES_2 = 2**16;
+    uint constant BYTES_3 = 2**24;
+    uint constant BYTES_4 = 2**32;
+    uint constant BYTES_5 = 2**40;
+    uint constant BYTES_6 = 2**48;
+    uint constant BYTES_7 = 2**56;
+    uint constant BYTES_8 = 2**64;
+    uint constant BYTES_9 = 2**72;
+    uint constant BYTES_10 = 2**80;
+    uint constant BYTES_11 = 2**88;
+    uint constant BYTES_12 = 2**96;
+    uint constant BYTES_13 = 2**104;
+    uint constant BYTES_14 = 2**112;
+    uint constant BYTES_15 = 2**120;
+    uint constant BYTES_16 = 2**128;
+    uint constant BYTES_17 = 2**136;
+    uint constant BYTES_18 = 2**144;
+    uint constant BYTES_19 = 2**152;
+    uint constant BYTES_20 = 2**160;
+    uint constant BYTES_21 = 2**168;
+    uint constant BYTES_22 = 2**176;
+    uint constant BYTES_23 = 2**184;
+    uint constant BYTES_24 = 2**192;
+    uint constant BYTES_25 = 2**200;
+    uint constant BYTES_26 = 2**208;
+    uint constant BYTES_27 = 2**216;
+    uint constant BYTES_28 = 2**224;
+    uint constant BYTES_29 = 2**232;
+    uint constant BYTES_30 = 2**240;
+    uint constant BYTES_31 = 2**248;
     //uint constant BYTES_32 = 2**256;
 }
