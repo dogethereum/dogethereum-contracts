@@ -312,7 +312,7 @@ contract DogeRelay is IDogeRelay {
     // i.e., how much time it took to mine the current block
     // @param _bits - previous block header difficulty (in bits)
     // @return - expected difficulty for the next block
-    function calculateDigishieldDifficulty(int64 _actualTimespan, uint32 _bits) private returns (uint32 result) {
+    function calculateDigishieldDifficulty(int64 _actualTimespan, uint32 _bits) private pure returns (uint32 result) {
         int64 retargetTimespan = int64(TARGET_TIMESPAN);
         int64 nModulatedTimespan = int64(_actualTimespan);
 
@@ -386,10 +386,10 @@ contract DogeRelay is IDogeRelay {
     // @param _txIndex - transaction's index within the block
     // @param _siblings - transaction's Merkle siblings
     // @param _txBlockHash - hash of the block that might contain the transaction
-    // @return - SHA-256 hash of _txBytes if the transaction is in the block, 0 otherwise 
+    // @return - SHA-256 hash of _txBytes if the transaction is in the block, 0 otherwise
     function verifyTx(bytes _txBytes, uint _txIndex, uint[] _siblings, uint _txBlockHash) public returns (uint) {
         uint txHash = m_dblShaFlip(_txBytes);
-        
+
         if (_txBytes.length == 64) {  // todo: is check 32 also needed?
             VerifyTransaction(bytes32(txHash), ERR_TX_64BYTE);
             return 0;
@@ -453,7 +453,7 @@ contract DogeRelay is IDogeRelay {
     // @param _txIndex - transaction's index within the block
     // @param _siblings - transaction's Merkle siblings
     // @param _txBlockHash - hash of the block that might contain the transaction
-    // @param _targetContract - 
+    // @param _targetContract -
     // @return - return value of processTransaction() if _txHash is in the block identified by _txBlockHash,
     // ERR_RELAY_VERIFY return code otherwise
     function relayTx(bytes _txBytes, uint _txIndex, uint[] _siblings, uint _txBlockHash, TransactionProcessor _targetContract) public returns (uint) {
@@ -699,7 +699,7 @@ contract DogeRelay is IDogeRelay {
         bytes memory result = new bytes(len);
         assembly {
             // Call precompiled contract to copy data
-            if iszero(call(not(0), 0x04, 0, add(add(_rawBytes, 0x20), offset), len, add(result, 0x20), len)) {
+            if iszero(staticcall(gas, 0x04, add(add(_rawBytes, 0x20), offset), len, add(result, 0x20), len)) {
                 revert(0, 0)
             }
         }
@@ -710,8 +710,7 @@ contract DogeRelay is IDogeRelay {
         assembly {
             // Call precompiled contract to copy data
             let ptr := mload(0x40)
-            mstore(0x40, add(ptr, 0x20))
-            if iszero(call(gas, 0x02, 0, add(add(_rawBytes, 0x20), offset), len, ptr, 0x20)) {
+            if iszero(staticcall(gas, 0x02, add(add(_rawBytes, 0x20), offset), len, ptr, 0x20)) {
                 revert(0, 0)
             }
             result := mload(ptr)
@@ -722,7 +721,7 @@ contract DogeRelay is IDogeRelay {
     //
     // @param _rawBytes - first 80 bytes of a block header
     // @return - exact same header information in BlockHeader struct form
-    function parseHeaderBytes(bytes _rawBytes, uint pos) internal returns (BlockHeader bh) {
+    function parseHeaderBytes(bytes _rawBytes, uint pos) internal view returns (BlockHeader bh) {
         bh.version = f_version(_rawBytes, pos);
         bh.time = f_getTimestamp(_rawBytes, pos);
         bh.bits = f_bits(_rawBytes, pos);
@@ -830,14 +829,14 @@ contract DogeRelay is IDogeRelay {
     // @param _blockHash - hash of the block whose difficulty is to be returned
     // @return - block's bits in big-endian format
     function m_getBits(uint _blockHash) internal view returns (uint32 result) {
-        return myblocks[_blockHash]._blockHeader.bits;        
+        return myblocks[_blockHash]._blockHeader.bits;
     }
 
     // @dev - get the merkle root of '$_blockHash'
     // @param _blockHash - hash of the block whose Merkle root is to be returned
     // @return block's Merkle root in big-endian format
     function getMerkleRoot(uint _blockHash) private view returns (uint) {
-        return myblocks[_blockHash]._blockHeader.merkleRoot;        
+        return myblocks[_blockHash]._blockHeader.merkleRoot;
     }
 
     // @dev - Bitcoin-way of hashing
@@ -1014,12 +1013,12 @@ contract DogeRelay is IDogeRelay {
     //
     // @param _blockHeader - Dogecoin block header bytes
     // @return - block's Merkle root in big endian format
-    function f_merkleRoot(bytes _blockHeader, uint pos) private view returns (uint) {
+    function f_merkleRoot(bytes _blockHeader, uint pos) private pure returns (uint) {
         uint merkle;
         assembly {
             merkle := mload(add(add(_blockHeader, 0x44), pos))
         }
-        return flip32Bytes(merkle);        
+        return flip32Bytes(merkle);
     }
 
     // @dev - extract bits field from a raw Dogecoin block header
