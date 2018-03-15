@@ -7,8 +7,8 @@ import "../DogeParser/DogeTx.sol";
 
 contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), TransactionProcessor {
 
-    address public _trustedDogeRelay;
-    bytes20 public _recipientDogethereum;
+    address public trustedDogeRelay;
+    bytes20 public recipientDogethereum;
 
     Set.Data dogeTxHashesAlreadyProcessed;
     uint256 public minimumLockTxValue;
@@ -24,20 +24,21 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
     uint32 public nextUnspentUtxoIndex;
 
 
-    function DogeToken(address trustedDogeRelay, bytes20 recipientDogethereum) public {
-        _trustedDogeRelay = trustedDogeRelay;
-        _recipientDogethereum = recipientDogethereum;
+    function DogeToken(address _trustedDogeRelay, address _trustedDogeEthPriceOracle, bytes20 _recipientDogethereum) public {
+        trustedDogeRelay = _trustedDogeRelay;
+        trustedDogeEthPriceOracle = _trustedDogeEthPriceOracle;
+        recipientDogethereum = _recipientDogethereum;
         minimumLockTxValue = 100000000;
     }
 
     function processTransaction(bytes dogeTx, uint txHash) public returns (uint) {
-        require(msg.sender == _trustedDogeRelay);
+        require(msg.sender == trustedDogeRelay);
 
         uint value;
         bytes32 pubKey;
         bool odd;
         uint16 outputIndex;
-        (value, pubKey, odd, outputIndex) = DogeTx.parseTransaction(dogeTx, _recipientDogethereum);
+        (value, pubKey, odd, outputIndex) = DogeTx.parseTransaction(dogeTx, recipientDogethereum);
 
         // Check tx was not processes already and add it to the dogeTxHashesAlreadyProcessed
         require(Set.insert(dogeTxHashesAlreadyProcessed, txHash));
@@ -84,8 +85,10 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
           uint fee;
     }
 
-
     event UnlockRequest(uint id, address from, string dogeAddress, uint value);
+
+    address public trustedDogeEthPriceOracle;
+    uint public dogeEthPrice;
 
 
     // Request ERC20 tokens to be burnt and dogecoins be received on the doge blockchain
@@ -127,6 +130,11 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
             selectedUtxos[i] = i + firstSelectedUtxo;
         }
         return (selectedUtxos, fee);
+    }
+
+    function setDogeEthPrice(uint _dogeEthPrice) public {
+        require(msg.sender == trustedDogeEthPriceOracle);
+        dogeEthPrice = _dogeEthPrice;
     }
 
     // Unlock section end

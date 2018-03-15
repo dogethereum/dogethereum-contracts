@@ -4,7 +4,7 @@ import "./DogeToken.sol";
 
 contract DogeTokenForTests is DogeToken {
 
-    function DogeTokenForTests(address trustedDogeRelay, bytes20 recipientDogethereum) public DogeToken(trustedDogeRelay, recipientDogethereum) {
+    function DogeTokenForTests(address trustedDogeRelay, address trustedDogeEthPriceOracle, bytes20 recipientDogethereum) public DogeToken(trustedDogeRelay, trustedDogeEthPriceOracle, recipientDogethereum) {
 
     }
 

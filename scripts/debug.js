@@ -29,6 +29,9 @@ module.exports = function(callback) {
     return dt.balanceOf.call("0x5f73616d1aaf5b9ed1d960685785cde6c77ac5c0"); 
   }).then(function(result) {
     console.log("Balance of 0x5f73616d1aaf5b9ed1d960685785cde6c77ac5c0 : " + result);
+    return dt.dogeEthPrice.call(); 
+  }).then(function(result) {
+    console.log("Doge-Eth price : " + result);
     callback();
   }).catch(function(e) {
     // There was an error! Handle it.

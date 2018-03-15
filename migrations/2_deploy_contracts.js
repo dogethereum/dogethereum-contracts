@@ -31,7 +31,7 @@ async function deployDevelopment(deployer, network, accounts, networkId, dogethe
   await dogeRelay.setScryptChecker(ScryptCheckerDummy.address);
 }
 
-async function deployProduction(deployer, network, accounts, networkId, dogethereumRecipient) {
+async function deployProduction(deployer, network, accounts, networkId, trustedDogeEthPriceOracle, dogethereumRecipient) {
   await deployer.deploy(Set);
   await deployer.deploy(DogeTx);
 
@@ -39,7 +39,7 @@ async function deployProduction(deployer, network, accounts, networkId, dogether
   await deployer.link(DogeTx, DogeToken);
 
   await deployer.deploy(DogeRelay, networkId);
-  await deployer.deploy(DogeToken, DogeRelay.address, dogethereumRecipient);
+  await deployer.deploy(DogeToken, DogeRelay.address, trustedDogeEthPriceOracle, dogethereumRecipient);
 
   await deployer.deploy(ScryptCheckerDummy, DogeRelay.address, true)
 
@@ -49,12 +49,20 @@ async function deployProduction(deployer, network, accounts, networkId, dogether
 
 module.exports = function(deployer, network, accounts) {
   deployer.then(async () => {
+
+    var trustedDogeEthPriceOracle;
+    if (network === 'development' || network === 'integrationDogeRegtest' || network === 'integrationDogeMain') {
+      trustedDogeEthPriceOracle = accounts[3]
+    } else {
+      trustedDogeEthPriceOracle = trustedDogeEthPriceOracleRopsten;
+    }
+
     if (network === 'development' || network === 'ropsten') {
-      await deployDevelopment(deployer, network, accounts, DOGE_MAINNET, dogethereumRecipientUnitTest);
+      await deployDevelopment(deployer, network, accounts, DOGE_MAINNET, trustedDogeEthPriceOracle, dogethereumRecipientUnitTest);
     } else if (network === 'integrationDogeMain') {
-      await deployProduction(deployer, network, accounts, DOGE_MAINNET, dogethereumRecipientIntegrationDogeMain);
+      await deployProduction(deployer, network, accounts, DOGE_MAINNET, trustedDogeEthPriceOracle, dogethereumRecipientIntegrationDogeMain);
     } else if (network === 'integrationDogeRegtest') {
-      await deployProduction(deployer, network, accounts, DOGE_REGTEST, dogethereumRecipientIntegrationDogeRegtest);
+      await deployProduction(deployer, network, accounts, DOGE_REGTEST, trustedDogeEthPriceOracle, dogethereumRecipientIntegrationDogeRegtest);
     }
   });
 };
