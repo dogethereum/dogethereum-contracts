@@ -61,20 +61,8 @@ Some operations require gas to be spent. Here are the incentives for doing that.
 
 * Install prerequisites
   * [nodejs](https://nodejs.org) v9.2.0 or above.
-  * [truffle](http://truffleframework.com/) v4.0.1 or above.
-  * [ganache-cli](https://github.com/trufflesuite/ganache-cli) v6.0.3 or above.
-  * Make truffle use solidity compiler v0.4.19 or above.
-    * Open a terminal and go to the truffle folder
-      * e.g. If you are on a mac, using nvm and node 9.2.0 `cd ~/.nvm/versions/node/v9.2.0/lib/node_modules/truffle/`
-    * Edit package.json and update solc dependency version
-      ```
-        "dependencies": {
-          ...
-          "solc": "^0.4.19"
-          ...
-        }
-      ```
-    * Run `npm install` on the truffle folder
+  * [truffle](http://truffleframework.com/) v4.1.3 or above.
+  * [ganache-cli](https://github.com/trufflesuite/ganache-cli) v6.1.0 or above.
 * Clone this repo.
 * Install npm dependencies.
   * cd to the directory where the repo is cloned.
