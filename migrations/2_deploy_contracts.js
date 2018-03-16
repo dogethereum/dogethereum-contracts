@@ -11,11 +11,12 @@ const scryptCheckerAddress = '0xfeedbeeffeedbeeffeedbeeffeedbeeffeedbeef';
 const dogethereumRecipientUnitTest = '0x4d905b4b815d483cdfabcd292c6f86509d0fad82';
 const dogethereumRecipientIntegrationDogeMain = '0x0000000000000000000000000000000000000003';
 const dogethereumRecipientIntegrationDogeRegtest = '0x0000000000000000000000000000000000000004';
+const trustedDogeEthPriceOracleRopsten = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
 const DOGE_MAINNET = 0;
 const DOGE_REGTEST = 2;
 
-async function deployDevelopment(deployer, network, accounts, networkId, dogethereumRecipient) {
+async function deployDevelopment(deployer, network, accounts, networkId, trustedDogeEthPriceOracle, dogethereumRecipient) {
   await deployer.deploy(Set);
   await deployer.deploy(DogeTx);
 
@@ -25,7 +26,7 @@ async function deployDevelopment(deployer, network, accounts, networkId, dogethe
   await deployer.deploy(DogeRelayForTests, networkId);
   await deployer.deploy(ScryptCheckerDummy, DogeRelayForTests.address, true)
   await deployer.deploy(DogeProcessor, DogeRelayForTests.address);
-  await deployer.deploy(DogeTokenForTests, DogeRelayForTests.address, dogethereumRecipient);
+  await deployer.deploy(DogeTokenForTests, DogeRelayForTests.address, trustedDogeEthPriceOracle, dogethereumRecipient);
 
   const dogeRelay = DogeRelayForTests.at(DogeRelayForTests.address);
   await dogeRelay.setScryptChecker(ScryptCheckerDummy.address);
