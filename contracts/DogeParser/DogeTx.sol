@@ -109,7 +109,7 @@ library DogeTx {
 
     // AuxPoW block fields
     struct AuxPoW {
-        uint version;
+        uint firstBytes;
 
         uint scryptHash;
         
@@ -392,18 +392,18 @@ library DogeTx {
 
         (n_outputs, pos) = parseVarInt(txBytes, pos);
 
-        // if (stop == 0 || stop > n_outputs) {
-        //     halt = n_outputs;
-        // } else {
-        //     halt = stop;
-        // }
+        if (stop == 0 || stop > n_outputs) {
+            halt = n_outputs;
+        } else {
+            halt = stop;
+        }
 
-        // for (uint256 i = 0; i < halt; i++) {
-        //     pos += 8;
+        for (uint256 i = 0; i < halt; i++) {
+            pos += 8;
 
-        //     (script_len, pos) = parseVarInt(txBytes, pos);
-        //     pos += script_len;
-        // }
+            (script_len, pos) = parseVarInt(txBytes, pos);
+            pos += script_len;
+        }
 
         return pos;
     }
@@ -622,28 +622,27 @@ library DogeTx {
     }
 
     function parseAuxPoW(bytes rawBytes) internal
-             returns (AuxPoW storage auxpow)
+             returns (AuxPoW memory auxpow)
     {
         // we need to traverse the bytes with a pointer because some fields are of variable length
         uint pos = 80; // skip non-AuxPoW header
-        auxpow.version = sliceBytes32Int(rawBytes, pos);
-        // uint slicePos = getSlicePos(rawBytes, pos);
-        // bytes memory hashData = sliceArray(rawBytes, pos, slicePos);
-        // auxpow.txHash = flip32Bytes(uint(sha256(sha256(hashData))));
-        // pos = slicePos;
-        // auxpow.scryptHash = sliceBytes32Int(rawBytes, pos);
-        // pos += 32;
-        // (auxpow.parentMerkleProof, pos) = scanMerkleBranch(rawBytes, pos, 0);
-        // auxpow.coinbaseTxIndex = getBytesLE(rawBytes, pos, 32);
-        // pos += 4;
-        // (auxpow.chainMerkleProof, pos) = scanMerkleBranch(rawBytes, pos, 0);
-        // auxpow.dogeHashIndex = getBytesLE(rawBytes, pos, 32);
-        // pos += 40; // skip hash that was just read, parent version and prev block
-        // auxpow.parentMerkleRoot = sliceBytes32Int(rawBytes, pos);
-        // pos += 40; // skip root that was just read, parent block timestamp and bits
-        // auxpow.parentNonce = getBytesLE(rawBytes, pos, 32);
+        auxpow.firstBytes = sliceBytes32Int(rawBytes, pos);
+        uint slicePos = getSlicePos(rawBytes, pos);
+        bytes memory hashData = sliceArray(rawBytes, pos, slicePos);
+        auxpow.txHash = flip32Bytes(uint(sha256(sha256(hashData))));
+        pos = slicePos;
+        auxpow.scryptHash = sliceBytes32Int(rawBytes, pos);
+        pos += 32;
+        (auxpow.parentMerkleProof, pos) = scanMerkleBranch(rawBytes, pos, 0);
+        auxpow.coinbaseTxIndex = getBytesLE(rawBytes, pos, 32);
+        pos += 4;
+        (auxpow.chainMerkleProof, pos) = scanMerkleBranch(rawBytes, pos, 0);
+        auxpow.dogeHashIndex = getBytesLE(rawBytes, pos, 32);
+        pos += 40; // skip hash that was just read, parent version and prev block
+        auxpow.parentMerkleRoot = sliceBytes32Int(rawBytes, pos);
+        pos += 40; // skip root that was just read, parent block timestamp and bits
+        auxpow.parentNonce = getBytesLE(rawBytes, pos, 32);
         auxpow.coinbaseMerkleRoot = findCoinbaseMerkleRoot(rawBytes);
-        return auxpow;
     }
 
     // @dev - looks for {0xfa, 0xbe, 'm', 'm'} byte sequence
