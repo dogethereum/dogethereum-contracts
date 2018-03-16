@@ -98,13 +98,33 @@
 // Addresses are the scriptHash with a version prefix of 5, encoded as
 // Base58check. These addresses begin with a '3'.
 
-pragma solidity ^0.4.11;
+pragma solidity ^0.4.19;
+pragma experimental ABIEncoderV2;
 
 // parse a raw bitcoin transaction byte array
 library DogeTx {
 
     uint constant p = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f;  // secp256k1
     uint constant q = (p + 1) / 4;
+
+    // AuxPoW block fields
+    struct AuxPoW {
+        uint version;
+
+        uint scryptHash;
+        
+        uint txHash;
+
+        uint coinbaseMerkleRoot; // Merkle root of auxiliary block hash tree; stored in coinbase tx field
+        uint[] chainMerkleProof; // proves that a given Dogecoin block hash belongs to a tree with the above root
+        uint dogeHashIndex; // index of Doge block hash within block hash tree
+
+        uint parentMerkleRoot; // Merkle root of transaction tree from parent Litecoin block header
+        uint[] parentMerkleProof; // proves that coinbase tx belongs to a tree with the above root
+        uint coinbaseTxIndex; // index of coinbase tx within Litecoin tx tree
+
+        uint parentNonce;
+    }
 
     // Convert a variable integer into something useful and return it and
     // the index to after it.
@@ -301,6 +321,31 @@ library DogeTx {
 
         return (script_starts, script_lens, pos);
     }
+    // similar to scanInputs, but consumes less gas since it doesn't store the inputs 
+    function skipInputs(bytes txBytes, uint pos, uint stop) private pure
+             returns (uint)
+    {
+        uint n_inputs;
+        uint halt;
+        uint script_len;
+
+        (n_inputs, pos) = parseVarInt(txBytes, pos);
+
+        if (stop == 0 || stop > n_inputs) {
+            halt = n_inputs;
+        } else {
+            halt = stop;
+        }
+
+        for (uint256 i = 0; i < halt; i++) {
+            pos += 36;  // skip outpoint
+            (script_len, pos) = parseVarInt(txBytes, pos);
+            // (script_len, pos) = (1, 0);
+            pos += script_len + 4;  // skip sig_script, seq
+        }
+
+        return pos;
+    }
     // scan the outputs and find the values and script lengths.
     // return array of values, array of script lengths and the
     // end position of the outputs.
@@ -337,6 +382,67 @@ library DogeTx {
 
         return (output_values, script_starts, script_lens, pos);
     }
+    // similar to scanOutputs, but consumes less gas since it doesn't store the outputs
+    function skipOutputs(bytes txBytes, uint pos, uint stop) private pure
+             returns (uint)
+    {
+        uint n_outputs;
+        uint halt;
+        uint script_len;
+
+        (n_outputs, pos) = parseVarInt(txBytes, pos);
+
+        // if (stop == 0 || stop > n_outputs) {
+        //     halt = n_outputs;
+        // } else {
+        //     halt = stop;
+        // }
+
+        // for (uint256 i = 0; i < halt; i++) {
+        //     pos += 8;
+
+        //     (script_len, pos) = parseVarInt(txBytes, pos);
+        //     pos += script_len;
+        // }
+
+        return pos;
+    }
+    // get final position of inputs, outputs and lock time
+    // this is a helper function to slice a byte array and hash the inputs, outputs and lock time
+    function getSlicePos(bytes txBytes, uint pos) private pure
+             returns (uint slicePos)
+    {
+        slicePos = skipInputs(txBytes, pos + 4, 0);
+        slicePos = skipOutputs(txBytes, slicePos, 0);
+        slicePos += 4; // skip lock time
+    }
+    // scan a Merkle branch.
+    // return array of values and the end position of the sibling hashes.
+    // takes a 'stop' argument which sets the maximum number of
+    // siblings to scan through. stop=0 => scan all.
+    function scanMerkleBranch(bytes txBytes, uint pos, uint stop) private pure
+             returns (uint[], uint)
+    {
+        uint n_siblings;
+        uint halt;
+
+        (n_siblings, pos) = parseVarInt(txBytes, pos);
+
+        if (stop == 0 || stop > n_siblings) {
+            halt = n_siblings;
+        } else {
+            halt = stop;
+        }
+
+        uint[] memory sibling_values = new uint[](halt);
+
+        for (uint256 i = 0; i < halt; i++) {
+            sibling_values[i] = sliceBytes32Int(txBytes, pos);
+            pos += 32;
+        }
+
+        return (sibling_values, pos);
+    }
     // Slice 20 contiguous bytes from bytes `data`, starting at `start`
     function sliceBytes20(bytes data, uint start) private pure returns (bytes20) {
         uint160 slice = 0;
@@ -344,6 +450,35 @@ library DogeTx {
             slice += uint160(data[i + start]) << (8 * (19 - i));
         }
         return bytes20(slice);
+    }
+    // Slice 32 contiguous bytes from bytes `data`, starting at `start`
+    function sliceBytes32Int(bytes data, uint start) private pure returns (uint slice) {
+        for (uint i = 0; i < 32; i++) {
+            if (i + start < data.length) {
+                slice += uint(data[i + start]) << (8 * (31 - i));
+            }
+        }
+    }
+    function f_hashPrevBlock(bytes memory data, uint pos) internal pure returns (uint) {
+        uint hashPrevBlock;
+        assembly {
+            hashPrevBlock := mload(add(add(data, 0x24), pos))
+        }
+        return flip32Bytes(hashPrevBlock);
+    }
+    // Slice data, starting at offset and ending at endIndex
+    function sliceArray(bytes memory data, uint offset, uint endIndex) private view
+             returns (bytes)
+    {
+        uint len = endIndex - offset;
+        bytes memory result = new bytes(len);
+        assembly {
+            // Call precompiled contract to copy data
+            if iszero(call(not(0), 0x04, 0, add(add(data, 0x20), offset), len, add(result, 0x20), len)) {
+                revert(0, 0)
+            }
+        }
+        return result;
     }
     // returns true if the bytes located in txBytes by pos and
     // script_len represent a P2PKH script
@@ -458,5 +593,83 @@ library DogeTx {
         }
         require(yy == mulmod(y, y, p));
         return address(keccak256(x, y));
+    }
+
+    // helper for parseAuxPoW
+    function flip32Bytes(uint _input) internal pure returns (uint) {
+        uint i = 0;
+        // unrolling this would decrease gas usage, but would increase
+        // the gas cost for code size by over 700K and exceed the PI million block gas limit
+        UintWrapper memory uw = UintWrapper(0);
+        uint pointer = ptr(uw);
+        while (i < 32) {
+            assembly {
+                mstore8(add(pointer, i), byte(sub(31 ,i), _input))
+            }
+            i++;
+        }
+        return uw.value;
+    }
+    // helpers for flip32Bytes
+    struct UintWrapper {
+        uint value;
+    }
+
+    function ptr(UintWrapper memory uw) private pure returns (uint addr) {
+        assembly {
+            addr := uw
+        }
+    }
+
+    function parseAuxPoW(bytes rawBytes) internal
+             returns (AuxPoW storage auxpow)
+    {
+        // we need to traverse the bytes with a pointer because some fields are of variable length
+        uint pos = 80; // skip non-AuxPoW header
+        auxpow.version = sliceBytes32Int(rawBytes, pos);
+        // uint slicePos = getSlicePos(rawBytes, pos);
+        // bytes memory hashData = sliceArray(rawBytes, pos, slicePos);
+        // auxpow.txHash = flip32Bytes(uint(sha256(sha256(hashData))));
+        // pos = slicePos;
+        // auxpow.scryptHash = sliceBytes32Int(rawBytes, pos);
+        // pos += 32;
+        // (auxpow.parentMerkleProof, pos) = scanMerkleBranch(rawBytes, pos, 0);
+        // auxpow.coinbaseTxIndex = getBytesLE(rawBytes, pos, 32);
+        // pos += 4;
+        // (auxpow.chainMerkleProof, pos) = scanMerkleBranch(rawBytes, pos, 0);
+        // auxpow.dogeHashIndex = getBytesLE(rawBytes, pos, 32);
+        // pos += 40; // skip hash that was just read, parent version and prev block
+        // auxpow.parentMerkleRoot = sliceBytes32Int(rawBytes, pos);
+        // pos += 40; // skip root that was just read, parent block timestamp and bits
+        // auxpow.parentNonce = getBytesLE(rawBytes, pos, 32);
+        auxpow.coinbaseMerkleRoot = findCoinbaseMerkleRoot(rawBytes);
+        return auxpow;
+    }
+
+    // @dev - looks for {0xfa, 0xbe, 'm', 'm'} byte sequence
+    // returns the following 32 bytes if it appears once and only once,
+    // 0 otherwise
+    function findCoinbaseMerkleRoot(bytes rawBytes) private pure
+             returns (uint)
+    {
+        uint position;
+        bool found = false;
+
+        for (uint i = 0; i < rawBytes.length; ++i) {
+            if (rawBytes[i] == 0xfa && rawBytes[i+1] == 0xbe && rawBytes[i+2] == 0x6d && rawBytes[i+3] == 0x6d) {
+                if (!found) {
+                    found = true;
+                    position = i + 4;
+                } else { // found twice
+                    return 0;
+                }
+            }
+        }
+        
+        if (!found) { // no merge mining header
+            return 0;
+        } else {
+            return sliceBytes32Int(rawBytes, position);
+        }
     }
 }
