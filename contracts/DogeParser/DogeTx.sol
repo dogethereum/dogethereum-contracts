@@ -107,9 +107,14 @@ library DogeTx {
     uint constant p = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f;  // secp256k1
     uint constant q = (p + 1) / 4;
 
+    // Error codes
+    uint constant ERR_FOUND_TWICE = 10080; // 0xfabe6d6d found twice
+    uint constant ERR_NO_MERGE_HEADER = 10090; // 0xfabe6d6d not found
+    uint constant ERR_NOT_IN_FIRST_20 = 10100; // chain Merkle root isn't in the first 20 bytes of coinbase tx
+
     // AuxPoW block fields
     struct AuxPoW {
-        uint firstBytes;
+        // uint firstBytes;
 
         uint scryptHash;
         
@@ -118,6 +123,8 @@ library DogeTx {
         uint coinbaseMerkleRoot; // Merkle root of auxiliary block hash tree; stored in coinbase tx field
         uint[] chainMerkleProof; // proves that a given Dogecoin block hash belongs to a tree with the above root
         uint dogeHashIndex; // index of Doge block hash within block hash tree
+        uint coinbaseMerkleRootPosition; // location of Merkle root within script
+        uint coinbaseMerkleRootCode; // encodes whether or not the root was found properly
 
         uint parentMerkleRoot; // Merkle root of transaction tree from parent Litecoin block header
         uint[] parentMerkleProof; // proves that coinbase tx belongs to a tree with the above root
@@ -322,14 +329,18 @@ library DogeTx {
         return (script_starts, script_lens, pos);
     }
     // similar to scanInputs, but consumes less gas since it doesn't store the inputs 
-    function skipInputs(bytes txBytes, uint pos, uint stop) private pure
-             returns (uint)
+    // also returns position of coinbase tx for later use
+    function skipInputsAndGetScriptPos(bytes txBytes, uint pos, uint stop) private pure
+             returns (uint, uint)
     {
+        uint script_pos;
+
         uint n_inputs;
         uint halt;
         uint script_len;
 
         (n_inputs, pos) = parseVarInt(txBytes, pos);
+        script_pos = pos;
 
         if (stop == 0 || stop > n_inputs) {
             halt = n_inputs;
@@ -344,7 +355,7 @@ library DogeTx {
             pos += script_len + 4;  // skip sig_script, seq
         }
 
-        return pos;
+        return (pos, script_pos);
     }
     // scan the outputs and find the values and script lengths.
     // return array of values, array of script lengths and the
@@ -409,10 +420,10 @@ library DogeTx {
     }
     // get final position of inputs, outputs and lock time
     // this is a helper function to slice a byte array and hash the inputs, outputs and lock time
-    function getSlicePos(bytes txBytes, uint pos) private pure
-             returns (uint slicePos)
+    function getSlicePosAndScriptPos(bytes txBytes, uint pos) private pure
+             returns (uint slicePos, uint scriptPos)
     {
-        slicePos = skipInputs(txBytes, pos + 4, 0);
+        (slicePos, scriptPos) = skipInputsAndGetScriptPos(txBytes, pos + 4, 0);
         slicePos = skipOutputs(txBytes, slicePos, 0);
         slicePos += 4; // skip lock time
     }
@@ -437,7 +448,7 @@ library DogeTx {
         uint[] memory sibling_values = new uint[](halt);
 
         for (uint256 i = 0; i < halt; i++) {
-            sibling_values[i] = sliceBytes32Int(txBytes, pos);
+            sibling_values[i] = flip32Bytes(sliceBytes32Int(txBytes, pos));
             pos += 32;
         }
 
@@ -626,8 +637,10 @@ library DogeTx {
     {
         // we need to traverse the bytes with a pointer because some fields are of variable length
         uint pos = 80; // skip non-AuxPoW header
-        auxpow.firstBytes = sliceBytes32Int(rawBytes, pos);
-        uint slicePos = getSlicePos(rawBytes, pos);
+        // auxpow.firstBytes = sliceBytes32Int(rawBytes, pos);
+        uint slicePos;
+        uint inputScriptPos;
+        (slicePos, inputScriptPos) = getSlicePosAndScriptPos(rawBytes, pos);
         bytes memory hashData = sliceArray(rawBytes, pos, slicePos);
         auxpow.txHash = flip32Bytes(uint(sha256(sha256(hashData))));
         pos = slicePos;
@@ -642,14 +655,17 @@ library DogeTx {
         auxpow.parentMerkleRoot = sliceBytes32Int(rawBytes, pos);
         pos += 40; // skip root that was just read, parent block timestamp and bits
         auxpow.parentNonce = getBytesLE(rawBytes, pos, 32);
-        auxpow.coinbaseMerkleRoot = findCoinbaseMerkleRoot(rawBytes);
+        (auxpow.coinbaseMerkleRoot, auxpow.coinbaseMerkleRootPosition, auxpow.coinbaseMerkleRootCode) = findCoinbaseMerkleRoot(rawBytes);
+        if (auxpow.coinbaseMerkleRootPosition - inputScriptPos > 20) {
+            auxpow.coinbaseMerkleRootCode = ERR_NOT_IN_FIRST_20;
+        }
     }
 
     // @dev - looks for {0xfa, 0xbe, 'm', 'm'} byte sequence
     // returns the following 32 bytes if it appears once and only once,
     // 0 otherwise
     function findCoinbaseMerkleRoot(bytes rawBytes) private pure
-             returns (uint)
+             returns (uint, uint, uint)
     {
         uint position;
         bool found = false;
@@ -660,15 +676,15 @@ library DogeTx {
                     found = true;
                     position = i + 4;
                 } else { // found twice
-                    return 0;
+                    return (0, position, ERR_FOUND_TWICE);
                 }
             }
         }
         
         if (!found) { // no merge mining header
-            return 0;
+            return (0, position, ERR_NO_MERGE_HEADER);
         } else {
-            return sliceBytes32Int(rawBytes, position);
+            return (sliceBytes32Int(rawBytes, position), position, 1);
         }
     }
 }

@@ -195,32 +195,42 @@ contract DogeRelay is IDogeRelay {
         BlockInformation storage bi = onholdBlocks[onholdIdx];
         bi._blockHeader = parseHeaderBytes(_blockHeaderBytes, pos);
         
-        if (checkDifficulty(_blockHeaderBytes, pos, len, _proposedScryptBlockHash, _truebitClaimantAddress, bi) == 1) {
-            if ((_blockHeaderBytes[pos + 1] & 0x01) != 0) { // I think this has something to do with the version. Ask!
-            // Merge mined block
-                scryptChecker.checkScrypt(sliceArray(_blockHeaderBytes, pos + len - 80, pos + len), bytes32(_proposedScryptBlockHash), _truebitClaimantAddress, bytes32(onholdIdx)); //sliceArray(...) is a merge mined block header, therefore longer than a regular block header
-                storeAuxPoW(_blockHeaderBytes);
-            }
-            return 1;
-        } else {
-            return 0;
-        }
-
-        // if (flip32Bytes(_proposedScryptBlockHash) > targetFromBits(bi._blockHeader.bits)) {
-        //     StoreHeader(bytes32(bi._blockHeader.blockHash), ERR_PROOF_OF_WORK);
+        // setAuxPoW(bi._blockHeader.blockHash, sliceArray(_blockHeaderBytes, pos, pos + len));
+        
+        // if (checkDifficulty(_blockHeaderBytes, pos, len, _proposedScryptBlockHash, _truebitClaimantAddress, bi) == 1) {
+        //     return 1;
+        // } else {
         //     return 0;
         // }
 
-        // if ((_blockHeaderBytes[pos + 1] & 0x01) != 0) { // I think this has something to do with the version. Ask!
-        //     // Merge mined block
-        //     scryptChecker.checkScrypt(sliceArray(_blockHeaderBytes, pos + len - 80, pos + len), bytes32(_proposedScryptBlockHash), _truebitClaimantAddress, bytes32(onholdIdx)); //sliceArray(...) is a merge mined block header, therefore longer than a regular block header
-        //     // storeAuxPoW(_blockHeaderBytes);
-        // } else {
-        //     // Normal block
-        //     scryptChecker.checkScrypt(sliceArray(_blockHeaderBytes, 0, 80), bytes32(_proposedScryptBlockHash), _truebitClaimantAddress, bytes32(onholdIdx)); //For normal blocks, we just need to slice the first 80 bytes
-        // }
+        uint blockSha256Hash = bi._blockHeader.blockHash;
+        
+        if (!isMergeMined(bi._blockHeader) && flip32Bytes(_proposedScryptBlockHash) > targetFromBits(bi._blockHeader.bits)) {
+            // if the block is merge mined, we'll do the check later
+            StoreHeader(bytes32(blockSha256Hash), ERR_PROOF_OF_WORK);
+            return 0;
+        }
 
-        // return 1;
+        if ((_blockHeaderBytes[pos + 1] & 0x01) != 0) { // I think this has something to do with the version. Ask!
+            // Merge mined block
+            setAuxPoW(blockSha256Hash, sliceArray(_blockHeaderBytes, pos, pos + len));
+            
+            if (flip32Bytes(auxPoW[blockSha256Hash].scryptHash) > targetFromBits(bi._blockHeader.bits)) {
+                StoreHeader(bytes32(blockSha256Hash), ERR_PROOF_OF_WORK);
+            }
+
+            scryptChecker.checkScrypt(sliceArray(_blockHeaderBytes, pos + len - 80, pos + len), bytes32(auxPoW[blockSha256Hash].scryptHash), _truebitClaimantAddress, bytes32(onholdIdx)); //sliceArray(...) is a merge mined block header, therefore longer than a regular block header
+
+            uint auxPoWCode = checkAuxPoW(blockSha256Hash);
+            if (auxPoWCode != 1) {
+                StoreHeader(bytes32(blockSha256Hash), auxPoWCode);
+            }
+        } else {
+            // Normal block
+            scryptChecker.checkScrypt(sliceArray(_blockHeaderBytes, 0, 80), bytes32(_proposedScryptBlockHash), _truebitClaimantAddress, bytes32(onholdIdx)); //For normal blocks, we just need to slice the first 80 bytes
+        }
+
+        return 1;
     }
 
     function checkDifficulty(bytes _blockHeaderBytes, uint pos, uint len, uint _proposedScryptBlockHash, address _truebitClaimantAddress, BlockInformation bi) private returns (uint) {
@@ -245,11 +255,10 @@ contract DogeRelay is IDogeRelay {
     //
     // @param _blockHeaderBytes - raw block header information
     function storeAuxPoW(bytes _blockHeaderBytes) private {
-        // if (isAuxPoW(_blockHeaderBytes)) {
+        if (isMergeMined(_blockHeaderBytes)) {
             DogeTx.AuxPoW memory auxpow = DogeTx.parseAuxPoW(_blockHeaderBytes);
-            // DogeTx.AuxPoW memory auxpow;
-            // onholdAuxPoW[onholdIdx] = auxpow;
-        // }
+            onholdAuxPoW[onholdIdx] = auxpow;
+        }
     }
 
     // @dev - once a pending block's scrypt hash has been verified as correct, this function is executed as a callback.
@@ -275,15 +284,15 @@ contract DogeRelay is IDogeRelay {
 
         uint128 scorePrevBlock = m_getScore(hashPrevBlock);
 
-        if (isAuxPoW(bi._blockHeader)) {
-            DogeTx.AuxPoW ap = onholdAuxPoW[uint(_proposalId)];
-            auxPoW[blockSha256Hash] = ap;
-            // uint auxPoWCode = checkAuxPoW(blockSha256Hash);
-            // if (auxPoWCode != 1) {
-            //     StoreHeader(blockSha256Hash, auxPoWCode);
-            //     return 0;
-            // }
-        }
+        // if (isMergeMined(bi._blockHeader)) {
+        //     // DogeTx.AuxPoW ap = onholdAuxPoW[uint(_proposalId)];
+        //     // auxPoW[blockSha256Hash] = ap;
+        //     uint auxPoWCode = checkAuxPoW(blockSha256Hash);
+        //     if (auxPoWCode != 1) {
+        //         StoreHeader(bytes32(blockSha256Hash), auxPoWCode);
+        //         return 0;
+        //     }
+        // }
 
         if (scorePrevBlock == 0) {
             StoreHeader(bytes32(blockSha256Hash), ERR_NO_PREV_BLOCK);
@@ -362,10 +371,34 @@ contract DogeRelay is IDogeRelay {
         return blockHeight;
     }
 
+    // @dev - checks if a merge-mined block's Merkle proofs are correct,
+    // i.e. Doge block hash is in coinbase Merkle tree
+    // and coinbase transaction is in parent Merkle tree.
+    //
+    // @param _blockHash - SHA-256 hash of the block whose Merkle proofs are being checked
+    // @return 1 if block was merge-mined and coinbase index, chain Merkle root and Merkle proofs are correct,
+    // respective error code otherwise
     function checkAuxPoW(uint _blockHash) private returns (uint) {
-        if (computeMerkle(_blockHash, auxPoW[_blockHash].dogeHashIndex, auxPoW[_blockHash].chainMerkleProof) != auxPoW[_blockHash].coinbaseMerkleRoot) {
+        if (!isMergeMined(_blockHash)) {
+            return ERR_NOT_MERGE_MINED;
+        }
+
+        if (auxPoW[_blockHash].coinbaseTxIndex != 0) {
+            return ERR_COINBASE_INDEX;
+        }
+
+        if (auxPoW[_blockHash].coinbaseMerkleRootCode != 1) {
+            return auxPoW[_blockHash].coinbaseMerkleRootCode;
+        }
+
+        if (computeChainMerkle(_blockHash) != auxPoW[_blockHash].coinbaseMerkleRoot) {
             return ERR_CHAIN_MERKLE;
         }
+
+        if (computeParentMerkle(_blockHash) != auxPoW[_blockHash].parentMerkleRoot) {
+            return ERR_PARENT_MERKLE;
+        }
+
         return 1;
     }
 
@@ -1116,27 +1149,19 @@ contract DogeRelay is IDogeRelay {
         }
     }
 
-    uint AUXPOW_VERSION_THRESHOLD = 0;
+    uint VERSION_AUXPOW = (1 << 8);
 
     // @dev - checks version to determine if a block has merge mining information
-    function isAuxPoW(bytes _rawBytes) private returns (bool) {
-        // if (f_version(_rawBytes) > AUXPOW_VERSION_THRESHOLD) {
-            return true;
-        // }
+    function isMergeMined(bytes _rawBytes) private returns (bool) {
+        return f_version(_rawBytes, 0) & VERSION_AUXPOW != 0;
     }
 
-    function isAuxPoW(BlockHeader _block) private returns (bool) {
-        // if (_block.version > AUXPOW_VERSION_THRESHOLD) {
-            return true;
-        // }
+    function isMergeMined(BlockHeader _block) private returns (bool) {
+        return _block.version & VERSION_AUXPOW != 0;
     }
 
-    function isAuxPoW(uint _blockHash) public returns (uint) {
-        if (myblocks[_blockHash]._blockHeader.version > AUXPOW_VERSION_THRESHOLD) {
-            return 1;
-        } else {
-            return 0;
-        }
+    function isMergeMined(uint _blockHash) public returns (bool) {
+        return myblocks[_blockHash]._blockHeader.version & VERSION_AUXPOW != 0;
     }
 
     function getVersion(uint _blockHash) public returns (uint) {
@@ -1151,9 +1176,9 @@ contract DogeRelay is IDogeRelay {
         // auxPoW[_blockHash].coinbaseMerkleRoot = 0x65fdfa97de61e7932a69b3fc70d71fc5fec14639f4d8d92d8da7574acff1c2cd;
     }
 
-    function getFirstBytes(uint _blockHash) public view returns (uint) {
-        return auxPoW[_blockHash].firstBytes;
-    }
+    // function getFirstBytes(uint _blockHash) public view returns (uint) {
+    //     return auxPoW[_blockHash].firstBytes;
+    // }
 
     function getCoinbaseMerkleRoot(uint _blockHash) public view returns (uint) {
         return auxPoW[_blockHash].coinbaseMerkleRoot;
@@ -1199,16 +1224,16 @@ contract DogeRelay is IDogeRelay {
         return auxPoW[_blockHash].parentNonce;
     }
 
-    function computeParentMerkle(uint _blockHash) public view returns (bytes32) {
-        return bytes32(computeMerkle(flip32Bytes(0x46ee29c6ca582b8aa4e5662a97e15845589765383ed2dbe84411409f82e57eef),
-                             auxPoW[_blockHash].coinbaseTxIndex,
-                             auxPoW[_blockHash].parentMerkleProof));
+    function computeParentMerkle(uint _blockHash) public view returns (uint) {
+        return flip32Bytes(computeMerkle(auxPoW[_blockHash].txHash,
+                                         auxPoW[_blockHash].coinbaseTxIndex,
+                                         auxPoW[_blockHash].parentMerkleProof));
     }
 
-    function computeChainMerkle(uint _blockHash) public view returns (bytes32) {
-        return bytes32(computeMerkle(_blockHash,
-                                     auxPoW[_blockHash].dogeHashIndex,
-                                     auxPoW[_blockHash].chainMerkleProof));
+    function computeChainMerkle(uint _blockHash) public view returns (uint) {
+        return computeMerkle(_blockHash,
+                             auxPoW[_blockHash].dogeHashIndex,
+                             auxPoW[_blockHash].chainMerkleProof);
     }
 
     function getTxHash(uint _blockHash) public view returns (uint) {
@@ -1242,9 +1267,14 @@ contract DogeRelay is IDogeRelay {
     uint constant ERR_NO_PREV_BLOCK = 10030;
     uint constant ERR_BLOCK_ALREADY_EXISTS = 10040;
     uint constant ERR_INVALID_HEADER = 10050;
-    uint constant ERR_CHAIN_MERKLE = 10060;
-    uint constant ERR_PARENT_MERKLE = 10070;
-    uint constant ERR_PROOF_OF_WORK = 10090;
+    uint constant ERR_COINBASE_INDEX = 10060;
+    uint constant ERR_NOT_MERGE_MINED = 10070;
+    uint constant ERR_FOUND_TWICE = 10080; // 0xfabe6d6d found twice
+    uint constant ERR_NO_MERGE_HEADER = 10090; // 0xfabe6d6d not found
+    uint constant ERR_NOT_IN_FIRST_20 = 10100;
+    uint constant ERR_CHAIN_MERKLE = 10110;
+    uint constant ERR_PARENT_MERKLE = 10120;
+    uint constant ERR_PROOF_OF_WORK = 10130;
 
     // error codes for verifyTx
     uint constant ERR_BAD_FEE = 20010;
