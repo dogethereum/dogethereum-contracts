@@ -197,9 +197,9 @@ contract DogeRelay is IDogeRelay {
         uint blockSha256Hash = bi._blockHeader.blockHash;
 
         if (isMergeMined(bi._blockHeader)) {
-            DogeTx.AuxPoW memory ap = DogeTx.parseAuxPoW(sliceArray(_blockHeaderBytes, pos, pos + len));
+            DogeTx.AuxPoW memory ap = DogeTx.parseAuxPoW(DogeTx.sliceArray(_blockHeaderBytes, pos, pos + len));
 
-            if (flip32Bytes(ap.scryptHash) > targetFromBits(bi._blockHeader.bits)) {
+            if (DogeTx.flip32Bytes(ap.scryptHash) > targetFromBits(bi._blockHeader.bits)) {
                 StoreHeader(bytes32(blockSha256Hash), ERR_PROOF_OF_WORK);
                 return 0;
             }
@@ -210,16 +210,16 @@ contract DogeRelay is IDogeRelay {
                 return 0;
             }
 
-            scryptChecker.checkScrypt(sliceArray(_blockHeaderBytes, pos + len - 80, pos + len), bytes32(ap.scryptHash), _truebitClaimantAddress, bytes32(onholdIdx)); //sliceArray(...) is a merge mined block header, therefore longer than a regular block header
+            scryptChecker.checkScrypt(DogeTx.sliceArray(_blockHeaderBytes, pos + len - 80, pos + len), bytes32(ap.scryptHash), _truebitClaimantAddress, bytes32(onholdIdx)); //DogeTx.sliceArray(...) is a merge mined block header, therefore longer than a regular block header
 
         } else {
             // Normal block
-            if (flip32Bytes(_proposedScryptBlockHash) > targetFromBits(bi._blockHeader.bits)) {
+            if (DogeTx.flip32Bytes(_proposedScryptBlockHash) > targetFromBits(bi._blockHeader.bits)) {
                 StoreHeader(bytes32(blockSha256Hash), ERR_PROOF_OF_WORK);
                 return 0;
             }
 
-            scryptChecker.checkScrypt(sliceArray(_blockHeaderBytes, 0, 80), bytes32(_proposedScryptBlockHash), _truebitClaimantAddress, bytes32(onholdIdx)); //For normal blocks, we just need to slice the first 80 bytes
+            scryptChecker.checkScrypt(DogeTx.sliceArray(_blockHeaderBytes, 0, 80), bytes32(_proposedScryptBlockHash), _truebitClaimantAddress, bytes32(onholdIdx)); //For normal blocks, we just need to slice the first 80 bytes
         }
 
         return 1;
@@ -741,26 +741,6 @@ contract DogeRelay is IDogeRelay {
         return out;
     }
 
-    // @dev returns a portion of a given byte array specified by its starting and ending points
-    // Should be private, made internal for testing
-    // Breaks underscore naming convention for parameters because it raises a compiler error
-    // if `offset` is changed to `_offset`.
-    //
-    // @param _rawBytes - array to be sliced
-    // @param offset - first byte of sliced array
-    // @param _endIndex - last byte of sliced array
-    function sliceArray(bytes memory _rawBytes, uint offset, uint _endIndex) internal view returns (bytes) {
-        uint len = _endIndex - offset;
-        bytes memory result = new bytes(len);
-        assembly {
-            // Call precompiled contract to copy data
-            if iszero(staticcall(gas, 0x04, add(add(_rawBytes, 0x20), offset), len, add(result, 0x20), len)) {
-                revert(0, 0)
-            }
-        }
-        return result;
-    }
-
     function sha256mem(bytes memory _rawBytes, uint offset, uint len) internal view returns (bytes32 result) {
         assembly {
             // Call precompiled contract to copy data
@@ -780,7 +760,7 @@ contract DogeRelay is IDogeRelay {
         bh.version = f_version(_rawBytes, pos);
         bh.time = f_getTimestamp(_rawBytes, pos);
         bh.bits = f_bits(_rawBytes, pos);
-        bh.blockHash = flip32Bytes(uint(sha256(sha256mem(_rawBytes, pos, 80))));
+        bh.blockHash = DogeTx.flip32Bytes(uint(sha256(sha256mem(_rawBytes, pos, 80))));
         bh.prevBlock = f_hashPrevBlock(_rawBytes, pos);
         bh.merkleRoot = f_merkleRoot(_rawBytes, pos);
     }
@@ -897,7 +877,7 @@ contract DogeRelay is IDogeRelay {
     // @param _dataBytes - raw data to be hashed
     // @return - result of applying SHA-256 twice to raw data and then flipping the bytes
     function m_dblShaFlip(bytes _dataBytes) private pure returns (uint) {
-        return flip32Bytes(uint(sha256(sha256(_dataBytes))));
+        return DogeTx.flip32Bytes(uint(sha256(sha256(_dataBytes))));
     }
 
     // @dev - Bitcoin-way of computing the target from the 'bits' field of a block header
@@ -920,7 +900,7 @@ contract DogeRelay is IDogeRelay {
     // @return - `_tx1` and `_tx2`'s parent, i.e. the result of concatenating them,
     // hashing that twice and flipping the bytes.
     function concatHash(uint _tx1, uint _tx2) internal pure returns (uint) {
-        return flip32Bytes(uint(sha256(sha256(flip32Bytes(_tx1), flip32Bytes(_tx2)))));
+        return DogeTx.flip32Bytes(uint(sha256(sha256(DogeTx.flip32Bytes(_tx1), DogeTx.flip32Bytes(_tx2)))));
     }
 
     // @dev - shift information to the right by a specified number of bits
@@ -950,20 +930,6 @@ contract DogeRelay is IDogeRelay {
         while (int_type > 0) {
           int_type = m_shiftRight(int_type, 1);
           length += 1;
-        }
-    }
-
-    // @dev - convert an unsigned integer from little-endian to big-endian representation
-    //
-    // @param _input - little-endian value
-    // @return - input value in big-endian format
-    function flip32Bytes(uint _input) internal pure returns (uint result) {
-        assembly {
-            let pos := mload(0x40)
-            for { let i := 0 } lt(i, 32) { i := add(i, 1) } {
-                mstore8(add(pos, i), byte(sub(31, i), _input))
-            }
-            result := mload(pos)
         }
     }
 
@@ -1060,7 +1026,7 @@ contract DogeRelay is IDogeRelay {
         assembly {
             hashPrevBlock := mload(add(add(_blockHeader, 0x24), pos))
         }
-        return flip32Bytes(hashPrevBlock);
+        return DogeTx.flip32Bytes(hashPrevBlock);
     }
 
     // @dev - extract Merkle root field from a raw Dogecoin block header
@@ -1072,7 +1038,7 @@ contract DogeRelay is IDogeRelay {
         assembly {
             merkle := mload(add(add(_blockHeader, 0x44), pos))
         }
-        return flip32Bytes(merkle);
+        return DogeTx.flip32Bytes(merkle);
     }
 
     // @dev - extract bits field from a raw Dogecoin block header
@@ -1130,7 +1096,7 @@ contract DogeRelay is IDogeRelay {
     // with this info was mined in if AuxPoW Merkle proof is correct,
     // garbage otherwise
     function computeParentMerkle(DogeTx.AuxPoW _ap) private view returns (uint) {
-        return flip32Bytes(computeMerkle(_ap.txHash,
+        return DogeTx.flip32Bytes(computeMerkle(_ap.txHash,
                                          _ap.coinbaseTxIndex,
                                          _ap.parentMerkleProof));
     }
