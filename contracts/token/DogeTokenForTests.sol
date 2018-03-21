@@ -15,16 +15,4 @@ contract DogeTokenForTests is DogeToken {
     function addUtxo(uint value, uint txHash, uint16 outputIndex) public {
         utxos.push(Utxo(value, txHash, outputIndex));
     }
-
-    function getUnlocksPendingInvestorProof(uint index) public view returns (address from, string dogeAddress, uint value, uint timestamp, uint32[] selectedUtxos, uint fee) {
-    	Unlock unlock = unlocksPendingInvestorProof[index];
-        from = unlock.from;
-        dogeAddress = unlock.dogeAddress;
-        value = unlock.value;
-        timestamp = unlock.timestamp;
-        selectedUtxos = unlock.selectedUtxos;
-        fee = unlock.fee;
-    }
-
-
 }

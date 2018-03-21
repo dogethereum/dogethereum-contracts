@@ -69,10 +69,10 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
     uint constant FEE_PER_INPUT = 100000000; // 1 doge
 
     // counter for next unlock
-    uint public unlockIdx;
+    uint32 public unlockIdx;
 
     // Unlocks the investor has not sent a proof of unlock yet.
-    mapping (uint => Unlock) public unlocksPendingInvestorProof;
+    mapping (uint32 => Unlock) public unlocksPendingInvestorProof;
 
     // Represents an unlock request
     struct Unlock {
@@ -85,7 +85,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
           uint fee;
     }
 
-    event UnlockRequest(uint id, address from, string dogeAddress, uint value);
+    event UnlockRequest(uint32 id, address from, string dogeAddress, uint value);
 
     address public trustedDogeEthPriceOracle;
     uint public dogeEthPrice;
@@ -136,6 +136,20 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         require(msg.sender == trustedDogeEthPriceOracle);
         dogeEthPrice = _dogeEthPrice;
     }
+
+    //function getUnlocksPendingInvestorProofSelectedUtxos(uint32 index) public view returns (uint32[] selectedUtxos) {
+    //    return unlocksPendingInvestorProof[index].selectedUtxos;
+    //}
+
+    function getUnlocksPendingInvestorProof(uint32 index) public view returns (address from, string dogeAddress, uint value, uint timestamp, uint32[] selectedUtxos, uint fee) {
+        Unlock unlock = unlocksPendingInvestorProof[index];
+        from = unlock.from;
+        dogeAddress = unlock.dogeAddress;
+        value = unlock.value;
+        timestamp = unlock.timestamp;
+        selectedUtxos = unlock.selectedUtxos;
+        fee = unlock.fee;
+    }    
 
     // Unlock section end
 }
