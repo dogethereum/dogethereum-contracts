@@ -1,7 +1,8 @@
-var fs = require('fs');
-var readline = require('readline');
-var btcProof = require('bitcoin-proof');
-var scryptsy = require('scryptsy');
+const fs = require('fs');
+const readline = require('readline');
+const btcProof = require('bitcoin-proof');
+const scryptsy = require('scryptsy');
+const sha256 = require('js-sha256').sha256;
 
 const SEND_BATCH = true;
 
@@ -23,6 +24,47 @@ async function parseDataFile(filename) {
   });
 };
 
+// Calculates the merkle root from an array of hashes
+// The hashes are expected to be 32 bytes in hexadecimal
+function makeMerkle(hashes) {
+  if (hashes.length == 0) {
+    return `0x${sha256('')}`;
+  }
+  while (hashes.length > 1) {
+    const newhashes = [];
+    for (let i=0; i< hashes.length; i+=2) {
+      const j = i+1 < hashes.length ? i+1 : hashes.length-1;
+      newhashes.push(sha256(Buffer.from(`${module.exports.formatHexUint32(module.exports.remove0x(hashes[i]))}${module.exports.formatHexUint32(module.exports.remove0x(hashes[j]))}`, 'hex')));
+    }
+    hashes = newhashes;
+  }
+  return `0x${module.exports.formatHexUint32(module.exports.remove0x(hashes[0]))}`;
+}
+
+// Format an array of hashes to bytes array
+// Hashes are expected to be 32 bytes in hexadecimal
+function hashesToData(hashes) {
+  let result = '';
+  hashes.forEach(hash => {
+    result += `${module.exports.formatHexUint32(module.exports.remove0x(hash))}`;
+  });
+  return `0x${result}`;
+}
+
+// Calculates the Dogecoin Scrypt hash from block header
+// Block header is expected to be in hexadecimal
+// Return the concatenated Scrypt hash and block header
+function headerToData(blockHeader) {
+  const scryptHash = module.exports.formatHexUint32(module.exports.calcHeaderPoW(blockHeader));
+  return `0x${scryptHash}${blockHeader}`;
+}
+
+// Calculates the double sha256 of a block header
+// Block header is expected to be in hexadecimal
+function calcBlockHash(blockHeader) {
+  const headerBin = module.exports.fromHex(blockHeader);
+  return `0x${sha256(sha256.arrayBuffer(headerBin))}`;
+}
 
 module.exports = {
   formatHexUint32: function (str) {
@@ -116,5 +158,9 @@ module.exports = {
       output.push(element.toNumber());
     });
     return output;
-  }
+  },
+  makeMerkle,
+  hashesToData,
+  headerToData,
+  calcBlockHash,
 };

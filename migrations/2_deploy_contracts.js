@@ -6,6 +6,8 @@ const DogeToken = artifacts.require('token/DogeToken');
 const DogeTokenForTests = artifacts.require('token/DogeTokenForTests');
 const DogeTx = artifacts.require('DogeTx');
 const ScryptCheckerDummy = artifacts.require('ScryptCheckerDummy');
+const Superblocks = artifacts.require('Superblocks');
+const ClaimManager = artifacts.require('ClaimManager');
 
 const scryptCheckerAddress = '0xfeedbeeffeedbeeffeedbeeffeedbeeffeedbeef';
 const dogethereumRecipientUnitTest = '0x4d905b4b815d483cdfabcd292c6f86509d0fad82';
@@ -24,9 +26,14 @@ async function deployDevelopment(deployer, network, accounts, networkId, trusted
   await deployer.link(DogeTx, DogeTokenForTests);
 
   await deployer.deploy(DogeRelayForTests, networkId);
-  await deployer.deploy(ScryptCheckerDummy, DogeRelayForTests.address, true)
-  await deployer.deploy(DogeProcessor, DogeRelayForTests.address);
   await deployer.deploy(DogeTokenForTests, DogeRelayForTests.address, trustedDogeEthPriceOracle, dogethereumRecipient);
+
+  await deployer.deploy(DogeProcessor, DogeRelayForTests.address);
+
+  await deployer.deploy(ScryptCheckerDummy, DogeRelayForTests.address, true)
+
+  await deployer.deploy(Superblocks);
+  await deployer.deploy(ClaimManager);
 
   const dogeRelay = DogeRelayForTests.at(DogeRelayForTests.address);
   await dogeRelay.setScryptChecker(ScryptCheckerDummy.address);
