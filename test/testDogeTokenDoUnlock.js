@@ -23,7 +23,7 @@ contract('testDogeTokenDoUnlock', function(accounts) {
       //console.log(result.receipt.logs);
     });
 
-    const unlockPendingInvestorProof = await dogeToken.getUnlocksPendingInvestorProof(1);
+    const unlockPendingInvestorProof = await dogeToken.getUnlockPendingInvestorProof(1);
     //console.log(unlockPendingInvestorProof);
     assert.equal(unlockPendingInvestorProof[0], accounts[0], `Unlock from is not the expected one`);
     assert.equal(unlockPendingInvestorProof[1], dogeAddress, `Unlock doge address is not the expected one`);
