@@ -87,4 +87,8 @@ contract DogeRelayForTests is DogeRelay {
     function flip32BytesPublic(uint input) public pure returns (uint) {
         return DogeTx.flip32Bytes(input);
     }
+
+    function checkAuxPoWPublic(uint blockHash, bytes auxBytes) public view returns (uint) {
+        return checkAuxPoWForTests(blockHash, auxBytes);
+    }
 }

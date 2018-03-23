@@ -357,6 +357,35 @@ contract DogeRelay is IDogeRelay {
         return 1;
     }
 
+    // doesn't check merge mining to see if other error codes work
+    function checkAuxPoWForTests(uint _blockHash, bytes memory _auxBytes) internal returns (uint) {
+        DogeTx.AuxPoW memory ap = DogeTx.parseAuxPoW(_auxBytes);
+
+        uint32 version = bytesToUint32Flipped(_auxBytes, 0);
+
+        if (!isMergeMined(_auxBytes)) {
+            return ERR_NOT_MERGE_MINED;
+        }
+
+        if (ap.coinbaseTxIndex != 0) {
+            return ERR_COINBASE_INDEX;
+        }
+
+        if (ap.coinbaseMerkleRootCode != 1) {
+            return ap.coinbaseMerkleRootCode;
+        }
+
+        if (computeChainMerkle(_blockHash, ap) != ap.coinbaseMerkleRoot) {
+            return ERR_CHAIN_MERKLE;
+        }
+
+        if (computeParentMerkle(ap) != ap.parentMerkleRoot) {
+            return ERR_PARENT_MERKLE;
+        }
+
+        return 1;
+    }
+
     // @dev - Implementation of DigiShield, almost directly translated from
     // C++ implementation of Dogecoin. See function CalculateDogecoinNextWorkRequired
     // on dogecoin/src/dogecoin.cpp for more details.
@@ -431,6 +460,12 @@ contract DogeRelay is IDogeRelay {
     // e.g. for input [0x01, 0x02, 0x03 0x04] returns 0x01020304
     function bytesToUint32(bytes memory input, uint pos) internal pure returns (uint32 result) {
         result = uint32(input[pos])*(2**24) + uint32(input[pos + 1])*(2**16) + uint32(input[pos + 2])*(2**8) + uint32(input[pos + 3]);
+    }
+
+    // @dev - Converts a bytes of size 4 to uint32,
+    // e.g. for input [0x01, 0x02, 0x03 0x04] returns 0x01020304
+    function bytesToUint32Flipped(bytes memory input, uint pos) internal pure returns (uint32 result) {
+        result = uint32(input[pos]) + uint32(input[pos + 1])*(2**8) + uint32(input[pos + 2])*(2**16) + uint32(input[pos + 3])*(2**24);
     }
 
     // @dev - Checks whether the transaction given by `_txBytes` is in the block identified by `_txBlockHash`.
@@ -1006,6 +1041,7 @@ contract DogeRelay is IDogeRelay {
     // @dev - extract version field from a raw Dogecoin block header
     //
     // @param _blockHeader - Dogecoin block header bytes
+    // @param pos - where to start reading version from
     // @return - block's version in big endian format
     function f_version(bytes memory _blockHeader, uint pos) internal pure returns (uint32 version) {
         assembly {
@@ -1020,6 +1056,7 @@ contract DogeRelay is IDogeRelay {
     // @dev - extract previous block field from a raw Dogecoin block header
     //
     // @param _blockHeader - Dogecoin block header bytes
+    // @param pos - where to start reading hash from
     // @return - hash of block's parent in big endian format
     function f_hashPrevBlock(bytes memory _blockHeader, uint pos) internal pure returns (uint) {
         uint hashPrevBlock;
@@ -1032,6 +1069,7 @@ contract DogeRelay is IDogeRelay {
     // @dev - extract Merkle root field from a raw Dogecoin block header
     //
     // @param _blockHeader - Dogecoin block header bytes
+    // @param pos - where to start reading root from
     // @return - block's Merkle root in big endian format
     function f_merkleRoot(bytes _blockHeader, uint pos) private pure returns (uint) {
         uint merkle;
@@ -1044,6 +1082,7 @@ contract DogeRelay is IDogeRelay {
     // @dev - extract bits field from a raw Dogecoin block header
     //
     // @param _blockHeader - Dogecoin block header bytes
+    // @param pos - where to start reading bits from
     // @return - block's difficulty in bits format, also big-endian
     function f_bits(bytes memory _blockHeader, uint pos) internal pure returns (uint32 bits) {
         assembly {
@@ -1058,6 +1097,7 @@ contract DogeRelay is IDogeRelay {
     // @dev - extract timestamp field from a raw Dogecoin block header
     //
     // @param _blockHeader - Dogecoin block header bytes
+    // @param pos - where to start reading bits from
     // @return - block's timestamp in big-endian format
     function f_getTimestamp(bytes memory _blockHeader, uint pos) internal pure returns (uint32 time) {
         assembly {
@@ -1069,11 +1109,11 @@ contract DogeRelay is IDogeRelay {
         }
     }
 
-    uint VERSION_AUXPOW = (1 << 8);
+    uint32 VERSION_AUXPOW = (1 << 8);
 
     // @dev - checks version to determine if a block has merge mining information
     function isMergeMined(bytes _rawBytes) private returns (bool) {
-        return f_version(_rawBytes, 0) & VERSION_AUXPOW != 0;
+        return bytesToUint32Flipped(_rawBytes, 0) & VERSION_AUXPOW != 0;
     }
 
     function isMergeMined(BlockHeader _block) private returns (bool) {
@@ -1146,7 +1186,7 @@ contract DogeRelay is IDogeRelay {
     uint constant ERR_NOT_MERGE_MINED = 10070;
     uint constant ERR_FOUND_TWICE = 10080; // 0xfabe6d6d found twice
     uint constant ERR_NO_MERGE_HEADER = 10090; // 0xfabe6d6d not found
-    uint constant ERR_NOT_IN_FIRST_20 = 10100;
+    uint constant ERR_NOT_IN_FIRST_20 = 10100; // chain Merkle root not within first 20 bytes of coinbase tx
     uint constant ERR_CHAIN_MERKLE = 10110;
     uint constant ERR_PARENT_MERKLE = 10120;
     uint constant ERR_PROOF_OF_WORK = 10130;

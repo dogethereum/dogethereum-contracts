@@ -123,7 +123,6 @@ library DogeTx {
         uint coinbaseMerkleRoot; // Merkle root of auxiliary block hash tree; stored in coinbase tx field
         uint[] chainMerkleProof; // proves that a given Dogecoin block hash belongs to a tree with the above root
         uint dogeHashIndex; // index of Doge block hash within block hash tree
-        uint coinbaseMerkleRootPosition; // location of Merkle root within script
         uint coinbaseMerkleRootCode; // encodes whether or not the root was found properly
 
         uint parentMerkleRoot; // Merkle root of transaction tree from parent Litecoin block header
@@ -340,7 +339,6 @@ library DogeTx {
         uint script_len;
 
         (n_inputs, pos) = parseVarInt(txBytes, pos);
-        script_pos = pos;
 
         if (stop == 0 || stop > n_inputs) {
             halt = n_inputs;
@@ -351,6 +349,8 @@ library DogeTx {
         for (uint256 i = 0; i < halt; i++) {
             pos += 36;  // skip outpoint
             (script_len, pos) = parseVarInt(txBytes, pos);
+            if (i == 0)
+                script_pos = pos; // first input script begins where first script length ends
             // (script_len, pos) = (1, 0);
             pos += script_len + 4;  // skip sig_script, seq
         }
@@ -658,8 +658,10 @@ library DogeTx {
         auxpow.parentMerkleRoot = sliceBytes32Int(rawBytes, pos);
         pos += 40; // skip root that was just read, parent block timestamp and bits
         auxpow.parentNonce = getBytesLE(rawBytes, pos, 32);
-        (auxpow.coinbaseMerkleRoot, auxpow.coinbaseMerkleRootPosition, auxpow.coinbaseMerkleRootCode) = findCoinbaseMerkleRoot(rawBytes);
-        if (auxpow.coinbaseMerkleRootPosition - inputScriptPos > 20) {
+        uint coinbaseMerkleRootPosition;
+        (auxpow.coinbaseMerkleRoot, coinbaseMerkleRootPosition, auxpow.coinbaseMerkleRootCode) = findCoinbaseMerkleRoot(rawBytes);
+        if (coinbaseMerkleRootPosition - inputScriptPos > 20 && auxpow.coinbaseMerkleRootCode == 1) {
+            // if it was found once and only once but not in the first 20 bytes, return this error code
             auxpow.coinbaseMerkleRootCode = ERR_NOT_IN_FIRST_20;
         }
     }
@@ -667,6 +669,7 @@ library DogeTx {
     // @dev - looks for {0xfa, 0xbe, 'm', 'm'} byte sequence
     // returns the following 32 bytes if it appears once and only once,
     // 0 otherwise
+    // also returns the position where the bytes first appear
     function findCoinbaseMerkleRoot(bytes rawBytes) private pure
              returns (uint, uint, uint)
     {
@@ -675,19 +678,19 @@ library DogeTx {
 
         for (uint i = 0; i < rawBytes.length; ++i) {
             if (rawBytes[i] == 0xfa && rawBytes[i+1] == 0xbe && rawBytes[i+2] == 0x6d && rawBytes[i+3] == 0x6d) {
-                if (!found) {
+                if (found) { // found twice
+                    return (0, position - 4, ERR_FOUND_TWICE);
+                } else {
                     found = true;
                     position = i + 4;
-                } else { // found twice
-                    return (0, position, ERR_FOUND_TWICE);
                 }
             }
         }
         
         if (!found) { // no merge mining header
-            return (0, position, ERR_NO_MERGE_HEADER);
+            return (0, position - 4, ERR_NO_MERGE_HEADER);
         } else {
-            return (sliceBytes32Int(rawBytes, position), position, 1);
+            return (sliceBytes32Int(rawBytes, position), position - 4, 1);
         }
     }
 }
