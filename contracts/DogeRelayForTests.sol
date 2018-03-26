@@ -15,7 +15,7 @@ contract DogeRelayForTests is DogeRelay {
     }
 
     function sliceArrayPublic(bytes original, uint32 offset, uint32 endIndex) public view returns (bytes result) {
-        return sliceArray(original, offset, endIndex);
+        return DogeTx.sliceArray(original, offset, endIndex);
     }
 
     function getBlockHash(uint blockHeight) public view returns (uint) {
@@ -85,6 +85,10 @@ contract DogeRelayForTests is DogeRelay {
     }
 
     function flip32BytesPublic(uint input) public pure returns (uint) {
-        return flip32Bytes(input);
+        return DogeTx.flip32Bytes(input);
+    }
+
+    function checkAuxPoWPublic(uint blockHash, bytes auxBytes) public view returns (uint) {
+        return checkAuxPoWForTests(blockHash, auxBytes);
     }
 }

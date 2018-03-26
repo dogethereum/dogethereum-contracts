@@ -5,3 +5,4 @@
 *.swp
 contracts/Timestamp*
 test/testTimestamp.js*
+test/parseAuxPoW.js*
