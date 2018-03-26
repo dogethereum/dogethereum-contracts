@@ -99,7 +99,6 @@
 // Base58check. These addresses begin with a '3'.
 
 pragma solidity ^0.4.19;
-pragma experimental ABIEncoderV2;
 
 // parse a raw bitcoin transaction byte array
 library DogeTx {

@@ -60,9 +60,6 @@ contract DogeRelay is IDogeRelay {
     // block hash => BlockInformation
     mapping (uint => BlockInformation) internal myblocks;
 
-    // also for internal usage, stores AuxPoW information associated with a certain block (identified by SHA-256)
-    // mapping (uint => DogeTx.AuxPoW) internal auxPoW;
-
     // hash of the block with the highest score, i.e. most work put into it (tip of the blockchain)
     uint internal bestBlockHash;
 
@@ -1182,8 +1179,8 @@ contract DogeRelay is IDogeRelay {
     uint constant ERR_NO_PREV_BLOCK = 10030;
     uint constant ERR_BLOCK_ALREADY_EXISTS = 10040;
     uint constant ERR_INVALID_HEADER = 10050;
-    uint constant ERR_COINBASE_INDEX = 10060;
-    uint constant ERR_NOT_MERGE_MINED = 10070;
+    uint constant ERR_COINBASE_INDEX = 10060; // coinbase tx index within Litecoin merkle isn't 0
+    uint constant ERR_NOT_MERGE_MINED = 10070; // trying to check AuxPoW on a block that wasn't merge mined
     uint constant ERR_FOUND_TWICE = 10080; // 0xfabe6d6d found twice
     uint constant ERR_NO_MERGE_HEADER = 10090; // 0xfabe6d6d not found
     uint constant ERR_NOT_IN_FIRST_20 = 10100; // chain Merkle root not within first 20 bytes of coinbase tx
