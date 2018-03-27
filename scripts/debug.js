@@ -16,9 +16,9 @@ module.exports = async function(callback) {
   console.log("Locator : " + blockLocatorFormatted);
   var dt = await DogeToken.deployed();
   var balance1 = await dt.balanceOf.call("0x92ecc1ba4ea10f681dcf35c02f583e59d2b99b4b"); 
-  console.log("Balance of 0x92ecc1ba4ea10f681dcf35c02f583e59d2b99b4b : " + balance1);
+  console.log("DogeToken Balance of 0x92ecc1ba4ea10f681dcf35c02f583e59d2b99b4b : " + balance1);
   var balance2 = await dt.balanceOf.call("0xd2394f3fad76167e7583a876c292c86ed10305da"); 
-  console.log("Balance of 0xd2394f3fad76167e7583a876c292c86ed10305da : " + balance2);
+  console.log("DogeToken Balance of 0xd2394f3fad76167e7583a876c292c86ed10305da : " + balance2);
   var dogeEthPrice = await dt.dogeEthPrice.call(); 
   console.log("Doge-Eth price : " + dogeEthPrice);
 }
