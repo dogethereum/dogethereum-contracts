@@ -1,12 +1,11 @@
 var DogeRelay = artifacts.require("./DogeRelay.sol");
-var DogeToken = artifacts.require("./token/DogeToken.sol");
 
 module.exports = function(callback) {
   var dr;
   DogeRelay.deployed().then(function(instance) {      
     dr = instance;
-    var block95Hash = "0x9fda0c0c4beeabeaf65b513544ce0a6ce7ecb918c58b55d89c67a22047da68c0";  
-    return dr.setInitialParent(block95Hash, 95, 1, {gas: 100000});     
+    var block57Hash = "0x77aed6d055e6a6249bf49cd6c3283fe7cf3f32dc5388deec2d73b8a9d6e89466";  
+    return dr.setInitialParent(block57Hash, 57, 1, {gas: 100000});     
   }).then(function(result) {
     // If this callback is called, the transaction was successfully processed.
     console.log("Transaction successful!");

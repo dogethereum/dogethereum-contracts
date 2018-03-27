@@ -10,7 +10,7 @@ const ScryptCheckerDummy = artifacts.require('ScryptCheckerDummy');
 const scryptCheckerAddress = '0xfeedbeeffeedbeeffeedbeeffeedbeeffeedbeef';
 const dogethereumRecipientUnitTest = '0x4d905b4b815d483cdfabcd292c6f86509d0fad82';
 const dogethereumRecipientIntegrationDogeMain = '0x0000000000000000000000000000000000000003';
-const dogethereumRecipientIntegrationDogeRegtest = '0x0000000000000000000000000000000000000004';
+const dogethereumRecipientIntegrationDogeRegtest = '0x03cd041b0139d3240607b9fd1b2d1b691e22b5d6';
 const trustedDogeEthPriceOracleRopsten = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
 const DOGE_MAINNET = 0;

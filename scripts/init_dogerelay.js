@@ -1,5 +1,4 @@
 var DogeRelay = artifacts.require("./DogeRelay.sol");
-var DogeToken = artifacts.require("./token/DogeToken.sol");
 
 module.exports = function(callback) {
   var dr;
