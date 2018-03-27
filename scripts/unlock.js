@@ -3,6 +3,6 @@ var movetokens = require('./movetokens');
 
 
 module.exports = async function(callback) {
-  movetokens(DogeToken, web3, "transfer", callback)
+  movetokens(DogeToken, web3, "unlock", callback)
 }
 
