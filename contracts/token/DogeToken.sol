@@ -137,10 +137,6 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         dogeEthPrice = _dogeEthPrice;
     }
 
-    //function getUnlocksPendingInvestorProofSelectedUtxos(uint32 index) public view returns (uint32[] selectedUtxos) {
-    //    return unlocksPendingInvestorProof[index].selectedUtxos;
-    //}
-
     function getUnlockPendingInvestorProof(uint32 index) public view returns (address from, string dogeAddress, uint value, uint timestamp, uint32[] selectedUtxos, uint fee) {
         Unlock unlock = unlocksPendingInvestorProof[index];
         from = unlock.from;
