@@ -147,5 +147,9 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         fee = unlock.fee;
     }    
 
+    function getUtxosLength() public view returns (uint) {
+        return utxos.length;
+    }
+
     // Unlock section end
 }
