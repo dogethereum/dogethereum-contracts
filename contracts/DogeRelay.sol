@@ -35,7 +35,7 @@ contract DogeRelay is IDogeRelay {
     // -   "_ibIndex" is the block's index to internalBlock (see btcChain)
     // -   "_score" is 1 more than the chainWork [see setInitialParent()]
     // - _ancestor: stores 8 32bit ancestor indices for more efficient backtracking (see btcChain)
-    // - _feeInfo is used for incentive.se (see m_getFeeInfo)
+    // - _feeInfo is used for incentive.se (see getFeeInfo)
     struct BlockInformation {
           BlockHeader _blockHeader;
           uint _info;
@@ -142,11 +142,11 @@ contract DogeRelay is IDogeRelay {
         // height cannot be set to -1 because inMainChain() assumes that
         // a block with height 0 does NOT exist (thus we cannot allow the
         // real genesis block to be at height 0)
-        m_setHeight(_blockHash, _height);
+        setHeight(_blockHash, _height);
 
         // do NOT pass _chainWork of 0, since score 0 means
         // block does NOT exist. see check in storeBlockHeader()
-        m_setScore(_blockHash, _chainWork);
+        setScore(_blockHash, _chainWork);
 
         // other fields do not need to be set, for example:
         // _ancestor can remain zeros because internalBlock[0] already points to blockHash
@@ -243,14 +243,14 @@ contract DogeRelay is IDogeRelay {
 
         uint hashPrevBlock = bi._blockHeader.prevBlock;
 
-        uint128 scorePrevBlock = m_getScore(hashPrevBlock);
+        uint128 scorePrevBlock = getScore(hashPrevBlock);
 
         if (scorePrevBlock == 0) {
             StoreHeader(bytes32(blockSha256Hash), ERR_NO_PREV_BLOCK);
             return 0;
         }
 
-        if (m_getScore(blockSha256Hash) != 0) {
+        if (getScore(blockSha256Hash) != 0) {
             // block already stored/exists
             StoreHeader(bytes32(blockSha256Hash), ERR_BLOCK_ALREADY_EXISTS);
             return 0;
@@ -258,8 +258,8 @@ contract DogeRelay is IDogeRelay {
 
         uint32 bits = bi._blockHeader.bits;
 
-        uint blockHeight = 1 + m_getHeight(hashPrevBlock);
-        uint32 prevBits = m_getBits(hashPrevBlock);
+        uint blockHeight = 1 + getHeight(hashPrevBlock);
+        uint32 prevBits = getBits(hashPrevBlock);
 
         // Ignore difficulty adjustment verification for regtest until we implement it
         if (net != Network.REGTEST) {
@@ -281,9 +281,9 @@ contract DogeRelay is IDogeRelay {
             } else {
                 // (blockHeight - DIFFICULTY_ADJUSTMENT_INTERVAL) is same as [getHeight(hashPrevBlock) - (DIFFICULTY_ADJUSTMENT_INTERVAL - 1)]
 
-                uint32 newBits = calculateDigishieldDifficulty(int64(m_getTimestamp(hashPrevBlock)) - int64(m_getTimestamp(getPrevBlock(hashPrevBlock))), prevBits);
+                uint32 newBits = calculateDigishieldDifficulty(int64(getTimestamp(hashPrevBlock)) - int64(getTimestamp(getPrevBlock(hashPrevBlock))), prevBits);
 
-                if (net == Network.TESTNET && bi._blockHeader.time - m_getTimestamp(hashPrevBlock) > 120 && blockHeight >= 157500) {
+                if (net == Network.TESTNET && bi._blockHeader.time - getTimestamp(hashPrevBlock) > 120 && blockHeight >= 157500) {
                     newBits = 0x1e0fffff;
                 }
 
@@ -296,7 +296,7 @@ contract DogeRelay is IDogeRelay {
         }
 
         myblocks[blockSha256Hash] = bi;
-        m_saveAncestors(blockSha256Hash, hashPrevBlock);  // increments ibIndex
+        saveAncestors(blockSha256Hash, hashPrevBlock);  // increments ibIndex
 
         delete onholdBlocks[uint(_proposalId)];
 
@@ -309,7 +309,7 @@ contract DogeRelay is IDogeRelay {
         // bitcoinj (so libdohj, dogecoin java implemntation) uses 2**256 as a dividend.
         // Investigate: May dogerelay best block be different than libdohj best block in some border cases?
         // Does libdohj matches dogecoin core?
-        m_setScore(blockSha256Hash, scoreBlock);
+        setScore(blockSha256Hash, scoreBlock);
 
         // equality allows block with same score to become an (alternate) tip, so that
         // when an (existing) tip becomes stale, the chain can continue with the alternate tip
@@ -417,7 +417,7 @@ contract DogeRelay is IDogeRelay {
             bnNew = POW_LIMIT;
         }
 
-        return m_toCompactBits(bnNew);
+        return toCompactBits(bnNew);
     }
 
     uint constant HASH_SIZE = 32;
@@ -475,7 +475,7 @@ contract DogeRelay is IDogeRelay {
     // @param _txBlockHash - hash of the block that might contain the transaction
     // @return - SHA-256 hash of _txBytes if the transaction is in the block, 0 otherwise
     function verifyTx(bytes _txBytes, uint _txIndex, uint[] _siblings, uint _txBlockHash) public returns (uint) {
-        uint txHash = m_dblShaFlip(_txBytes);
+        uint txHash = dblShaFlip(_txBytes);
 
         if (_txBytes.length == 64) {  // todo: is check 32 also needed?
             VerifyTransaction(bytes32(txHash), ERR_TX_64BYTE);
@@ -505,7 +505,7 @@ contract DogeRelay is IDogeRelay {
     // 20040 (ERR_MERKLE_ROOT) if the block is in the main chain but the Merkle proof fails.
     function helperVerifyHash__(uint256 _txHash, uint _txIndex, uint[] _siblings, uint _txBlockHash) private returns (uint) {
         // TODO: implement when dealing with incentives
-        // if (!feePaid(_txBlockHash, m_getFeeAmount(_txBlockHash))) {  // in incentive.se
+        // if (!feePaid(_txBlockHash, getFeeAmount(_txBlockHash))) {  // in incentive.se
         //    VerifyTransaction(bytes32(_txHash), ERR_BAD_FEE);
         //    return (ERR_BAD_FEE);
         // }
@@ -515,10 +515,10 @@ contract DogeRelay is IDogeRelay {
             return (ERR_CONFIRMATIONS);
         }
 
-  //      if (!priv_inMainChain__(_txBlockHash)) {
-  //          VerifyTransaction(bytes32(_txHash), ERR_CHAIN);
-  //          return (ERR_CHAIN);
-  //      }
+    //    if (!priv_inMainChain__(_txBlockHash)) {
+    //        VerifyTransaction(bytes32(_txHash), ERR_CHAIN);
+    //        return (ERR_CHAIN);
+       }
 
         if (computeMerkle(_txHash, _txIndex, _siblings) != getMerkleRoot(_txBlockHash)) {
           VerifyTransaction(bytes32(_txHash), ERR_MERKLE_ROOT);
@@ -565,18 +565,18 @@ contract DogeRelay is IDogeRelay {
         //locator.push(blockHash);
         locator[0] = blockHash;
         for (uint i = 0 ; i < NUM_ANCESTOR_DEPTHS ; i++) {
-            // uint blockHash2 = internalBlock[m_getAncestor(blockHash, i)];
+            // uint blockHash2 = internalBlock[getAncestor(blockHash, i)];
             //if (blockHash2 != 0) {
             //    locator.push(blockHash2);
             //}
-            locator[i+1] = internalBlock[m_getAncestor(blockHash, i)];
+            locator[i+1] = internalBlock[getAncestor(blockHash, i)];
         }
         return locator;
     }
 
     // @dev - return the height of the best block (chain tip)
     function getBestBlockHeight() public view returns (uint) {
-        return m_getHeight(bestBlockHash);
+        return getHeight(bestBlockHash);
     }
 
     // @dev - return the hash of the best block (chain tip)
@@ -589,28 +589,28 @@ contract DogeRelay is IDogeRelay {
     //
     // @param _blockHash - hash of the block whose ancestors are being saved
     // @param _hashPrevBlock - hash of its parent block
-    function m_saveAncestors(uint _blockHash, uint _hashPrevBlock) private {
+    function saveAncestors(uint _blockHash, uint _hashPrevBlock) private {
         internalBlock[ibIndex] = _blockHash;
-        m_setIbIndex(_blockHash, ibIndex);
+        setIbIndex(_blockHash, ibIndex);
         ibIndex += 1;
 
-        m_setHeight(_blockHash, m_getHeight(_hashPrevBlock) + 1);
+        setHeight(_blockHash, getHeight(_hashPrevBlock) + 1);
 
         // 8 indexes into internalBlock can be stored inside one ancestor (32 byte) word
         uint ancWord = 0;
 
         // the first ancestor is the index to _hashPrevBlock, and write it to ancWord
-        uint32 prevIbIndex = m_getIbIndex(_hashPrevBlock);
-        ancWord = m_mwrite32(ancWord, 0, prevIbIndex);
+        uint32 prevIbIndex = getIbIndex(_hashPrevBlock);
+        ancWord = mwrite32(ancWord, 0, prevIbIndex);
 
-        uint blockHeight = m_getHeight(_blockHash);
+        uint blockHeight = getHeight(_blockHash);
 
         // update ancWord with the remaining indexes
         for (uint i = 1 ; i < NUM_ANCESTOR_DEPTHS ; i++) {
-            if (blockHeight % m_getAncDepth(i) == 1) {
-                ancWord = m_mwrite32(ancWord, 4*i, prevIbIndex);
+            if (blockHeight % getAncDepth(i) == 1) {
+                ancWord = mwrite32(ancWord, 4*i, prevIbIndex);
             } else {
-                ancWord = m_mwrite32(ancWord, 4*i, m_getAncestor(_hashPrevBlock, i));
+                ancWord = mwrite32(ancWord, 4*i, getAncestor(_hashPrevBlock, i));
             }
         }
         //log1(bytes32(_blockHash), bytes32(ancWord));
@@ -629,7 +629,7 @@ contract DogeRelay is IDogeRelay {
     function priv_inMainChain__(uint _blockHash) private view returns (bool) {
         require(msg.sender == address(this));
 
-        uint blockHeight = m_getHeight(_blockHash);
+        uint blockHeight = getHeight(_blockHash);
 
         // By assuming that a block with height 0 does not exist, we can do
         // this optimization and immediate say that _blockHash is not in the main chain.
@@ -658,11 +658,11 @@ contract DogeRelay is IDogeRelay {
         uint blockHash = bestBlockHash;
         uint anc_index = NUM_ANCESTOR_DEPTHS - 1;
 
-        while (m_getHeight(blockHash) > _blockHeight) {
-            while (m_getHeight(blockHash) - _blockHeight < m_getAncDepth(anc_index) && anc_index > 0) {
+        while (getHeight(blockHash) > _blockHeight) {
+            while (getHeight(blockHash) - _blockHeight < getAncDepth(anc_index) && anc_index > 0) {
                 anc_index -= 1;
             }
-            blockHash = internalBlock[m_getAncestor(blockHash, anc_index)];
+            blockHash = internalBlock[getAncestor(blockHash, anc_index)];
         }
 
         return blockHash;
@@ -670,13 +670,13 @@ contract DogeRelay is IDogeRelay {
 
     // @dev - a block's _ancestor storage slot contains 8 indexes into internalBlock, so
     // this function returns the index that can be used to look up the desired ancestor
-    // e.g. for combined usage, internalBlock[m_getAncestor(someBlock, 2)] will
+    // e.g. for combined usage, internalBlock[getAncestor(someBlock, 2)] will
     // return the block hash of someBlock's 3rd ancestor
     //
     // @param _blockHash - hash of the block whose ancestor is being looked up
     // @param _whichAncestor - index of ancestor to be looked up; an integer between 0 and 7 where 0 is the given block's parent
     // @return - desired ancestor's hash
-    function m_getAncestor(uint _blockHash, uint _whichAncestor) private view returns (uint32) {
+    function getAncestor(uint _blockHash, uint _whichAncestor) private view returns (uint32) {
         return uint32 ((myblocks[_blockHash]._ancestor * (2**(32*uint(_whichAncestor)))) / BYTES_28);
     }
 
@@ -684,7 +684,7 @@ contract DogeRelay is IDogeRelay {
     //
     // @param _index - index of ancestor to be looked up; an integer between 0 and 7
     // @return - depth corresponding to said index, i.e. 5**index
-    function m_getAncDepth(uint _index) private pure returns (uint) {
+    function getAncDepth(uint _index) private pure returns (uint) {
         return 5**(uint(_index));
     }
 
@@ -694,7 +694,7 @@ contract DogeRelay is IDogeRelay {
     // @param _word - information to be partially overwritten
     // @param _position - position to start writing from
     // @param _eightBytes - information to be written
-    function m_mwrite64(uint _word, uint8 _position, uint64 _eightBytes) private pure returns (uint result) {
+    function mwrite64(uint _word, uint8 _position, uint64 _eightBytes) private pure returns (uint result) {
         assembly {
             let pointer := mload(0x40)
             mstore(pointer, _word)
@@ -716,7 +716,7 @@ contract DogeRelay is IDogeRelay {
     // @param _word - information to be partially overwritten
     // @param _position - position to start writing from
     // @param _eightBytes - information to be written
-    function m_mwrite128(uint _word, uint8 _position, uint128 _sixteenBytes) private pure returns (uint result) {
+    function mwrite128(uint _word, uint8 _position, uint128 _sixteenBytes) private pure returns (uint result) {
         assembly {
             let pointer := mload(0x40)
             mstore(pointer, _word)
@@ -746,7 +746,7 @@ contract DogeRelay is IDogeRelay {
     // @param _word - information to be partially overwritten
     // @param _position - position to start writing from
     // @param _eightBytes - information to be written
-    function m_mwrite32(uint _word, uint _position, uint32 _fourBytes) private pure returns (uint result) {
+    function mwrite32(uint _word, uint _position, uint32 _fourBytes) private pure returns (uint result) {
         assembly {
             let pointer := mload(0x40)
             mstore(pointer, _word)
@@ -789,12 +789,12 @@ contract DogeRelay is IDogeRelay {
     // @param _rawBytes - first 80 bytes of a block header
     // @return - exact same header information in BlockHeader struct form
     function parseHeaderBytes(bytes _rawBytes, uint pos) internal view returns (BlockHeader bh) {
-        bh.version = f_version(_rawBytes, pos);
-        bh.time = f_getTimestamp(_rawBytes, pos);
-        bh.bits = f_bits(_rawBytes, pos);
+        bh.version = getVersion(_rawBytes, pos);
+        bh.time = getTimestamp(_rawBytes, pos);
+        bh.bits = getBits(_rawBytes, pos);
         bh.blockHash = DogeTx.flip32Bytes(uint(sha256(sha256mem(_rawBytes, pos, 80))));
-        bh.prevBlock = f_hashPrevBlock(_rawBytes, pos);
-        bh.merkleRoot = f_merkleRoot(_rawBytes, pos);
+        bh.prevBlock = getHashPrevBlock(_rawBytes, pos);
+        bh.merkleRoot = getHeaderMerkleRoot(_rawBytes, pos);
     }
 
     // @dev - For a valid proof, returns the root of the Merkle tree.
@@ -856,24 +856,24 @@ contract DogeRelay is IDogeRelay {
     //
     // @param _val - difficulty in target format
     // @return - difficulty in bits format
-    function m_toCompactBits(uint _val) private pure returns (uint32) {
-        uint nbytes = uint (m_shiftRight((m_bitLen(_val) + 7), 3));
+    function toCompactBits(uint _val) private pure returns (uint32) {
+        uint nbytes = uint (shiftRight((bitLen(_val) + 7), 3));
         uint32 compact = 0;
         if (nbytes <= 3) {
-            compact = uint32 (m_shiftLeft((_val & 0xFFFFFF), 8 * (3 - nbytes)));
+            compact = uint32 (shiftLeft((_val & 0xFFFFFF), 8 * (3 - nbytes)));
         } else {
-            compact = uint32 (m_shiftRight(_val, 8 * (nbytes - 3)));
+            compact = uint32 (shiftRight(_val, 8 * (nbytes - 3)));
             compact = uint32 (compact & 0xFFFFFF);
         }
 
         // If the sign bit (0x00800000) is set, divide the mantissa by 256 and
         // increase the exponent to get an encoding without it set.
         if ((compact & 0x00800000) > 0) {
-            compact = uint32(m_shiftRight(compact, 8));
+            compact = uint32(shiftRight(compact, 8));
             nbytes += 1;
         }
 
-        return compact | uint32(m_shiftLeft(nbytes, 24));
+        return compact | uint32(shiftLeft(nbytes, 24));
     }
 
     // @dev - get the block hash of a Dogecoin block's parent
@@ -887,14 +887,14 @@ contract DogeRelay is IDogeRelay {
     // @dev - get the timestamp from a Dogecoin block header
     // @param _blockHash - hash of the block whose timestamp is to be returned
     // @return - block's timestamp in big-endian format
-    function m_getTimestamp(uint _blockHash) internal view returns (uint32 result) {
+    function getTimestamp(uint _blockHash) internal view returns (uint32 result) {
         return myblocks[_blockHash]._blockHeader.time;
      }
 
     // @dev - get difficulty (in bits format) from a Dogecoin block header
     // @param _blockHash - hash of the block whose difficulty is to be returned
     // @return - block's bits in big-endian format
-    function m_getBits(uint _blockHash) internal view returns (uint32 result) {
+    function getBits(uint _blockHash) internal view returns (uint32 result) {
         return myblocks[_blockHash]._blockHeader.bits;
     }
 
@@ -908,7 +908,7 @@ contract DogeRelay is IDogeRelay {
     // @dev - Bitcoin-way of hashing
     // @param _dataBytes - raw data to be hashed
     // @return - result of applying SHA-256 twice to raw data and then flipping the bytes
-    function m_dblShaFlip(bytes _dataBytes) private pure returns (uint) {
+    function dblShaFlip(bytes _dataBytes) private pure returns (uint) {
         return DogeTx.flip32Bytes(uint(sha256(sha256(_dataBytes))));
     }
 
@@ -940,7 +940,7 @@ contract DogeRelay is IDogeRelay {
     // @param _val - value to be shifted
     // @param _shift - number of bits to shift
     // @return - `_val` shifted `_shift` bits to the right, i.e. divided by 2**`_shift`
-    function m_shiftRight(uint _val, uint _shift) private pure returns (uint) {
+    function shiftRight(uint _val, uint _shift) private pure returns (uint) {
         return _val / uint(2)**_shift;
     }
 
@@ -949,7 +949,7 @@ contract DogeRelay is IDogeRelay {
     // @param _val - value to be shifted
     // @param _shift - number of bits to shift
     // @return - `_val` shifted `_shift` bits to the left, i.e. multiplied by 2**`_shift`
-    function m_shiftLeft(uint _val, uint _shift) private pure returns (uint) {
+    function shiftLeft(uint _val, uint _shift) private pure returns (uint) {
         return _val * uint(2)**_shift;
     }
 
@@ -957,10 +957,10 @@ contract DogeRelay is IDogeRelay {
     //
     // @param _val - unsigned integer value
     // @return - given value's bit length
-    function m_bitLen(uint _val) private pure returns (uint length) {
+    function bitLen(uint _val) private pure returns (uint length) {
         uint int_type = _val;
         while (int_type > 0) {
-          int_type = m_shiftRight(int_type, 1);
+          int_type = shiftRight(int_type, 1);
           length += 1;
         }
     }
@@ -974,9 +974,9 @@ contract DogeRelay is IDogeRelay {
     //
     // @param _blockHash - hash of the block whose height is to be set
     // @param _blockHeight - value that the height is being set to
-    function m_setHeight(uint _blockHash, uint64 _blockHeight) private {
+    function setHeight(uint _blockHash, uint64 _blockHeight) private {
         uint info = myblocks[_blockHash]._info;
-        info = m_mwrite64(info, 0, _blockHeight);
+        info = mwrite64(info, 0, _blockHeight);
         myblocks[_blockHash]._info = info;
     }
 
@@ -984,7 +984,7 @@ contract DogeRelay is IDogeRelay {
     //
     // @param _blockHash - hash identifying the block
     // @result - height of the block identified by `_blockHash`
-    function m_getHeight(uint _blockHash) internal view returns (uint64) {
+    function getHeight(uint _blockHash) internal view returns (uint64) {
         return uint64(myblocks[_blockHash]._info / BYTES_24);
     }
 
@@ -994,10 +994,10 @@ contract DogeRelay is IDogeRelay {
     // @param _blockHash - hash of the block whose internal index is to be set
     // @param _internalIndex - value that the index is being set to;
     // required to be DogeRelay's internal block index at the time it is called
-    function m_setIbIndex(uint _blockHash, uint32 _internalIndex) private {
+    function setIbIndex(uint _blockHash, uint32 _internalIndex) private {
         uint info = myblocks[_blockHash]._info;
         uint64 internalIndex64 = _internalIndex;
-        info = m_mwrite64(info, 8, internalIndex64);
+        info = mwrite64(info, 8, internalIndex64);
         myblocks[_blockHash]._info = info;
     }
 
@@ -1005,7 +1005,7 @@ contract DogeRelay is IDogeRelay {
     //
     // @param _blockHash - hash identifying the block
     // @result - internal index of the block identified by `_blockHash`
-    function m_getIbIndex(uint _blockHash) private view returns (uint32) {
+    function getIbIndex(uint _blockHash) private view returns (uint32) {
         return uint32(myblocks[_blockHash]._info * BYTES_8 / BYTES_24);
     }
 
@@ -1014,9 +1014,9 @@ contract DogeRelay is IDogeRelay {
     //
     // @param _blockHash - hash of the block whose work is to be set
     // @param _blockScore - work that has been put into the block
-    function m_setScore(uint _blockHash, uint128 _blockScore) private {
+    function setScore(uint _blockHash, uint128 _blockScore) private {
         uint info = myblocks[_blockHash]._info;
-        info = m_mwrite128(info, 16, _blockScore);
+        info = mwrite128(info, 16, _blockScore);
         myblocks[_blockHash]._info = info;
     }
 
@@ -1024,7 +1024,7 @@ contract DogeRelay is IDogeRelay {
     //
     // @param _blockHash - hash identifying the block
     // @result - work put into the block identified by `_blockHash`
-    function m_getScore(uint _blockHash) internal view returns (uint128) {
+    function getScore(uint _blockHash) internal view returns (uint128) {
         return uint128(myblocks[_blockHash]._info * BYTES_16 / BYTES_16);
     }
 
@@ -1040,7 +1040,7 @@ contract DogeRelay is IDogeRelay {
     // @param _blockHeader - Dogecoin block header bytes
     // @param pos - where to start reading version from
     // @return - block's version in big endian format
-    function f_version(bytes memory _blockHeader, uint pos) internal pure returns (uint32 version) {
+    function getVersion(bytes memory _blockHeader, uint pos) internal pure returns (uint32 version) {
         assembly {
             let word := mload(add(add(_blockHeader, 0x4), pos))
             version := add(byte(24, word),
@@ -1055,7 +1055,7 @@ contract DogeRelay is IDogeRelay {
     // @param _blockHeader - Dogecoin block header bytes
     // @param pos - where to start reading hash from
     // @return - hash of block's parent in big endian format
-    function f_hashPrevBlock(bytes memory _blockHeader, uint pos) internal pure returns (uint) {
+    function getHashPrevBlock(bytes memory _blockHeader, uint pos) internal pure returns (uint) {
         uint hashPrevBlock;
         assembly {
             hashPrevBlock := mload(add(add(_blockHeader, 0x24), pos))
@@ -1068,7 +1068,7 @@ contract DogeRelay is IDogeRelay {
     // @param _blockHeader - Dogecoin block header bytes
     // @param pos - where to start reading root from
     // @return - block's Merkle root in big endian format
-    function f_merkleRoot(bytes _blockHeader, uint pos) private pure returns (uint) {
+    function getHeaderMerkleRoot(bytes _blockHeader, uint pos) private pure returns (uint) {
         uint merkle;
         assembly {
             merkle := mload(add(add(_blockHeader, 0x44), pos))
@@ -1081,7 +1081,7 @@ contract DogeRelay is IDogeRelay {
     // @param _blockHeader - Dogecoin block header bytes
     // @param pos - where to start reading bits from
     // @return - block's difficulty in bits format, also big-endian
-    function f_bits(bytes memory _blockHeader, uint pos) internal pure returns (uint32 bits) {
+    function getBits(bytes memory _blockHeader, uint pos) internal pure returns (uint32 bits) {
         assembly {
             let word := mload(add(add(_blockHeader, 0x50), pos))
             bits := add(byte(24, word),
@@ -1096,7 +1096,7 @@ contract DogeRelay is IDogeRelay {
     // @param _blockHeader - Dogecoin block header bytes
     // @param pos - where to start reading bits from
     // @return - block's timestamp in big-endian format
-    function f_getTimestamp(bytes memory _blockHeader, uint pos) internal pure returns (uint32 time) {
+    function getTimestamp(bytes memory _blockHeader, uint pos) internal pure returns (uint32 time) {
         assembly {
             let word := mload(add(add(_blockHeader, 0x4c), pos))
             time := add(byte(24, word),

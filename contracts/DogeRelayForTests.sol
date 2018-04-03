@@ -26,7 +26,7 @@ contract DogeRelayForTests is DogeRelay {
     // return the chainWork of the Tip
     // http://bitcoin.stackexchange.com/questions/26869/what-is-chainwork
     function getChainWork() public view returns (uint128) {
-        return m_getScore(bestBlockHash);
+        return getScore(bestBlockHash);
     }
 
 
@@ -39,7 +39,7 @@ contract DogeRelayForTests is DogeRelay {
     function getAverageChainWork() public view returns (uint) {
         uint blockHash = bestBlockHash;
 
-        uint128 chainWorkTip = m_getScore(blockHash);
+        uint128 chainWorkTip = getScore(blockHash);
 
         uint8 i = 0;
         while (i < 10) {
@@ -47,9 +47,9 @@ contract DogeRelayForTests is DogeRelay {
             i += 1;
         }
 
-        // uint128 chainWork10Ancestors = m_getScore(blockHash);
+        // uint128 chainWork10Ancestors = getScore(blockHash);
 
-        return (chainWorkTip - m_getScore(blockHash));
+        return (chainWorkTip - getScore(blockHash));
     }
 
     // returns the block header (zeros for a header that does not exist) when
@@ -68,12 +68,12 @@ contract DogeRelayForTests is DogeRelay {
         return getPrevBlock(blockHash);
     }
 
-    function m_getTimestampPublic(uint blockHash) public view returns (uint32 result) {
-        return m_getTimestamp(blockHash);
+    function getTimestampPublic(uint blockHash) public view returns (uint32 result) {
+        return getTimestamp(blockHash);
     }
 
-    function m_getBitsPublic(uint blockHash) public view returns (uint32 result) {
-        return m_getBits(blockHash);
+    function getBitsPublic(uint blockHash) public view returns (uint32 result) {
+        return getBits(blockHash);
     }
 
     function targetFromBitsPublic(uint32 bits) public pure returns (uint) {

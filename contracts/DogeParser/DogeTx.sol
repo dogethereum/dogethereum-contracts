@@ -469,7 +469,7 @@ library DogeTx {
             }
         }
     }
-    function f_hashPrevBlock(bytes memory data, uint pos) internal pure returns (uint) {
+    function getHashPrevBlock(bytes memory data, uint pos) internal pure returns (uint) {
         uint hashPrevBlock;
         assembly {
             hashPrevBlock := mload(add(add(data, 0x24), pos))
