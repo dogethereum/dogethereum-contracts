@@ -467,7 +467,7 @@ contract DogeRelay is IDogeRelay {
 
     // @dev - Checks whether the transaction given by `_txBytes` is in the block identified by `_txBlockHash`.
     // First it guards against a Merkle tree collision attack by raising an error if the transaction is exactly 64 bytes long,
-    // then it calls helperVerifyHash__ to do the actual check.
+    // then it calls helperVerifyHash to do the actual check.
     //
     // @param _txBytes - transaction bytes
     // @param _txIndex - transaction's index within the block
@@ -482,10 +482,10 @@ contract DogeRelay is IDogeRelay {
             return 0;
         }
 
-        if (helperVerifyHash__(txHash, _txIndex, _siblings, _txBlockHash) == 1) {
+        if (helperVerifyHash(txHash, _txIndex, _siblings, _txBlockHash) == 1) {
             return txHash;
         } else {
-            // log is done via helperVerifyHash__
+            // log is done via helperVerifyHash
             return 0;
         }
     }
@@ -503,7 +503,7 @@ contract DogeRelay is IDogeRelay {
     // @return - 1 if the transaction is in the block and the block is in the main chain,
     // 20020 (ERR_CONFIRMATIONS) if the block is not in the main chain,
     // 20040 (ERR_MERKLE_ROOT) if the block is in the main chain but the Merkle proof fails.
-    function helperVerifyHash__(uint256 _txHash, uint _txIndex, uint[] _siblings, uint _txBlockHash) private returns (uint) {
+    function helperVerifyHash(uint256 _txHash, uint _txIndex, uint[] _siblings, uint _txBlockHash) private returns (uint) {
         // TODO: implement when dealing with incentives
         // if (!feePaid(_txBlockHash, getFeeAmount(_txBlockHash))) {  // in incentive.se
         //    VerifyTransaction(bytes32(_txHash), ERR_BAD_FEE);
@@ -515,7 +515,7 @@ contract DogeRelay is IDogeRelay {
             return (ERR_CONFIRMATIONS);
         }
 
-    //    if (!priv_inMainChain__(_txBlockHash)) {
+    //    if (!inMainChain(_txBlockHash)) {
     //        VerifyTransaction(bytes32(_txHash), ERR_CHAIN);
     //        return (ERR_CHAIN);
        }
@@ -626,7 +626,7 @@ contract DogeRelay is IDogeRelay {
     // @param _blockHash - hash of the block being searched for in the main chain
     // @return - true if the block identified by _blockHash is in the main chain,
     // false otherwise
-    function priv_inMainChain__(uint _blockHash) private view returns (bool) {
+    function inMainChain(uint _blockHash) private view returns (bool) {
         require(msg.sender == address(this));
 
         uint blockHeight = getHeight(_blockHash);
@@ -639,7 +639,7 @@ contract DogeRelay is IDogeRelay {
           return false;
         }
 
-        return (priv_fastGetBlockHash__(blockHeight) == _blockHash);
+        return (fastGetBlockHash(blockHeight) == _blockHash);
     }
 
     // @dev - private (to prevent leeching)
@@ -651,7 +651,7 @@ contract DogeRelay is IDogeRelay {
     //
     // @param _blockHeight - block height
     // @return - hash corresponding to block of height _blockHeight
-    function priv_fastGetBlockHash__(uint _blockHeight) internal view returns (uint) {
+    function fastGetBlockHash(uint _blockHeight) internal view returns (uint) {
         //Comment out require to make tests work
         //require(msg.sender == address(this));
 

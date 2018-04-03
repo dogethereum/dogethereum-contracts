@@ -19,7 +19,7 @@ contract DogeRelayForTests is DogeRelay {
     }
 
     function getBlockHash(uint blockHeight) public view returns (uint) {
-        return priv_fastGetBlockHash__(blockHeight);
+        return fastGetBlockHash(blockHeight);
     }
 
 
