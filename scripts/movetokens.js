@@ -9,7 +9,7 @@ module.exports = async function(DogeToken, web3, command, callback) {
   var tokenHolderAddress = "0xd2394f3fad76167e7583a876c292c86ed10305da";      
   var tokenHolderPrivateKey = "0xf968fec769bdd389e33755d6b8a704c04e3ab958f99cc6a8b2bcf467807f9634";
   var tokenHolderAddress2 = "0xd2394f3fad76167e7583a876c292c86ed10305db";
-  var valueToTransfer = 100000000;
+  var valueToTransfer = 300000000;
 
   var dt = await DogeToken.deployed();
 

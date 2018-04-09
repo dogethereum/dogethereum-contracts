@@ -63,7 +63,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
 
     // Unlock section begin
 
-    uint constant MIN_UNLOCK_VALUE = 1000000000; // 10 doges
+    uint constant MIN_UNLOCK_VALUE = 300000000; // 3 doges
     uint constant MIN_FEE = 100000000; // 1 doge
     uint constant BASE_FEE = 50000000; // 0.5 doge
     uint constant FEE_PER_INPUT = 100000000; // 1 doge
