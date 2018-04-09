@@ -14,7 +14,7 @@ contract('DogeRelay2', function(accounts) {
     await dogeRelay.setInitialParent(block974400Hash, 974400, 1, {from: accounts[0]});
 
     const blockScryptHash = `0x${utils.calcHeaderPoW(block974401Header)}`;
-    await dogeRelay.storeBlockHeader(block974401Header, blockScryptHash, accounts[2], {from: accounts[0]});
+    await dogeRelay.storeBlockHeader(block974401Header, blockScryptHash, {from: accounts[0]});
 
     const bestBlockHash = await dogeRelay.getBestBlockHash.call();
     assert.equal(utils.formatHexUint32(bestBlockHash.toString(16)), utils.remove0x(block974401Hash), "chain head hash is not the expected one");

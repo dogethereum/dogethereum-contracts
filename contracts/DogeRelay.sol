@@ -173,11 +173,11 @@ contract DogeRelay is IDogeRelay {
     // @param _proposedScryptBlockHash - not-yet-validated scrypt hash
     // @param _truebitClaimantAddress - address of party who will be verifying scrypt hash
     // @return - 1 if the block has been properly stored (i.e. scrypt hash matches target difficulty), 0 otherwise
-    function storeBlockHeader(bytes _blockHeaderBytes, uint _proposedScryptBlockHash, address _truebitClaimantAddress) public returns (uint) {
-        return storeBlockHeaderInternal(_blockHeaderBytes, 0, _blockHeaderBytes.length, _proposedScryptBlockHash, _truebitClaimantAddress);
+    function storeBlockHeader(bytes _blockHeaderBytes, uint _proposedScryptBlockHash) public returns (uint) {
+        return storeBlockHeaderInternal(_blockHeaderBytes, 0, _blockHeaderBytes.length, _proposedScryptBlockHash);
     }
 
-    function storeBlockHeaderInternal(bytes _blockHeaderBytes, uint pos, uint len, uint _proposedScryptBlockHash, address _truebitClaimantAddress) internal returns (uint) {
+    function storeBlockHeaderInternal(bytes _blockHeaderBytes, uint pos, uint len, uint _proposedScryptBlockHash) internal returns (uint) {
         // blockHash should be a function parameter in dogecoin because the hash can not be calculated onchain.
         // Code here should call the Scrypt validator contract to make sure the supplied hash of the block is correct
         // If the block is merge mined, there are 2 Scrypts functions to execute, the one that checks PoW of the litecoin block
@@ -207,7 +207,7 @@ contract DogeRelay is IDogeRelay {
                 return 0;
             }
 
-            scryptChecker.checkScrypt(DogeTx.sliceArray(_blockHeaderBytes, pos + len - 80, pos + len), bytes32(ap.scryptHash), _truebitClaimantAddress, bytes32(onholdIdx)); //DogeTx.sliceArray(...) is a merge mined block header, therefore longer than a regular block header
+            scryptChecker.checkScrypt(DogeTx.sliceArray(_blockHeaderBytes, pos + len - 80, pos + len), bytes32(ap.scryptHash), msg.sender, bytes32(onholdIdx)); //DogeTx.sliceArray(...) is a merge mined block header, therefore longer than a regular block header
 
         } else {
             // Normal block
@@ -216,7 +216,7 @@ contract DogeRelay is IDogeRelay {
                 return 0;
             }
 
-            scryptChecker.checkScrypt(DogeTx.sliceArray(_blockHeaderBytes, 0, 80), bytes32(_proposedScryptBlockHash), _truebitClaimantAddress, bytes32(onholdIdx)); //For normal blocks, we just need to slice the first 80 bytes
+            scryptChecker.checkScrypt(DogeTx.sliceArray(_blockHeaderBytes, 0, 80), bytes32(_proposedScryptBlockHash), msg.sender, bytes32(onholdIdx)); //For normal blocks, we just need to slice the first 80 bytes
         }
 
         return 1;
@@ -432,7 +432,7 @@ contract DogeRelay is IDogeRelay {
     // _hashesBytes[i] should be _headersBytes[i]'s scrypt hash
     // @param count - number of headers sent
     // @return - height of last stored block
-    function bulkStoreHeaders(bytes _headersBytes, bytes _hashesBytes, uint count, address truebitClaimantAddress) public returns (uint result) {
+    function bulkStoreHeaders(bytes _headersBytes, bytes _hashesBytes, uint count) public returns (uint result) {
         //uint8 HEADER_SIZE = 80;
         uint headersOffset = 0;
         uint hashesOffset = 0;
@@ -441,7 +441,7 @@ contract DogeRelay is IDogeRelay {
             uint currHeaderLength = bytesToUint32(_headersBytes, headersOffset);
             headersOffset += 4;
             //log2(bytes32(currHeaderLength), bytes32(headersOffset), bytes32(headersEndIndex));
-            result = storeBlockHeaderInternal(_headersBytes, headersOffset, currHeaderLength, uint(bytesToBytes32(_hashesBytes, hashesOffset)), truebitClaimantAddress);
+            result = storeBlockHeaderInternal(_headersBytes, headersOffset, currHeaderLength, uint(bytesToBytes32(_hashesBytes, hashesOffset)));
             headersOffset += currHeaderLength;
             hashesOffset += HASH_SIZE;
             i += 1;
@@ -515,9 +515,9 @@ contract DogeRelay is IDogeRelay {
             return (ERR_CONFIRMATIONS);
         }
 
-    //    if (!inMainChain(_txBlockHash)) {
-    //        VerifyTransaction(bytes32(_txHash), ERR_CHAIN);
-    //        return (ERR_CHAIN);
+       if (!inMainChain(_txBlockHash)) {
+           VerifyTransaction(bytes32(_txHash), ERR_CHAIN);
+           return (ERR_CHAIN);
        }
 
         if (computeMerkle(_txHash, _txIndex, _siblings) != getMerkleRoot(_txBlockHash)) {
@@ -627,8 +627,6 @@ contract DogeRelay is IDogeRelay {
     // @return - true if the block identified by _blockHash is in the main chain,
     // false otherwise
     function inMainChain(uint _blockHash) private view returns (bool) {
-        require(msg.sender == address(this));
-
         uint blockHeight = getHeight(_blockHash);
 
         // By assuming that a block with height 0 does not exist, we can do
@@ -636,7 +634,7 @@ contract DogeRelay is IDogeRelay {
         // However, the consequence is that
         // the genesis block must be at height 1 instead of 0 [see setInitialParent()]
         if (blockHeight == 0) {
-          return false;
+            return false;
         }
 
         return (fastGetBlockHash(blockHeight) == _blockHash);
@@ -652,9 +650,6 @@ contract DogeRelay is IDogeRelay {
     // @param _blockHeight - block height
     // @return - hash corresponding to block of height _blockHeight
     function fastGetBlockHash(uint _blockHeight) internal view returns (uint) {
-        //Comment out require to make tests work
-        //require(msg.sender == address(this));
-
         uint blockHash = bestBlockHash;
         uint anc_index = NUM_ANCESTOR_DEPTHS - 1;
 
@@ -960,8 +955,8 @@ contract DogeRelay is IDogeRelay {
     function bitLen(uint _val) private pure returns (uint length) {
         uint int_type = _val;
         while (int_type > 0) {
-          int_type = shiftRight(int_type, 1);
-          length += 1;
+            int_type = shiftRight(int_type, 1);
+            length += 1;
         }
     }
 

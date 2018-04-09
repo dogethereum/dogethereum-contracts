@@ -34,7 +34,7 @@ contract('test_bulkStoreHeaders', (accounts) => {
     let bestBlockHash;
 
     await dogeRelay.setInitialParent(block974400Hash, 974400, 1, {from: accounts[0]});
-    await dogeRelay.bulkStoreHeaders(headers, hashes, 7, accounts[2], {from: accounts[0]});
+    await dogeRelay.bulkStoreHeaders(headers, hashes, 7, {from: accounts[0]});
 
     bestBlockHeight = await dogeRelay.getBestBlockHeight.call();
     assert.equal(bestBlockHeight.toNumber(), 974407, "blocks not stored as expected");
