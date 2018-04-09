@@ -20,7 +20,7 @@ contract('test_bulkStoreHeaders4', (accounts) => {
     const headers = `0x${rawHeaders.map(utils.addSizeToHeader).join('')}`;
     const hashes = `0x${rawHeaders.map(utils.calcHeaderPoW).join('')}`;
 
-    const result = await dogeRelay.bulkStoreHeaders(headers, hashes, 11, accounts[2], {from: accounts[0]});
+    const result = await dogeRelay.bulkStoreHeaders(headers, hashes, 11, {from: accounts[0]});
     // console.log(result.receipt.logs);
 
     const chainWork = await dogeRelay.getChainWork.call();
