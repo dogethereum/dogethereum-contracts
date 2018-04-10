@@ -33,19 +33,19 @@ async function deployDevelopment(deployer, network, accounts, networkId, trusted
 }
 
 async function deployProduction(deployer, network, accounts, networkId, trustedDogeEthPriceOracle, dogethereumRecipient) {
-  await deployer.deploy(Set);
-  await deployer.deploy(DogeTx);
+  await deployer.deploy(Set, {gas: 300000});
+  await deployer.deploy(DogeTx, {gas: 100000});
 
   await deployer.link(Set, DogeToken);
   await deployer.link(DogeTx, DogeToken);
 
-  await deployer.deploy(DogeRelay, networkId);
-  await deployer.deploy(DogeToken, DogeRelay.address, trustedDogeEthPriceOracle, dogethereumRecipient);
+  await deployer.deploy(DogeRelay, networkId, {gas: 3600000});
+  await deployer.deploy(DogeToken, DogeRelay.address, trustedDogeEthPriceOracle, dogethereumRecipient, {gas: 4200000});
 
-  await deployer.deploy(ScryptCheckerDummy, DogeRelay.address, true)
+  await deployer.deploy(ScryptCheckerDummy, DogeRelay.address, true, {gas: 1000000})
 
   const dogeRelay = DogeRelay.at(DogeRelay.address);
-  await dogeRelay.setScryptChecker(ScryptCheckerDummy.address);
+  await dogeRelay.setScryptChecker(ScryptCheckerDummy.address, {gas: 100000});
 }
 
 module.exports = function(deployer, network, accounts) {
