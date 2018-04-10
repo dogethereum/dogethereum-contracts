@@ -1,5 +1,7 @@
 # DogeRelay
 
+[![Build Status](https://travis-ci.org/dogethereum/dogerelay.svg?branch=master)](https://travis-ci.org/dogethereum/dogerelay)
+
 DogeRelay is a set of contracts that enable sending coins from the Dogecoin blockchain to ethereum blockchain.
 
 Core components:
