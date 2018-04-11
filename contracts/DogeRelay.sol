@@ -770,7 +770,8 @@ contract DogeRelay is IDogeRelay {
 
     function sha256mem(bytes memory _rawBytes, uint offset, uint len) internal view returns (bytes32 result) {
         assembly {
-            // Call precompiled contract to copy data
+            // Call sha256 precompiled contract (located in address 0x02) to copy data.
+            // Assign to ptr the next available memory position (stored in memory position 0x40).
             let ptr := mload(0x40)
             if iszero(staticcall(gas, 0x02, add(add(_rawBytes, 0x20), offset), len, ptr, 0x20)) {
                 revert(0, 0)
