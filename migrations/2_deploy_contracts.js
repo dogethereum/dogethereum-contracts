@@ -32,7 +32,7 @@ async function deployDevelopment(deployer, network, accounts, networkId, trusted
   await dogeRelay.setScryptChecker(ScryptCheckerDummy.address);
 }
 
-async function deployProduction(deployer, network, accounts, networkId, trustedDogeEthPriceOracle, dogethereumRecipient) {
+async function deployIntegration(deployer, network, accounts, networkId, trustedDogeEthPriceOracle, dogethereumRecipient) {
   await deployer.deploy(Set, {gas: 300000});
   await deployer.deploy(DogeTx, {gas: 100000});
 
@@ -60,11 +60,11 @@ module.exports = function(deployer, network, accounts) {
     if (network === 'development') {
       await deployDevelopment(deployer, network, accounts, DOGE_MAINNET, trustedDogeEthPriceOracle, dogethereumRecipientUnitTest);
     } else if (network === 'ropsten') {
-      await deployProduction(deployer, network, accounts, DOGE_MAINNET, trustedDogeEthPriceOracle, dogethereumRecipientIntegrationDogeMain);
+      await deployIntegration(deployer, network, accounts, DOGE_MAINNET, trustedDogeEthPriceOracle, dogethereumRecipientIntegrationDogeMain);
     } else if (network === 'integrationDogeMain') {
-      await deployProduction(deployer, network, accounts, DOGE_MAINNET, trustedDogeEthPriceOracle, dogethereumRecipientIntegrationDogeMain);
+      await deployIntegration(deployer, network, accounts, DOGE_MAINNET, trustedDogeEthPriceOracle, dogethereumRecipientIntegrationDogeMain);
     } else if (network === 'integrationDogeRegtest') {
-      await deployProduction(deployer, network, accounts, DOGE_REGTEST, trustedDogeEthPriceOracle, dogethereumRecipientIntegrationDogeRegtest);
+      await deployIntegration(deployer, network, accounts, DOGE_REGTEST, trustedDogeEthPriceOracle, dogethereumRecipientIntegrationDogeRegtest);
     }
   });
 };
