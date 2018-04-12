@@ -52,7 +52,7 @@ module.exports = function(deployer, network, accounts) {
 
     var trustedDogeEthPriceOracle;
     if (network === 'development' || network === 'integrationDogeRegtest' || network === 'integrationDogeMain') {
-      trustedDogeEthPriceOracle = accounts[3]
+      trustedDogeEthPriceOracle = accounts[2]
     } else {
       trustedDogeEthPriceOracle = trustedDogeEthPriceOracleRopsten;
     }
