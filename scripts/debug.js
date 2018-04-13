@@ -34,4 +34,11 @@ module.exports = async function(callback) {
     var utxo = await dt.utxos(i);
     console.log("utxo [" + i + "]: " + utxo);  
   }
+  var unlockRequestEvent = dt.UnlockRequest({}, {fromBlock: 0, toBlock: "latest"});
+  var myResults = unlockRequestEvent.get(function(error, logs){ 
+     if (error) console.log("error : " + error);
+     console.log("unlock request events : " + JSON.stringify(logs));
+  });
+
+
 }
