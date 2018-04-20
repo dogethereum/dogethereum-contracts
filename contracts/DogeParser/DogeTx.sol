@@ -172,16 +172,6 @@ library DogeTx {
         }
     }
 
-    // Parses a doge tx
-    // Inputs
-    // txBytes: tx byte arrar
-    // expected_output_address: lock address (expected to be on 1st or 2nd output, require() fails otherwise)
-    // Outputs
-    // output_value: amount sent to the lock address in satoshis
-    // inputPubKey: "x" axis value of the public key used to sign the first output
-    // inputPubKeyOdd: Indicates inputPubKey odd bit
-    // outputIndex: number of output where expected_output_address was found
-
     struct ParseTransactionVariablesStruct {
         uint pos;
         bytes20 output_address;
@@ -190,6 +180,16 @@ library DogeTx {
         bytes32 inputPubKey;
         bool inputPubKeyOdd;    
     }
+    
+    // Parses a doge tx
+    // Inputs
+    // txBytes: tx byte array
+    // expected_output_address: lock address (expected to be on 1st or 2nd output, require() fails otherwise)
+    // Outputs
+    // output_value: amount sent to the lock address in satoshis
+    // inputPubKey: "x" axis value of the public key used to sign the first output
+    // inputPubKeyOdd: Indicates inputPubKey odd bit
+    // outputIndex: number of output where expected_output_address was found
 
     function parseTransaction(bytes txBytes, bytes20 expected_output_address) internal pure
              returns (uint, bytes32, bool, uint16)
