@@ -6,7 +6,7 @@ const Superblocks = artifacts.require('Superblocks');
 contract('Superblocks', (accounts) => {
   let superblocks;
   before(async () => {
-    superblocks = await Superblocks.deployed();
+    superblocks = await Superblocks.new();
   });
   describe('Utils', () => {
     let hash;

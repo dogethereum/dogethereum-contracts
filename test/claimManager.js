@@ -32,7 +32,7 @@ contract('ClaimManager', (accounts) => {
     const hashes = rawHeaders.map(utils.calcBlockHash);
     const merkleRoot = utils.makeMerkle(hashes);
     before(async () => {
-      claimManager = await ClaimManager.deployed();
+      claimManager = await ClaimManager.new();
     });
     it('Initialized', async () => {
       const result = await claimManager.initialize(emptyMerkleRoot, initAccumulatedWork, initTimestamp, initLastHash, initParentHash, { from: owner });
