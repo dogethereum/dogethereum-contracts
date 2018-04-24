@@ -1,9 +1,11 @@
 const utils = require('./utils');
 const ClaimManager = artifacts.require('ClaimManager');
+const Superblocks = artifacts.require('Superblocks');
 
 
 contract('ClaimManager', (accounts) => {
   let claimManager;
+  let superblocks;
   let id0;
   let id1;
   let id2;
@@ -32,10 +34,13 @@ contract('ClaimManager', (accounts) => {
     const hashes = rawHeaders.map(utils.calcBlockHash);
     const merkleRoot = utils.makeMerkle(hashes);
     before(async () => {
-      claimManager = await ClaimManager.new();
+      superblocks = await Superblocks.new();
+      claimManager = await ClaimManager.new(superblocks.address);
+      superblocks.setClaimManager(claimManager.address);
     });
     it('Initialized', async () => {
-      const result = await claimManager.initialize(emptyMerkleRoot, initAccumulatedWork, initTimestamp, initLastHash, initParentHash, { from: owner });
+      const result = await superblocks.initialize(emptyMerkleRoot, initAccumulatedWork, initTimestamp, initLastHash, initParentHash, { from: owner });
+      // console.log(JSON.stringify(result, null, '  '));
       assert.equal(result.logs[0].event, 'NewSuperblock', 'New superblock proposed');
       id0 = result.logs[0].args.superblockId;
     });
@@ -47,20 +52,20 @@ contract('ClaimManager', (accounts) => {
       assert.equal(result.logs[0].event, 'DepositMade', 'Challenger deposit made');
     });
     it('Propose', async () => {
-      const best = await claimManager.getBestSuperblock();
+      const best = await superblocks.getBestSuperblock();
       assert.equal(id0, best, 'Best superblock should match');
       const accumulatedWork = 1;
       const timestamp = (new Date()).getTime() / 1000;
       const lastHash = hashes[hashes.length - 1];
       const parentHash = id0;
       const result = await claimManager.proposeSuperblock(merkleRoot, accumulatedWork, timestamp, lastHash, parentHash, { from: submitter });
-      assert.equal(result.logs[0].event, 'NewSuperblock', 'New superblock proposed');
-      id1 = result.logs[0].args.superblockId;
+      assert.equal(result.logs[1].event, 'SuperblockClaimCreated', 'New superblock proposed');
+      id1 = result.logs[1].args.superblockId;
     });
     it('Challenge', async () => {
       const result = await claimManager.challengeSuperblock(id1, { from: challenger });
-      assert.equal(result.logs[2].event, 'SuperblockClaimChallenged', 'Superblock challenged');
-      claimId1 = result.logs[2].args.claimId;
+      assert.equal(result.logs[1].event, 'SuperblockClaimChallenged', 'Superblock challenged');
+      claimId1 = result.logs[1].args.claimId;
     });
     it('Start Battle', async () => {
       const result = await claimManager.runNextBattleSession(claimId1, { from: submitter });
@@ -70,19 +75,23 @@ contract('ClaimManager', (accounts) => {
     it('Query hashes', async () => {
       const session = await claimManager.getSession(claimId1, challenger);
       assert.equal(session, sessionId1, 'Sessions should match');
-      await claimManager.query(sessionId1, 0, 0, { from: challenger });
+      result = await claimManager.query(sessionId1, 0, 0, { from: challenger });
+      assert.equal(result.logs[0].event, 'NewQuery', 'Query hashes');
     });
     it('Verify hashes', async () => {
       const data = utils.hashesToData(hashes);
-      await claimManager.respond(sessionId1, 0, data, { from: submitter });
+      const result = await claimManager.respond(sessionId1, 0, data, { from: submitter });
+      assert.equal(result.logs[0].event, 'NewResponse', 'Hashes accepted');
     });
     hashes.forEach((hash, idx) => {
       it(`Query blocks header ${hash}`, async () => {
         await claimManager.query(sessionId1, 1, hash, { from: challenger });
+        assert.equal(result.logs[0].event, 'NewQuery', 'Query block header');
       });
       it(`Answer blocks header ${hash}`, async () => {
         const data = utils.headerToData(rawHeaders[idx]);
         const result = await claimManager.respond(sessionId1, 1, data, { from: submitter });
+        assert.equal(result.logs[0].event, 'NewResponse', 'Block header accepted');
       });
     });
     it('Verify superblock', async () => {
@@ -91,7 +100,7 @@ contract('ClaimManager', (accounts) => {
     });
     it('Accept superblock', async () => {
       const result = await claimManager.checkClaimFinished(claimId1, { from: submitter });
-      assert.equal(result.logs[2].event, 'SuperblockClaimSuccessful', 'Superblock accepted');
+      assert.equal(result.logs[1].event, 'SuperblockClaimSuccessful', 'Superblock accepted');
     });
   });
 });

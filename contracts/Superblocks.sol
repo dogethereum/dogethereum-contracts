@@ -36,8 +36,24 @@ contract Superblocks {
 
     event ErrorSuperblock(bytes32 superblockId, uint err);
 
+    // ClaimManager
+    address public claimManager;
+
+    modifier onlyClaimManager() {
+        require(msg.sender == claimManager);
+        _;
+    }
+
     // @dev – the constructor
     function Superblocks() public {
+    }
+
+    // @dev - sets ClaimManager instance associated with managing superblocks.
+    // Once claimManager has been set, it cannot be changed.
+    // @param _claimManager - address of the ClaimManager contract to be associated with
+    function setClaimManager(address _claimManager) public {
+        require(address(claimManager) == 0x0 && _claimManager != 0x0);
+        claimManager = _claimManager;
     }
 
     // @dev - Initializes superblocks contract
@@ -171,15 +187,15 @@ contract Superblocks {
     //
     // @param _superblockId Id of the superblock to semi-approve
     // @return Error code and superblockId
-    function semiApprove(bytes32 _superblockId) public returns (uint) {
+    function semiApprove(bytes32 _superblockId) public returns (uint, bytes32) {
         SuperblockInfo storage superblock = superblocks[_superblockId];
         if (superblock.status != Status.InBattle) {
             emit ErrorSuperblock(_superblockId, ERR_SUPERBLOCK_BAD_STATUS);
-            return ERR_SUPERBLOCK_BAD_STATUS;
+            return (ERR_SUPERBLOCK_BAD_STATUS, 0);
         }
         superblock.status = Status.SemiApproved;
         emit SemiApprovedSuperblock(_superblockId, msg.sender);
-        return ERR_SUPERBLOCK_OK;
+        return (ERR_SUPERBLOCK_OK, _superblockId);
     }
 
     // @dev - Invalidates a superblock
@@ -190,15 +206,15 @@ contract Superblocks {
     //
     // @param _superblockId Id of the superblock to invalidate
     // @return Error code and superblockId
-    function invalidate(bytes32 _superblockId) public returns (uint) {
+    function invalidate(bytes32 _superblockId) public returns (uint, bytes32) {
         SuperblockInfo storage superblock = superblocks[_superblockId];
         if (superblock.status != Status.InBattle && superblock.status != Status.SemiApproved) {
             emit ErrorSuperblock(_superblockId, ERR_SUPERBLOCK_BAD_STATUS);
-            return ERR_SUPERBLOCK_BAD_STATUS;
+            return (ERR_SUPERBLOCK_BAD_STATUS, 0);
         }
         superblock.status = Status.Invalid;
         emit InvalidSuperblock(_superblockId, msg.sender);
-        return ERR_SUPERBLOCK_OK;
+        return (ERR_SUPERBLOCK_OK, _superblockId);
     }
 
     // @dev - Evaluate the SuperblockId
@@ -214,7 +230,6 @@ contract Superblocks {
     function calcSuperblockId(bytes32 _blocksMerkleRoot, uint _accumulatedWork, uint _timestamp, bytes32 _lastHash, bytes32 _parentId) public pure returns (bytes32) {
         return keccak256(_blocksMerkleRoot, _accumulatedWork, _timestamp, _lastHash, _parentId);
     }
-
 
     // @dev - Returns the superblock with the most accumulated work
     //
@@ -282,6 +297,14 @@ contract Superblocks {
         }
         return hashes[0];
     }
+
+    function verifyMerkleRoot(bytes32 _superblockId, bytes32[] _hashes) public view returns (bool) {
+        bytes32 merkleRoot = makeMerkle(_hashes);
+        SuperblockInfo storage superblock = superblocks[_superblockId];
+        return (merkleRoot == superblock.blocksMerkleRoot);
+    }
+
+    // FIXME: Unify error codes with ClaimManager
 
     // Error codes
     uint constant ERR_SUPERBLOCK_OK = 0;

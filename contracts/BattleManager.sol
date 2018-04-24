@@ -36,14 +36,7 @@ contract BattleManager {
     uint sessionsCount = 0;
 
     // @dev - Start a battle session
-    function beginBattleSession(
-        bytes32 claimId,
-        address challenger,
-        address claimant
-    )
-        public
-        returns (bytes32)
-    {
+    function beginBattleSession(bytes32 claimId, address challenger, address claimant) public returns (bytes32) {
         bytes32 sessionId = bytes32(sessionsCount+1);
         BattleSession storage s = sessions[sessionId];
         s.id = sessionId;
@@ -66,10 +59,7 @@ contract BattleManager {
     function queryBlockHeader(bytes32 claimId, bytes32 blockHash) internal;
 
     // @dev - For the challenger to start a query
-    function query(bytes32 sessionId, uint step, bytes32 data)
-        onlyChallenger(sessionId)
-        public
-    {
+    function query(bytes32 sessionId, uint step, bytes32 data) onlyChallenger(sessionId) public {
         BattleSession storage s = sessions[sessionId];
         bytes32 claimId = s.claimId;
         if (step == 0) {
@@ -89,10 +79,7 @@ contract BattleManager {
     function verifyBlockHeader(bytes32 claimId, bytes data) internal;
 
     // @dev - For the submitter to respond to challenger queries
-    function respond(bytes32 sessionId, uint step, bytes data)
-        onlyClaimant(sessionId)
-        public
-    {
+    function respond(bytes32 sessionId, uint step, bytes data) onlyClaimant(sessionId) public {
         BattleSession storage s = sessions[sessionId];
         bytes32 claimId = s.claimId;
         if (step == 0) {
@@ -121,9 +108,7 @@ contract BattleManager {
     }
 
     // @dev - Able to trigger conviction if time of response is too high
-    function timeout(bytes32 sessionId, bytes32 claimId)
-        public
-    {
+    function timeout(bytes32 sessionId, bytes32 claimId) public {
         BattleSession storage session = sessions[sessionId];
         require(session.claimant != 0);
         if (
@@ -145,9 +130,7 @@ contract BattleManager {
     function sessionDecided(bytes32 sessionId, bytes32 claimId, address winner, address loser) internal;
 
     // @dev - To be called when a challenger is convicted
-    function challengerConvicted(bytes32 sessionId, address challenger, bytes32 claimId)
-        internal
-    {
+    function challengerConvicted(bytes32 sessionId, address challenger, bytes32 claimId) internal {
         BattleSession storage s = sessions[sessionId];
         sessionDecided(sessionId, claimId, s.claimant, s.challenger);
         disable(sessionId);
@@ -155,9 +138,7 @@ contract BattleManager {
     }
 
     // @dev - To be called when a submitter is convicted
-    function claimantConvicted(bytes32 sessionId, address claimant, bytes32 claimId)
-        internal
-    {
+    function claimantConvicted(bytes32 sessionId, address claimant, bytes32 claimId) internal {
         BattleSession storage s = sessions[sessionId];
         sessionDecided(sessionId, claimId, s.challenger, s.claimant);
         disable(sessionId);
@@ -166,9 +147,7 @@ contract BattleManager {
 
     // @dev - Disable session
     // It should be called only when either the submitter or the challenger were convicted.
-    function disable(bytes32 sessionId)
-        internal
-    {
+    function disable(bytes32 sessionId) internal {
         delete sessions[sessionId];
     }
 }

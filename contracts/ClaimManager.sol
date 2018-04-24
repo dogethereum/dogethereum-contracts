@@ -8,7 +8,7 @@ import {BattleManager} from './BattleManager.sol';
 // @dev - Manager of superblock claims
 //
 // Manages superblocks proposal and challenges
-contract ClaimManager is DepositsManager, Superblocks, BattleManager {
+contract ClaimManager is DepositsManager, BattleManager {
     uint private numClaims = 1;
     uint public minDeposit = 1;
 
@@ -56,13 +56,17 @@ contract ClaimManager is DepositsManager, Superblocks, BattleManager {
     // Active Superblock claims
     mapping(bytes32 => SuperblockClaim) private claims;
 
+    Superblocks superblocks;
+
     modifier onlyBy(address _account) {
         require(msg.sender == _account);
         _;
     }
 
-    // @dev – the constructor
-    function ClaimManager() public {
+    // @dev – Configures the contract storing the superblocks
+    // @param _superblocks Contract that manages superblocks
+    function ClaimManager(Superblocks _superblocks) public {
+        superblocks = _superblocks;
     }
 
     // @dev – locks up part of the a user's deposit into a claim.
@@ -128,7 +132,7 @@ contract ClaimManager is DepositsManager, Superblocks, BattleManager {
 
         uint err;
         bytes32 superblockId;
-        (err, superblockId) = propose(_blocksMerkleRoot, _accumulatedWork, _timestamp, _lastHash, _parentHash);
+        (err, superblockId) = superblocks.propose(_blocksMerkleRoot, _accumulatedWork, _timestamp, _lastHash, _parentHash);
         if (err != 0) {
             return (err, superblockId);
         }
@@ -167,7 +171,7 @@ contract ClaimManager is DepositsManager, Superblocks, BattleManager {
         bondDeposit(claimId, msg.sender, minDeposit);
 
         uint err;
-        (err, ) = challenge(superblockId);
+        (err, ) = superblocks.challenge(superblockId);
         if (err != 0) {
             return (err, 0);
         }
@@ -267,7 +271,7 @@ contract ClaimManager is DepositsManager, Superblocks, BattleManager {
 
         claim.decided = true;
 
-        semiApprove(claim.superblockId);
+        superblocks.semiApprove(claim.superblockId);
 
         unbondDeposit(claimId, claim.claimant);
 
@@ -327,9 +331,7 @@ contract ClaimManager is DepositsManager, Superblocks, BattleManager {
             for (uint i=0; i<count; ++i) {
                 claim.blockHashes.push(readBytes32(data, i));
             }
-            bytes32 merkleRoot = makeMerkle(claim.blockHashes);
-            SuperblockInfo storage superblock = superblocks[claim.superblockId];
-            require(merkleRoot == superblock.blocksMerkleRoot);
+            require(superblocks.verifyMerkleRoot(claim.superblockId, claim.blockHashes));
         }
     }
 
@@ -374,4 +376,15 @@ contract ClaimManager is DepositsManager, Superblocks, BattleManager {
         }
         return false;
     }
+
+    //FIXME: Consolidate with error constants in Superblocks in a single file
+    // Error codes
+    uint constant ERR_SUPERBLOCK_OK = 0;
+    uint constant ERR_SUPERBLOCK_EXIST = 50010;
+    uint constant ERR_SUPERBLOCK_BAD_STATUS = 50020;
+    uint constant ERR_SUPERBLOCK_TIMEOUT = 50030;
+    uint constant ERR_SUPERBLOCK_INVALID_MERKLE = 50040;
+    uint constant ERR_SUPERBLOCK_BAD_PARENT = 50050;
+
+    uint constant ERR_SUPERBLOCK_MIN_DEPOSIT = 50060;
 }

@@ -4,8 +4,10 @@ import "./TransactionProcessor.sol";
 import "./IScryptChecker.sol";
 import "./IDogeRelay.sol";
 import "./DogeParser/DogeTx.sol";
+import "./Superblocks.sol";
 
-contract DogeRelay is IDogeRelay {
+
+contract DogeRelay is IDogeRelay, Superblocks {
 
     enum Network { MAINNET, TESTNET, REGTEST }
 
