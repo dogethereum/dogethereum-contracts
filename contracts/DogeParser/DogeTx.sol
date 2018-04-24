@@ -116,7 +116,7 @@ library DogeTx {
         // uint firstBytes;
 
         uint scryptHash;
-        
+
         uint txHash;
 
         uint coinbaseMerkleRoot; // Merkle root of auxiliary block hash tree; stored in coinbase tx field
@@ -188,7 +188,7 @@ library DogeTx {
         uint output_value;
         uint16 outputIndex;
         bytes32 inputPubKey;
-        bool inputPubKeyOdd;    
+        bool inputPubKeyOdd;
     }
 
     function parseTransaction(bytes txBytes, bytes20 expected_output_public_key_hash) internal pure
@@ -326,7 +326,7 @@ library DogeTx {
 
         return (script_starts, script_lens, pos);
     }
-    // similar to scanInputs, but consumes less gas since it doesn't store the inputs 
+    // similar to scanInputs, but consumes less gas since it doesn't store the inputs
     // also returns position of coinbase tx for later use
     function skipInputsAndGetScriptPos(bytes txBytes, uint pos, uint stop) private pure
              returns (uint, uint)
@@ -699,11 +699,129 @@ library DogeTx {
                 }
             }
         }
-        
+
         if (!found) { // no merge mining header
             return (0, position - 4, ERR_NO_MERGE_HEADER);
         } else {
             return (sliceBytes32Int(rawBytes, position), position - 4, 1);
         }
+    }
+
+    // @dev - Reverse bytes of its inputs
+    function flipBytes32(bytes32 _input) internal pure returns (bytes32) {
+        bytes32 result;
+        assembly {
+            let pos := mload(0x40)
+            for { let i := 0 } lt(i, 32) { i := add(i, 1) } {
+                mstore8(add(pos, i), byte(sub(31, i), _input))
+            }
+            result := mload(pos)
+        }
+        return result;
+    }
+
+    // @dev - Evaluate the merkle root
+    //
+    // Given an array of hashes it calculates the
+    // root of the merkle tree.
+    //
+    // @return root of merkle tree
+    function makeMerkle(bytes32[] hashes) internal pure returns (bytes32) {
+        uint length = hashes.length;
+        if (length == 1) return hashes[0];
+        require(length > 0);
+        uint i;
+        uint j;
+        uint k;
+        k = 0;
+        for (i=0; i<length; i += 2) {
+            j = i+1<length ? i+1 : length-1;
+            hashes[k] = sha256(sha256(flipBytes32(hashes[i]), flipBytes32(hashes[j])));
+            k += 1;
+        }
+        length = k;
+        while (length > 1) {
+            k = 0;
+            for (i = 0; i < length; i += 2) {
+                j = i+1<length ? i+1 : length-1;
+                hashes[k] = sha256(sha256(hashes[i], hashes[j]));
+                k += 1;
+            }
+            length = k;
+        }
+        return flipBytes32(hashes[0]);
+    }
+
+    // @dev - For a valid proof, returns the root of the Merkle tree.
+    //
+    // @param _txHash - transaction hash
+    // @param _txIndex - transaction's index within the block it's assumed to be in
+    // @param _siblings - transaction's Merkle siblings
+    // @return - Merkle tree root of the block the transaction belongs to if the proof is valid,
+    // garbage if it's invalid
+    function computeMerkle(uint _txHash, uint _txIndex, uint[] _siblings) internal pure returns (uint) {
+        uint resultHash = _txHash;
+        uint i = 0;
+        while (i < _siblings.length) {
+            uint proofHex = _siblings[i];
+
+            uint sideOfSiblings = _txIndex % 2;  // 0 means _siblings is on the right; 1 means left
+
+            uint left;
+            uint right;
+            if (sideOfSiblings == 1) {
+                left = proofHex;
+                right = resultHash;
+            } else if (sideOfSiblings == 0) {
+                left = resultHash;
+                right = proofHex;
+            }
+
+            resultHash = concatHash(left, right);
+
+            _txIndex /= 2;
+            i += 1;
+        }
+
+        return resultHash;
+    }
+
+    // @dev - calculates the Merkle root of a tree containing Litecoin transactions
+    // in order to prove that `ap`'s coinbase tx is in that Litecoin block.
+    //
+    // @param _ap - AuxPoW information
+    // @return - Merkle root of Litecoin block that the Dogecoin block
+    // with this info was mined in if AuxPoW Merkle proof is correct,
+    // garbage otherwise
+    function computeParentMerkle(AuxPoW _ap) internal view returns (uint) {
+        return flip32Bytes(computeMerkle(_ap.txHash,
+                                         _ap.coinbaseTxIndex,
+                                         _ap.parentMerkleProof));
+    }
+
+    // @dev - calculates the Merkle root of a tree containing auxiliary block hashes
+    // in order to prove that the Dogecoin block identified by _blockHash
+    // was merge-mined in a Litecoin block.
+    //
+    // @param _blockHash - SHA-256 hash of a certain Dogecoin block
+    // @param _ap - AuxPoW information corresponding to said block
+    // @return - Merkle root of auxiliary chain tree
+    // if AuxPoW Merkle proof is correct, garbage otherwise
+    function computeChainMerkle(uint _blockHash, AuxPoW _ap) internal view returns (uint) {
+        return computeMerkle(_blockHash,
+                             _ap.dogeHashIndex,
+                             _ap.chainMerkleProof);
+    }
+
+    // @dev - Helper function for Merkle root calculation.
+    // Given two sibling nodes in a Merkle tree, calculate their parent.
+    // Concatenates hashes `_tx1` and `_tx2`, then hashes the result.
+    //
+    // @param _tx1 - Merkle node (either root or internal node)
+    // @param _tx2 - Merkle node (either root or internal node), has to be `_tx1`'s sibling
+    // @return - `_tx1` and `_tx2`'s parent, i.e. the result of concatenating them,
+    // hashing that twice and flipping the bytes.
+    function concatHash(uint _tx1, uint _tx2) internal pure returns (uint) {
+        return flip32Bytes(uint(sha256(sha256(flip32Bytes(_tx1), flip32Bytes(_tx2)))));
     }
 }

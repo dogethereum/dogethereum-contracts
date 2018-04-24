@@ -1,6 +1,7 @@
 pragma solidity ^0.4.19;
 
 import "./DogeRelay.sol";
+import "./DogeParser/DogeTx.sol";
 
 contract DogeRelayForTests is DogeRelay {
 
@@ -81,7 +82,7 @@ contract DogeRelayForTests is DogeRelay {
     }
 
     function concatHashPublic(uint tx1, uint tx2) public pure returns (uint) {
-        return concatHash(tx1, tx2);
+        return DogeTx.concatHash(tx1, tx2);
     }
 
     function flip32BytesPublic(uint input) public pure returns (uint) {

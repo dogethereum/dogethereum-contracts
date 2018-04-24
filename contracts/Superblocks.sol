@@ -1,5 +1,7 @@
 pragma solidity ^0.4.19;
 
+import "./DogeParser/DogeTx.sol";
+
 //FIXME: The access of most methods is public but should be internal
 
 // @dev - Manages superblocks
@@ -67,7 +69,6 @@ contract Superblocks {
     // @param _parentId Id of the parent superblock
     // @return Error code and superblockId
     function initialize(bytes32 _blocksMerkleRoot, uint _accumulatedWork, uint _timestamp, bytes32 _lastHash, bytes32 _parentId) public returns (uint, bytes32) {
-
         require(bestSuperblock == 0);
         require(accumulatedWork == 0);
         require(_parentId == 0);
@@ -274,53 +275,8 @@ contract Superblocks {
         );
     }
 
-    // @dev - Reverse bytes of its inputs
-    function flipBytes32(bytes32 _input) internal pure returns (bytes32) {
-        bytes32 result;
-        assembly {
-            let pos := mload(0x40)
-            for { let i := 0 } lt(i, 32) { i := add(i, 1) } {
-                mstore8(add(pos, i), byte(sub(31, i), _input))
-            }
-            result := mload(pos)
-        }
-        return result;
-    }
-
-    // @dev - Evaluate the merkle root
-    //
-    // Given an array of hashes it calculates the
-    // root of the merkle tree.
-    //
-    // @return root of merkle tree
-    function makeMerkle(bytes32[] hashes) public pure returns (bytes32) {
-        uint length = hashes.length;
-        if (length == 1) return hashes[0];
-        require(length > 0);
-        uint i;
-        uint j;
-        uint k;
-        k = 0;
-        for (i=0; i<length; i += 2) {
-            j = i+1<length ? i+1 : length-1;
-            hashes[k] = sha256(sha256(flipBytes32(hashes[i]), flipBytes32(hashes[j])));
-            k += 1;
-        }
-        length = k;
-        while (length > 1) {
-            k = 0;
-            for (i = 0; i < length; i += 2) {
-                j = i+1<length ? i+1 : length-1;
-                hashes[k] = sha256(sha256(hashes[i], hashes[j]));
-                k += 1;
-            }
-            length = k;
-        }
-        return flipBytes32(hashes[0]);
-    }
-
     function verifyMerkleRoot(bytes32 _superblockId, bytes32[] _hashes) public view returns (bool) {
-        bytes32 merkleRoot = makeMerkle(_hashes);
+        bytes32 merkleRoot = DogeTx.makeMerkle(_hashes);
         SuperblockInfo storage superblock = superblocks[_superblockId];
         return (merkleRoot == superblock.blocksMerkleRoot);
     }
