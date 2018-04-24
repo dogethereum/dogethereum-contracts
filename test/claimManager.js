@@ -14,10 +14,9 @@ contract('ClaimManager', (accounts) => {
   const owner = accounts[0];
   const submitter = accounts[1];
   const challenger = accounts[2];
-  const hashes = [];
-  const rootHash = utils.makeMerkle(hashes);
   describe('Session', () => {
-    const emptyMerkleRoot = utils.makeMerkle([]);
+    const initHashes = ["0x0000000000000000000000000000000000000000000000000000000000000000"];
+    const initMerkleRoot = utils.makeMerkle(initHashes);
     const initAccumulatedWork = 0;
     const initTimestamp = (new Date()).getTime() / 1000;
     const initLastHash = '0x00';
@@ -39,7 +38,7 @@ contract('ClaimManager', (accounts) => {
       superblocks.setClaimManager(claimManager.address);
     });
     it('Initialized', async () => {
-      const result = await superblocks.initialize(emptyMerkleRoot, initAccumulatedWork, initTimestamp, initLastHash, initParentHash, { from: owner });
+      const result = await superblocks.initialize(initMerkleRoot, initAccumulatedWork, initTimestamp, initLastHash, initParentHash, { from: owner });
       // console.log(JSON.stringify(result, null, '  '));
       assert.equal(result.logs[0].event, 'NewSuperblock', 'New superblock proposed');
       id0 = result.logs[0].args.superblockId;

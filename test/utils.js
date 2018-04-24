@@ -28,17 +28,12 @@ async function parseDataFile(filename) {
 // The hashes are expected to be 32 bytes in hexadecimal
 function makeMerkle(hashes) {
   if (hashes.length == 0) {
-    return `0x${sha256('')}`;
+    throw new Error('Cannot compute merkle tree of an empty array');
   }
-  while (hashes.length > 1) {
-    const newhashes = [];
-    for (let i=0; i< hashes.length; i+=2) {
-      const j = i+1 < hashes.length ? i+1 : hashes.length-1;
-      newhashes.push(sha256(Buffer.from(`${module.exports.formatHexUint32(module.exports.remove0x(hashes[i]))}${module.exports.formatHexUint32(module.exports.remove0x(hashes[j]))}`, 'hex')));
-    }
-    hashes = newhashes;
-  }
-  return `0x${module.exports.formatHexUint32(module.exports.remove0x(hashes[0]))}`;
+
+  return `0x${btcProof.getMerkleRoot(
+    hashes.map(x => module.exports.formatHexUint32(module.exports.remove0x(x)) )
+  )}`;
 }
 
 // Format an array of hashes to bytes array

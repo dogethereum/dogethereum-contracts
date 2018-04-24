@@ -10,7 +10,6 @@ contract('Superblocks', (accounts) => {
   });
   describe('Utils', () => {
     let hash;
-    const zeroHashes = [];
     const oneHash = [
       "0x57a8a9a8de6131bf61f5d385318c10e29a5d826eed6adbdbeedc3a0539908ed4"
     ];
@@ -40,17 +39,25 @@ contract('Superblocks', (accounts) => {
       "0xc2213074ba6cf84780030f9dc261fa31999c039811516aaf0fb8fd1e1a9fa0c3",
       "0x38d3dffed604f5a160b327ecde5147eb1aa46e3d154b98644cd2a39f0f9ab915"
     ]
-    it('Make merkle', async () => {
-      hash = await superblocks.makeMerkle(zeroHashes);
-      assert.equal(hash, utils.makeMerkle(zeroHashes), 'Empty hashes array');
+    it('Merkle javascript', async () => {
+      hash = utils.makeMerkle(oneHash);
+      assert.equal(hash, "0x57a8a9a8de6131bf61f5d385318c10e29a5d826eed6adbdbeedc3a0539908ed4", 'One hash array')
+      hash = utils.makeMerkle(twoHashes);
+      assert.equal(hash, "0xae1c24c61efe6b378017f6055b891dd62747deb23a7939cffe78002f1cfb79ab", 'Two hashes array')
+      hash = utils.makeMerkle(threeHashes);
+      assert.equal(hash, "0xe1c52ec93d4f4f83783aeede9e6b84b5ded007ec9591b521d6e5e4b6d9512d43", 'Three hashes array')
+      hash = utils.makeMerkle(manyHashes);
+      assert.equal(hash, "0xee712eefe9b4c9ecd39a71d45e975b83c9427070e54953559e78f45d2cbb03b3", 'Many hashes array')
+    })
+    it('Merkle solidity', async () => {
       hash = await superblocks.makeMerkle(oneHash);
-      assert.equal(hash, utils.makeMerkle(oneHash), 'One hash array');
+      assert.equal(hash, "0x57a8a9a8de6131bf61f5d385318c10e29a5d826eed6adbdbeedc3a0539908ed4", 'One hash array')
       hash = await superblocks.makeMerkle(twoHashes);
-      assert.equal(hash, utils.makeMerkle(twoHashes), 'Two hashes array');
+      assert.equal(hash, "0xae1c24c61efe6b378017f6055b891dd62747deb23a7939cffe78002f1cfb79ab", 'Two hashes array')
       hash = await superblocks.makeMerkle(threeHashes);
-      assert.equal(hash, utils.makeMerkle(threeHashes), 'Three hashes array');
+      assert.equal(hash, "0xe1c52ec93d4f4f83783aeede9e6b84b5ded007ec9591b521d6e5e4b6d9512d43", 'Three hashes array')
       hash = await superblocks.makeMerkle(manyHashes);
-      assert.equal(hash, utils.makeMerkle(manyHashes), 'Many hashes array');
+      assert.equal(hash, "0xee712eefe9b4c9ecd39a71d45e975b83c9427070e54953559e78f45d2cbb03b3", 'Many hashes array')
     });
     it('Superblock id', async () => {
       const superblockId = "0x4b93573044c1acca678af19f594129417cebe5b048eb5323d3ce542ba07387a6";
@@ -68,7 +75,7 @@ contract('Superblocks', (accounts) => {
     let id1;
     let id2;
     let id3;
-    const merkleRoot = utils.makeMerkle([]);
+    const merkleRoot = utils.makeMerkle(["0x0000000000000000000000000000000000000000000000000000000000000000"]);
     const accumulatedWork = 0;
     const timestamp = (new Date()).getTime() / 1000;
     const lastHash = '0x00';
