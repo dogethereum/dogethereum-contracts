@@ -208,12 +208,12 @@ library DogeTx {
 
         (output_values, output_script_starts, output_script_lens, variables.pos) = scanOutputs(txBytes, variables.pos, 2);
         // The output we are looking for should be the first or the second output
-        variables.output_public_key_hash = parseP2KHOutputScript(txBytes, output_script_starts[0], output_script_lens[0]);
+        variables.output_public_key_hash = parseP2PKHOutputScript(txBytes, output_script_starts[0], output_script_lens[0]);
         variables.output_value = output_values[0];
         variables.outputIndex = 0;
 
         if (variables.output_public_key_hash != expected_output_public_key_hash) {
-            variables.output_public_key_hash = parseP2KHOutputScript(txBytes, output_script_starts[1], output_script_lens[1]);
+            variables.output_public_key_hash = parseP2PKHOutputScript(txBytes, output_script_starts[1], output_script_lens[1]);
             variables.output_value = output_values[1];
             variables.outputIndex = 1;
         }
@@ -241,7 +241,7 @@ library DogeTx {
         (output_values, script_starts, output_script_lens, pos) = scanOutputs(txBytes, pos, 2);
 
         for (uint i = 0; i < 2; i++) {
-            var pkhash = parseP2KHOutputScript(txBytes, script_starts[i], output_script_lens[i]);
+            var pkhash = parseP2PKHOutputScript(txBytes, script_starts[i], output_script_lens[i]);
             output_public_key_hashes[i] = pkhash;
         }
 
@@ -531,7 +531,7 @@ library DogeTx {
     // Get the pubkeyhash from an output script. Assumes
     // pay-to-pubkey-hash (P2PKH) outputs.
     // Returns the pubkeyhash, or zero if unknown output.
-    function parseP2KHOutputScript(bytes txBytes, uint pos, uint script_len) private pure
+    function parseP2PKHOutputScript(bytes txBytes, uint pos, uint script_len) private pure
              returns (bytes20)
     {
         if (isP2PKH(txBytes, pos, script_len)) {
