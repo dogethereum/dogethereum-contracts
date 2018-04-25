@@ -175,23 +175,23 @@ library DogeTx {
     // Parses a doge tx
     // Inputs
     // txBytes: tx byte arrar
-    // expected_output_address: lock address (expected to be on 1st or 2nd output, require() fails otherwise)
+    // expected_output_public_key_hash: lock address (expected to be on 1st or 2nd output, require() fails otherwise)
     // Outputs
     // output_value: amount sent to the lock address in satoshis
     // inputPubKey: "x" axis value of the public key used to sign the first output
     // inputPubKeyOdd: Indicates inputPubKey odd bit
-    // outputIndex: number of output where expected_output_address was found
+    // outputIndex: number of output where expected_output_public_key_hash was found
 
     struct ParseTransactionVariablesStruct {
         uint pos;
-        bytes20 output_address;
+        bytes20 output_public_key_hash;
         uint output_value;
         uint16 outputIndex;
         bytes32 inputPubKey;
         bool inputPubKeyOdd;    
     }
 
-    function parseTransaction(bytes txBytes, bytes20 expected_output_address) internal pure
+    function parseTransaction(bytes txBytes, bytes20 expected_output_public_key_hash) internal pure
              returns (uint, bytes32, bool, uint16)
     {
         ParseTransactionVariablesStruct memory variables;
@@ -208,16 +208,16 @@ library DogeTx {
 
         (output_values, output_script_starts, output_script_lens, variables.pos) = scanOutputs(txBytes, variables.pos, 2);
         // The output we are looking for should be the first or the second output
-        variables.output_address = parseOutputScript(txBytes, output_script_starts[0], output_script_lens[0]);
+        variables.output_public_key_hash = parseP2KHOutputScript(txBytes, output_script_starts[0], output_script_lens[0]);
         variables.output_value = output_values[0];
         variables.outputIndex = 0;
 
-        if (variables.output_address != expected_output_address) {
-            variables.output_address = parseOutputScript(txBytes, output_script_starts[1], output_script_lens[1]);
+        if (variables.output_public_key_hash != expected_output_public_key_hash) {
+            variables.output_public_key_hash = parseP2KHOutputScript(txBytes, output_script_starts[1], output_script_lens[1]);
             variables.output_value = output_values[1];
             variables.outputIndex = 1;
         }
-        require(variables.output_address == expected_output_address);
+        require(variables.output_public_key_hash == expected_output_public_key_hash);
 
         return (variables.output_value, variables.inputPubKey, variables.inputPubKeyOdd, variables.outputIndex);
     }
@@ -232,7 +232,7 @@ library DogeTx {
         uint[] memory output_script_lens;
         uint[] memory script_starts;
         uint[] memory output_values;
-        bytes20[] memory output_addresses = new bytes20[](2);
+        bytes20[] memory output_public_key_hashes = new bytes20[](2);
 
         pos = 4;  // skip version
 
@@ -241,12 +241,12 @@ library DogeTx {
         (output_values, script_starts, output_script_lens, pos) = scanOutputs(txBytes, pos, 2);
 
         for (uint i = 0; i < 2; i++) {
-            var pkhash = parseOutputScript(txBytes, script_starts[i], output_script_lens[i]);
-            output_addresses[i] = pkhash;
+            var pkhash = parseP2KHOutputScript(txBytes, script_starts[i], output_script_lens[i]);
+            output_public_key_hashes[i] = pkhash;
         }
 
-        return (output_values[0], output_addresses[0],
-                output_values[1], output_addresses[1]);
+        return (output_values[0], output_public_key_hashes[0],
+                output_values[1], output_public_key_hashes[1]);
     }
 
     function getFirstInputPubKey(bytes txBytes) private pure
@@ -527,6 +527,20 @@ library DogeTx {
             return;
         }
     }
+
+    // Get the pubkeyhash from an output script. Assumes
+    // pay-to-pubkey-hash (P2PKH) outputs.
+    // Returns the pubkeyhash, or zero if unknown output.
+    function parseP2KHOutputScript(bytes txBytes, uint pos, uint script_len) private pure
+             returns (bytes20)
+    {
+        if (isP2PKH(txBytes, pos, script_len)) {
+            return sliceBytes20(txBytes, pos + 3);
+        } else {
+            return;
+        }
+    }
+
 
     // Parse a P2PKH scriptSig
     function parseScriptSig(bytes txBytes, uint pos) private pure
