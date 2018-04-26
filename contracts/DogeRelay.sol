@@ -203,7 +203,7 @@ contract DogeRelay is IDogeRelay, Superblocks {
                 return 0;
             }
 
-            uint auxPoWCode = checkAuxPoW(blockSha256Hash, ap);
+            uint auxPoWCode = DogeTx.checkAuxPoW(blockSha256Hash, ap);
             if (auxPoWCode != 1) {
                 StoreHeader(bytes32(blockSha256Hash), auxPoWCode);
                 return 0;
@@ -324,67 +324,6 @@ contract DogeRelay is IDogeRelay, Superblocks {
         return blockHeight;
     }
 
-    // @dev - checks if a merge-mined block's Merkle proofs are correct,
-    // i.e. Doge block hash is in coinbase Merkle tree
-    // and coinbase transaction is in parent Merkle tree.
-    //
-    // @param _blockHash - SHA-256 hash of the block whose Merkle proofs are being checked
-    // @param _ap - AuxPoW struct corresponding to the block
-    // @return 1 if block was merge-mined and coinbase index, chain Merkle root and Merkle proofs are correct,
-    // respective error code otherwise
-    function checkAuxPoW(uint _blockHash, DogeTx.AuxPoW _ap) private returns (uint) {
-        if (!isMergeMined(_blockHash)) {
-            return ERR_NOT_MERGE_MINED;
-        }
-
-        if (_ap.coinbaseTxIndex != 0) {
-            return ERR_COINBASE_INDEX;
-        }
-
-        if (_ap.coinbaseMerkleRootCode != 1) {
-            return _ap.coinbaseMerkleRootCode;
-        }
-
-        if (DogeTx.computeChainMerkle(_blockHash, _ap) != _ap.coinbaseMerkleRoot) {
-            return ERR_CHAIN_MERKLE;
-        }
-
-        if (DogeTx.computeParentMerkle(_ap) != _ap.parentMerkleRoot) {
-            return ERR_PARENT_MERKLE;
-        }
-
-        return 1;
-    }
-
-    // doesn't check merge mining to see if other error codes work
-    function checkAuxPoWForTests(uint _blockHash, bytes memory _auxBytes) internal returns (uint) {
-        DogeTx.AuxPoW memory ap = DogeTx.parseAuxPoW(_auxBytes);
-
-        uint32 version = bytesToUint32Flipped(_auxBytes, 0);
-
-        if (!isMergeMined(_auxBytes)) {
-            return ERR_NOT_MERGE_MINED;
-        }
-
-        if (ap.coinbaseTxIndex != 0) {
-            return ERR_COINBASE_INDEX;
-        }
-
-        if (ap.coinbaseMerkleRootCode != 1) {
-            return ap.coinbaseMerkleRootCode;
-        }
-
-        if (DogeTx.computeChainMerkle(_blockHash, ap) != ap.coinbaseMerkleRoot) {
-            return ERR_CHAIN_MERKLE;
-        }
-
-        if (DogeTx.computeParentMerkle(ap) != ap.parentMerkleRoot) {
-            return ERR_PARENT_MERKLE;
-        }
-
-        return 1;
-    }
-
     // @dev - Implementation of DigiShield, almost directly translated from
     // C++ implementation of Dogecoin. See function CalculateDogecoinNextWorkRequired
     // on dogecoin/src/dogecoin.cpp for more details.
@@ -459,12 +398,6 @@ contract DogeRelay is IDogeRelay, Superblocks {
     // e.g. for input [0x01, 0x02, 0x03 0x04] returns 0x01020304
     function bytesToUint32(bytes memory input, uint pos) internal pure returns (uint32 result) {
         result = uint32(input[pos])*(2**24) + uint32(input[pos + 1])*(2**16) + uint32(input[pos + 2])*(2**8) + uint32(input[pos + 3]);
-    }
-
-    // @dev - Converts a bytes of size 4 to uint32,
-    // e.g. for input [0x01, 0x02, 0x03 0x04] returns 0x01020304
-    function bytesToUint32Flipped(bytes memory input, uint pos) internal pure returns (uint32 result) {
-        result = uint32(input[pos]) + uint32(input[pos + 1])*(2**8) + uint32(input[pos + 2])*(2**16) + uint32(input[pos + 3])*(2**24);
     }
 
     // @dev - Checks whether the transaction given by `_txBytes` is in the block identified by `_txBlockHash`.
@@ -1058,22 +991,13 @@ contract DogeRelay is IDogeRelay, Superblocks {
         }
     }
 
-    uint32 VERSION_AUXPOW = (1 << 8);
-
+    uint32 constant VERSION_AUXPOW = (1 << 8);
     // @dev - checks version to determine if a block has merge mining information
-    function isMergeMined(bytes _rawBytes) private returns (bool) {
-        return bytesToUint32Flipped(_rawBytes, 0) & VERSION_AUXPOW != 0;
-    }
-
-    function isMergeMined(BlockHeader _block) private returns (bool) {
+    function isMergeMined(BlockHeader _block) private pure returns (bool) {
         return _block.version & VERSION_AUXPOW != 0;
     }
 
-    function isMergeMined(uint _blockHash) public returns (bool) {
-        return myblocks[_blockHash]._blockHeader.version & VERSION_AUXPOW != 0;
-    }
-
-    function getVersion(uint _blockHash) public returns (uint) {
+    function getVersion(uint _blockHash) public view returns (uint) {
         return myblocks[_blockHash]._blockHeader.version;
     }
 

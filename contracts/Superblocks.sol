@@ -281,6 +281,10 @@ contract Superblocks {
         return (merkleRoot == superblock.blocksMerkleRoot);
     }
 
+    function makeMerkle(bytes32[] hashes) public pure returns (bytes32) {
+        return DogeTx.makeMerkle(hashes);
+    }
+
     // FIXME: Unify error codes with ClaimManager
 
     // Error codes

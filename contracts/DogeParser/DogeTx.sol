@@ -107,9 +107,14 @@ library DogeTx {
     uint constant q = (p + 1) / 4;
 
     // Error codes
+    uint constant ERR_COINBASE_INDEX = 10060; // coinbase tx index within Litecoin merkle isn't 0
+    uint constant ERR_NOT_MERGE_MINED = 10070; // trying to check AuxPoW on a block that wasn't merge mined
     uint constant ERR_FOUND_TWICE = 10080; // 0xfabe6d6d found twice
     uint constant ERR_NO_MERGE_HEADER = 10090; // 0xfabe6d6d not found
     uint constant ERR_NOT_IN_FIRST_20 = 10100; // chain Merkle root isn't in the first 20 bytes of coinbase tx
+    uint constant ERR_CHAIN_MERKLE = 10110;
+    uint constant ERR_PARENT_MERKLE = 10120;
+    uint constant ERR_PROOF_OF_WORK = 10130;
 
     // AuxPoW block fields
     struct AuxPoW {
@@ -648,7 +653,7 @@ library DogeTx {
         }
     }
 
-    function parseAuxPoW(bytes rawBytes) internal
+    function parseAuxPoW(bytes rawBytes) internal view
              returns (AuxPoW memory auxpow)
     {
         // we need to traverse the bytes with a pointer because some fields are of variable length
@@ -793,7 +798,7 @@ library DogeTx {
     // @return - Merkle root of Litecoin block that the Dogecoin block
     // with this info was mined in if AuxPoW Merkle proof is correct,
     // garbage otherwise
-    function computeParentMerkle(AuxPoW _ap) internal view returns (uint) {
+    function computeParentMerkle(AuxPoW _ap) internal pure returns (uint) {
         return flip32Bytes(computeMerkle(_ap.txHash,
                                          _ap.coinbaseTxIndex,
                                          _ap.parentMerkleProof));
@@ -807,7 +812,7 @@ library DogeTx {
     // @param _ap - AuxPoW information corresponding to said block
     // @return - Merkle root of auxiliary chain tree
     // if AuxPoW Merkle proof is correct, garbage otherwise
-    function computeChainMerkle(uint _blockHash, AuxPoW _ap) internal view returns (uint) {
+    function computeChainMerkle(uint _blockHash, AuxPoW _ap) internal pure returns (uint) {
         return computeMerkle(_blockHash,
                              _ap.dogeHashIndex,
                              _ap.chainMerkleProof);
@@ -823,5 +828,33 @@ library DogeTx {
     // hashing that twice and flipping the bytes.
     function concatHash(uint _tx1, uint _tx2) internal pure returns (uint) {
         return flip32Bytes(uint(sha256(sha256(flip32Bytes(_tx1), flip32Bytes(_tx2)))));
+    }
+
+    // @dev - checks if a merge-mined block's Merkle proofs are correct,
+    // i.e. Doge block hash is in coinbase Merkle tree
+    // and coinbase transaction is in parent Merkle tree.
+    //
+    // @param _blockHash - SHA-256 hash of the block whose Merkle proofs are being checked
+    // @param _ap - AuxPoW struct corresponding to the block
+    // @return 1 if block was merge-mined and coinbase index, chain Merkle root and Merkle proofs are correct,
+    // respective error code otherwise
+    function checkAuxPoW(uint _blockHash, AuxPoW _ap) internal pure returns (uint) {
+        if (_ap.coinbaseTxIndex != 0) {
+            return ERR_COINBASE_INDEX;
+        }
+
+        if (_ap.coinbaseMerkleRootCode != 1) {
+            return _ap.coinbaseMerkleRootCode;
+        }
+
+        if (computeChainMerkle(_blockHash, _ap) != _ap.coinbaseMerkleRoot) {
+            return ERR_CHAIN_MERKLE;
+        }
+
+        if (computeParentMerkle(_ap) != _ap.parentMerkleRoot) {
+            return ERR_PARENT_MERKLE;
+        }
+
+        return 1;
     }
 }
