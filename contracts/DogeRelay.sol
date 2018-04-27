@@ -4,8 +4,10 @@ import "./TransactionProcessor.sol";
 import "./IScryptChecker.sol";
 import "./IDogeRelay.sol";
 import "./DogeParser/DogeTx.sol";
+import "./Superblocks.sol";
 
-contract DogeRelay is IDogeRelay {
+
+contract DogeRelay is IDogeRelay, Superblocks {
 
     enum Network { MAINNET, TESTNET, REGTEST }
 
@@ -201,7 +203,7 @@ contract DogeRelay is IDogeRelay {
                 return 0;
             }
 
-            uint auxPoWCode = checkAuxPoW(blockSha256Hash, ap);
+            uint auxPoWCode = DogeTx.checkAuxPoW(blockSha256Hash, ap);
             if (auxPoWCode != 1) {
                 StoreHeader(bytes32(blockSha256Hash), auxPoWCode);
                 return 0;
@@ -322,67 +324,6 @@ contract DogeRelay is IDogeRelay {
         return blockHeight;
     }
 
-    // @dev - checks if a merge-mined block's Merkle proofs are correct,
-    // i.e. Doge block hash is in coinbase Merkle tree
-    // and coinbase transaction is in parent Merkle tree.
-    //
-    // @param _blockHash - SHA-256 hash of the block whose Merkle proofs are being checked
-    // @param _ap - AuxPoW struct corresponding to the block
-    // @return 1 if block was merge-mined and coinbase index, chain Merkle root and Merkle proofs are correct,
-    // respective error code otherwise
-    function checkAuxPoW(uint _blockHash, DogeTx.AuxPoW _ap) private returns (uint) {
-        if (!isMergeMined(_blockHash)) {
-            return ERR_NOT_MERGE_MINED;
-        }
-
-        if (_ap.coinbaseTxIndex != 0) {
-            return ERR_COINBASE_INDEX;
-        }
-
-        if (_ap.coinbaseMerkleRootCode != 1) {
-            return _ap.coinbaseMerkleRootCode;
-        }
-
-        if (computeChainMerkle(_blockHash, _ap) != _ap.coinbaseMerkleRoot) {
-            return ERR_CHAIN_MERKLE;
-        }
-
-        if (computeParentMerkle(_ap) != _ap.parentMerkleRoot) {
-            return ERR_PARENT_MERKLE;
-        }
-
-        return 1;
-    }
-
-    // doesn't check merge mining to see if other error codes work
-    function checkAuxPoWForTests(uint _blockHash, bytes memory _auxBytes) internal returns (uint) {
-        DogeTx.AuxPoW memory ap = DogeTx.parseAuxPoW(_auxBytes);
-
-        uint32 version = bytesToUint32Flipped(_auxBytes, 0);
-
-        if (!isMergeMined(_auxBytes)) {
-            return ERR_NOT_MERGE_MINED;
-        }
-
-        if (ap.coinbaseTxIndex != 0) {
-            return ERR_COINBASE_INDEX;
-        }
-
-        if (ap.coinbaseMerkleRootCode != 1) {
-            return ap.coinbaseMerkleRootCode;
-        }
-
-        if (computeChainMerkle(_blockHash, ap) != ap.coinbaseMerkleRoot) {
-            return ERR_CHAIN_MERKLE;
-        }
-
-        if (computeParentMerkle(ap) != ap.parentMerkleRoot) {
-            return ERR_PARENT_MERKLE;
-        }
-
-        return 1;
-    }
-
     // @dev - Implementation of DigiShield, almost directly translated from
     // C++ implementation of Dogecoin. See function CalculateDogecoinNextWorkRequired
     // on dogecoin/src/dogecoin.cpp for more details.
@@ -459,12 +400,6 @@ contract DogeRelay is IDogeRelay {
         result = uint32(input[pos])*(2**24) + uint32(input[pos + 1])*(2**16) + uint32(input[pos + 2])*(2**8) + uint32(input[pos + 3]);
     }
 
-    // @dev - Converts a bytes of size 4 to uint32,
-    // e.g. for input [0x01, 0x02, 0x03 0x04] returns 0x01020304
-    function bytesToUint32Flipped(bytes memory input, uint pos) internal pure returns (uint32 result) {
-        result = uint32(input[pos]) + uint32(input[pos + 1])*(2**8) + uint32(input[pos + 2])*(2**16) + uint32(input[pos + 3])*(2**24);
-    }
-
     // @dev - Checks whether the transaction given by `_txBytes` is in the block identified by `_txBlockHash`.
     // First it guards against a Merkle tree collision attack by raising an error if the transaction is exactly 64 bytes long,
     // then it calls helperVerifyHash to do the actual check.
@@ -520,7 +455,7 @@ contract DogeRelay is IDogeRelay {
            return (ERR_CHAIN);
        }
 
-        if (computeMerkle(_txHash, _txIndex, _siblings) != getMerkleRoot(_txBlockHash)) {
+        if (DogeTx.computeMerkle(_txHash, _txIndex, _siblings) != getMerkleRoot(_txBlockHash)) {
           VerifyTransaction(bytes32(_txHash), ERR_MERKLE_ROOT);
           return (ERR_MERKLE_ROOT);
         }
@@ -793,40 +728,6 @@ contract DogeRelay is IDogeRelay {
         bh.merkleRoot = getHeaderMerkleRoot(_rawBytes, pos);
     }
 
-    // @dev - For a valid proof, returns the root of the Merkle tree.
-    //
-    // @param _txHash - transaction hash
-    // @param _txIndex - transaction's index within the block it's assumed to be in
-    // @param _siblings - transaction's Merkle siblings
-    // @return - Merkle tree root of the block the transaction belongs to if the proof is valid,
-    // garbage if it's invalid
-    function computeMerkle(uint _txHash, uint _txIndex, uint[] _siblings) private pure returns (uint) {
-        uint resultHash = _txHash;
-        uint i = 0;
-        while (i < _siblings.length) {
-            uint proofHex = _siblings[i];
-
-            uint sideOfSiblings = _txIndex % 2;  // 0 means _siblings is on the right; 1 means left
-
-            uint left;
-            uint right;
-            if (sideOfSiblings == 1) {
-                left = proofHex;
-                right = resultHash;
-            } else if (sideOfSiblings == 0) {
-                left = resultHash;
-                right = proofHex;
-            }
-
-            resultHash = concatHash(left, right);
-
-            _txIndex /= 2;
-            i += 1;
-        }
-
-        return resultHash;
-    }
-
     // @dev - checks whether the block identified by _blockHash is within 6 blocks of the chain's best block
     //
     // @param _blockHash - block hash
@@ -917,18 +818,6 @@ contract DogeRelay is IDogeRelay {
         uint exp = _bits / 0x1000000;  // 2**24
         uint mant = _bits & 0xffffff;
         return mant * 256**(exp - 3);
-    }
-
-    // @dev - Helper function for Merkle root calculation.
-    // Given two sibling nodes in a Merkle tree, calculate their parent.
-    // Concatenates hashes `_tx1` and `_tx2`, then hashes the result.
-    //
-    // @param _tx1 - Merkle node (either root or internal node)
-    // @param _tx2 - Merkle node (either root or internal node), has to be `_tx1`'s sibling
-    // @return - `_tx1` and `_tx2`'s parent, i.e. the result of concatenating them,
-    // hashing that twice and flipping the bytes.
-    function concatHash(uint _tx1, uint _tx2) internal pure returns (uint) {
-        return DogeTx.flip32Bytes(uint(sha256(sha256(DogeTx.flip32Bytes(_tx1), DogeTx.flip32Bytes(_tx2)))));
     }
 
     // @dev - shift information to the right by a specified number of bits
@@ -1102,50 +991,14 @@ contract DogeRelay is IDogeRelay {
         }
     }
 
-    uint32 VERSION_AUXPOW = (1 << 8);
-
+    uint32 constant VERSION_AUXPOW = (1 << 8);
     // @dev - checks version to determine if a block has merge mining information
-    function isMergeMined(bytes _rawBytes) private returns (bool) {
-        return bytesToUint32Flipped(_rawBytes, 0) & VERSION_AUXPOW != 0;
-    }
-
-    function isMergeMined(BlockHeader _block) private returns (bool) {
+    function isMergeMined(BlockHeader _block) private pure returns (bool) {
         return _block.version & VERSION_AUXPOW != 0;
     }
 
-    function isMergeMined(uint _blockHash) public returns (bool) {
-        return myblocks[_blockHash]._blockHeader.version & VERSION_AUXPOW != 0;
-    }
-
-    function getVersion(uint _blockHash) public returns (uint) {
+    function getVersion(uint _blockHash) public view returns (uint) {
         return myblocks[_blockHash]._blockHeader.version;
-    }
-
-    // @dev - calculates the Merkle root of a tree containing Litecoin transactions
-    // in order to prove that `ap`'s coinbase tx is in that Litecoin block.
-    //
-    // @param _ap - AuxPoW information
-    // @return - Merkle root of Litecoin block that the Dogecoin block
-    // with this info was mined in if AuxPoW Merkle proof is correct,
-    // garbage otherwise
-    function computeParentMerkle(DogeTx.AuxPoW _ap) private view returns (uint) {
-        return DogeTx.flip32Bytes(computeMerkle(_ap.txHash,
-                                         _ap.coinbaseTxIndex,
-                                         _ap.parentMerkleProof));
-    }
-
-    // @dev - calculates the Merkle root of a tree containing auxiliary block hashes
-    // in order to prove that the Dogecoin block identified by _blockHash
-    // was merge-mined in a Litecoin block.
-    //
-    // @param _blockHash - SHA-256 hash of a certain Dogecoin block
-    // @param _ap - AuxPoW information corresponding to said block
-    // @return - Merkle root of auxiliary chain tree
-    // if AuxPoW Merkle proof is correct, garbage otherwise
-    function computeChainMerkle(uint _blockHash, DogeTx.AuxPoW _ap) private view returns (uint) {
-        return computeMerkle(_blockHash,
-                             _ap.dogeHashIndex,
-                             _ap.chainMerkleProof);
     }
 
     // Constants

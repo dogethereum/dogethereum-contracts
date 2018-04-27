@@ -8,7 +8,7 @@ import "../DogeParser/DogeTx.sol";
 contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), TransactionProcessor {
 
     address public trustedDogeRelay;
-    bytes20 public recipientDogethereum;
+    bytes20 public operatorPublicKeyHash;
 
     Set.Data dogeTxHashesAlreadyProcessed;
     uint256 public minimumLockTxValue;
@@ -24,10 +24,10 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
     uint32 public nextUnspentUtxoIndex;
 
 
-    function DogeToken(address _trustedDogeRelay, address _trustedDogeEthPriceOracle, bytes20 _recipientDogethereum) public {
+    function DogeToken(address _trustedDogeRelay, address _trustedDogeEthPriceOracle, bytes20 _operatorPublicKeyHash) public {
         trustedDogeRelay = _trustedDogeRelay;
         trustedDogeEthPriceOracle = _trustedDogeEthPriceOracle;
-        recipientDogethereum = _recipientDogethereum;
+        operatorPublicKeyHash = _operatorPublicKeyHash;
         minimumLockTxValue = 100000000;
     }
 
@@ -35,10 +35,10 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         require(msg.sender == trustedDogeRelay);
 
         uint value;
-        bytes32 pubKey;
+        bytes32 firstInputPublicKey;
         bool odd;
         uint16 outputIndex;
-        (value, pubKey, odd, outputIndex) = DogeTx.parseTransaction(dogeTx, recipientDogethereum);
+        (value, firstInputPublicKey, odd, outputIndex) = DogeTx.parseTransaction(dogeTx, operatorPublicKeyHash);
 
         // Check tx was not processes already and add it to the dogeTxHashesAlreadyProcessed
         require(Set.insert(dogeTxHashesAlreadyProcessed, txHash));
@@ -47,7 +47,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         utxos.push(Utxo(value, txHash, outputIndex));
 
         // Calculate ethereum address from dogecoin public key
-        address destinationAddress = DogeTx.pub2address(uint256(pubKey), odd);
+        address destinationAddress = DogeTx.pub2address(uint256(firstInputPublicKey), odd);
 
         balances[destinationAddress] += value;
         NewToken(destinationAddress, value);

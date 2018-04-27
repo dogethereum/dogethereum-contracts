@@ -6,6 +6,8 @@ const DogeToken = artifacts.require('token/DogeToken');
 const DogeTokenForTests = artifacts.require('token/DogeTokenForTests');
 const DogeTx = artifacts.require('DogeTx');
 const ScryptCheckerDummy = artifacts.require('ScryptCheckerDummy');
+const Superblocks = artifacts.require('Superblocks');
+const ClaimManager = artifacts.require('ClaimManager');
 
 const scryptCheckerAddress = '0xfeedbeeffeedbeeffeedbeeffeedbeeffeedbeef';
 const dogethereumRecipientUnitTest = '0x4d905b4b815d483cdfabcd292c6f86509d0fad82';
@@ -24,12 +26,18 @@ async function deployDevelopment(deployer, network, accounts, networkId, trusted
   await deployer.link(DogeTx, DogeTokenForTests);
 
   await deployer.deploy(DogeRelayForTests, networkId);
-  await deployer.deploy(ScryptCheckerDummy, DogeRelayForTests.address, true)
-  await deployer.deploy(DogeProcessor, DogeRelayForTests.address);
   await deployer.deploy(DogeTokenForTests, DogeRelayForTests.address, trustedDogeEthPriceOracle, dogethereumRecipient);
+
+  await deployer.deploy(DogeProcessor, DogeRelayForTests.address);
+
+  await deployer.deploy(ClaimManager, DogeRelayForTests.address);
+
+  await deployer.deploy(ScryptCheckerDummy, DogeRelayForTests.address, true)
 
   const dogeRelay = DogeRelayForTests.at(DogeRelayForTests.address);
   await dogeRelay.setScryptChecker(ScryptCheckerDummy.address);
+
+  await dogeRelay.setClaimManager(ClaimManager.address);
 }
 
 async function deployIntegration(deployer, network, accounts, networkId, trustedDogeEthPriceOracle, dogethereumRecipient) {
@@ -42,9 +50,13 @@ async function deployIntegration(deployer, network, accounts, networkId, trusted
   await deployer.deploy(DogeRelay, networkId, {gas: 4500000});
   await deployer.deploy(ScryptCheckerDummy, DogeRelay.address, true, {gas: 1000000})
   await deployer.deploy(DogeToken, DogeRelay.address, trustedDogeEthPriceOracle, dogethereumRecipient, {gas: 4500000});
-  
+
+  await deployer.deploy(ClaimManager, DogeRelay.address);
+
   const dogeRelay = DogeRelay.at(DogeRelay.address);
   await dogeRelay.setScryptChecker(ScryptCheckerDummy.address, {gas: 100000});
+
+  await dogeRelay.setClaimManager(ClaimManager.address, {gas: 100000});
 }
 
 module.exports = function(deployer, network, accounts) {
