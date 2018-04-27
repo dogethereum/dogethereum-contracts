@@ -6,11 +6,11 @@ const Superblocks = artifacts.require('Superblocks');
 contract('ClaimManager', (accounts) => {
   let claimManager;
   let superblocks;
-  let id0;
-  let id1;
-  let id2;
-  let claimId1;
-  let sessionId1;
+  let superblock0;
+  let superblock1;
+  let superblock2;
+  let claim1;
+  let session1;
   const owner = accounts[0];
   const submitter = accounts[1];
   const challenger = accounts[2];
@@ -21,7 +21,7 @@ contract('ClaimManager', (accounts) => {
     const initTimestamp = (new Date()).getTime() / 1000;
     const initLastHash = '0x00';
     const initParentHash = '0x00';
-    const rawHeaders = [
+    const headers = [
       `03016200da16dd5b0168b4dc4301b0c3296b188fdb4b59099537776be21b5a53d65649a8ef7ee5829f401144e8dbd23e386597584558e1972a66e5a48a2b58cac629ee46f8455556481a041b0000000001000000010000000000000000000000000000000000000000000000000000000000000000ffffffff6403439e0de4b883e5bda9e7a59ee4bb99e9b1bcfabe6d6d65fdfa97de61e7932a69b3fc70d71fc5fec14639f4d8d92d8da7574acff1c2cd40000000f09f909f4d696e65642062792061696c696e37363232320000000000000000000000000000000000002a0000000168794696000000001976a914aa3750aa18b8a0f3f0590731e1fab934856680cf88acc5d6f6323569d4c55c658997830bce8f904bf4cb74e63cfcc8e1037a5fab03000000000004f529ba9787936a281f792a15d03dc1c6d2a45e25666432bcbe4663ad193a7f15307380ab3ab6f115e796fe4cea3b297b3c22018edad8d3982cf89fe3102265061ae397c9c145539a1de3eddfeff6ba512096542e41498cade2b4986d43d497c74c10c869bc28e301b2d9e7558237b1655f699f93a9635938f58cf750b94d4e9a00000000062900000000000000000000000000000000000000000000000000000000000000463ceed131958d98aee29089d1cf38b9728b224512e51ca3a8b1189d5ed03d0709b68fd6e328528f2a29ec7fb077c834fbf0f14c371fafcfb27444017fbf5b26fdb884bed8ad6a4bded36fc89ed8b05a6c6c0ae1cfd5fe37eb3021b32a1e29042b7a2e142329e7d0d0bffcb5cc338621a576b49d4d32991000b8d4ac793bc1f50c27ad8b8e751d85f7e9dc7a5ff18c817a72cd9976063c6849d1538f6a662d342800000003000000c63abe4881f9c765925fffb15c88cdb861e86a32f4c493a36c3e29c54dc62cf45ba4401d07d6d760e3b84fb0b9222b855c3b7c04a174f17c6e7df07d472d0126fe455556358c011b6017f799`,
       `03016200a475894849fe17b79673e7ecda4d0be2814cdbbcdd2376a5d7a4ca56b47703a16694d245b05bc4b65a26ba504fedee7f47acf3c354c2f3897964991b784074ee9446555640b1031b0000000001000000010000000000000000000000000000000000000000000000000000000000000000ffffffff6403449e0de4b883e5bda9e7a59ee4bb99e9b1bcfabe6d6d84117b09e5d99fc04280af2d78bb36915e1b196c65d454aec3b0fb88b8e1ec6240000000f09f909f4d696e65642062792077616e67636875616e776569000000000000000000000000000000001b0100000148e01995000000001976a914aa3750aa18b8a0f3f0590731e1fab934856680cf88acf2770637d9c2b6599fc2bc94a4b9c2a3c8589f2fd62e4a0459bc13f33aa401000000000005462f31ec45cdd06c1098d74e311d2182eb1320694ac39c8b13de927800959eb0c586e12adb95b25281c4fd377bda5f5b4dc4477dd237faf7c68aa7ff690cbc47c58a8ef40c56afe6262c57ccbc88f368caceb048b674a89146794434e3796f9173d35744c56a580399985ea21897a1f4ee112906634bbb7ee00e3652ff2351e1e8550037fffb2db59f11dc1d492d6311e2376abaf895acaa6d5e391259491e2d00000000062900000000000000000000000000000000000000000000000000000000000000463ceed131958d98aee29089d1cf38b9728b224512e51ca3a8b1189d5ed03d0709b68fd6e328528f2a29ec7fb077c834fbf0f14c371fafcfb27444017fbf5b26fdb884bed8ad6a4bded36fc89ed8b05a6c6c0ae1cfd5fe37eb3021b32a1e29042b7a2e142329e7d0d0bffcb5cc338621a576b49d4d32991000b8d4ac793bc1f5258991030d537050ab2d4b302f1966c3e1d25816ba5c6701710cc2e32d35cf9e280000000300000071fad47a6bcb4f483da2562d7e1afeb03bfa07a4540365fbf2ef3db5be41598052989d551f777b8ba0f13067f45d03627552e878432735738278eb500864da5594465556358c011bff0c2f00`,
       `03016200241bb260a8b2ffd509982c8230475e8c012f5bb41036ed7caa97905ec2c66fb25e2f04306e21065b956b5726e1f1dfed1a468b7309dff926628c53f453c53142b14655564c6e041b0000000001000000010000000000000000000000000000000000000000000000000000000000000000ffffffff6403449e0de4b883e5bda9e7a59ee4bb99e9b1bcfabe6d6d2eb40132424f2d742e503a6052788225449011e7ca46d5ce3be2189aab6f40f940000000f09f909f4d696e6564206279206c7463303031000000000000000000000000000000000000000000003de7050001c8abbe95000000001976a914aa3750aa18b8a0f3f0590731e1fab934856680cf88acc92c61360f08ad87f772eb16bdd893a49bf2f02bb4a3bcb8e3605b9046bb0200000000000531c3275dc3dcb07bcf550a77d5c63b29959d034536ab5afeac74c36c37727dcd5752dd9effcbda9c1e5ddc17aa1f1a984192d834b8ff5a1a60e9efd55bf94f1532391099740d20947b24a3556a61602d43e8eabc8ebdba8152459c3a3f24b5c5276a9eed0dbd8b253cef989c0b3a91ed6c2cfba17488646287cb1a8b31d20a7e808778fa84ff3413c05b7debab62b8385fa7625d5c3db31775911b54f86ddbf000000000062900000000000000000000000000000000000000000000000000000000000000463ceed131958d98aee29089d1cf38b9728b224512e51ca3a8b1189d5ed03d0709b68fd6e328528f2a29ec7fb077c834fbf0f14c371fafcfb27444017fbf5b26fdb884bed8ad6a4bded36fc89ed8b05a6c6c0ae1cfd5fe37eb3021b32a1e29042b7a2e142329e7d0d0bffcb5cc338621a576b49d4d32991000b8d4ac793bc1f50800d93cbb266b6d9cf068dea7fdb153f648f673583e0c196985ab21d576e86c280000000300000071fad47a6bcb4f483da2562d7e1afeb03bfa07a4540365fbf2ef3db5be41598057f99a71e88ddc60bdd708d004c740b816a55a924759e4de63649d21546584c0e9465556358c011b12ebae8e`,
@@ -30,8 +30,7 @@ contract('ClaimManager', (accounts) => {
       `0301620029b451ad79429fc1fd26109331ee83b858a5335952b5754993b1922d29dc2ed7c38be4f98012dedeb9372926959ca82247784933badf7b94d308d96eb195c090ec47555616c3051b0000000001000000010000000000000000000000000000000000000000000000000000000000000000ffffffff6403449e0de4b883e5bda9e7a59ee4bb99e9b1bcfabe6d6dc5eb29e28e7c54b269858b1f5b278b74eed3cbda1cf7dd506429d94f346ca9e740000000f09f909f4d696e656420627920636169726f6e670000000000000000000000000000000000000000002800000001b83af495000000001976a914aa3750aa18b8a0f3f0590731e1fab934856680cf88ac3d757a337f51482ded52a98d026b2aab20d4bd6bcedc3be5823471eada6e0300000000000631c3275dc3dcb07bcf550a77d5c63b29959d034536ab5afeac74c36c37727dcdce2b8079e87c60509d7ee92a0821d75800115f8877b5ab2a81a8b4400cf959cdcf457944488908b9f39527ac492dc490fab9b6548fb693ed38073466395fe9c659cbb38b6e245c52ea756e3d77514f23ea3e1ff4f16e0e4d9886ab3f3e1a0b0a47a0102b4ef760f0e7cbc4a53302c14d38704ee49b5fd0dfd17309ff97ba2a61729a8880632134ae072c6693b465b084086f4a2750bd86044814cb0a3fd5d12900000000062900000000000000000000000000000000000000000000000000000000000000463ceed131958d98aee29089d1cf38b9728b224512e51ca3a8b1189d5ed03d0709b68fd6e328528f2a29ec7fb077c834fbf0f14c371fafcfb27444017fbf5b26fdb884bed8ad6a4bded36fc89ed8b05a6c6c0ae1cfd5fe37eb3021b32a1e29042b7a2e142329e7d0d0bffcb5cc338621a576b49d4d32991000b8d4ac793bc1f583718a099fd33ba7cbb8e3c233e86d76375c354fa3189e5df3203fbd4f4d417c280000000300000071fad47a6bcb4f483da2562d7e1afeb03bfa07a4540365fbf2ef3db5be415980b2b87463d388a3682b24d2172f71908de64e875867df17abbf42a225b24d922d27485556358c011ba66aad20`,
       `02016200427b118bc209c9ff10f50a25181410276720ba4bb2d6e001d2897671ebd3cfe43983c016d7643b77b2bab44314d6411c68634813c2ae1a2eb4894321c609e93cb7485556932f051b0000000002000000010000000000000000000000000000000000000000000000000000000000000000ffffffff5403449e0d2cfabe6d6dbaac4ffbf483b312f20c87896d4651b22b5da8ad1fae296b733926353e066ec201000000000000002fe585abe5ae9de6b1a0203862616f6368692e636f6d2f0100000076fc0f023d010000000000000110ae0f96000000001976a9149659e4bc4b884ae48b9e8e70e22b9b7dea9ef24788ac0000000002c4e323fc827d020a0d179b3d39489ce1d2c8391eaa715248a4f836fccea12107f3798f240748c042e9b6074526232c818a192df3016a2f8c04835c336db4335ffbf3c336ec1fe51ef9e6e60460c3902d84e3c672a91001d63aa2a22edb0485cca78d32071fabf1ebc844fb2c9f37630394ef405bcc4a9211170fd7db6ebf9069c4e1386a0c75901ffa5cfc53d5e02c843508586b38ee9ede0fea5379968b0418e30c2eda83fedb03c5d1f0485d301f34fe2740ec3106891fb8041abb85d73ff2e8a0855c3d58afc5f8f3aea6c176f960e7b08dab000627c5adc09e9169da742d6e799841f20c5bcd121c0df05bcf57ab79a77b181340a440292c66539fbebee30000000000000000000300000071fad47a6bcb4f483da2562d7e1afeb03bfa07a4540365fbf2ef3db5be415980daaadd9da1da6c858fdfd94c8e297f695a6c575b65e215a8888aa9ae6cb1352bb6485556358c011bfeffbb00`,
     ];
-    const hashes = rawHeaders.map(utils.calcBlockHash);
-    const merkleRoot = utils.makeMerkle(hashes);
+    const hashes = headers.map(utils.calcBlockHash);
     before(async () => {
       superblocks = await Superblocks.new();
       claimManager = await ClaimManager.new(superblocks.address);
@@ -41,7 +40,9 @@ contract('ClaimManager', (accounts) => {
       const result = await superblocks.initialize(initMerkleRoot, initAccumulatedWork, initTimestamp, initLastHash, initParentHash, { from: owner });
       // console.log(JSON.stringify(result, null, '  '));
       assert.equal(result.logs[0].event, 'NewSuperblock', 'New superblock proposed');
-      id0 = result.logs[0].args.superblockId;
+      superblock0 = result.logs[0].args.superblockId;
+      const best = await superblocks.getBestSuperblock();
+      assert.equal(superblock0, best, 'Best superblock should match');
     });
     it('Deposit', async () => {
       //FIXME: ganache-cli creates the same transaction hash if two account send the same amount
@@ -51,54 +52,73 @@ contract('ClaimManager', (accounts) => {
       assert.equal(result.logs[0].event, 'DepositMade', 'Challenger deposit made');
     });
     it('Propose', async () => {
-      const best = await superblocks.getBestSuperblock();
-      assert.equal(id0, best, 'Best superblock should match');
       const accumulatedWork = 1;
       const timestamp = (new Date()).getTime() / 1000;
-      const lastHash = hashes[hashes.length - 1];
-      const parentHash = id0;
+      const lastHash = initHashes[0];
+      const parentHash = superblock0;
+      const merkleRoot = utils.makeMerkle(initHashes);
       const result = await claimManager.proposeSuperblock(merkleRoot, accumulatedWork, timestamp, lastHash, parentHash, { from: submitter });
       assert.equal(result.logs[1].event, 'SuperblockClaimCreated', 'New superblock proposed');
-      id1 = result.logs[1].args.superblockId;
+      superblock1 = result.logs[1].args.superblockId;
+    });
+    it('Confirm', async () => {
+      const result = await claimManager.checkClaimFinished(superblock1, { from: challenger });
+      //console.log(JSON.stringify(result, null, '  '));
+      assert.equal(result.logs[1].event, 'SuperblockClaimSuccessful', 'Superblock challenged');
+      const best = await superblocks.getBestSuperblock();
+      assert.equal(superblock1, best, 'Best superblock should match');
+      // claimId1 = result.logs[1].args.claimId;
+    });
+    it('Propose bis', async () => {
+      //const best = await superblocks.getBestSuperblock();
+      //assert.equal(id0, best, 'Best superblock should match');
+      const accumulatedWork = 2;
+      const timestamp = (new Date()).getTime() / 1000;
+      const lastHash = hashes[hashes.length - 1];
+      const parentHash = superblock1;
+      const merkleRoot = utils.makeMerkle(hashes);
+      const result = await claimManager.proposeSuperblock(merkleRoot, accumulatedWork, timestamp, lastHash, parentHash, { from: submitter });
+      assert.equal(result.logs[1].event, 'SuperblockClaimCreated', 'New superblock proposed');
+      superblock2 = result.logs[1].args.superblockId;
     });
     it('Challenge', async () => {
-      const result = await claimManager.challengeSuperblock(id1, { from: challenger });
+      const result = await claimManager.challengeSuperblock(superblock2, { from: challenger });
       assert.equal(result.logs[1].event, 'SuperblockClaimChallenged', 'Superblock challenged');
-      claimId1 = result.logs[1].args.claimId;
+      claim1 = result.logs[1].args.claimId;
     });
     it('Start Battle', async () => {
-      const result = await claimManager.runNextBattleSession(claimId1, { from: submitter });
+      const result = await claimManager.runNextBattleSession(claim1, { from: submitter });
       assert.equal(result.logs[1].event, 'VerificationGameStarted', 'Verification battle started');
-      sessionId1 = result.logs[1].args.sessionId;
+      session1 = result.logs[1].args.sessionId;
     });
     it('Query hashes', async () => {
-      const session = await claimManager.getSession(claimId1, challenger);
-      assert.equal(session, sessionId1, 'Sessions should match');
-      result = await claimManager.query(sessionId1, 0, 0, { from: challenger });
+      const session = await claimManager.getSession(claim1, challenger);
+      assert.equal(session, session1, 'Sessions should match');
+      result = await claimManager.query(session1, 0, 0, { from: challenger });
       assert.equal(result.logs[0].event, 'NewQuery', 'Query hashes');
     });
     it('Verify hashes', async () => {
       const data = utils.hashesToData(hashes);
-      const result = await claimManager.respond(sessionId1, 0, data, { from: submitter });
+      const result = await claimManager.respond(session1, 0, data, { from: submitter });
       assert.equal(result.logs[0].event, 'NewResponse', 'Hashes accepted');
     });
     hashes.forEach((hash, idx) => {
       it(`Query blocks header ${hash}`, async () => {
-        await claimManager.query(sessionId1, 1, hash, { from: challenger });
+        await claimManager.query(session1, 1, hash, { from: challenger });
         assert.equal(result.logs[0].event, 'NewQuery', 'Query block header');
       });
       it(`Answer blocks header ${hash}`, async () => {
-        const data = utils.headerToData(rawHeaders[idx]);
-        const result = await claimManager.respond(sessionId1, 1, data, { from: submitter });
+        const data = utils.headerToData(headers[idx]);
+        const result = await claimManager.respond(session1, 1, data, { from: submitter });
         assert.equal(result.logs[0].event, 'NewResponse', 'Block header accepted');
       });
     });
     it('Verify superblock', async () => {
-      const result = await claimManager.performVerification(sessionId1, { from: challenger });
+      const result = await claimManager.performVerification(session1, { from: challenger });
       assert.equal(result.logs[0].event, 'SessionDecided', 'Superblock verified');
     });
     it('Accept superblock', async () => {
-      const result = await claimManager.checkClaimFinished(claimId1, { from: submitter });
+      const result = await claimManager.checkClaimFinished(claim1, { from: submitter });
       assert.equal(result.logs[1].event, 'SuperblockClaimSuccessful', 'Superblock accepted');
     });
   });

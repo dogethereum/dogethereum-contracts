@@ -271,7 +271,11 @@ contract ClaimManager is DepositsManager, BattleManager {
 
         claim.decided = true;
 
-        superblocks.semiApprove(claim.superblockId);
+        if (claim.challengers.length == 0) {
+            superblocks.confirm(claim.superblockId);
+        } else {
+            superblocks.semiApprove(claim.superblockId);
+        }
 
         unbondDeposit(claimId, claim.claimant);
 
