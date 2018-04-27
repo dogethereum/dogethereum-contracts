@@ -147,6 +147,7 @@ contract ClaimManager is DepositsManager, BattleManager {
         claim.decided = false;
         claim.verificationOngoing = false;
         claim.createdAt = block.number;
+        claim.challengeTimeoutBlockNumber = block.number;
         claim.superblockId = superblockId;
         claim.state = ClaimState.Unchallenged;
 
@@ -261,10 +262,10 @@ contract ClaimManager is DepositsManager, BattleManager {
 
         //FIXME: Enforce timeouts
         // check that the claim has exceeded the default challenge timeout.
-        //require(block.number -  claim.createdAt > defaultChallengeTimeout);
+        require(block.number -  claim.createdAt > defaultChallengeTimeout, "timeout");
 
         //check that the claim has exceeded the claim's specific challenge timeout.
-        //require(block.number > claim.challengeTimeoutBlockNumber);
+        require(block.number > claim.challengeTimeoutBlockNumber, "timeout");
 
         // check that all verification games have been played.
         require(claim.numChallengers <= claim.currentChallenger);

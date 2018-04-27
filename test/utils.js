@@ -61,6 +61,34 @@ function calcBlockHash(blockHeader) {
   return `0x${sha256(sha256.arrayBuffer(headerBin))}`;
 }
 
+const timeout = async (ms) => new Promise((resolve, reject) => setTimeout(resolve, ms));
+
+const mineBlocks = async (web3, n) => {
+  for (let i = 0; i < n; i++) {
+    await web3.currentProvider.send({
+      jsonrpc: '2.0',
+      method: 'evm_mine',
+      params: [],
+      id: 0,
+    });
+    await timeout(1000);
+  }
+}
+
+async function verifyThrow(P, cond, message) {
+  let e;
+  try {
+    await P();
+  } catch (ex) {
+    e = ex;
+  }
+  assert.throws(() => {
+    if (e) {
+      throw e;
+    }
+  }, cond, message);
+}
+
 module.exports = {
   formatHexUint32: function (str) {
     while (str.length < 64) {
@@ -158,4 +186,6 @@ module.exports = {
   hashesToData,
   headerToData,
   calcBlockHash,
+  mineBlocks,
+  verifyThrow,
 };
