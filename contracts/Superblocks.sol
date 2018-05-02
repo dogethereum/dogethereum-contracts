@@ -1,6 +1,7 @@
 pragma solidity ^0.4.19;
 
-import "./DogeParser/DogeTx.sol";
+import {DogeTx} from "./DogeParser/DogeTx.sol";
+import {DogeRelay} from "./DogeRelay.sol";
 
 //FIXME: The access of most methods is public but should be internal
 
@@ -41,13 +42,17 @@ contract Superblocks {
     // ClaimManager
     address public claimManager;
 
+    // DogeRelay
+    address public dogeRelay;
+
     modifier onlyClaimManager() {
         require(msg.sender == claimManager);
         _;
     }
 
     // @dev – the constructor
-    function Superblocks() public {
+    function Superblocks(DogeRelay _dogeRelay) public {
+        dogeRelay = _dogeRelay;
     }
 
     // @dev - sets ClaimManager instance associated with managing superblocks.

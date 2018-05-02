@@ -30,14 +30,19 @@ async function deployDevelopment(deployer, network, accounts, networkId, trusted
 
   await deployer.deploy(DogeProcessor, DogeRelayForTests.address);
 
-  await deployer.deploy(ClaimManager, DogeRelayForTests.address);
+  await deployer.link(DogeTx, Superblocks);
+  await deployer.link(DogeTx, ClaimManager);
+
+  await deployer.deploy(Superblocks, DogeRelayForTests.address);
+  await deployer.deploy(ClaimManager, Superblocks.address);
 
   await deployer.deploy(ScryptCheckerDummy, DogeRelayForTests.address, true)
 
   const dogeRelay = DogeRelayForTests.at(DogeRelayForTests.address);
   await dogeRelay.setScryptChecker(ScryptCheckerDummy.address);
 
-  await dogeRelay.setClaimManager(ClaimManager.address);
+  const superblocks = Superblocks.at(Superblocks.address);
+  await superblocks.setClaimManager(ClaimManager.address);
 }
 
 async function deployIntegration(deployer, network, accounts, networkId, trustedDogeEthPriceOracle, dogethereumRecipient) {
@@ -47,16 +52,21 @@ async function deployIntegration(deployer, network, accounts, networkId, trusted
   await deployer.link(Set, DogeToken);
   await deployer.link(DogeTx, DogeToken);
 
-  await deployer.deploy(DogeRelay, networkId, {gas: 4500000});
+  await deployer.deploy(DogeRelay, networkId, {gas: 4800000});
   await deployer.deploy(ScryptCheckerDummy, DogeRelay.address, true, {gas: 1000000})
   await deployer.deploy(DogeToken, DogeRelay.address, trustedDogeEthPriceOracle, dogethereumRecipient, {gas: 4500000});
 
-  await deployer.deploy(ClaimManager, DogeRelay.address);
+  await deployer.link(DogeTx, Superblocks);
+  await deployer.link(DogeTx, ClaimManager);
+
+  await deployer.deploy(Superblocks, DogeRelay.address, {gas: 3000000});
+  await deployer.deploy(ClaimManager, Superblocks.address, {gas: 4500000});
 
   const dogeRelay = DogeRelay.at(DogeRelay.address);
   await dogeRelay.setScryptChecker(ScryptCheckerDummy.address, {gas: 100000});
 
-  await dogeRelay.setClaimManager(ClaimManager.address, {gas: 100000});
+  const superblocks = Superblocks.at(Superblocks.address);
+  await superblocks.setClaimManager(ClaimManager.address, {gas: 100000});
 }
 
 module.exports = function(deployer, network, accounts) {

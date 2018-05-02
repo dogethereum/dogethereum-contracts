@@ -22,7 +22,7 @@ contract('ClaimManager', (accounts) => {
     const initLastHash = '0x0000000000000000000000000000000000000000000000000000000000000000';
     const initParentHash = '0x0000000000000000000000000000000000000000000000000000000000000000';
     before(async () => {
-      superblocks = await Superblocks.new();
+      superblocks = await Superblocks.new(0x0);
       claimManager = await ClaimManager.new(superblocks.address);
       superblocks.setClaimManager(claimManager.address);
     });
@@ -89,7 +89,7 @@ contract('ClaimManager', (accounts) => {
     ];
     const hashes = headers.map(utils.calcBlockHash);
     before(async () => {
-      superblocks = await Superblocks.new();
+      superblocks = await Superblocks.new(0x0);
       claimManager = await ClaimManager.new(superblocks.address);
       superblocks.setClaimManager(claimManager.address);
     });
