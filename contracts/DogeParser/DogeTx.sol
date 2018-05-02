@@ -185,7 +185,7 @@ library DogeTx {
         bytes32 inputPubKey;
         bool inputPubKeyOdd;
     }
-    
+
     // Parses a doge tx
     // Inputs
     // txBytes: tx byte array
@@ -856,5 +856,31 @@ library DogeTx {
         }
 
         return 1;
+    }
+
+    function sha256mem(bytes memory _rawBytes, uint offset, uint len) internal view returns (bytes32 result) {
+        assembly {
+            // Call sha256 precompiled contract (located in address 0x02) to copy data.
+            // Assign to ptr the next available memory position (stored in memory position 0x40).
+            let ptr := mload(0x40)
+            if iszero(staticcall(gas, 0x02, add(add(_rawBytes, 0x20), offset), len, ptr, 0x20)) {
+                revert(0, 0)
+            }
+            result := mload(ptr)
+        }
+    }
+
+    // @dev - Bitcoin-way of hashing
+    // @param _dataBytes - raw data to be hashed
+    // @return - result of applying SHA-256 twice to raw data and then flipping the bytes
+    function dblShaFlip(bytes _dataBytes) internal pure returns (uint) {
+        return flip32Bytes(uint(sha256(sha256(_dataBytes))));
+    }
+
+    // @dev - Bitcoin-way of hashing
+    // @param _dataBytes - raw data to be hashed
+    // @return - result of applying SHA-256 twice to raw data and then flipping the bytes
+    function dblShaFlipMem(bytes memory _rawBytes, uint offset, uint len) internal view returns (uint) {
+        return flip32Bytes(uint(sha256(sha256mem(_rawBytes, offset, len))));
     }
 }

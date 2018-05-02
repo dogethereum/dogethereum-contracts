@@ -58,7 +58,7 @@ function headerToData(blockHeader) {
 // Block header is expected to be in hexadecimal
 function calcBlockHash(blockHeader) {
   const headerBin = module.exports.fromHex(blockHeader);
-  return `0x${sha256(sha256.arrayBuffer(headerBin))}`;
+  return `0x${Buffer.from(sha256.array(sha256.arrayBuffer(headerBin))).reverse().toString('hex')}`;
 }
 
 const timeout = async (ms) => new Promise((resolve, reject) => setTimeout(resolve, ms));

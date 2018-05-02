@@ -409,7 +409,7 @@ contract DogeRelay is IDogeRelay {
     // @param _txBlockHash - hash of the block that might contain the transaction
     // @return - SHA-256 hash of _txBytes if the transaction is in the block, 0 otherwise
     function verifyTx(bytes _txBytes, uint _txIndex, uint[] _siblings, uint _txBlockHash) public returns (uint) {
-        uint txHash = dblShaFlip(_txBytes);
+        uint txHash = DogeTx.dblShaFlip(_txBytes);
 
         if (_txBytes.length == 64) {  // todo: is check 32 also needed?
             VerifyTransaction(bytes32(txHash), ERR_TX_64BYTE);
@@ -702,18 +702,6 @@ contract DogeRelay is IDogeRelay {
         return out;
     }
 
-    function sha256mem(bytes memory _rawBytes, uint offset, uint len) internal view returns (bytes32 result) {
-        assembly {
-            // Call sha256 precompiled contract (located in address 0x02) to copy data.
-            // Assign to ptr the next available memory position (stored in memory position 0x40).
-            let ptr := mload(0x40)
-            if iszero(staticcall(gas, 0x02, add(add(_rawBytes, 0x20), offset), len, ptr, 0x20)) {
-                revert(0, 0)
-            }
-            result := mload(ptr)
-        }
-    }
-
     // @dev - converts raw bytes representation of a Dogecoin block header to struct representation
     //
     // @param _rawBytes - first 80 bytes of a block header
@@ -722,7 +710,7 @@ contract DogeRelay is IDogeRelay {
         bh.version = getVersion(_rawBytes, pos);
         bh.time = getTimestamp(_rawBytes, pos);
         bh.bits = getBits(_rawBytes, pos);
-        bh.blockHash = DogeTx.flip32Bytes(uint(sha256(sha256mem(_rawBytes, pos, 80))));
+        bh.blockHash = DogeTx.dblShaFlipMem(_rawBytes, pos, 80);
         bh.prevBlock = getHashPrevBlock(_rawBytes, pos);
         bh.merkleRoot = getHeaderMerkleRoot(_rawBytes, pos);
     }
@@ -799,13 +787,6 @@ contract DogeRelay is IDogeRelay {
     // @return block's Merkle root in big-endian format
     function getMerkleRoot(uint _blockHash) private view returns (uint) {
         return myblocks[_blockHash]._blockHeader.merkleRoot;
-    }
-
-    // @dev - Bitcoin-way of hashing
-    // @param _dataBytes - raw data to be hashed
-    // @return - result of applying SHA-256 twice to raw data and then flipping the bytes
-    function dblShaFlip(bytes _dataBytes) private pure returns (uint) {
-        return DogeTx.flip32Bytes(uint(sha256(sha256(_dataBytes))));
     }
 
     // @dev - Bitcoin-way of computing the target from the 'bits' field of a block header

@@ -3,6 +3,7 @@ pragma solidity ^0.4.19;
 import {DepositsManager} from './DepositsManager.sol';
 import {Superblocks} from './Superblocks.sol';
 import {BattleManager} from './BattleManager.sol';
+import {DogeTx} from './DogeParser/DogeTx.sol';
 
 
 // @dev - Manager of superblock claims
@@ -358,7 +359,7 @@ contract ClaimManager is DepositsManager, BattleManager {
         SuperblockClaim storage claim = claims[claimId];
         bytes32 scryptHash = readBytes32(data, 0);
         if (claim.state == ClaimState.QueryHeaders) {
-            bytes32 blockHash = sha256(sha256mem(data, 32, data.length - 32));
+            bytes32 blockHash = bytes32(DogeTx.dblShaFlipMem(data, 32, data.length - 32));
             require(claim.blockHeaderQueries[blockHash] == 1);
             claim.blockHeaderQueries[blockHash] = 2;
             claim.countBlockHeaderResponses += 1;
