@@ -71,7 +71,7 @@ const mineBlocks = async (web3, n) => {
       params: [],
       id: 0,
     });
-    await timeout(1000);
+    await timeout(100);
   }
 }
 

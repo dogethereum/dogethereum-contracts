@@ -883,4 +883,14 @@ library DogeTx {
     function dblShaFlipMem(bytes memory _rawBytes, uint offset, uint len) internal view returns (uint) {
         return flip32Bytes(uint(sha256(sha256mem(_rawBytes, offset, len))));
     }
+
+    // @dev – Read a bytes32 from an offset in the byte array
+    function readBytes32(bytes data, uint offset) internal pure returns (bytes32) {
+        bytes32 result;
+        assembly {
+            result := mload(add(add(data, 0x20), offset))
+        }
+        return result;
+    }
+
 }

@@ -184,12 +184,16 @@ contract ClaimManager is DepositsManager, BattleManager {
         claim.state = ClaimState.Challenged;
         emit SuperblockClaimChallenged(claimId, msg.sender);
 
+        if (claim.currentChallenger == 0) {
+            runNextBattleSession(claimId);
+        }
+
         return (ERR_SUPERBLOCK_OK, claimId);
     }
 
     // @dev – runs the battle session to verify a superblock for the next challenger
     // @param claimID – the claim id.
-    function runNextBattleSession(bytes32 claimId) public {
+    function runNextBattleSession(bytes32 claimId) internal {
         SuperblockClaim storage claim = claims[claimId];
 
         require(claimExists(claim));
@@ -263,10 +267,10 @@ contract ClaimManager is DepositsManager, BattleManager {
 
         //FIXME: Enforce timeouts
         // check that the claim has exceeded the default challenge timeout.
-        require(block.number -  claim.createdAt > defaultChallengeTimeout, "timeout");
+        require(block.number -  claim.createdAt > defaultChallengeTimeout);
 
         //check that the claim has exceeded the claim's specific challenge timeout.
-        require(block.number > claim.challengeTimeoutBlockNumber, "timeout");
+        require(block.number > claim.challengeTimeoutBlockNumber);
 
         // check that all verification games have been played.
         require(claim.numChallengers <= claim.currentChallenger);
@@ -317,15 +321,6 @@ contract ClaimManager is DepositsManager, BattleManager {
         }
     }
 
-    // @dev – Return a bytes32 at index in a byte array
-    function readBytes32(bytes data, uint index) internal pure returns (bytes32) {
-        bytes32 result;
-        assembly {
-            result := mload(add(add(data, 0x20), mul(32, index)))
-        }
-        return result;
-    }
-
     // @dev – Verify an array of hashes matches superblock merkleroot
     function verifyHashes(bytes32 claimId, bytes data) internal {
         SuperblockClaim storage claim = claims[claimId];
@@ -335,29 +330,16 @@ contract ClaimManager is DepositsManager, BattleManager {
             require(data.length % 32 == 0);
             uint count = data.length / 32;
             for (uint i=0; i<count; ++i) {
-                claim.blockHashes.push(readBytes32(data, i));
+                claim.blockHashes.push(DogeTx.readBytes32(data, 32*i));
             }
             require(superblocks.verifyMerkleRoot(claim.superblockId, claim.blockHashes));
-        }
-    }
-
-    // @dev – Calc sha256 of a sequence of bytes in a byte array
-    function sha256mem(bytes memory _rawBytes, uint offset, uint len) internal view returns (bytes32 result) {
-        assembly {
-            // Call sha256 precompiled contract (located in address 0x02) to copy data.
-            // Assign to ptr the next available memory position (stored in memory position 0x40).
-            let ptr := mload(0x40)
-            if iszero(staticcall(gas, 0x02, add(add(_rawBytes, 0x20), offset), len, ptr, 0x20)) {
-                revert(0, 0)
-            }
-            result := mload(ptr)
         }
     }
 
     // @dev - Verify a block header data correspond to a block hash in the superblock
     function verifyBlockHeader(bytes32 claimId, bytes data) internal {
         SuperblockClaim storage claim = claims[claimId];
-        bytes32 scryptHash = readBytes32(data, 0);
+        bytes32 scryptHash = DogeTx.readBytes32(data, 0);
         if (claim.state == ClaimState.QueryHeaders) {
             bytes32 blockHash = bytes32(DogeTx.dblShaFlipMem(data, 32, data.length - 32));
             require(claim.blockHeaderQueries[blockHash] == 1);
@@ -393,4 +375,6 @@ contract ClaimManager is DepositsManager, BattleManager {
     uint constant ERR_SUPERBLOCK_BAD_PARENT = 50050;
 
     uint constant ERR_SUPERBLOCK_MIN_DEPOSIT = 50060;
+
+    uint constant ERR_SUPERBLOCK_BAD_CLAIM = 50070;
 }
