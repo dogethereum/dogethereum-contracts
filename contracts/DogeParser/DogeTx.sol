@@ -189,7 +189,7 @@ library DogeTx {
     // Parses a doge tx
     // Inputs
     // txBytes: tx byte array
-    // expected_output_address: lock address (expected to be on 1st or 2nd output, require() fails otherwise)
+    // expected_output_public_key_hash: lock address (actually, it's public key hash expected to be on 1st or 2nd output, require() fails otherwise)
     // Outputs
     // output_value: amount sent to the lock address in satoshis
     // inputPubKey: "x" axis value of the public key used to sign the first output
@@ -627,6 +627,12 @@ library DogeTx {
         }
         require(yy == mulmod(y, y, p));
         return address(keccak256(x, y));
+    }
+
+    // Gets the public key hash given a public key
+    function pub2PubKeyHash(bytes32 pub, bool odd) internal pure returns (bytes20) {
+        byte firstByte = odd ? byte(0x03) : byte(0x02);
+        return ripemd160(sha256(firstByte, pub));
     }
 
     // @dev - convert an unsigned integer from little-endian to big-endian representation
