@@ -112,7 +112,12 @@ contract Superblocks {
     // @param _lastHash Hash of the last block in the superblock
     // @param _parentId Id of the parent superblock
     // @return Error code and superblockId
-    function propose(bytes32 _blocksMerkleRoot, uint _accumulatedWork, uint _timestamp, bytes32 _lastHash, bytes32 _parentId) onlyClaimManager public returns (uint, bytes32) {
+    function propose(bytes32 _blocksMerkleRoot, uint _accumulatedWork, uint _timestamp, bytes32 _lastHash, bytes32 _parentId) public returns (uint, bytes32) {
+        if (msg.sender != claimManager) {
+            emit ErrorSuperblock(0, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
+            return (ERR_SUPERBLOCK_NOT_CLAIMMANAGER, 0);
+        }
+
         SuperblockInfo storage parent = superblocks[_parentId];
         if (parent.status != Status.SemiApproved && parent.status != Status.Approved) {
             emit ErrorSuperblock(superblockId, ERR_SUPERBLOCK_BAD_PARENT);
@@ -147,7 +152,11 @@ contract Superblocks {
     //
     // @param _superblockId Id of the superblock to confirm
     // @return Error code and superblockId
-    function confirm(bytes32 _superblockId) onlyClaimManager public returns (uint, bytes32) {
+    function confirm(bytes32 _superblockId) public returns (uint, bytes32) {
+        if (msg.sender != claimManager) {
+            emit ErrorSuperblock(_superblockId, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
+            return (ERR_SUPERBLOCK_NOT_CLAIMMANAGER, 0);
+        }
         SuperblockInfo storage superblock = superblocks[_superblockId];
         if (superblock.status != Status.New && superblock.status != Status.SemiApproved) {
             emit ErrorSuperblock(_superblockId, ERR_SUPERBLOCK_BAD_STATUS);
@@ -174,7 +183,11 @@ contract Superblocks {
     //
     // @param _superblockId Id of the superblock to challenge
     // @return Error code and superblockId
-    function challenge(bytes32 _superblockId) onlyClaimManager public returns (uint, bytes32) {
+    function challenge(bytes32 _superblockId) public returns (uint, bytes32) {
+        if (msg.sender != claimManager) {
+            emit ErrorSuperblock(_superblockId, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
+            return (ERR_SUPERBLOCK_NOT_CLAIMMANAGER, 0);
+        }
         SuperblockInfo storage superblock = superblocks[_superblockId];
         if (superblock.status != Status.New && superblock.status != Status.InBattle) {
             emit ErrorSuperblock(_superblockId, ERR_SUPERBLOCK_BAD_STATUS);
@@ -193,7 +206,11 @@ contract Superblocks {
     //
     // @param _superblockId Id of the superblock to semi-approve
     // @return Error code and superblockId
-    function semiApprove(bytes32 _superblockId) onlyClaimManager public returns (uint, bytes32) {
+    function semiApprove(bytes32 _superblockId) public returns (uint, bytes32) {
+        if (msg.sender != claimManager) {
+            emit ErrorSuperblock(_superblockId, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
+            return (ERR_SUPERBLOCK_NOT_CLAIMMANAGER, 0);
+        }
         SuperblockInfo storage superblock = superblocks[_superblockId];
         if (superblock.status != Status.InBattle) {
             emit ErrorSuperblock(_superblockId, ERR_SUPERBLOCK_BAD_STATUS);
@@ -212,7 +229,11 @@ contract Superblocks {
     //
     // @param _superblockId Id of the superblock to invalidate
     // @return Error code and superblockId
-    function invalidate(bytes32 _superblockId) onlyClaimManager public returns (uint, bytes32) {
+    function invalidate(bytes32 _superblockId) public returns (uint, bytes32) {
+        if (msg.sender != claimManager) {
+            emit ErrorSuperblock(_superblockId, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
+            return (ERR_SUPERBLOCK_NOT_CLAIMMANAGER, 0);
+        }
         SuperblockInfo storage superblock = superblocks[_superblockId];
         if (superblock.status != Status.InBattle && superblock.status != Status.SemiApproved) {
             emit ErrorSuperblock(_superblockId, ERR_SUPERBLOCK_BAD_STATUS);
@@ -301,4 +322,5 @@ contract Superblocks {
     uint constant ERR_SUPERBLOCK_BAD_PARENT = 50050;
 
     uint constant ERR_SUPERBLOCK_MIN_DEPOSIT = 50060;
+    uint constant ERR_SUPERBLOCK_NOT_CLAIMMANAGER = 50070;
 }
