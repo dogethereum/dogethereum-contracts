@@ -189,7 +189,7 @@ library DogeTx {
     // Parses a doge tx
     // Inputs
     // txBytes: tx byte array
-    // expected_output_address: lock address (expected to be on 1st or 2nd output, require() fails otherwise)
+    // expected_output_public_key_hash: lock address (actually, it's public key hash expected to be on 1st or 2nd output, require() fails otherwise)
     // Outputs
     // output_value: amount sent to the lock address in satoshis
     // inputPubKey: "x" axis value of the public key used to sign the first output
