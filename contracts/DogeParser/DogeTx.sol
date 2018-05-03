@@ -629,6 +629,12 @@ library DogeTx {
         return address(keccak256(x, y));
     }
 
+    // Gets the public key hash given a public key
+    function pub2PubKeyHash(bytes32 pub, bool odd) internal pure returns (bytes20) {
+        byte firstByte = odd ? byte(0x03) : byte(0x02);
+        return ripemd160(sha256(firstByte, pub));
+    }
+
     // @dev - convert an unsigned integer from little-endian to big-endian representation
     //
     // @param _input - little-endian value

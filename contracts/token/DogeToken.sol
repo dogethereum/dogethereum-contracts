@@ -36,9 +36,9 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
 
         uint value;
         bytes32 firstInputPublicKey;
-        bool odd;
+        bool firstInputPublicKeyOdd;
         uint16 outputIndex;
-        (value, firstInputPublicKey, odd, outputIndex) = DogeTx.parseTransaction(dogeTx, operatorPublicKeyHash);
+        (value, firstInputPublicKey, firstInputPublicKeyOdd, outputIndex) = DogeTx.parseTransaction(dogeTx, operatorPublicKeyHash);
 
         // Check tx was not processes already and add it to the dogeTxHashesAlreadyProcessed
         require(Set.insert(dogeTxHashesAlreadyProcessed, txHash));
@@ -46,15 +46,24 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         // Add utxo
         utxos.push(Utxo(value, txHash, outputIndex));
 
-        // Calculate ethereum address from dogecoin public key
-        address destinationAddress = DogeTx.pub2address(uint256(firstInputPublicKey), odd);
+        // See if the first input was signed by the operator
+        bytes20 firstInputPublicKeyHash = DogeTx.pub2PubKeyHash(firstInputPublicKey, firstInputPublicKeyOdd);
+        if (operatorPublicKeyHash != firstInputPublicKeyHash) {
+            // this is a lock tx
+            // Calculate ethereum address from dogecoin public key
+            address destinationAddress = DogeTx.pub2address(uint256(firstInputPublicKey), firstInputPublicKeyOdd);
 
-        balances[destinationAddress] += value;
-        NewToken(destinationAddress, value);
-        // Hack to make etherscan show the event
-        Transfer(0, destinationAddress, value);
+            balances[destinationAddress] += value;
+            NewToken(destinationAddress, value);
+            // Hack to make etherscan show the event
+            Transfer(0, destinationAddress, value);
 
-        return value;
+            return value;        
+        } else {
+            // this is an unlock tx
+            // Do nothing
+            return 0;
+        }
     }
 
     function wasLockTxProcessed(uint txHash) public view returns (bool) {
