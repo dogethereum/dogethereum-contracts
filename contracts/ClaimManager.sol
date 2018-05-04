@@ -184,7 +184,7 @@ contract ClaimManager is DepositsManager, BattleManager {
         claim.state = ClaimState.Challenged;
         emit SuperblockClaimChallenged(claimId, msg.sender);
 
-        if (claim.currentChallenger == 0) {
+        if (claim.verificationOngoing == false && claim.currentChallenger < claim.numChallengers) {
             runNextBattleSession(claimId);
         }
 
@@ -193,7 +193,7 @@ contract ClaimManager is DepositsManager, BattleManager {
 
     // @dev – runs the battle session to verify a superblock for the next challenger
     // @param claimID – the claim id.
-    function runNextBattleSession(bytes32 claimId) internal {
+    function runNextBattleSession(bytes32 claimId) public {
         SuperblockClaim storage claim = claims[claimId];
 
         require(claimExists(claim));
@@ -273,10 +273,11 @@ contract ClaimManager is DepositsManager, BattleManager {
         require(block.number > claim.challengeTimeoutBlockNumber);
 
         // check that all verification games have been played.
-        require(claim.numChallengers <= claim.currentChallenger);
+        require(claim.currentChallenger >= claim.numChallengers);
 
         claim.decided = true;
 
+        // If no challengers confirm immediately
         if (claim.challengers.length == 0) {
             superblocks.confirm(claim.superblockId);
         } else {
