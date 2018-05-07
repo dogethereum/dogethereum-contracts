@@ -195,7 +195,7 @@ contract DogeRelay is IDogeRelay {
         uint blockSha256Hash = bi._blockHeader.blockHash;
 
         if (isMergeMined(bi._blockHeader)) {
-            DogeTx.AuxPoW memory ap = DogeTx.parseAuxPoW(DogeTx.sliceArray(_blockHeaderBytes, pos, pos + len));
+            DogeTx.AuxPoW memory ap = DogeTx.parseAuxPoW(_blockHeaderBytes, pos, pos + len);
 
             if (DogeTx.flip32Bytes(ap.scryptHash) > targetFromBits(bi._blockHeader.bits)) {
                 StoreHeader(bytes32(blockSha256Hash), ERR_PROOF_OF_WORK);

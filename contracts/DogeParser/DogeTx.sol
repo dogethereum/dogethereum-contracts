@@ -659,17 +659,16 @@ library DogeTx {
         }
     }
 
-    function parseAuxPoW(bytes rawBytes) internal view
+    function parseAuxPoW(bytes rawBytes, uint pos, uint len) internal view
              returns (AuxPoW memory auxpow)
     {
         // we need to traverse the bytes with a pointer because some fields are of variable length
-        uint pos = 80; // skip non-AuxPoW header
+        pos += 80; // skip non-AuxPoW header
         // auxpow.firstBytes = sliceBytes32Int(rawBytes, pos);
         uint slicePos;
         uint inputScriptPos;
         (slicePos, inputScriptPos) = getSlicePosAndScriptPos(rawBytes, pos);
-        bytes memory hashData = sliceArray(rawBytes, pos, slicePos);
-        auxpow.txHash = flip32Bytes(uint(sha256(sha256(hashData))));
+        auxpow.txHash = dblShaFlipMem(rawBytes, pos, slicePos - pos);
         pos = slicePos;
         auxpow.scryptHash = sliceBytes32Int(rawBytes, pos);
         pos += 32;

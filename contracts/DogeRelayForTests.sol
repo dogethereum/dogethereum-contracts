@@ -106,7 +106,7 @@ contract DogeRelayForTests is DogeRelay {
 
     // doesn't check merge mining to see if other error codes work
     function checkAuxPoWForTests(uint _blockHash, bytes memory _auxBytes) internal view returns (uint) {
-        DogeTx.AuxPoW memory ap = DogeTx.parseAuxPoW(_auxBytes);
+        DogeTx.AuxPoW memory ap = DogeTx.parseAuxPoW(_auxBytes, 0, _auxBytes.length);
 
         //uint32 version = bytesToUint32Flipped(_auxBytes, 0);
 
