@@ -57,7 +57,7 @@ function headerToData(blockHeader) {
 // Calculates the double sha256 of a block header
 // Block header is expected to be in hexadecimal
 function calcBlockHash(blockHeader) {
-  const headerBin = module.exports.fromHex(blockHeader);
+  const headerBin = module.exports.fromHex(blockHeader).slice(0, 80);
   return `0x${Buffer.from(sha256.array(sha256.arrayBuffer(headerBin))).reverse().toString('hex')}`;
 }
 

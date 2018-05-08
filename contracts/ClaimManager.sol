@@ -342,7 +342,7 @@ contract ClaimManager is DepositsManager, BattleManager {
         SuperblockClaim storage claim = claims[claimId];
         bytes32 scryptHash = DogeTx.readBytes32(data, 0);
         if (claim.state == ClaimState.QueryHeaders) {
-            bytes32 blockHash = bytes32(DogeTx.dblShaFlipMem(data, 32, data.length - 32));
+            bytes32 blockHash = bytes32(DogeTx.dblShaFlipMem(data, 32, 80));
             require(claim.blockHeaderQueries[blockHash] == 1);
             claim.blockHeaderQueries[blockHash] = 2;
             claim.countBlockHeaderResponses += 1;
