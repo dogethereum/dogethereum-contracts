@@ -7,39 +7,74 @@ contract('ClaimManager', (accounts) => {
   const owner = accounts[0];
   const submitter = accounts[1];
   const challenger = accounts[2];
+  let claimManager;
+  let superblocks;
+  const initHashes = ['0x0000000000000000000000000000000000000000000000000000000000000000'];
+  const initMerkleRoot = utils.makeMerkle(initHashes);
+  const initAccumulatedWork = 0;
+  const initTimestamp = 0;
+  const initLastHash = '0x0000000000000000000000000000000000000000000000000000000000000000';
+  const initParentHash = '0x0000000000000000000000000000000000000000000000000000000000000000';
+  const initSuperblock = '0xdfded4ed5ac76ba7379cfe7b3b0f53e768dca8d45a34854e649cfc3c18cbd9cd';
+  async function initSuperblocks() {
+    superblocks = await Superblocks.new(0x0);
+    claimManager = await ClaimManager.new(superblocks.address);
+    superblocks.setClaimManager(claimManager.address);
+    await superblocks.initialize(initMerkleRoot, initAccumulatedWork, initTimestamp, initLastHash, initParentHash, { from: owner });
+    //FIXME: ganache-cli creates the same transaction hash if two account send the same amount
+    await claimManager.makeDeposit({ value: 10, from: submitter });
+    await claimManager.makeDeposit({ value: 11, from: challenger });
+  }
   describe('Confirm superblock after timeout', () => {
-    let claimManager;
-    let superblocks;
     let superblock0;
     let superblock1;
     let superblock2;
     let claim1;
     let session1;
-    const initHashes = ['0x0000000000000000000000000000000000000000000000000000000000000000'];
-    const initMerkleRoot = utils.makeMerkle(initHashes);
-    const initAccumulatedWork = 0;
-    const initTimestamp = (new Date()).getTime() / 1000;
-    const initLastHash = '0x0000000000000000000000000000000000000000000000000000000000000000';
-    const initParentHash = '0x0000000000000000000000000000000000000000000000000000000000000000';
     before(async () => {
-      superblocks = await Superblocks.new(0x0);
-      claimManager = await ClaimManager.new(superblocks.address);
-      superblocks.setClaimManager(claimManager.address);
+      await initSuperblocks();
     });
     it('Initialized', async () => {
-      const result = await superblocks.initialize(initMerkleRoot, initAccumulatedWork, initTimestamp, initLastHash, initParentHash, { from: owner });
-      // console.log(JSON.stringify(result, null, '  '));
-      assert.equal(result.logs[0].event, 'NewSuperblock', 'New superblock proposed');
-      superblock0 = result.logs[0].args.superblockId;
+      superblock0 = initSuperblock;
       const best = await superblocks.getBestSuperblock();
       assert.equal(superblock0, best, 'Best superblock should match');
     });
-    it('Deposit', async () => {
-      //FIXME: ganache-cli creates the same transaction hash if two account send the same amount
-      let result = await claimManager.makeDeposit({ value: 10, from: submitter });
-      assert.equal(result.logs[0].event, 'DepositMade', 'Submitter deposit made');
-      result = await claimManager.makeDeposit({ value: 11, from: challenger });
-      assert.equal(result.logs[0].event, 'DepositMade', 'Challenger deposit made');
+    it('Propose', async () => {
+      const accumulatedWork = 1;
+      const timestamp = (new Date()).getTime() / 1000;
+      const lastHash = initHashes[0];
+      const parentHash = superblock0;
+      const merkleRoot = utils.makeMerkle(initHashes);
+      const result = await claimManager.proposeSuperblock(merkleRoot, accumulatedWork, timestamp, lastHash, parentHash, { from: submitter });
+      assert.equal(result.logs[1].event, 'SuperblockClaimCreated', 'New superblock proposed');
+      superblock1 = result.logs[1].args.superblockId;
+    });
+    it('Try to confirm whitout waiting', async () => {
+      utils.verifyThrow(() => {
+        return claimManager.checkClaimFinished(superblock1, { from: challenger })
+      }, /revert/, 'Should revert');
+    });
+    it('Confirm', async () => {
+      await utils.mineBlocks(web3, 5);
+      const result = await claimManager.checkClaimFinished(superblock1, { from: challenger });
+      assert.equal(result.logs[1].event, 'SuperblockClaimSuccessful', 'Superblock challenged');
+      const best = await superblocks.getBestSuperblock();
+      assert.equal(superblock1, best, 'Best superblock should match');
+    });
+  });
+  describe('Invalid superblock', () => {
+    let superblock0;
+    let superblock1;
+    let superblock2;
+    let claim1;
+    let session1;
+    before(async () => {
+      await initSuperblocks();
+    });
+    it('Initialized', async () => {
+      superblock0 = initSuperblock;
+      const best = await superblocks.getBestSuperblock();
+      assert.equal(superblock0, best, 'Best superblock should match');
     });
     it('Propose', async () => {
       const accumulatedWork = 1;
@@ -65,8 +100,6 @@ contract('ClaimManager', (accounts) => {
     });
   });
   describe('Challenge superblock', () => {
-    let claimManager;
-    let superblocks;
     let superblock0;
     let superblock1;
     let superblock2;
@@ -89,24 +122,12 @@ contract('ClaimManager', (accounts) => {
     ];
     const hashes = headers.map(utils.calcBlockHash);
     before(async () => {
-      superblocks = await Superblocks.new(0x0);
-      claimManager = await ClaimManager.new(superblocks.address);
-      superblocks.setClaimManager(claimManager.address);
+      await initSuperblocks();
     });
     it('Initialized', async () => {
-      const result = await superblocks.initialize(initMerkleRoot, initAccumulatedWork, initTimestamp, initLastHash, initParentHash, { from: owner });
-      // console.log(JSON.stringify(result, null, '  '));
-      assert.equal(result.logs[0].event, 'NewSuperblock', 'New superblock proposed');
-      superblock0 = result.logs[0].args.superblockId;
+      superblock0 = initSuperblock;
       const best = await superblocks.getBestSuperblock();
       assert.equal(superblock0, best, 'Best superblock should match');
-    });
-    it('Deposit', async () => {
-      //FIXME: ganache-cli creates the same transaction hash if two account send the same amount
-      let result = await claimManager.makeDeposit({ value: 10, from: submitter });
-      assert.equal(result.logs[0].event, 'DepositMade', 'Submitter deposit made');
-      result = await claimManager.makeDeposit({ value: 11, from: challenger });
-      assert.equal(result.logs[0].event, 'DepositMade', 'Challenger deposit made');
     });
     it('Propose', async () => {
       const accumulatedWork = 2;
