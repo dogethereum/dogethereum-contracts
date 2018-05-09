@@ -2,13 +2,14 @@ pragma solidity ^0.4.19;
 
 import {DogeTx} from "./DogeParser/DogeTx.sol";
 import {DogeRelay} from "./DogeRelay.sol";
+import {SuperblockErrorCodes} from "./SuperblockErrorCodes.sol";
 
 //FIXME: The access of most methods is public but should be internal
 
 // @dev - Manages superblocks
 //
 // Management of superblocks and status transitions
-contract Superblocks {
+contract Superblocks is SuperblockErrorCodes {
 
     uint constant SUPERBLOCK_PERIOD = 0;
 
@@ -98,7 +99,7 @@ contract Superblocks {
 
         emit ApprovedSuperblock(superblockId, msg.sender);
 
-        return (ERR_SUPERBLOCK_OK, superblockId);
+        return (SuperblockErrorCodes.ERR_SUPERBLOCK_OK, superblockId);
     }
 
     // @dev - Proposes a new superblock
@@ -310,17 +311,4 @@ contract Superblocks {
     function makeMerkle(bytes32[] hashes) public pure returns (bytes32) {
         return DogeTx.makeMerkle(hashes);
     }
-
-    // FIXME: Unify error codes with ClaimManager
-
-    // Error codes
-    uint constant ERR_SUPERBLOCK_OK = 0;
-    uint constant ERR_SUPERBLOCK_EXIST = 50010;
-    uint constant ERR_SUPERBLOCK_BAD_STATUS = 50020;
-    uint constant ERR_SUPERBLOCK_TIMEOUT = 50030;
-    uint constant ERR_SUPERBLOCK_INVALID_MERKLE = 50040;
-    uint constant ERR_SUPERBLOCK_BAD_PARENT = 50050;
-
-    uint constant ERR_SUPERBLOCK_MIN_DEPOSIT = 50060;
-    uint constant ERR_SUPERBLOCK_NOT_CLAIMMANAGER = 50070;
 }

@@ -4,12 +4,13 @@ import {DepositsManager} from './DepositsManager.sol';
 import {Superblocks} from './Superblocks.sol';
 import {BattleManager} from './BattleManager.sol';
 import {DogeTx} from './DogeParser/DogeTx.sol';
+import {SuperblockErrorCodes} from "./SuperblockErrorCodes.sol";
 
 
 // @dev - Manager of superblock claims
 //
 // Manages superblocks proposal and challenges
-contract ClaimManager is DepositsManager, BattleManager {
+contract ClaimManager is DepositsManager, BattleManager, SuperblockErrorCodes {
     uint private numClaims = 1;
     uint public minDeposit = 1;
 
@@ -371,16 +372,4 @@ contract ClaimManager is DepositsManager, BattleManager {
         return false;
     }
 
-    //FIXME: Consolidate with error constants in Superblocks in a single file
-    // Error codes
-    uint constant ERR_SUPERBLOCK_OK = 0;
-    uint constant ERR_SUPERBLOCK_EXIST = 50010;
-    uint constant ERR_SUPERBLOCK_BAD_STATUS = 50020;
-    uint constant ERR_SUPERBLOCK_TIMEOUT = 50030;
-    uint constant ERR_SUPERBLOCK_INVALID_MERKLE = 50040;
-    uint constant ERR_SUPERBLOCK_BAD_PARENT = 50050;
-
-    uint constant ERR_SUPERBLOCK_MIN_DEPOSIT = 50060;
-
-    uint constant ERR_SUPERBLOCK_BAD_CLAIM = 50070;
 }
