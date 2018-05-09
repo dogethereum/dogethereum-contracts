@@ -25,6 +25,8 @@ contract ClaimManager is DepositsManager, BattleManager, SuperblockErrorCodes {
     event SuperblockClaimFailed(bytes32 claimId, address claimant, bytes32 superblockId);
     event VerificationGameStarted(bytes32 claimId, address claimant, address challenger, bytes32 sessionId);
 
+    event ErrorClaim(bytes32 claimId, uint err);
+
     enum ChallengeState {
         Unchallenged,       // Unchallenged claim
         Challenged,         // Claims was challenged
@@ -40,6 +42,7 @@ contract ClaimManager is DepositsManager, BattleManager, SuperblockErrorCodes {
         uint createdAt;                             // Block when claim was created
 
         address[] challengers;                      // List of challengers
+        mapping (address => uint) idxChallengers;   // Index of challengers (position + 1 in challengers array)
         mapping (address => uint) bondedDeposits;   // Deposit associated to challengers
 
         uint currentChallenger;                     // Index of challenger in current session
@@ -75,7 +78,7 @@ contract ClaimManager is DepositsManager, BattleManager, SuperblockErrorCodes {
     }
 
     // @dev – locks up part of the a user's deposit into a claim.
-    // @param claimID – the claim id.
+    // @param claimId – the claim id.
     // @param account – the user's address.
     // @param amount – the amount of deposit to lock up.
     // @return – the user's deposit bonded for the claim.
@@ -92,7 +95,7 @@ contract ClaimManager is DepositsManager, BattleManager, SuperblockErrorCodes {
     }
 
     // @dev – accessor for a claims bonded deposits.
-    // @param claimID – the claim id.
+    // @param claimId – the claim id.
     // @param account – the user's address.
     // @return – the user's deposit bonded for the claim.
     function getBondedDeposit(bytes32 claimId, address account) public view returns (uint) {
@@ -102,7 +105,7 @@ contract ClaimManager is DepositsManager, BattleManager, SuperblockErrorCodes {
     }
 
     // @dev – unlocks a user's bonded deposits from a claim.
-    // @param claimID – the claim id.
+    // @param claimId – the claim id.
     // @param account – the user's address.
     // @return – the user's deposit which was unbonded from the claim.
     function unbondDeposit(bytes32 claimId, address account) public returns (uint) {
@@ -132,6 +135,7 @@ contract ClaimManager is DepositsManager, BattleManager, SuperblockErrorCodes {
         address _submitter = msg.sender;
 
         if (deposits[_submitter] < minDeposit) {
+            emit ErrorClaim(0, ERR_SUPERBLOCK_MIN_DEPOSIT);
             return (ERR_SUPERBLOCK_MIN_DEPOSIT, 0);
         }
 
@@ -139,11 +143,15 @@ contract ClaimManager is DepositsManager, BattleManager, SuperblockErrorCodes {
         bytes32 superblockId;
         (err, superblockId) = superblocks.propose(_blocksMerkleRoot, _accumulatedWork, _timestamp, _lastHash, _parentHash);
         if (err != 0) {
+            emit ErrorClaim(superblockId, err);
             return (err, superblockId);
         }
 
         bytes32 claimId = superblockId;
-        require(!claimExists(claims[claimId]));
+        if (claimExists(claim)) {
+            emit ErrorClaim(claimId, ERR_SUPERBLOCK_BAD_CLAIM);
+            return (ERR_SUPERBLOCK_BAD_CLAIM, claimId);
+        }
 
         SuperblockClaim storage claim = claims[claimId];
         claim.claimant = _submitter;
@@ -170,34 +178,43 @@ contract ClaimManager is DepositsManager, BattleManager, SuperblockErrorCodes {
         bytes32 claimId = superblockId;
         SuperblockClaim storage claim = claims[claimId];
 
-        require(claimExists(claim));
-        require(!claim.decided);
-        require(claim.sessions[msg.sender] == 0);
-
-        require(deposits[msg.sender] >= minDeposit);
-        bondDeposit(claimId, msg.sender, minDeposit);
+        if (!claimExists(claim)) {
+            emit ErrorClaim(claimId, ERR_SUPERBLOCK_BAD_CLAIM);
+            return (ERR_SUPERBLOCK_BAD_CLAIM, claimId);
+        }
+        if (claim.decided) {
+            emit ErrorClaim(claimId, ERR_SUPERBLOCK_CLAIM_DECIDED);
+            return (ERR_SUPERBLOCK_CLAIM_DECIDED, claimId);
+        }
+        if (deposits[msg.sender] < minDeposit) {
+            emit ErrorClaim(claimId, ERR_SUPERBLOCK_MIN_DEPOSIT);
+            return (ERR_SUPERBLOCK_MIN_DEPOSIT, claimId);
+        }
+        if (claim.idxChallengers[msg.sender] != 0) {
+            emit ErrorClaim(claimId, ERR_SUPERBLOCK_BAD_CHALLENGER);
+            return (ERR_SUPERBLOCK_BAD_CHALLENGER, claimId);
+        }
 
         uint err;
         (err, ) = superblocks.challenge(superblockId);
         if (err != 0) {
+            emit ErrorClaim(claimId, err);
             return (err, 0);
         }
 
+        bondDeposit(claimId, msg.sender, minDeposit);
+
         claim.challengeTimeoutBlockNumber += defaultChallengeTimeout;
         claim.challengers.push(msg.sender);
-        // claim.numChallengers += 1;
+        claim.idxChallengers[msg.sender] = claim.challengers.length;
         claim.challengeState = ChallengeState.Challenged;
         emit SuperblockClaimChallenged(claimId, msg.sender);
-
-        if (claim.verificationOngoing == false && claim.currentChallenger < claim.challengers.length) {
-            runNextBattleSession(claimId);
-        }
 
         return (ERR_SUPERBLOCK_OK, claimId);
     }
 
     // @dev – runs the battle session to verify a superblock for the next challenger
-    // @param claimID – the claim id.
+    // @param claimId – the claim id.
     function runNextBattleSession(bytes32 claimId) public {
         SuperblockClaim storage claim = claims[claimId];
 
@@ -259,24 +276,38 @@ contract ClaimManager is DepositsManager, BattleManager, SuperblockErrorCodes {
     // if successful, it will trigger a callback to the DogeRelay contract,
     // notifying it that the Scrypt blockhash was correctly calculated.
     //
-    // @param claimID – the claim ID.
-    function checkClaimFinished(bytes32 claimId) public {
+    // @param claimId – the claim ID.
+    function checkClaimFinished(bytes32 claimId) public returns (bool) {
         SuperblockClaim storage claim = claims[claimId];
 
-        require(claimExists(claim));
+        if (!claimExists(claim)) {
+            emit ErrorClaim(claimId, ERR_SUPERBLOCK_BAD_CLAIM);
+            return false;
+        }
 
         // check that there is no ongoing verification game.
-        require(claim.verificationOngoing == false);
+        if (claim.verificationOngoing) {
+            emit ErrorClaim(claimId, ERR_SUPERBLOCK_VERIFICATION_PENDING);
+            return false;
+        }
 
-        //FIXME: Enforce timeouts
         // check that the claim has exceeded the default challenge timeout.
-        require(block.number -  claim.createdAt > defaultChallengeTimeout);
+        if (block.number -  claim.createdAt <= defaultChallengeTimeout) {
+            emit ErrorClaim(claimId, ERR_SUPERBLOCK_NOT_TIMEOUT);
+            return false;
+        }
 
         //check that the claim has exceeded the claim's specific challenge timeout.
-        require(block.number > claim.challengeTimeoutBlockNumber);
+        if (block.number <= claim.challengeTimeoutBlockNumber) {
+            emit ErrorClaim(claimId, ERR_SUPERBLOCK_NOT_TIMEOUT);
+            return false;
+        }
 
         // check that all verification games have been played.
-        require(claim.currentChallenger >= claim.challengers.length);
+        if (claim.currentChallenger < claim.challengers.length) {
+            emit ErrorClaim(claimId, ERR_SUPERBLOCK_VERIFICATION_PENDING);
+            return false;
+        }
 
         claim.decided = true;
 
@@ -293,6 +324,8 @@ contract ClaimManager is DepositsManager, BattleManager, SuperblockErrorCodes {
             unbondDeposit(claimId, claim.claimant);
             emit SuperblockClaimSuccessful(claimId, claim.claimant, claim.superblockId);
         }
+
+        return true;
     }
 
     // @dev – Check if a claim exists

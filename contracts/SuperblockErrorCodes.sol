@@ -16,4 +16,6 @@ contract SuperblockErrorCodes {
 
     uint constant ERR_SUPERBLOCK_BAD_CLAIM = 50080;
     uint constant ERR_SUPERBLOCK_VERIFICATION_PENDING = 50090;
+    uint constant ERR_SUPERBLOCK_CLAIM_DECIDED = 50100;
+    uint constant ERR_SUPERBLOCK_BAD_CHALLENGER = 50110;
 }

@@ -78,11 +78,11 @@ contract('Superblocks', (accounts) => {
     let id1;
     let id2;
     let id3;
-    const merkleRoot = utils.makeMerkle(["0x0000000000000000000000000000000000000000000000000000000000000000"]);
+    const merkleRoot = utils.makeMerkle(['0x0000000000000000000000000000000000000000000000000000000000000000']);
     const accumulatedWork = 0;
-    const timestamp = (new Date()).getTime() / 1000;
-    const lastHash = '0x00';
-    const parentHash = '0x00';
+    const timestamp = 1;
+    const lastHash = '0x0000000000000000000000000000000000000000000000000000000000000000';
+    const parentHash = '0x0000000000000000000000000000000000000000000000000000000000000000';
     before(async () => {
       superblocks = await Superblocks.new(0x0);
       await superblocks.setClaimManager(claimManager);
@@ -99,7 +99,11 @@ contract('Superblocks', (accounts) => {
     });
     it('Bad propose', async () => {
       const result = await superblocks.propose(merkleRoot, accumulatedWork, timestamp, lastHash, id0, { from: claimManager });
-      assert.equal(result.logs[0].event, 'ErrorSuperblock', 'Superblock already exists');
+      assert.equal(result.logs[0].event, 'ErrorSuperblock', 'Superblock already exist');
+    });
+    it('Bad parent', async () => {
+      const result = await superblocks.propose(merkleRoot, accumulatedWork, timestamp, lastHash, "0x0", { from: claimManager });
+      assert.equal(result.logs[0].event, 'ErrorSuperblock', 'Superblock parent does not exist');
     });
     it('Approve', async () => {
       const result = await superblocks.confirm(id1, { from: claimManager });
@@ -149,7 +153,7 @@ contract('Superblocks', (accounts) => {
     let id1;
     let id2;
     let id3;
-    const merkleRoot = utils.makeMerkle(["0x0000000000000000000000000000000000000000000000000000000000000000"]);
+    const merkleRoot = utils.makeMerkle(['0x0000000000000000000000000000000000000000000000000000000000000000']);
     const accumulatedWork = 0;
     const timestamp = (new Date()).getTime() / 1000;
     const lastHash = '0x00';
