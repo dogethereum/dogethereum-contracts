@@ -15,6 +15,7 @@ contract ClaimManager is DepositsManager, BattleManager, SuperblockErrorCodes {
     uint public minDeposit = 1;
 
     uint public defaultChallengeTimeout = 5;
+    uint public superblocksDelta = 1 hours;
 
     event DepositBonded(bytes32 claimId, address account, uint amount);
     event DepositUnbonded(bytes32 claimId, address account, uint amount);
@@ -40,6 +41,7 @@ contract ClaimManager is DepositsManager, BattleManager, SuperblockErrorCodes {
         address claimant;                           // Superblock submitter
         bytes32 superblockId;                       // Superblock Id
         uint createdAt;                             // Block when claim was created
+        uint timestamp;                             // Superblock timestamp
 
         address[] challengers;                      // List of challengers
         mapping (address => uint) idxChallengers;   // Index of challengers (position + 1 in challengers array)
@@ -59,6 +61,7 @@ contract ClaimManager is DepositsManager, BattleManager, SuperblockErrorCodes {
         uint countBlockHeaderQueries;               // Number of block header queries
         uint countBlockHeaderResponses;             // Number of block header responses
         mapping(bytes32 => uint) blockHeaderQueries;  // 0 - none, 1 - required, 2 - replied
+        uint accumulatedWork;
     }
 
     // Active Superblock claims
@@ -161,6 +164,7 @@ contract ClaimManager is DepositsManager, BattleManager, SuperblockErrorCodes {
         claim.challengeTimeoutBlockNumber = block.number;
         claim.superblockId = superblockId;
         claim.challengeState = ChallengeState.Unchallenged;
+        claim.timestamp = _timestamp / superblocksDelta;
 
         bondDeposit(claimId, msg.sender, minDeposit);
 
@@ -393,6 +397,11 @@ contract ClaimManager is DepositsManager, BattleManager, SuperblockErrorCodes {
             require(claim.blockHeaderQueries[blockHash] == 1);
             claim.blockHeaderQueries[blockHash] = 2;
             claim.countBlockHeaderResponses += 1;
+
+            uint timestamp = DogeTx.getBytesLE(data, 32+68, 32);
+            timestamp /= superblocksDelta;
+            require(timestamp <= claim.timestamp);
+            require(timestamp >= claim.timestamp - 1);
 
             //FIXME: start scrypt hash verification
             // storeBlockHeader(data, uint(scryptHash));

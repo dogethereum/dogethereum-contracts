@@ -82,20 +82,49 @@ contract('ClaimManager', (accounts) => {
     });
     it('Propose', async () => {
       const accumulatedWork = 1;
-      const timestamp = 1;
-      const lastHash = initHashes[0];
+      const timestamp = utils.getBlockTimestamp(blockHeader);
+      const lastHash = blockHash;
       const parentHash = superblock0;
-      const merkleRoot = utils.makeMerkle(initHashes);
+      const merkleRoot = utils.makeMerkle([blockHash]);
       const result = await claimManager.proposeSuperblock(merkleRoot, accumulatedWork, timestamp, lastHash, parentHash, { from: submitter });
       assert.equal(result.logs[1].event, 'SuperblockClaimCreated', 'New superblock proposed');
       superblock1 = result.logs[1].args.superblockId;
+      claim1 = superblock1;
+    });
+    it('Challenge', async () => {
+      const result = await claimManager.challengeSuperblock(superblock1, { from: challenger });
+      assert.equal(result.logs[1].event, 'SuperblockClaimChallenged', 'Superblock challenged');
+      assert.equal(claim1, result.logs[1].args.claimId);
+    });
+    it('Query and verify hashes', async () => {
+      let result;
+      result = await claimManager.runNextBattleSession(claim1, { from: challenger });
+      assert.equal(result.logs[0].event, 'NewSession', 'New battle session');
+      session1 = result.logs[0].args.sessionId;
+      assert.equal(result.logs[1].event, 'VerificationGameStarted', 'Battle started');
+      result = await claimManager.query(session1, 0, 0, { from: challenger });
+      assert.equal(result.logs[0].event, 'NewQuery', 'Query hashes');
+      const data = utils.hashesToData([blockHash]);
+      result = await claimManager.respond(session1, 0, data, { from: submitter });
+      assert.equal(result.logs[0].event, 'NewResponse', 'Hashes accepted');
+    });
+    it('Query and reply block header', async () => {
+      let result;
+      result = await claimManager.query(session1, 1, blockHash, { from: challenger });
+      assert.equal(result.logs[0].event, 'NewQuery', 'Query block header');
+      const data = utils.headerToData(blockHeader);
+      result = await claimManager.respond(session1, 1, data, { from: submitter });
+      // console.log(JSON.stringify(result, null, '  '));
+      assert.equal(result.logs[0].event, 'NewResponse', 'Block header accepted');
+    });
+    it('Verify superblock', async () => {
+      const result = await claimManager.performVerification(session1, { from: challenger });
+      assert.equal(result.logs[0].event, 'SessionDecided', 'Superblock verified');
     });
     it('Confirm', async () => {
       await utils.mineBlocks(web3, 5);
       const result = await claimManager.checkClaimFinished(superblock1, { from: challenger });
       assert.equal(result.logs[1].event, 'SuperblockClaimSuccessful', 'Superblock challenged');
-      const best = await superblocks.getBestSuperblock();
-      assert.equal(superblock1, best, 'Best superblock should match');
     });
   });
   describe('Challenge superblock', () => {
@@ -130,7 +159,7 @@ contract('ClaimManager', (accounts) => {
     });
     it('Propose', async () => {
       const accumulatedWork = 2;
-      const timestamp = 1;
+      const timestamp = utils.getBlockTimestamp(headers[headers.length - 1]);
       const lastHash = hashes[hashes.length - 1];
       const parentHash = superblock0;
       const merkleRoot = utils.makeMerkle(hashes);
@@ -199,7 +228,7 @@ contract('ClaimManager', (accounts) => {
 
       // Propose
       const accumulatedWork = 2;
-      const timestamp = 1;
+      const timestamp = utils.getBlockTimestamp(headers[0]);
       const lastHash = hashes[hashes.length - 1];
       const parentHash = superblock0;
       const merkleRoot = utils.makeMerkle(hashes);
@@ -217,10 +246,10 @@ contract('ClaimManager', (accounts) => {
     it('Timeout query hashes', async () => {
       let result;
       await beginNewChallenge();
-      result = await claimManager.timeout(session1, { from: challenger });
+      result = await claimManager.timeout(session1, { from: submitter });
       assert.equal(result.logs[0].event, 'SessionError', 'Timeout too early');
       await utils.mineBlocks(web3, 5);
-      result = await claimManager.timeout(session1, { from: challenger });
+      result = await claimManager.timeout(session1, { from: submitter });
       assert.equal(result.logs[0].event, 'SessionDecided', 'Session decided');
       assert.equal(result.logs[1].event, 'ChallengerConvicted', 'Should convict challenger');
     });
@@ -244,10 +273,10 @@ contract('ClaimManager', (accounts) => {
       const data = utils.hashesToData(hashes);
       result = await claimManager.respond(session1, 0, data, { from: submitter });
       assert.equal(result.logs[0].event, 'NewResponse', 'Hashes accepted');
-      result = await claimManager.timeout(session1, { from: challenger });
+      result = await claimManager.timeout(session1, { from: submitter });
       assert.equal(result.logs[0].event, 'SessionError', 'Timeout too early');
       await utils.mineBlocks(web3, 5);
-      result = await claimManager.timeout(session1, { from: challenger });
+      result = await claimManager.timeout(session1, { from: submitter });
       assert.equal(result.logs[0].event, 'SessionDecided', 'Session decided');
       assert.equal(result.logs[1].event, 'ChallengerConvicted', 'Should convict challenger');
     });
@@ -282,10 +311,10 @@ contract('ClaimManager', (accounts) => {
       data = utils.headerToData(headers[0]);
       result = await claimManager.respond(session1, 1, data, { from: submitter });
       assert.equal(result.logs[0].event, 'NewResponse', 'Block header accepted');
-      result = await claimManager.timeout(session1, { from: challenger });
+      result = await claimManager.timeout(session1, { from: submitter });
       assert.equal(result.logs[0].event, 'SessionError', 'Timeout too early');
       await utils.mineBlocks(web3, 5);
-      result = await claimManager.timeout(session1, { from: challenger });
+      result = await claimManager.timeout(session1, { from: submitter });
       assert.equal(result.logs[0].event, 'SessionDecided', 'Session decided');
       assert.equal(result.logs[1].event, 'ChallengerConvicted', 'Should convict challenger');
     });

@@ -154,7 +154,7 @@ library DogeTx {
         }
     }
     // convert little endian bytes to uint
-    function getBytesLE(bytes data, uint pos, uint bits) private pure returns (uint) {
+    function getBytesLE(bytes data, uint pos, uint bits) internal pure returns (uint) {
         if (bits == 8) {
             return uint8(data[pos]);
         } else if (bits == 16) {
@@ -898,4 +898,16 @@ library DogeTx {
         return result;
     }
 
+    // @dev – Read an uint32 from an offset in the byte array
+    function readUint32(bytes data, uint offset) internal pure returns (uint32) {
+        uint32 result;
+        assembly {
+            let word := mload(add(add(data, 0x20), offset))
+            result := add(byte(3, word),
+                add(mul(byte(2, word), 0x100),
+                    add(mul(byte(1, word), 0x10000),
+                        mul(byte(0, word), 0x1000000))))
+        }
+        return result;
+    }
 }
