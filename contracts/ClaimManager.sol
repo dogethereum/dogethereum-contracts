@@ -132,30 +132,27 @@ contract ClaimManager is DepositsManager, BattleManager, SuperblockErrorCodes {
     // @param _parentId Id of the parent superblock
     // @return Error code and superblockId
     function proposeSuperblock(bytes32 _blocksMerkleRoot, uint _accumulatedWork, uint _timestamp, bytes32 _lastHash, bytes32 _parentHash) public returns (uint, bytes32) {
-        address _submitter = msg.sender;
-
-        if (deposits[_submitter] < minDeposit) {
+        if (deposits[msg.sender] < minDeposit) {
             emit ErrorClaim(0, ERR_SUPERBLOCK_MIN_DEPOSIT);
             return (ERR_SUPERBLOCK_MIN_DEPOSIT, 0);
         }
 
         uint err;
         bytes32 superblockId;
-        (err, superblockId) = superblocks.propose(_blocksMerkleRoot, _accumulatedWork, _timestamp, _lastHash, _parentHash);
+        (err, superblockId) = superblocks.propose(_blocksMerkleRoot, _accumulatedWork, _timestamp, _lastHash, _parentHash, msg.sender);
         if (err != 0) {
             emit ErrorClaim(superblockId, err);
             return (err, superblockId);
         }
 
         bytes32 claimId = superblockId;
+        SuperblockClaim storage claim = claims[claimId];
         if (claimExists(claim)) {
             emit ErrorClaim(claimId, ERR_SUPERBLOCK_BAD_CLAIM);
             return (ERR_SUPERBLOCK_BAD_CLAIM, claimId);
         }
 
-        SuperblockClaim storage claim = claims[claimId];
-        claim.claimant = _submitter;
-        // claim.numChallengers = 0;
+        claim.claimant = msg.sender;
         claim.currentChallenger = 0;
         claim.decided = false;
         claim.invalid = false;
@@ -165,8 +162,9 @@ contract ClaimManager is DepositsManager, BattleManager, SuperblockErrorCodes {
         claim.superblockId = superblockId;
         claim.challengeState = ChallengeState.Unchallenged;
 
-        bondDeposit(claimId, claim.claimant, minDeposit);
-        emit SuperblockClaimCreated(claimId, claim.claimant, superblockId);
+        bondDeposit(claimId, msg.sender, minDeposit);
+
+        emit SuperblockClaimCreated(claimId, msg.sender, superblockId);
 
         return (ERR_SUPERBLOCK_OK, superblockId);
     }
@@ -215,13 +213,23 @@ contract ClaimManager is DepositsManager, BattleManager, SuperblockErrorCodes {
 
     // @dev – runs the battle session to verify a superblock for the next challenger
     // @param claimId – the claim id.
-    function runNextBattleSession(bytes32 claimId) public {
+    function runNextBattleSession(bytes32 claimId) public returns (bool) {
         SuperblockClaim storage claim = claims[claimId];
 
-        require(claimExists(claim));
-        require(!claim.decided);
+        if (!claimExists(claim)) {
+            emit ErrorClaim(claimId, ERR_SUPERBLOCK_BAD_CLAIM);
+            return false;
+        }
 
-        require(claim.verificationOngoing == false);
+        if (claim.decided) {
+            emit ErrorClaim(claimId, ERR_SUPERBLOCK_CLAIM_DECIDED);
+            return false;
+        }
+
+        if (claim.verificationOngoing) {
+            emit ErrorClaim(claimId, ERR_SUPERBLOCK_VERIFICATION_PENDING);
+            return false;
+        }
 
         if (claim.currentChallenger < claim.challengers.length) {
 
@@ -232,7 +240,10 @@ contract ClaimManager is DepositsManager, BattleManager, SuperblockErrorCodes {
 
             claim.verificationOngoing = true;
             claim.currentChallenger += 1;
+
+            return true;
         }
+        return false;
     }
 
     // @dev – called when a battle session has ended.
@@ -343,21 +354,6 @@ contract ClaimManager is DepositsManager, BattleManager, SuperblockErrorCodes {
         SuperblockClaim storage claim = claims[claimId];
         if (claim.challengeState == ChallengeState.Challenged) {
             claim.challengeState = ChallengeState.QueryHashes;
-        } else {
-        }
-    }
-
-    // @dev – Make a query for superblock block headers
-    function queryBlockHeader(bytes32 claimId, bytes32 blockHash) internal {
-        SuperblockClaim storage claim = claims[claimId];
-        if (claim.challengeState == ChallengeState.RespondHashes || claim.challengeState == ChallengeState.QueryHeaders) {
-            require(claim.countBlockHeaderQueries < claim.blockHashes.length);
-            require(claim.blockHeaderQueries[blockHash] == 0);
-            claim.countBlockHeaderQueries += 1;
-            claim.blockHeaderQueries[blockHash] = 1;
-            claim.challengeState = ChallengeState.QueryHeaders;
-        } else {
-
         }
     }
 
@@ -373,6 +369,18 @@ contract ClaimManager is DepositsManager, BattleManager, SuperblockErrorCodes {
                 claim.blockHashes.push(DogeTx.readBytes32(data, 32*i));
             }
             require(superblocks.verifyMerkleRoot(claim.superblockId, claim.blockHashes));
+        }
+    }
+
+    // @dev – Make a query for superblock block headers
+    function queryBlockHeader(bytes32 claimId, bytes32 blockHash) internal {
+        SuperblockClaim storage claim = claims[claimId];
+        if (claim.challengeState == ChallengeState.RespondHashes || claim.challengeState == ChallengeState.QueryHeaders) {
+            require(claim.countBlockHeaderQueries < claim.blockHashes.length);
+            require(claim.blockHeaderQueries[blockHash] == 0);
+            claim.countBlockHeaderQueries += 1;
+            claim.blockHeaderQueries[blockHash] = 1;
+            claim.challengeState = ChallengeState.QueryHeaders;
         }
     }
 
