@@ -113,7 +113,7 @@ contract Superblocks is SuperblockErrorCodes {
     // @param _lastHash Hash of the last block in the superblock
     // @param _parentId Id of the parent superblock
     // @return Error code and superblockId
-    function propose(bytes32 _blocksMerkleRoot, uint _accumulatedWork, uint _timestamp, bytes32 _lastHash, bytes32 _parentId) public returns (uint, bytes32) {
+    function propose(bytes32 _blocksMerkleRoot, uint _accumulatedWork, uint _timestamp, bytes32 _lastHash, bytes32 _parentId, address submitter) public returns (uint, bytes32) {
         if (msg.sender != claimManager) {
             emit ErrorSuperblock(0, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
             return (ERR_SUPERBLOCK_NOT_CLAIMMANAGER, 0);
@@ -137,7 +137,7 @@ contract Superblocks is SuperblockErrorCodes {
         superblock.timestamp = _timestamp;
         superblock.lastHash = _lastHash;
         superblock.parentId = _parentId;
-        superblock.submitter = msg.sender;
+        superblock.submitter = submitter;
         superblock.status = Status.New;
 
         emit NewSuperblock(superblockId, msg.sender);
