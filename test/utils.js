@@ -56,7 +56,7 @@ function headerToData(blockHeader) {
 
 // Calculates the double sha256 of a block header
 // Block header is expected to be in hexadecimal
-function calcBlockHash(blockHeader) {
+function calcBlockSha256Hash(blockHeader) {
   const headerBin = module.exports.fromHex(blockHeader).slice(0, 80);
   return `0x${Buffer.from(sha256.array(sha256.arrayBuffer(headerBin))).reverse().toString('hex')}`;
 }
@@ -185,7 +185,7 @@ module.exports = {
   makeMerkle,
   hashesToData,
   headerToData,
-  calcBlockHash,
+  calcBlockSha256Hash,
   mineBlocks,
   verifyThrow,
 };
