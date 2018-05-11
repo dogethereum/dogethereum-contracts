@@ -61,6 +61,13 @@ function calcBlockSha256Hash(blockHeader) {
   return `0x${Buffer.from(sha256.array(sha256.arrayBuffer(headerBin))).reverse().toString('hex')}`;
 }
 
+// Get timestamp from dogecoin block header
+function getBlockTimestamp(blockHeader) {
+  const headerBin = module.exports.fromHex(blockHeader).slice(0, 80);
+  const timestamp = headerBin[68] + 256 * headerBin[69] + 256 * 256 * headerBin[70] + 256 * 256 * 256 * headerBin[71];
+  return timestamp;
+}
+
 const timeout = async (ms) => new Promise((resolve, reject) => setTimeout(resolve, ms));
 
 const mineBlocks = async (web3, n) => {
@@ -186,6 +193,7 @@ module.exports = {
   hashesToData,
   headerToData,
   calcBlockSha256Hash,
+  getBlockTimestamp,
   mineBlocks,
   verifyThrow,
 };
