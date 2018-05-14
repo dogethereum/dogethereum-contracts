@@ -22,11 +22,18 @@ contract Superblocks is SuperblockErrorCodes {
         bytes32 lastHash;
         bytes32 parentId;
         address submitter;
+        bytes32 ancestors;
+        uint32 index;
+        uint32 height;
         Status status;
     }
 
     // Mapping superblock id => superblock data
     mapping (bytes32 => SuperblockInfo) superblocks;
+
+    // Index to superblock id
+    mapping (uint32 => bytes32) private indexSuperblock;
+    uint32 indexNextSuperblock;
 
     bytes32 bestSuperblock;
     uint accumulatedWork;
@@ -52,7 +59,7 @@ contract Superblocks is SuperblockErrorCodes {
     }
 
     // @dev – the constructor
-    function Superblocks(DogeRelay _dogeRelay) public {
+    constructor(DogeRelay _dogeRelay) public {
         dogeRelay = _dogeRelay;
     }
 
@@ -84,13 +91,20 @@ contract Superblocks is SuperblockErrorCodes {
 
         require(superblock.status == Status.Unitialized);
 
+        indexSuperblock[indexNextSuperblock] = superblockId;
+
         superblock.blocksMerkleRoot = _blocksMerkleRoot;
         superblock.accumulatedWork = _accumulatedWork;
         superblock.timestamp = _timestamp;
         superblock.lastHash = _lastHash;
         superblock.parentId = _parentId;
         superblock.submitter = msg.sender;
+        superblock.index = indexNextSuperblock;
+        superblock.height = 0;
         superblock.status = Status.Approved;
+        superblock.ancestors = 0;
+
+        indexNextSuperblock++;
 
         emit NewSuperblock(superblockId, msg.sender);
 
@@ -132,13 +146,20 @@ contract Superblocks is SuperblockErrorCodes {
             return (ERR_SUPERBLOCK_EXIST, 0);
         }
 
+        indexSuperblock[indexNextSuperblock] = superblockId;
+
         superblock.blocksMerkleRoot = _blocksMerkleRoot;
         superblock.accumulatedWork = _accumulatedWork;
         superblock.timestamp = _timestamp;
         superblock.lastHash = _lastHash;
         superblock.parentId = _parentId;
         superblock.submitter = submitter;
+        superblock.index = indexNextSuperblock;
+        superblock.height = parent.height + 1;
         superblock.status = Status.New;
+        superblock.ancestors = updateAncestors(parent.ancestors, parent.index, parent.height + 1);
+
+        indexNextSuperblock++;
 
         emit NewSuperblock(superblockId, msg.sender);
 
@@ -302,6 +323,21 @@ contract Superblocks is SuperblockErrorCodes {
         );
     }
 
+    // Returns superblock height
+    function getSuperblockHeight(bytes32 superblockId) public view returns (uint32) {
+        return superblocks[superblockId].height;
+    }
+
+    // @dev - Returns superblock internal index
+    function getSuperblockIndex(bytes32 superblockId) public view returns (uint32) {
+        return superblocks[superblockId].index;
+    }
+
+    // @dev - Return superblock ancestors indexes
+    function getSuperblockAncestors(bytes32 superblockId) public view returns (bytes32) {
+        return superblocks[superblockId].ancestors;
+    }
+
     function verifyMerkleRoot(bytes32 _superblockId, bytes32[] _hashes) public view returns (bool) {
         bytes32 merkleRoot = DogeTx.makeMerkle(_hashes);
         SuperblockInfo storage superblock = superblocks[_superblockId];
@@ -310,5 +346,62 @@ contract Superblocks is SuperblockErrorCodes {
 
     function makeMerkle(bytes32[] hashes) public pure returns (bytes32) {
         return DogeTx.makeMerkle(hashes);
+    }
+
+    // @dev - write `_fourBytes` into `_word` starting from `_position`
+    // This is useful for writing 32bit ints inside one 32 byte word
+    //
+    // @param _word - information to be partially overwritten
+    // @param _position - position to start writing from
+    // @param _eightBytes - information to be written
+    function writeUint32(bytes32 _word, uint _position, uint32 _fourBytes) private pure returns (bytes32) {
+        bytes32 result;
+        assembly {
+            let pointer := mload(0x40)
+            mstore(pointer, _word)
+            mstore8(add(pointer, _position), byte(28, _fourBytes))
+            mstore8(add(pointer, add(_position,1)), byte(29, _fourBytes))
+            mstore8(add(pointer, add(_position,2)), byte(30, _fourBytes))
+            mstore8(add(pointer, add(_position,3)), byte(31, _fourBytes))
+            result := mload(pointer)
+        }
+        return result;
+    }
+
+    uint constant ANCESTOR_STEP = 5;
+    uint constant NUM_ANCESTOR_DEPTHS = 8;
+
+    // @dev - Update ancestor to the new height
+    function updateAncestors(bytes32 ancestors, uint32 index, uint height) internal pure returns (bytes32) {
+        uint step = ANCESTOR_STEP;
+        ancestors = writeUint32(ancestors, 0, index);
+        uint i = 1;
+        while (i<NUM_ANCESTOR_DEPTHS && (height % step == 1)) {
+            ancestors = writeUint32(ancestors, 4*i, index);
+            step *= ANCESTOR_STEP;
+            ++i;
+        }
+        return ancestors;
+    }
+
+    // @dev - Returns a list of superblock hashes (9 hashes maximum) that helps an agent find out what
+    // superblocks are missing.
+    // The first position contains bestSuperblock, then
+    // bestSuperblock - 1,
+    // (bestSuperblock-1) - ((bestSuperblock-1) % 5), then
+    // (bestSuperblock-1) - ((bestSuperblock-1) % 25), ... until
+    // (bestSuperblock-1) - ((bestSuperblock-1) % 78125)
+    //
+    // @return - list of up to 9 ancestor supeerblock id
+    function getSuperblockLocator() public view returns (bytes32[9] locator) {
+        locator[0] = bestSuperblock;
+        bytes32 ancestors = getSuperblockAncestors(bestSuperblock);
+        uint i = NUM_ANCESTOR_DEPTHS;
+        while (i > 0) {
+            locator[i] = indexSuperblock[uint32(ancestors & 0xFFFFFFFF)];
+            ancestors >>= 32;
+            --i;
+        }
+        return locator;
     }
 }

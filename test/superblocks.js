@@ -209,4 +209,58 @@ contract('Superblocks', (accounts) => {
       assert.equal(result.logs[0].event, 'InvalidSuperblock', 'Superblock invalidated');
     });
   });
+  describe.only('Test locator', () => {
+    let id0;
+    let id1;
+    let id2;
+    let id3;
+    const merkleRoot = utils.makeMerkle(['0x0000000000000000000000000000000000000000000000000000000000000000']);
+    const accumulatedWork = 0;
+    const timestamp = 0;
+    const lastHash = '0x0000000000000000000000000000000000000000000000000000000000000000';
+    const parentHash = '0x0000000000000000000000000000000000000000000000000000000000000000';
+    before(async () => {
+      superblocks = await Superblocks.new(0x0);
+      await superblocks.setClaimManager(claimManager);
+    });
+    it('Initialized', async () => {
+      const result = await superblocks.initialize(merkleRoot, accumulatedWork, timestamp, lastHash, parentHash);
+      assert.equal(result.logs[0].event, 'NewSuperblock', 'New superblock proposed');
+      id0 = result.logs[0].args.superblockId;
+    });
+    it('Verify locator', async () => {
+      let parentId;
+      parentId = id0;
+      let superblockId;
+      let result;
+      let prevLocator;
+      let locator;
+      prevLocator = locator = await superblocks.getSuperblockLocator();
+      const sblocks = {};
+      sblocks[0] = id0;
+      for(let work = 1; work < 30; ++work) {
+        result = await superblocks.propose(merkleRoot, work, work, lastHash, parentId, claimManager, { from: claimManager });
+        assert.equal(result.logs[0].event, 'NewSuperblock', 'ClaimManager can propose');
+        superblockId = result.logs[0].args.superblockId;
+        result = await superblocks.confirm(superblockId, { from: claimManager });
+        assert.equal(result.logs[0].event, 'ApprovedSuperblock', 'Only claimManager can propose');
+        locator = await superblocks.getSuperblockLocator();
+        assert.equal(locator[0], superblockId, 'Position 0 current best superblock');
+        assert.equal(locator[1], parentId, 'Position 1 parent best superblock');
+        let step = 5;
+        // At index i we have superblockId of height
+        // (bestSuperblock-1) - (bestSuperblock-1) % 5**(i-1)
+        for (let i=2; i<=8; ++i) {
+          let pos = work - 1 - (work - 1) % step;
+          assert.equal(locator[i], sblocks[pos], `Invalid superblock at ${i} ${step} ${pos}`);
+          step = step * 5;
+        }
+        if (work % 5 === 0) {
+          sblocks[work] = superblockId;
+        }
+        parentId = superblockId;
+        prevLocator = locator;
+      }
+    });
+  });
 });
