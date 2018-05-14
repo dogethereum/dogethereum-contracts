@@ -209,7 +209,7 @@ contract('Superblocks', (accounts) => {
       assert.equal(result.logs[0].event, 'InvalidSuperblock', 'Superblock invalidated');
     });
   });
-  describe.only('Test locator', () => {
+  describe('Test locator', () => {
     let id0;
     let id1;
     let id2;
