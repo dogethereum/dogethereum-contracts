@@ -244,10 +244,9 @@ contract ClaimManager is DepositsManager, BattleManager, SuperblockErrorCodes {
 
             claim.verificationOngoing = true;
             claim.currentChallenger += 1;
-
-            return true;
         }
-        return false;
+
+        return true;
     }
 
     // @dev – called when a battle session has ended.
@@ -276,9 +275,14 @@ contract ClaimManager is DepositsManager, BattleManager, SuperblockErrorCodes {
 
             //Trigger end of verification game
             claim.invalid = true;
+
+            // It should not fail when called from sessionDecided
+            // the data should be verified and a out of gas will cause
+            // the whole transaction to revert
             runNextBattleSession(claimId);
         } else if (claim.claimant == winner) {
             // the claim continues.
+            // It should not fail when called from sessionDecided
             runNextBattleSession(claimId);
         } else {
             revert();
