@@ -376,7 +376,8 @@ contract ClaimManager is DepositsManager, BattleManager, SuperblockErrorCodes {
             for (uint i=0; i<count; ++i) {
                 claim.blockHashes.push(DogeTx.readBytes32(data, 32*i));
             }
-            require(superblocks.verifyMerkleRoot(claim.superblockId, claim.blockHashes));
+            bytes32 merkleRoot = DogeTx.makeMerkle(claim.blockHashes);
+            require(merkleRoot == superblocks.getSuperblockMerkleRoot(claim.superblockId));
         }
     }
 

@@ -102,7 +102,7 @@ contract Superblocks is SuperblockErrorCodes {
         superblock.index = indexNextSuperblock;
         superblock.height = 0;
         superblock.status = Status.Approved;
-        superblock.ancestors = 0;
+        superblock.ancestors = 0x0;
 
         indexNextSuperblock++;
 
@@ -338,10 +338,9 @@ contract Superblocks is SuperblockErrorCodes {
         return superblocks[superblockId].ancestors;
     }
 
-    function verifyMerkleRoot(bytes32 _superblockId, bytes32[] _hashes) public view returns (bool) {
-        bytes32 merkleRoot = DogeTx.makeMerkle(_hashes);
-        SuperblockInfo storage superblock = superblocks[_superblockId];
-        return (merkleRoot == superblock.blocksMerkleRoot);
+    // @dev - Return superblock blocks' merkle root
+    function getSuperblockMerkleRoot(bytes32 _superblockId) public view returns (bytes32) {
+        return superblocks[_superblockId].blocksMerkleRoot;
     }
 
     function makeMerkle(bytes32[] hashes) public pure returns (bytes32) {
@@ -393,7 +392,8 @@ contract Superblocks is SuperblockErrorCodes {
     // (bestSuperblock-1) - ((bestSuperblock-1) % 78125)
     //
     // @return - list of up to 9 ancestor supeerblock id
-    function getSuperblockLocator() public view returns (bytes32[9] locator) {
+    function getSuperblockLocator() public view returns (bytes32[9]) {
+        bytes32[9] memory locator;
         locator[0] = bestSuperblock;
         bytes32 ancestors = getSuperblockAncestors(bestSuperblock);
         uint i = NUM_ANCESTOR_DEPTHS;
