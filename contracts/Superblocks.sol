@@ -343,6 +343,16 @@ contract Superblocks is SuperblockErrorCodes {
         return superblocks[_superblockId].blocksMerkleRoot;
     }
 
+    // @dev - Return superblock timestamp
+    function getSuperblockTimestamp(bytes32 _superblockId) public view returns (uint) {
+        return superblocks[_superblockId].timestamp;
+    }
+
+    // @dev - Return superblock last block hash
+    function getSuperblockLastHash(bytes32 _superblockId) public view returns (bytes32) {
+        return superblocks[_superblockId].lastHash;
+    }
+
     function makeMerkle(bytes32[] hashes) public pure returns (bytes32) {
         return DogeTx.makeMerkle(hashes);
     }

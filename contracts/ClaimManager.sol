@@ -34,7 +34,14 @@ contract ClaimManager is DepositsManager, BattleManager, SuperblockErrorCodes {
         QueryHashes,        // Challenger expecting block hashes
         RespondHashes,      // Blcok hashes were received and verified
         QueryHeaders,       // Challenger is requesting block headers
-        RespondHeaders      // All block headers were received
+        RespondHeaders,     // All block headers were received
+        SuperblockVerified  // Superblock was verified
+    }
+
+    struct BlockInfo {
+        uint timestamp;
+        uint difficulty;
+        uint status;        // 0 - none, 1 - required, 2 - replied
     }
 
     struct SuperblockClaim {
@@ -60,7 +67,7 @@ contract ClaimManager is DepositsManager, BattleManager, SuperblockErrorCodes {
         bytes32[] blockHashes;                      // Block hashes
         uint countBlockHeaderQueries;               // Number of block header queries
         uint countBlockHeaderResponses;             // Number of block header responses
-        mapping(bytes32 => uint) blockHeaderQueries;  // 0 - none, 1 - required, 2 - replied
+        mapping(bytes32 => BlockInfo) blocksInfo;
         uint accumulatedWork;
     }
 
@@ -386,12 +393,19 @@ contract ClaimManager is DepositsManager, BattleManager, SuperblockErrorCodes {
         SuperblockClaim storage claim = claims[claimId];
         if (claim.challengeState == ChallengeState.RespondHashes || claim.challengeState == ChallengeState.QueryHeaders) {
             require(claim.countBlockHeaderQueries < claim.blockHashes.length);
-            require(claim.blockHeaderQueries[blockHash] == 0);
+            require(claim.blocksInfo[blockHash].status == 0);
             claim.countBlockHeaderQueries += 1;
-            claim.blockHeaderQueries[blockHash] = 1;
+            claim.blocksInfo[blockHash].status = 1;
             claim.challengeState = ChallengeState.QueryHeaders;
         }
     }
+
+    uint constant DOGECOIN_HEADER_VERSION_OFFSET = 0;
+    uint constant DOGECOIN_HEADER_PARENT_OFFSET = 4;
+    uint constant DOGECOIN_HEADER_MERKLEROOT_OFFSET = 36;
+    uint constant DOGECOIN_HEADER_TIMESTAMP_OFFSET = 68;
+    uint constant DOGECOIN_HEADER_DIFFICULTY_OFFSET = 72;
+    uint constant DOGECOIN_HEADER_NONCE_OFFSET = 76;
 
     // @dev - Verify a block header data correspond to a block hash in the superblock
     function verifyBlockHeader(bytes32 claimId, bytes data) internal {
@@ -399,14 +413,19 @@ contract ClaimManager is DepositsManager, BattleManager, SuperblockErrorCodes {
         bytes32 scryptHash = DogeTx.readBytes32(data, 0);
         if (claim.challengeState == ChallengeState.QueryHeaders) {
             bytes32 blockHash = bytes32(DogeTx.dblShaFlipMem(data, 32, 80));
-            require(claim.blockHeaderQueries[blockHash] == 1);
-            claim.blockHeaderQueries[blockHash] = 2;
+            require(claim.blocksInfo[blockHash].status == 1);
+            claim.blocksInfo[blockHash].status = 2;
             claim.countBlockHeaderResponses += 1;
 
-            uint timestamp = DogeTx.getBytesLE(data, 32+68, 32);
+            uint timestamp = DogeTx.getBytesLE(data, 32 + DOGECOIN_HEADER_TIMESTAMP_OFFSET, 32);
             timestamp /= superblocksDelta;
             require(timestamp <= claim.timestamp);
             require(timestamp >= claim.timestamp - 1);
+
+            uint difficulty = DogeTx.getBytesLE(data, 32 + DOGECOIN_HEADER_DIFFICULTY_OFFSET, 32);
+
+            claim.blocksInfo[blockHash].timestamp = timestamp;
+            claim.blocksInfo[blockHash].difficulty = difficulty;
 
             //FIXME: start scrypt hash verification
             // storeBlockHeader(data, uint(scryptHash));
@@ -421,7 +440,12 @@ contract ClaimManager is DepositsManager, BattleManager, SuperblockErrorCodes {
     function verifySuperblock(bytes32 claimId) internal returns (bool) {
         SuperblockClaim storage claim = claims[claimId];
         if (claim.challengeState == ChallengeState.RespondHeaders) {
-            //FIXME: Verify timestamps & proof of work
+            claim.challengeState = ChallengeState.SuperblockVerified;
+            bytes32 superblockId = claim.superblockId;
+            bytes32 lastHash = superblocks.getSuperblockLastHash(superblockId);
+
+            //require(claim.blocksInfo[lastHash].timestamp == superblocks.getSuperblockTimestamp(superblockId));
+
             return true;
         }
         return false;
