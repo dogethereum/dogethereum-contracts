@@ -39,7 +39,6 @@ contract ClaimManager is DepositsManager, BattleManager, SuperblockErrorCodes {
     }
 
     struct BlockInfo {
-        uint timestamp;
         uint difficulty;
         uint status;        // 0 - none, 1 - required, 2 - replied
     }
@@ -69,6 +68,7 @@ contract ClaimManager is DepositsManager, BattleManager, SuperblockErrorCodes {
         uint countBlockHeaderResponses;             // Number of block header responses
         mapping(bytes32 => BlockInfo) blocksInfo;
         uint accumulatedWork;
+        uint lastBlockTimestamp;
     }
 
     // Active Superblock claims
@@ -171,7 +171,7 @@ contract ClaimManager is DepositsManager, BattleManager, SuperblockErrorCodes {
         claim.challengeTimeoutBlockNumber = block.number;
         claim.superblockId = superblockId;
         claim.challengeState = ChallengeState.Unchallenged;
-        claim.timestamp = _timestamp / superblocksDelta;
+        claim.timestamp = _timestamp;
 
         bondDeposit(claimId, msg.sender, minDeposit);
 
@@ -418,14 +418,19 @@ contract ClaimManager is DepositsManager, BattleManager, SuperblockErrorCodes {
             claim.countBlockHeaderResponses += 1;
 
             uint timestamp = DogeTx.getBytesLE(data, 32 + DOGECOIN_HEADER_TIMESTAMP_OFFSET, 32);
-            timestamp /= superblocksDelta;
-            require(timestamp <= claim.timestamp);
-            require(timestamp >= claim.timestamp - 1);
+
+            // Block timestamp to be within the expected timestamp of the superblock
+            require(timestamp / superblocksDelta <= claim.timestamp / superblocksDelta);
+            require(timestamp / superblocksDelta >= claim.timestamp / superblocksDelta - 1);
 
             uint difficulty = DogeTx.getBytesLE(data, 32 + DOGECOIN_HEADER_DIFFICULTY_OFFSET, 32);
 
-            claim.blocksInfo[blockHash].timestamp = timestamp;
             claim.blocksInfo[blockHash].difficulty = difficulty;
+
+            if (blockHash == claim.blockHashes[claim.blockHashes.length - 1]) {
+                claim.lastBlockTimestamp = timestamp;
+                // require(timestamp == claim.timestamp);
+            }
 
             //FIXME: start scrypt hash verification
             // storeBlockHeader(data, uint(scryptHash));
@@ -444,7 +449,7 @@ contract ClaimManager is DepositsManager, BattleManager, SuperblockErrorCodes {
             bytes32 superblockId = claim.superblockId;
             bytes32 lastHash = superblocks.getSuperblockLastHash(superblockId);
 
-            //require(claim.blocksInfo[lastHash].timestamp == superblocks.getSuperblockTimestamp(superblockId));
+            require(claim.lastBlockTimestamp != 0 && claim.lastBlockTimestamp == claim.timestamp);
 
             return true;
         }
