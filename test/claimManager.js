@@ -15,7 +15,14 @@ contract('ClaimManager', (accounts) => {
   const initTimestamp = 0;
   const initLastHash = '0x0000000000000000000000000000000000000000000000000000000000000000';
   const initParentHash = '0x0000000000000000000000000000000000000000000000000000000000000000';
-  const initSuperblock = '0xdfded4ed5ac76ba7379cfe7b3b0f53e768dca8d45a34854e649cfc3c18cbd9cd';
+  const initSuperblock = utils.calcSuperblockId(
+    initMerkleRoot,
+    initAccumulatedWork,
+    initTimestamp,
+    initLastHash,
+    initParentHash,
+  );
+
   async function initSuperblocks() {
     superblocks = await Superblocks.new(0x0);
     claimManager = await ClaimManager.new(superblocks.address);
@@ -40,7 +47,7 @@ contract('ClaimManager', (accounts) => {
       assert.equal(superblock0, best, 'Best superblock should match');
     });
     it('Propose', async () => {
-      const accumulatedWork = 1;
+      const accumulatedWork = initAccumulatedWork + 2;
       const timestamp = 1;
       const lastHash = initHashes[0];
       const parentHash = superblock0;
@@ -63,6 +70,23 @@ contract('ClaimManager', (accounts) => {
       const best = await superblocks.getBestSuperblock();
       assert.equal(superblock1, best, 'Best superblock should match');
     });
+    it('Propose fork', async () => {
+      const accumulatedWork = initAccumulatedWork + 1;
+      const timestamp = 1;
+      const lastHash = initHashes[0];
+      const parentHash = superblock0;
+      const merkleRoot = utils.makeMerkle(initHashes);
+      const result = await claimManager.proposeSuperblock(merkleRoot, accumulatedWork, timestamp, lastHash, parentHash, { from: submitter });
+      assert.equal(result.logs[1].event, 'SuperblockClaimCreated', 'New superblock proposed');
+      superblock2 = result.logs[1].args.superblockId;
+    });
+    it('Confirm fork', async () => {
+      await utils.mineBlocks(web3, 5);
+      const result = await claimManager.checkClaimFinished(superblock2, { from: challenger });
+      assert.equal(result.logs[1].event, 'SuperblockClaimSuccessful', 'Superblock challenged');
+      const best = await superblocks.getBestSuperblock();
+      assert.equal(superblock1, best, 'Best superblock did not change');
+    });
   });
   describe('Invalid superblock', () => {
     let superblock0;
@@ -81,7 +105,7 @@ contract('ClaimManager', (accounts) => {
       assert.equal(superblock0, best, 'Best superblock should match');
     });
     it('Propose', async () => {
-      const accumulatedWork = 1;
+      const accumulatedWork = web3.toBigNumber(initAccumulatedWork).plus(utils.getBlockDifficulty(blockHeader));
       const timestamp = utils.getBlockTimestamp(blockHeader);
       const lastHash = blockHash;
       const parentHash = superblock0;
@@ -114,7 +138,6 @@ contract('ClaimManager', (accounts) => {
       assert.equal(result.logs[0].event, 'NewQuery', 'Query block header');
       const data = utils.headerToData(blockHeader);
       result = await claimManager.respond(session1, 1, data, { from: submitter });
-      // console.log(JSON.stringify(result, null, '  '));
       assert.equal(result.logs[0].event, 'NewResponse', 'Block header accepted');
     });
     it('Verify superblock', async () => {
@@ -158,7 +181,7 @@ contract('ClaimManager', (accounts) => {
       assert.equal(superblock0, best, 'Best superblock should match');
     });
     it('Propose', async () => {
-      const accumulatedWork = 2;
+      const accumulatedWork = headers.reduce((work, header) => work.plus(utils.getBlockDifficulty(header)), web3.toBigNumber(initAccumulatedWork));
       const timestamp = utils.getBlockTimestamp(headers[headers.length - 1]);
       const lastHash = hashes[hashes.length - 1];
       const parentHash = superblock0;
@@ -194,7 +217,7 @@ contract('ClaimManager', (accounts) => {
         const result = await claimManager.query(session1, 1, hash, { from: challenger });
         assert.equal(result.logs[0].event, 'NewQuery', 'Query block header');
       });
-      it(`Answer blocks header ${hash.slice(0, 20)}`, async () => {
+      it(`Answer blocks header ${hash.slice(0, 20)}..`, async () => {
         const data = utils.headerToData(headers[idx]);
         const result = await claimManager.respond(session1, 1, data, { from: submitter });
         assert.equal(result.logs[0].event, 'NewResponse', 'Block header accepted');
@@ -222,14 +245,14 @@ contract('ClaimManager', (accounts) => {
 
     const beginNewChallenge = async () => {
       let result;
-
       await initSuperblocks();
+
       superblock0 = initSuperblock;
 
       // Propose
-      const accumulatedWork = 2;
+      const accumulatedWork = web3.toBigNumber(initAccumulatedWork).plus(utils.getBlockDifficulty(headers[0]));
       const timestamp = utils.getBlockTimestamp(headers[0]);
-      const lastHash = hashes[hashes.length - 1];
+      const lastHash = hashes[0];
       const parentHash = superblock0;
       const merkleRoot = utils.makeMerkle(hashes);
 

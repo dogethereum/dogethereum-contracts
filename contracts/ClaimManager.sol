@@ -39,7 +39,6 @@ contract ClaimManager is DepositsManager, BattleManager, SuperblockErrorCodes {
     }
 
     struct BlockInfo {
-        uint difficulty;
         uint status;        // 0 - none, 1 - required, 2 - replied
     }
 
@@ -423,9 +422,9 @@ contract ClaimManager is DepositsManager, BattleManager, SuperblockErrorCodes {
             require(timestamp / superblocksDelta <= claim.timestamp / superblocksDelta);
             require(timestamp / superblocksDelta >= claim.timestamp / superblocksDelta - 1);
 
-            uint difficulty = DogeTx.getBytesLE(data, 32 + DOGECOIN_HEADER_DIFFICULTY_OFFSET, 32);
+            uint bits = DogeTx.getBytesLE(data, 32 + DOGECOIN_HEADER_DIFFICULTY_OFFSET, 32);
 
-            claim.blocksInfo[blockHash].difficulty = difficulty;
+            claim.accumulatedWork += targetToDiff(targetFromBits(bits));
 
             if (blockHash == claim.blockHashes[claim.blockHashes.length - 1]) {
                 claim.lastBlockTimestamp = timestamp;
@@ -447,13 +446,38 @@ contract ClaimManager is DepositsManager, BattleManager, SuperblockErrorCodes {
         if (claim.challengeState == ChallengeState.RespondHeaders) {
             claim.challengeState = ChallengeState.SuperblockVerified;
             bytes32 superblockId = claim.superblockId;
+
             bytes32 lastHash = superblocks.getSuperblockLastHash(superblockId);
 
+            uint accumulatedWork = superblocks.getSuperblockAccumulatedWork(superblockId);
+
+            bytes32 parentId = superblocks.getSuperblockParentId(superblockId);
+            uint parentAccumulatedWork = superblocks.getSuperblockAccumulatedWork(parentId);
+
             require(claim.lastBlockTimestamp != 0 && claim.lastBlockTimestamp == claim.timestamp);
+
+            require(parentAccumulatedWork + claim.accumulatedWork == accumulatedWork);
 
             return true;
         }
         return false;
     }
 
+    // @dev - Bitcoin-way of computing the target from the 'bits' field of a block header
+    // based on http://www.righto.com/2014/02/bitcoin-mining-hard-way-algorithms.html//ref3
+    //
+    // @param _bits - difficulty in bits format
+    // @return - difficulty in target format
+    function targetFromBits(uint _bits) internal pure returns (uint) {
+        uint exp = _bits / 0x1000000;  // 2**24
+        uint mant = _bits & 0xffffff;
+        return mant * 256**(exp - 3);
+    }
+
+    uint constant DOGECOIN_DIFFICULTY1 = 0xFFFFF * 256**(0x1e - 3);
+
+    // @dev - Calculate dogecoin difficulty from target
+    function targetToDiff(uint target) internal pure returns (uint) {
+        return DOGECOIN_DIFFICULTY1 / target;
+    }
 }

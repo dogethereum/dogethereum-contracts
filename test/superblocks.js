@@ -63,12 +63,18 @@ contract('Superblocks', (accounts) => {
       assert.equal(hash, "0xee712eefe9b4c9ecd39a71d45e975b83c9427070e54953559e78f45d2cbb03b3", 'Many hashes array');
     });
     it('Superblock id', async () => {
-      const superblockId = "0x4b93573044c1acca678af19f594129417cebe5b048eb5323d3ce542ba07387a6";
       const merkleRoot = "0xbc89818e52613f36d6cea2edba2c9417f01ee910250dbd85a8647a92e655996b";
-      const accumulatedWork = "0x0000000000000000000000000000000000000000000000000000000000000001";
+      const accumulatedWork = "0x0000000000000000000000000000000000000000000000000000000000000023";
       const timestamp = "0x000000000000000000000000000000000000000000000000000000005ada05b9";
       const lastHash = "0xe0dd609916339ee7e12272cf5467cf5915d2d41a16816e7118116fb281337367";
       const parentId = "0xe70a134b97a4381e5b6c1f4ae0e1e3726b7284bf03506afacebf92401e255e97";
+      const superblockId = utils.calcSuperblockId(
+        merkleRoot,
+        accumulatedWork,
+        timestamp,
+        lastHash,
+        parentId
+      );
       const id = await superblocks.calcSuperblockId(merkleRoot, accumulatedWork, timestamp, lastHash, parentId);
       assert.equal(id, superblockId, "SuperblockId should match");
     });

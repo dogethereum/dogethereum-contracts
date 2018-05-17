@@ -83,7 +83,6 @@ contract Superblocks is SuperblockErrorCodes {
     // @return Error code and superblockId
     function initialize(bytes32 _blocksMerkleRoot, uint _accumulatedWork, uint _timestamp, bytes32 _lastHash, bytes32 _parentId) public returns (uint, bytes32) {
         require(bestSuperblock == 0);
-        require(accumulatedWork == 0);
         require(_parentId == 0);
 
         bytes32 superblockId = calcSuperblockId(_blocksMerkleRoot, _accumulatedWork, _timestamp, _lastHash, _parentId);
@@ -353,6 +352,17 @@ contract Superblocks is SuperblockErrorCodes {
         return superblocks[_superblockId].lastHash;
     }
 
+    // @dev - Return superblock parent
+    function getSuperblockParentId(bytes32 _superblockId) public view returns (bytes32) {
+        return superblocks[_superblockId].parentId;
+    }
+
+    // @dev - Return superblock accumulated work
+    function getSuperblockAccumulatedWork(bytes32 _superblockId) public view returns (uint) {
+        return superblocks[_superblockId].accumulatedWork;
+    }
+
+    // @dev - Calculte merkle root from hashes
     function makeMerkle(bytes32[] hashes) public pure returns (bytes32) {
         return DogeTx.makeMerkle(hashes);
     }

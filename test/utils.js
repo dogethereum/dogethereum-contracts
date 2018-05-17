@@ -3,6 +3,7 @@ const readline = require('readline');
 const btcProof = require('bitcoin-proof');
 const scryptsy = require('scryptsy');
 const sha256 = require('js-sha256').sha256;
+const keccak256 = require('js-sha3').keccak256;
 
 const SEND_BATCH = true;
 
@@ -68,6 +69,17 @@ function getBlockTimestamp(blockHeader) {
   return timestamp;
 }
 
+// Get difficulty from dogecoin block header
+function getBlockDifficulty(blockHeader) {
+  const headerBin = module.exports.fromHex(blockHeader).slice(0, 80);
+  const exp = web3.toBigNumber(headerBin[75]);
+  const mant = web3.toBigNumber(headerBin[72] + 256 * headerBin[73] + 256 * 256 * headerBin[74]);
+  const target = mant.mul(web3.toBigNumber(256).pow(exp.minus(3)));
+  const difficulty1 = web3.toBigNumber(0x00FFFFF).mul(web3.toBigNumber(256).pow(web3.toBigNumber(0x1e-3)));
+  const difficulty = difficulty1.divToInt(target);
+  return difficulty1.divToInt(target);
+}
+
 const timeout = async (ms) => new Promise((resolve, reject) => setTimeout(resolve, ms));
 
 const mineBlocks = async (web3, n) => {
@@ -82,6 +94,7 @@ const mineBlocks = async (web3, n) => {
   }
 }
 
+// Helper to assert a promise failing
 async function verifyThrow(P, cond, message) {
   let e;
   try {
@@ -94,6 +107,31 @@ async function verifyThrow(P, cond, message) {
       throw e;
     }
   }, cond, message);
+}
+
+// Format a numeric or hexadecimal string to solidity uint256
+function toUint256(value) {
+  if (typeof value === 'string') {
+    // Assume data is hex formatted
+    value = module.exports.remove0x(value);
+  } else {
+    // Number or BignNumber
+    value = value.toString(16);
+  }
+  return module.exports.formatHexUint32(value);
+}
+
+// Calculate a superblock id
+function calcSuperblockId(merkleRoot, accumulatedWork, timestamp, lastHash, parentId) {
+  return `0x${Buffer.from(keccak256.arrayBuffer(
+    Buffer.concat([
+      module.exports.fromHex(merkleRoot),
+      module.exports.fromHex(toUint256(accumulatedWork)),
+      module.exports.fromHex(toUint256(timestamp)),
+      module.exports.fromHex(lastHash),
+      module.exports.fromHex(parentId)
+    ])
+  )).toString('hex')}`;
 }
 
 module.exports = {
@@ -194,6 +232,8 @@ module.exports = {
   headerToData,
   calcBlockSha256Hash,
   getBlockTimestamp,
+  getBlockDifficulty,
   mineBlocks,
   verifyThrow,
+  calcSuperblockId,
 };
