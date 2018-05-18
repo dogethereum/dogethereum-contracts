@@ -32,7 +32,7 @@ module.exports = async function(callback) {
   console.log("utxosLength : " + utxosLength);  
   for (var i = 0; i < utxosLength; i++) {
     var utxo = await dt.utxos(i);
-    console.log("utxo [" + i + "]: " + utxo);  
+    console.log("utxo [" + i + "]: " + utils.formatHexUint32(utxo[1].toString(16)) + ", " + utxo[2] + ", " + utxo[0]);  
   }
   var unlockRequestEvent = dt.UnlockRequest({}, {fromBlock: 0, toBlock: "latest"});
   var myResults = unlockRequestEvent.get(function(error, logs){ 
