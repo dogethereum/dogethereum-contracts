@@ -10,7 +10,7 @@ import {SuperblockErrorCodes} from "./SuperblockErrorCodes.sol";
 // @dev - Manager of superblock claims
 //
 // Manages superblocks proposal and challenges
-contract ClaimManager is DepositsManager, BattleManager, SuperblockErrorCodes {
+contract ClaimManager is DepositsManager, BattleManager {
     uint private numClaims = 1;
     uint public minDeposit = 1;
 
@@ -74,11 +74,6 @@ contract ClaimManager is DepositsManager, BattleManager, SuperblockErrorCodes {
     mapping(bytes32 => SuperblockClaim) private claims;
 
     Superblocks superblocks;
-
-    modifier onlyBy(address _account) {
-        require(msg.sender == _account);
-        _;
-    }
 
     // @dev – Configures the contract storing the superblocks
     // @param _superblocks Contract that manages superblocks
@@ -318,13 +313,13 @@ contract ClaimManager is DepositsManager, BattleManager, SuperblockErrorCodes {
 
         // check that the claim has exceeded the default challenge timeout.
         if (block.number -  claim.createdAt <= defaultChallengeTimeout) {
-            emit ErrorClaim(claimId, ERR_SUPERBLOCK_NOT_TIMEOUT);
+            emit ErrorClaim(claimId, ERR_SUPERBLOCK_NO_TIMEOUT);
             return false;
         }
 
         //check that the claim has exceeded the claim's specific challenge timeout.
         if (block.number <= claim.challengeTimeoutBlockNumber) {
-            emit ErrorClaim(claimId, ERR_SUPERBLOCK_NOT_TIMEOUT);
+            emit ErrorClaim(claimId, ERR_SUPERBLOCK_NO_TIMEOUT);
             return false;
         }
 
@@ -336,11 +331,12 @@ contract ClaimManager is DepositsManager, BattleManager, SuperblockErrorCodes {
 
         claim.decided = true;
 
-        // If no challengers confirm immediately
+        // If the claim is invalid superblock data didn't match provided input
         if (claim.invalid) {
             superblocks.invalidate(claim.superblockId);
             emit SuperblockClaimFailed(claimId, claim.claimant, claim.superblockId);
         } else {
+            // If no challengers confirm immediately
             if (claim.challengers.length == 0) {
                 superblocks.confirm(claim.superblockId);
             } else {
@@ -382,6 +378,8 @@ contract ClaimManager is DepositsManager, BattleManager, SuperblockErrorCodes {
             for (uint i=0; i<count; ++i) {
                 claim.blockHashes.push(DogeTx.readBytes32(data, 32*i));
             }
+            bytes32 lastHash = superblocks.getSuperblockLastHash(claim.superblockId);
+            require(lastHash == claim.blockHashes[claim.blockHashes.length - 1]);
             bytes32 merkleRoot = DogeTx.makeMerkle(claim.blockHashes);
             require(merkleRoot == superblocks.getSuperblockMerkleRoot(claim.superblockId));
         }
@@ -457,6 +455,8 @@ contract ClaimManager is DepositsManager, BattleManager, SuperblockErrorCodes {
             require(claim.lastBlockTimestamp != 0 && claim.lastBlockTimestamp == claim.timestamp);
 
             require(parentAccumulatedWork + claim.accumulatedWork == accumulatedWork);
+
+            require(lastHash == claim.blockHashes[claim.blockHashes.length - 1]);
 
             return true;
         }

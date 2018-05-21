@@ -1,8 +1,10 @@
 pragma solidity ^0.4.19;
 
+import {SuperblockErrorCodes} from "./SuperblockErrorCodes.sol";
+
 
 // @dev - Manages a battle session between superblock submitter and challenger
-contract BattleManager {
+contract BattleManager is SuperblockErrorCodes {
 
     event NewSession(bytes32 sessionId, address claimant, address challenger);
     event NewQuery(bytes32 sessionId, address claimant, uint step);
@@ -156,10 +158,4 @@ contract BattleManager {
     function disable(bytes32 sessionId) internal {
         delete sessions[sessionId];
     }
-
-    //FIXME: Consolidate with error constants in Superblocks and ClaimManager in a single file
-    // Error codes
-    uint constant ERR_SUPERBLOCK_OK = 0;
-    uint constant ERR_SUPERBLOCK_BAD_CLAIM = 52000;
-    uint constant ERR_SUPERBLOCK_NO_TIMEOUT = 52010;
 }

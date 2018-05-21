@@ -4,15 +4,13 @@ import {DogeTx} from "./DogeParser/DogeTx.sol";
 import {DogeRelay} from "./DogeRelay.sol";
 import {SuperblockErrorCodes} from "./SuperblockErrorCodes.sol";
 
-//FIXME: The access of most methods is public but should be internal
 
 // @dev - Manages superblocks
 //
 // Management of superblocks and status transitions
 contract Superblocks is SuperblockErrorCodes {
 
-    uint constant SUPERBLOCK_PERIOD = 0;
-
+    // @dev - Superblock status
     enum Status { Unitialized, New, InBattle, SemiApproved, Approved, Invalid }
 
     struct SuperblockInfo {
@@ -35,10 +33,10 @@ contract Superblocks is SuperblockErrorCodes {
     mapping (uint32 => bytes32) private indexSuperblock;
     uint32 indexNextSuperblock;
 
-    bytes32 bestSuperblock;
-    uint accumulatedWork;
+    bytes32 public bestSuperblock;
+    uint public bestSuperblockAccumulatedWork;
 
-    //TODO: Add 'indexed' to parameters
+    //FIXME: Add 'indexed' to parameters
     event NewSuperblock(bytes32 superblockId, address who);
     event ApprovedSuperblock(bytes32 superblockId, address who);
     event ChallengeSuperblock(bytes32 superblockId, address who);
@@ -108,7 +106,7 @@ contract Superblocks is SuperblockErrorCodes {
         emit NewSuperblock(superblockId, msg.sender);
 
         bestSuperblock = superblockId;
-        accumulatedWork = _accumulatedWork;
+        bestSuperblockaccumulatedWork = _accumulatedWork;
 
         emit ApprovedSuperblock(superblockId, msg.sender);
 
@@ -189,9 +187,9 @@ contract Superblocks is SuperblockErrorCodes {
             return (ERR_SUPERBLOCK_BAD_PARENT, 0);
         }
         superblock.status = Status.Approved;
-        if (superblock.accumulatedWork > accumulatedWork) {
+        if (superblock.accumulatedWork > bestSuperblockAccumulatedWork) {
             bestSuperblock = _superblockId;
-            accumulatedWork = superblock.accumulatedWork;
+            bestSuperblockAccumulatedWork = superblock.accumulatedWork;
         }
         emit ApprovedSuperblock(_superblockId, msg.sender);
         return (ERR_SUPERBLOCK_OK, _superblockId);
