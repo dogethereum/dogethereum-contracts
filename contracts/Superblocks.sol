@@ -106,7 +106,7 @@ contract Superblocks is SuperblockErrorCodes {
         emit NewSuperblock(superblockId, msg.sender);
 
         bestSuperblock = superblockId;
-        bestSuperblockaccumulatedWork = _accumulatedWork;
+        bestSuperblockAccumulatedWork = _accumulatedWork;
 
         emit ApprovedSuperblock(superblockId, msg.sender);
 
