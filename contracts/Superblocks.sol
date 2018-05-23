@@ -360,6 +360,11 @@ contract Superblocks is SuperblockErrorCodes {
         return superblocks[_superblockId].accumulatedWork;
     }
 
+    // @dev - Return superblock status
+    function getSuperblockStatus(bytes32 _superblockId) public view returns (Status) {
+        return superblocks[_superblockId].status;
+    }
+
     // @dev - Calculte merkle root from hashes
     function makeMerkle(bytes32[] hashes) public pure returns (bytes32) {
         return DogeTx.makeMerkle(hashes);
