@@ -158,7 +158,7 @@ contract Superblocks is SuperblockErrorCodes {
 
         indexNextSuperblock++;
 
-        emit NewSuperblock(superblockId, msg.sender);
+        emit NewSuperblock(superblockId, submitter);
 
         return (ERR_SUPERBLOCK_OK, superblockId);
     }
@@ -191,7 +191,7 @@ contract Superblocks is SuperblockErrorCodes {
             bestSuperblock = _superblockId;
             bestSuperblockAccumulatedWork = superblock.accumulatedWork;
         }
-        emit ApprovedSuperblock(_superblockId, msg.sender);
+        emit ApprovedSuperblock(_superblockId, superblock.submitter);
         return (ERR_SUPERBLOCK_OK, _superblockId);
     }
 
@@ -213,7 +213,7 @@ contract Superblocks is SuperblockErrorCodes {
             return (ERR_SUPERBLOCK_BAD_STATUS, 0);
         }
         superblock.status = Status.InBattle;
-        emit ChallengeSuperblock(_superblockId, msg.sender);
+        emit ChallengeSuperblock(_superblockId, superblock.submitter);
         return (ERR_SUPERBLOCK_OK, _superblockId);
     }
 
@@ -236,7 +236,7 @@ contract Superblocks is SuperblockErrorCodes {
             return (ERR_SUPERBLOCK_BAD_STATUS, 0);
         }
         superblock.status = Status.SemiApproved;
-        emit SemiApprovedSuperblock(_superblockId, msg.sender);
+        emit SemiApprovedSuperblock(_superblockId, superblock.submitter);
         return (ERR_SUPERBLOCK_OK, _superblockId);
     }
 
@@ -259,7 +259,7 @@ contract Superblocks is SuperblockErrorCodes {
             return (ERR_SUPERBLOCK_BAD_STATUS, 0);
         }
         superblock.status = Status.Invalid;
-        emit InvalidSuperblock(_superblockId, msg.sender);
+        emit InvalidSuperblock(_superblockId, superblock.submitter);
         return (ERR_SUPERBLOCK_OK, _superblockId);
     }
 
