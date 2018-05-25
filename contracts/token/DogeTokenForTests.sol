@@ -4,7 +4,7 @@ import "./DogeToken.sol";
 
 contract DogeTokenForTests is DogeToken {
 
-    function DogeTokenForTests(address trustedDogeRelay, address trustedDogeEthPriceOracle, bytes20 recipientDogethereum) public DogeToken(trustedDogeRelay, trustedDogeEthPriceOracle, recipientDogethereum) {
+    function DogeTokenForTests(address _trustedDogeRelay, address _trustedDogeEthPriceOracle, uint8 _collateralRatio) public DogeToken(_trustedDogeRelay, _trustedDogeEthPriceOracle, _collateralRatio) {
 
     }
 
@@ -12,7 +12,20 @@ contract DogeTokenForTests is DogeToken {
         balances[_to] += _value;
     }
 
-    function addUtxo(uint value, uint txHash, uint16 outputIndex) public {
-        utxos.push(Utxo(value, txHash, outputIndex));
+    function addOperatorSimple(bytes20 operatorPublicKeyHash) public {
+        Operator operator = operators[operatorPublicKeyHash];
+        operator.ethAddress = msg.sender;
     }
+
+    function addUtxo(bytes20 operatorPublicKeyHash, uint value, uint txHash, uint16 outputIndex) public {
+        Operator operator = operators[operatorPublicKeyHash];
+        operator.utxos.push(Utxo(value, txHash, outputIndex));
+        operator.dogeAvailableBalance += value;
+    }
+
+    // Similar to DogeToken.addOperator() but makes no checks before adding the operator
+    function addOperator2(bytes20 operatorPublicKeyHash) public {
+        Operator storage operator = operators[operatorPublicKeyHash];
+        operator.ethAddress = msg.sender;
+    }    
 }

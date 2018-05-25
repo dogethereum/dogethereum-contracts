@@ -23,7 +23,7 @@ contract DogeProcessor is TransactionProcessor {
     //
     // this exact function signature is required as it has to match
     // the signature specified in DogeRelay (otherwise DogeRelay will not call it)
-    function processTransaction(bytes dogeTx, uint256 txHash) public returns (uint) {
+    function processTransaction(bytes dogeTx, uint256 txHash, bytes20 operatorPublicKeyHash) public returns (uint) {
         log0("processTransaction called");
 
         // only allow trustedDogeRelay, otherwise anyone can provide a fake dogeTx

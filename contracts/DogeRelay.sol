@@ -483,10 +483,10 @@ contract DogeRelay is IScryptCheckerListener {
     // @param _targetContract -
     // @return - return value of processTransaction() if _txHash is in the block identified by _txBlockHash,
     // ERR_RELAY_VERIFY return code otherwise
-    function relayTx(bytes _txBytes, uint _txIndex, uint[] _siblings, uint _txBlockHash, TransactionProcessor _targetContract) public returns (uint) {
+    function relayTx(bytes _txBytes, bytes20 operatorPublicKeyHash, uint _txIndex, uint[] _siblings, uint _txBlockHash, TransactionProcessor _targetContract) public returns (uint) {
         uint txHash = verifyTx(_txBytes, _txIndex, _siblings, _txBlockHash);
         if (txHash != 0) {
-            uint returnCode = _targetContract.processTransaction(_txBytes, txHash);
+            uint returnCode = _targetContract.processTransaction(_txBytes, txHash, operatorPublicKeyHash);
             RelayTransaction(bytes32(txHash), returnCode);
             return (returnCode);
         }

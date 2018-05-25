@@ -574,7 +574,7 @@ library DogeTx {
     }
 
     // Extract public key
-    function parsePubKey(bytes txBytes, uint pos) private pure
+    function parsePubKey(bytes txBytes, uint pos) public pure
              returns (bytes32, bool, uint)
     {
         uint8 op;
@@ -618,6 +618,7 @@ library DogeTx {
     }
 
     function pub2address(uint x, bool odd) internal returns (address) {
+        // First, uncompress pub key
         uint yy = mulmod(x, x, p);
         yy = mulmod(yy, x, p);
         yy = addmod(yy, 7, p);
@@ -626,6 +627,7 @@ library DogeTx {
           y = p - y;
         }
         require(yy == mulmod(y, y, p));
+        // Now, with uncompressed x and y, create the address
         return address(keccak256(x, y));
     }
 

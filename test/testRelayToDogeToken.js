@@ -11,6 +11,9 @@ contract('testRelayToDogeToken', function(accounts) {
     dogeToken = await DogeToken.deployed();
   });
   it('Relay tx to token', async () => {
+    const operatorPublicKeyHash = `0x4d905b4b815d483cdfabcd292c6f86509d0fad82`;
+    await dogeToken.addOperator2(operatorPublicKeyHash);
+
     const headerAndHashes = await utils.bulkStore10From974401(dogeRelay, accounts[0], accounts[2]);
     const txIndex = 2; // Third tx in the block
     const txHash = '718add98dca8f54288b244dde3b0e797e8fe541477a08ef4b570ea2b07dccd3f';
@@ -18,7 +21,7 @@ contract('testRelayToDogeToken', function(accounts) {
 
     const siblings = utils.makeMerkleProof(headerAndHashes.hashes, txIndex)
       .map(sibling => `0x${sibling}`);
-    await dogeRelay.relayTx(txData, txIndex, siblings, "0x" + headerAndHashes.header.hash, dogeToken.address);
+    await dogeRelay.relayTx(txData, operatorPublicKeyHash, txIndex, siblings, "0x" + headerAndHashes.header.hash, dogeToken.address);
     const address = '0x30d90d1dbf03aa127d58e6af83ca1da9e748c98d';
     const value = 'd2e90efb4f';
     const balance = await dogeToken.balanceOf(address);

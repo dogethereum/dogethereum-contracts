@@ -2,6 +2,7 @@ const DogeRelay = artifacts.require('./DogeRelay.sol');
 const DogeRelayForTests = artifacts.require('./DogeRelayForTests.sol');
 const DogeProcessor = artifacts.require('./DogeProcessor.sol');
 const Set = artifacts.require('./token/Set.sol');
+const ECRecovery = artifacts.require('ECRecovery');
 const DogeToken = artifacts.require('./token/DogeToken.sol');
 const DogeTokenForTests = artifacts.require('./token/DogeTokenForTests.sol');
 const DogeTx = artifacts.require('./DogeParser/DogeTx.sol');
@@ -16,10 +17,11 @@ const ScryptVerifier = artifacts.require('./scriypt-interactive/ScryptVerifier.s
 const ScryptRunner = artifacts.require('./scriypt-interactive/ScryptRunner.sol');
 
 const scryptCheckerAddress = '0xfeedbeeffeedbeeffeedbeeffeedbeeffeedbeef';
-const dogethereumRecipientUnitTest = '0x4d905b4b815d483cdfabcd292c6f86509d0fad82';
-const dogethereumRecipientIntegrationDogeMain = '0x0000000000000000000000000000000000000003';
-const dogethereumRecipientIntegrationDogeRegtest = '0x03cd041b0139d3240607b9fd1b2d1b691e22b5d6';
+//const dogethereumRecipientUnitTest = '0x4d905b4b815d483cdfabcd292c6f86509d0fad82';
+//const dogethereumRecipientIntegrationDogeMain = '0x0000000000000000000000000000000000000003';
+//const dogethereumRecipientIntegrationDogeRegtest = '0x03cd041b0139d3240607b9fd1b2d1b691e22b5d6';
 const trustedDogeEthPriceOracleRopsten = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+const collateralRatio = 2;
 
 const DOGE_MAINNET = 0;
 const DOGE_REGTEST = 2;
@@ -28,12 +30,14 @@ async function deployDevelopment(deployer, network, accounts, networkId, trusted
   await deployer.deploy(Set);
   await deployer.deploy(DogeTx);
   await deployer.deploy(SafeMath);
+  await deployer.deploy(ECRecovery);
 
   await deployer.link(Set, DogeTokenForTests);
   await deployer.link(DogeTx, DogeTokenForTests);
+  await deployer.link(ECRecovery, DogeTokenForTests);
 
   await deployer.deploy(DogeRelayForTests, networkId);
-  await deployer.deploy(DogeTokenForTests, DogeRelayForTests.address, trustedDogeEthPriceOracle, dogethereumRecipient);
+  await deployer.deploy(DogeTokenForTests, DogeRelayForTests.address, trustedDogeEthPriceOracle, collateralRatio);
 
   await deployer.deploy(DogeProcessor, DogeRelayForTests.address);
 
@@ -63,15 +67,17 @@ async function deployDevelopment(deployer, network, accounts, networkId, trusted
 
 async function deployIntegration(deployer, network, accounts, networkId, trustedDogeEthPriceOracle, dogethereumRecipient) {
   await deployer.deploy(Set, {gas: 300000});
-  await deployer.deploy(DogeTx, {gas: 100000});
+  await deployer.deploy(DogeTx, {gas: 250000});
   await deployer.deploy(SafeMath, {gas: 100000});
+  await deployer.deploy(ECRecovery, {gas: 100000});
 
   await deployer.link(Set, DogeToken);
   await deployer.link(DogeTx, DogeToken);
+  await deployer.link(ECRecovery, DogeToken);
 
   await deployer.deploy(DogeRelay, networkId, {gas: 4200000});
   // await deployer.deploy(ScryptCheckerDummy, DogeRelay.address, true, {gas: 800000})
-  await deployer.deploy(DogeToken, DogeRelay.address, trustedDogeEthPriceOracle, dogethereumRecipient, {gas: 4500000});
+  await deployer.deploy(DogeToken, DogeRelay.address, trustedDogeEthPriceOracle, collateralRatio, {gas: 5300000});
 
   await deployer.link(DogeTx, DogeSuperblocks);
   await deployer.link(DogeTx, DogeClaimManager);
@@ -106,13 +112,13 @@ module.exports = function(deployer, network, accounts) {
     }
 
     if (network === 'development') {
-      await deployDevelopment(deployer, network, accounts, DOGE_MAINNET, trustedDogeEthPriceOracle, dogethereumRecipientUnitTest);
+      await deployDevelopment(deployer, network, accounts, DOGE_MAINNET, trustedDogeEthPriceOracle);
     } else if (network === 'ropsten') {
-      await deployIntegration(deployer, network, accounts, DOGE_MAINNET, trustedDogeEthPriceOracle, dogethereumRecipientIntegrationDogeMain);
+      await deployIntegration(deployer, network, accounts, DOGE_MAINNET, trustedDogeEthPriceOracle);
     } else if (network === 'integrationDogeMain') {
-      await deployIntegration(deployer, network, accounts, DOGE_MAINNET, trustedDogeEthPriceOracle, dogethereumRecipientIntegrationDogeMain);
+      await deployIntegration(deployer, network, accounts, DOGE_MAINNET, trustedDogeEthPriceOracle);
     } else if (network === 'integrationDogeRegtest') {
-      await deployIntegration(deployer, network, accounts, DOGE_REGTEST, trustedDogeEthPriceOracle, dogethereumRecipientIntegrationDogeRegtest);
+      await deployIntegration(deployer, network, accounts, DOGE_REGTEST, trustedDogeEthPriceOracle);
     }
   });
 };

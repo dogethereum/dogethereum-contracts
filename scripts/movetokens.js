@@ -42,8 +42,9 @@ module.exports = async function(DogeToken, web3, command, callback) {
     await dt.transfer(tokenHolderAddress2, valueToTransfer, {from: tokenHolderAddress});     
   } else if (command == "unlock") {
     // Do unlock
-    console.log("Unlocking " + valueToTransfer + " DogeTokens from " + tokenHolderAddress);     
-    await dt.doUnlock("ncbC7ZY1K9EcMVjvwbgSBWKQ4bwDWS4d5P", valueToTransfer, {from: tokenHolderAddress});     
+    const regtestOperatorPublicKeyHash = '0x03cd041b0139d3240607b9fd1b2d1b691e22b5d6';
+    console.log("Unlocking " + valueToTransfer + " DogeTokens from " + tokenHolderAddress + " using operator " + regtestOperatorPublicKeyHash);     
+    await dt.doUnlock("ncbC7ZY1K9EcMVjvwbgSBWKQ4bwDWS4d5P", valueToTransfer, regtestOperatorPublicKeyHash, {from: tokenHolderAddress});     
   }
 
   // Print DogeToken balances after transfer
