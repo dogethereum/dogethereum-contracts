@@ -1,13 +1,19 @@
-const DogeRelay = artifacts.require('DogeRelay');
-const DogeRelayForTests = artifacts.require('DogeRelayForTests');
-const DogeProcessor = artifacts.require('DogeProcessor');
-const Set = artifacts.require('token/Set');
-const DogeToken = artifacts.require('token/DogeToken');
-const DogeTokenForTests = artifacts.require('token/DogeTokenForTests');
-const DogeTx = artifacts.require('DogeTx');
-const ScryptCheckerDummy = artifacts.require('ScryptCheckerDummy');
-const Superblocks = artifacts.require('Superblocks');
-const ClaimManager = artifacts.require('ClaimManager');
+const DogeRelay = artifacts.require('./DogeRelay.sol');
+const DogeRelayForTests = artifacts.require('./DogeRelayForTests.sol');
+const DogeProcessor = artifacts.require('./DogeProcessor.sol');
+const Set = artifacts.require('./token/Set.sol');
+const DogeToken = artifacts.require('./token/DogeToken.sol');
+const DogeTokenForTests = artifacts.require('./token/DogeTokenForTests.sol');
+const DogeTx = artifacts.require('./DogeParser/DogeTx.sol');
+const ScryptCheckerDummy = artifacts.require('./ScryptCheckerDummy.sol');
+const DogeSuperblocks = artifacts.require('./DogeSuperblocks.sol');
+const DogeClaimManager = artifacts.require('./DogeClaimManager.sol');
+
+const SafeMath = artifacts.require('openzeppelin-solidity/contracts/math/SafeMath.sol');
+
+const ClaimManager = artifacts.require('./scriypt-interactive/ClaimManager.sol');
+const ScryptVerifier = artifacts.require('./scriypt-interactive/ScryptVerifier.sol');
+const ScryptRunner = artifacts.require('./scriypt-interactive/ScryptRunner.sol');
 
 const scryptCheckerAddress = '0xfeedbeeffeedbeeffeedbeeffeedbeeffeedbeef';
 const dogethereumRecipientUnitTest = '0x4d905b4b815d483cdfabcd292c6f86509d0fad82';
@@ -21,6 +27,7 @@ const DOGE_REGTEST = 2;
 async function deployDevelopment(deployer, network, accounts, networkId, trustedDogeEthPriceOracle, dogethereumRecipient) {
   await deployer.deploy(Set);
   await deployer.deploy(DogeTx);
+  await deployer.deploy(SafeMath);
 
   await deployer.link(Set, DogeTokenForTests);
   await deployer.link(DogeTx, DogeTokenForTests);
@@ -30,43 +37,62 @@ async function deployDevelopment(deployer, network, accounts, networkId, trusted
 
   await deployer.deploy(DogeProcessor, DogeRelayForTests.address);
 
-  await deployer.link(DogeTx, Superblocks);
-  await deployer.link(DogeTx, ClaimManager);
+  await deployer.link(DogeTx, DogeSuperblocks);
+  await deployer.link(DogeTx, DogeClaimManager);
 
-  await deployer.deploy(Superblocks, DogeRelayForTests.address);
-  await deployer.deploy(ClaimManager, Superblocks.address);
+  await deployer.deploy(DogeSuperblocks, DogeRelayForTests.address);
+  await deployer.deploy(DogeClaimManager, DogeSuperblocks.address);
 
   await deployer.deploy(ScryptCheckerDummy, DogeRelayForTests.address, true)
+
+  await deployer.link(SafeMath, ClaimManager);
+
+  await deployer.deploy(ScryptVerifier);
+  await deployer.deploy(ClaimManager, ScryptVerifier.address);
+  await deployer.deploy(ScryptRunner);
 
   const dogeRelay = DogeRelayForTests.at(DogeRelayForTests.address);
   await dogeRelay.setScryptChecker(ScryptCheckerDummy.address);
 
-  const superblocks = Superblocks.at(Superblocks.address);
-  await superblocks.setClaimManager(ClaimManager.address);
+  const superblocks = DogeSuperblocks.at(DogeSuperblocks.address);
+  await superblocks.setClaimManager(DogeClaimManager.address);
+
+  const dogeClaimManager = DogeClaimManager.at(DogeClaimManager.address);
+  await dogeClaimManager.setScryptChecker(ScryptCheckerDummy.address);
 }
 
 async function deployIntegration(deployer, network, accounts, networkId, trustedDogeEthPriceOracle, dogethereumRecipient) {
   await deployer.deploy(Set, {gas: 300000});
   await deployer.deploy(DogeTx, {gas: 100000});
+  await deployer.deploy(SafeMath, {gas: 100000});
 
   await deployer.link(Set, DogeToken);
   await deployer.link(DogeTx, DogeToken);
 
-  await deployer.deploy(DogeRelay, networkId, {gas: 4800000});
-  await deployer.deploy(ScryptCheckerDummy, DogeRelay.address, true, {gas: 1000000})
+  await deployer.deploy(DogeRelay, networkId, {gas: 4200000});
+  await deployer.deploy(ScryptCheckerDummy, DogeRelay.address, true, {gas: 800000})
   await deployer.deploy(DogeToken, DogeRelay.address, trustedDogeEthPriceOracle, dogethereumRecipient, {gas: 4500000});
 
-  await deployer.link(DogeTx, Superblocks);
-  await deployer.link(DogeTx, ClaimManager);
+  await deployer.link(DogeTx, DogeSuperblocks);
+  await deployer.link(DogeTx, DogeClaimManager);
 
-  await deployer.deploy(Superblocks, DogeRelay.address, {gas: 3000000});
-  await deployer.deploy(ClaimManager, Superblocks.address, {gas: 56000000});
+  await deployer.deploy(DogeSuperblocks, DogeRelay.address, {gas: 2700000});
+  await deployer.deploy(DogeClaimManager, DogeSuperblocks.address, {gas: 6500000});
+
+  await deployer.link(SafeMath, ClaimManager);
+
+  await deployer.deploy(ScryptVerifier, {gas: 4200000});
+  await deployer.deploy(ClaimManager, ScryptVerifier.address, {gas: 5000000});
+  await deployer.deploy(ScryptRunner, {gas: 3000000});
 
   const dogeRelay = DogeRelay.at(DogeRelay.address);
-  await dogeRelay.setScryptChecker(ScryptCheckerDummy.address, {gas: 100000});
+  await dogeRelay.setScryptChecker(ScryptCheckerDummy.address, {gas: 60000});
 
-  const superblocks = Superblocks.at(Superblocks.address);
-  await superblocks.setClaimManager(ClaimManager.address, {gas: 100000});
+  const superblocks = DogeSuperblocks.at(DogeSuperblocks.address);
+  await superblocks.setClaimManager(DogeClaimManager.address, {gas: 60000});
+
+  const dogeClaimManager = DogeClaimManager.at(DogeClaimManager.address);
+  await dogeClaimManager.setScryptChecker(ScryptVerifier.address, {gas: 60000});
 }
 
 module.exports = function(deployer, network, accounts) {

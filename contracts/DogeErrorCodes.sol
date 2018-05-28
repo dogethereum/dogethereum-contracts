@@ -1,7 +1,7 @@
 pragma solidity ^0.4.19;
 
-// @dev - Superblocks Error codes
-contract SuperblockErrorCodes {
+// @dev - DogeRelay error codes
+contract DogeErrorCodes {
     // Error codes
     uint constant ERR_SUPERBLOCK_OK = 0;
     uint constant ERR_SUPERBLOCK_EXIST = 50010;

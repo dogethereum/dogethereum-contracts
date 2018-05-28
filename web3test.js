@@ -17,10 +17,11 @@ let input = {
     'TransactionProcessor.sol' : fs.readFileSync('./contracts/TransactionProcessor.sol', 'utf8'),
     'DogeRelay.sol' : fs.readFileSync('./contracts/DogeRelay.sol', 'utf8'),
     'DogeRelayForTests.sol' : fs.readFileSync('./contracts/DogeRelayForTests.sol', 'utf8'),
-    'Superblocks.sol' : fs.readFileSync('./contracts/Superblocks.sol', 'utf8'),
-    'BattleManager.sol' : fs.readFileSync('./contracts/BattleManager.sol', 'utf8'),
-    'ClaimManager.sol' : fs.readFileSync('./contracts/ClaimManager.sol', 'utf8'),
-    'DepositsManager.sol' : fs.readFileSync('./contracts/DepositsManager.sol', 'utf8'),
+    'DogeSuperblocks.sol' : fs.readFileSync('./contracts/DogeSuperblocks.sol', 'utf8'),
+    'DogeBattleManager.sol' : fs.readFileSync('./contracts/DogeBattleManager.sol', 'utf8'),
+    'DogeClaimManager.sol' : fs.readFileSync('./contracts/DogeClaimManager.sol', 'utf8'),
+    'DogeDepositsManager.sol' : fs.readFileSync('./contracts/DogeDepositsManager.sol', 'utf8'),
+    'DogeErrorCodes.sol' : fs.readFileSync('./contracts/DogeErrorCodes.sol', 'utf8'),
     'token/DogeToken.sol' : fs.readFileSync('./contracts/token/DogeToken.sol', 'utf8'),
     'token/Token.sol' : fs.readFileSync('./contracts/token/Token.sol', 'utf8'),
     'token/StandardToken.sol' : fs.readFileSync('./contracts/token/StandardToken.sol', 'utf8'),
@@ -36,8 +37,8 @@ let gasEstimate = 0;
 
 let deployedContracts = [
     'DogeRelay.sol:DogeRelay',
-    'Superblocks.sol:Superblocks',
-    'ClaimManager.sol:ClaimManager',
+    'DogeSuperblocks.sol:DogeSuperblocks',
+    'DogeClaimManager.sol:DogeClaimManager',
     'TransactionProcessor.sol:TransactionProcessor',
     'ScryptCheckerDummy.sol:ScryptCheckerDummy',
     'DogeProcessor.sol:DogeProcessor'
@@ -45,6 +46,7 @@ let deployedContracts = [
 
 for (i in deployedContracts) {
     d = deployedContracts[i];
+    // console.log(compiledContract, Object.keys(compiledContract.contracts));
     bytecode = '0x' + compiledContract.contracts[d].bytecode;
     let gas = web3.eth.estimateGas({data: bytecode, gasLimit: "8990000000000000"});
     console.log("Gas for " + d + ": " + gas);

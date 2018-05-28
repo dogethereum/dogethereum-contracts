@@ -1,16 +1,17 @@
 pragma solidity ^0.4.19;
 
-import {DepositsManager} from './DepositsManager.sol';
-import {Superblocks} from './Superblocks.sol';
-import {BattleManager} from './BattleManager.sol';
+import {DogeDepositsManager} from './DogeDepositsManager.sol';
+import {DogeSuperblocks} from './DogeSuperblocks.sol';
+import {DogeBattleManager} from './DogeBattleManager.sol';
 import {DogeTx} from './DogeParser/DogeTx.sol';
-import {SuperblockErrorCodes} from "./SuperblockErrorCodes.sol";
+import {DogeErrorCodes} from "./DogeErrorCodes.sol";
+import {IScryptChecker} from "./IScryptChecker.sol";
 
 
 // @dev - Manager of superblock claims
 //
 // Manages superblocks proposal and challenges
-contract ClaimManager is DepositsManager, BattleManager {
+contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
     uint private numClaims = 1;
     uint public minDeposit = 1;
 
@@ -73,12 +74,26 @@ contract ClaimManager is DepositsManager, BattleManager {
     // Active Superblock claims
     mapping(bytes32 => SuperblockClaim) private claims;
 
-    Superblocks superblocks;
+    // Superblocks contract
+    DogeSuperblocks superblocks;
+
+    // Scrypt checker
+    IScryptChecker public scryptChecker;
 
     // @dev – Configures the contract storing the superblocks
     // @param _superblocks Contract that manages superblocks
-    function ClaimManager(Superblocks _superblocks) public {
+    constructor(DogeSuperblocks _superblocks) public {
         superblocks = _superblocks;
+    }
+
+    // @dev - sets ScryptChecker instance associated with this DogeClaimManager contract.
+    // Once scryptChecker has been set, it cannot be changed.
+    // An address of 0x0 means scryptChecker hasn't been set yet.
+    //
+    // @param _scryptChecker - address of the ScryptChecker contract to be associated with DogeRelay
+    function setScryptChecker(address _scryptChecker) public {
+        require(address(scryptChecker) == 0x0 && _scryptChecker != 0x0);
+        scryptChecker = IScryptChecker(_scryptChecker);
     }
 
     // @dev – locks up part of the a user's deposit into a claim.
@@ -136,6 +151,8 @@ contract ClaimManager is DepositsManager, BattleManager {
     // @param _parentId Id of the parent superblock
     // @return Error code and superblockId
     function proposeSuperblock(bytes32 _blocksMerkleRoot, uint _accumulatedWork, uint _timestamp, bytes32 _lastHash, bytes32 _parentHash) public returns (uint, bytes32) {
+        require(address(superblocks) != 0);
+
         if (deposits[msg.sender] < minDeposit) {
             emit ErrorClaim(0, ERR_SUPERBLOCK_MIN_DEPOSIT);
             return (ERR_SUPERBLOCK_MIN_DEPOSIT, 0);
@@ -178,6 +195,8 @@ contract ClaimManager is DepositsManager, BattleManager {
     // @param superblockId – Id of the superblock to challenge.
     // @return Error code an claim Id
     function challengeSuperblock(bytes32 superblockId) public returns (uint, bytes32) {
+        require(address(superblocks) != 0);
+
         bytes32 claimId = superblockId;
         SuperblockClaim storage claim = claims[claimId];
 
@@ -431,6 +450,7 @@ contract ClaimManager is DepositsManager, BattleManager {
 
             //FIXME: start scrypt hash verification
             // storeBlockHeader(data, uint(scryptHash));
+            //scryptChecker.checkScrypt(DogeTx.sliceArray(data, 32, 32 + 80), scryptHash, 0, address(this));
 
             if (claim.countBlockHeaderResponses == claim.blockHashes.length) {
                 claim.challengeState = ChallengeState.RespondHeaders;

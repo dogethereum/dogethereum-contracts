@@ -208,7 +208,7 @@ contract DogeRelay is IDogeRelay {
                 return 0;
             }
 
-            scryptChecker.checkScrypt(DogeTx.sliceArray(_blockHeaderBytes, pos + len - 80, pos + len), bytes32(ap.scryptHash), msg.sender, bytes32(onholdIdx)); //DogeTx.sliceArray(...) is a merge mined block header, therefore longer than a regular block header
+            scryptChecker.checkScrypt(DogeTx.sliceArray(_blockHeaderBytes, pos + len - 80, pos + len), bytes32(ap.scryptHash), bytes32(onholdIdx), msg.sender); //DogeTx.sliceArray(...) is a merge mined block header, therefore longer than a regular block header
 
         } else {
             // Normal block
@@ -217,7 +217,7 @@ contract DogeRelay is IDogeRelay {
                 return 0;
             }
 
-            scryptChecker.checkScrypt(DogeTx.sliceArray(_blockHeaderBytes, 0, 80), bytes32(_proposedScryptBlockHash), msg.sender, bytes32(onholdIdx)); //For normal blocks, we just need to slice the first 80 bytes
+            scryptChecker.checkScrypt(DogeTx.sliceArray(_blockHeaderBytes, 0, 80), bytes32(_proposedScryptBlockHash), bytes32(onholdIdx), msg.sender); //For normal blocks, we just need to slice the first 80 bytes
         }
 
         return 1;

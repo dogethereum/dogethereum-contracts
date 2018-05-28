@@ -1,14 +1,16 @@
 const utils = require('./utils');
-const ClaimManager = artifacts.require('ClaimManager');
-const Superblocks = artifacts.require('Superblocks');
+const DogeClaimManager = artifacts.require('DogeClaimManager');
+const DogeSuperblocks = artifacts.require('DogeSuperblocks');
+const ScryptCheckerDummy = artifacts.require('./ScryptCheckerDummy.sol');
 
 
-contract('ClaimManager', (accounts) => {
+contract('DogeClaimManager', (accounts) => {
   const owner = accounts[0];
   const submitter = accounts[1];
   const challenger = accounts[2];
   let claimManager;
   let superblocks;
+  let scryptChecker;
   const initHashes = ['0x0000000000000000000000000000000000000000000000000000000000000000'];
   const initMerkleRoot = utils.makeMerkle(initHashes);
   const initAccumulatedWork = 0;
@@ -24,9 +26,11 @@ contract('ClaimManager', (accounts) => {
   );
 
   async function initSuperblocks() {
-    superblocks = await Superblocks.new(0x0);
-    claimManager = await ClaimManager.new(superblocks.address);
-    superblocks.setClaimManager(claimManager.address);
+    superblocks = await DogeSuperblocks.new(0x0);
+    claimManager = await DogeClaimManager.new(superblocks.address);
+    scryptChecker = await ScryptCheckerDummy.new(claimManager.address, true);
+    await superblocks.setClaimManager(claimManager.address);
+    await claimManager.setScryptChecker(scryptChecker.address);
     await superblocks.initialize(initMerkleRoot, initAccumulatedWork, initTimestamp, initLastHash, initParentHash, { from: owner });
     //FIXME: ganache-cli creates the same transaction hash if two account send the same amount
     await claimManager.makeDeposit({ value: 10, from: submitter });

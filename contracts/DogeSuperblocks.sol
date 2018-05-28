@@ -2,13 +2,13 @@ pragma solidity ^0.4.19;
 
 import {DogeTx} from "./DogeParser/DogeTx.sol";
 import {DogeRelay} from "./DogeRelay.sol";
-import {SuperblockErrorCodes} from "./SuperblockErrorCodes.sol";
+import {DogeErrorCodes} from "./DogeErrorCodes.sol";
 
 
 // @dev - Manages superblocks
 //
 // Management of superblocks and status transitions
-contract Superblocks is SuperblockErrorCodes {
+contract DogeSuperblocks is DogeErrorCodes {
 
     // @dev - Superblock status
     enum Status { Unitialized, New, InBattle, SemiApproved, Approved, Invalid }
@@ -110,7 +110,7 @@ contract Superblocks is SuperblockErrorCodes {
 
         emit ApprovedSuperblock(superblockId, msg.sender);
 
-        return (SuperblockErrorCodes.ERR_SUPERBLOCK_OK, superblockId);
+        return (ERR_SUPERBLOCK_OK, superblockId);
     }
 
     // @dev - Proposes a new superblock

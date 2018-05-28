@@ -1,10 +1,10 @@
 pragma solidity ^0.4.19;
 
-import {SuperblockErrorCodes} from "./SuperblockErrorCodes.sol";
+import {DogeErrorCodes} from "./DogeErrorCodes.sol";
 
 
 // @dev - Manages a battle session between superblock submitter and challenger
-contract BattleManager is SuperblockErrorCodes {
+contract DogeBattleManager is DogeErrorCodes {
 
     event NewSession(bytes32 sessionId, address claimant, address challenger);
     event NewQuery(bytes32 sessionId, address claimant, uint step);

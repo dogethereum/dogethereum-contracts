@@ -1,7 +1,7 @@
 pragma solidity ^0.4.19;
 
-import "./IDogeRelay.sol";
-import "./IScryptChecker.sol";
+import {IDogeRelay} from "./IDogeRelay.sol";
+import {IScryptChecker} from "./IScryptChecker.sol";
 
 contract ScryptCheckerDummy is IScryptChecker {
     // DogeRelay
@@ -24,8 +24,8 @@ contract ScryptCheckerDummy is IScryptChecker {
     mapping (bytes32 => ScryptHashRequest) public pendingRequests;
 
 
-    function ScryptCheckerDummy(address _dogeRelay, bool _acceptAll) public {
-        dogeRelay = IDogeRelay(_dogeRelay);
+    constructor(IDogeRelay _dogeRelay, bool _acceptAll) public {
+        dogeRelay = _dogeRelay;
         acceptAll = _acceptAll;
     }
 
@@ -44,7 +44,7 @@ contract ScryptCheckerDummy is IScryptChecker {
     // @param _hash – result of applying scrypt to data.
     // @param _submitter – the address of the submitter.
     // @param _requestId – request identifier of the call.
-    function checkScrypt(bytes _data, bytes32 _hash, address _submitter, bytes32 _proposalId) public payable {
+    function checkScrypt(bytes _data, bytes32 _hash, bytes32 _proposalId, address _submitter) external payable {
         if (acceptAll || hashStorage[keccak256(_data)] == _hash) {
             dogeRelay.scryptVerified(_proposalId);
         } else {
