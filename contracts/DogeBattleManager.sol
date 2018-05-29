@@ -41,7 +41,7 @@ contract DogeBattleManager is DogeErrorCodes {
 
     // @dev - Start a battle session
     function beginBattleSession(bytes32 claimId, address challenger, address claimant) public returns (bytes32) {
-        bytes32 sessionId = keccak256(claimId, msg.sender, sessionsCount);
+        bytes32 sessionId = keccak256(abi.encode(claimId, msg.sender, sessionsCount));
         BattleSession storage session = sessions[sessionId];
         session.id = sessionId;
         session.claimId = claimId;
@@ -115,7 +115,6 @@ contract DogeBattleManager is DogeErrorCodes {
     function timeout(bytes32 sessionId) public returns (uint) {
         BattleSession storage session = sessions[sessionId];
         bytes32 claimId = session.claimId;
-        log2(bytes32(session.lastChallengerMessage), bytes32(session.lastClaimantMessage), bytes32(block.number));
         if (
             session.lastChallengerMessage > session.lastClaimantMessage &&
             block.number> session.lastChallengerMessage + responseTimeout

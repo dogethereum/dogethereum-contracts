@@ -274,7 +274,7 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @param _parentId Id of the parent superblock
     // @return Superblock id
     function calcSuperblockId(bytes32 _blocksMerkleRoot, uint _accumulatedWork, uint _timestamp, bytes32 _lastHash, bytes32 _parentId) public pure returns (bytes32) {
-        return keccak256(_blocksMerkleRoot, _accumulatedWork, _timestamp, _lastHash, _parentId);
+        return keccak256(abi.encode(_blocksMerkleRoot, _accumulatedWork, _timestamp, _lastHash, _parentId));
     }
 
     // @dev - Returns the superblock with the most accumulated work

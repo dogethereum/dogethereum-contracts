@@ -94,6 +94,16 @@ const mineBlocks = async (web3, n) => {
   }
 }
 
+const getBlockNumber = () => new Promise((resolve, reject) => {
+  web3.eth.getBlockNumber((err, res) => {
+    if (err) {
+      reject(err);
+    } else {
+      resolve(res);
+    }
+  });
+});
+
 // Helper to assert a promise failing
 async function verifyThrow(P, cond, message) {
   let e;
@@ -234,6 +244,7 @@ module.exports = {
   getBlockTimestamp,
   getBlockDifficulty,
   mineBlocks,
+  getBlockNumber,
   verifyThrow,
   calcSuperblockId,
 };

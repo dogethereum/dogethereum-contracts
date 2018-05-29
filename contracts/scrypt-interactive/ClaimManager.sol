@@ -2,7 +2,7 @@ pragma solidity ^0.4.19;
 
 import {DepositsManager} from './DepositsManager.sol';
 import {ScryptVerifier} from "./ScryptVerifier.sol";
-import {IDogeRelay} from "../IDogeRelay.sol";
+import {IScryptCheckerListener} from "../IScryptCheckerListener.sol";
 import {IScryptChecker} from "../IScryptChecker.sol";
 
 
@@ -40,7 +40,7 @@ contract ClaimManager is DepositsManager, IScryptChecker {
     bool decided;
     uint challengeTimeoutBlockNumber;
     bytes32 proposalId;
-    IDogeRelay scryptDependent;
+    IScryptCheckerListener scryptDependent;
   }
 
 //  mapping(address => uint) public claimantClaims;
@@ -110,7 +110,7 @@ contract ClaimManager is DepositsManager, IScryptChecker {
   // @param claimant – the address of the Dogecoin block submitter.
   function checkScrypt(bytes _data, bytes32 _hash, bytes32 _proposalId, address _submitter) external payable {
     // dogeRelay can directly make a deposit on behalf of the claimant.
-    IDogeRelay _scryptDependent = IDogeRelay(_submitter);
+    IScryptCheckerListener _scryptDependent = IScryptCheckerListener(_submitter);
 
     bytes memory _blockHash = new bytes(32);
     assembly {
@@ -123,7 +123,8 @@ contract ClaimManager is DepositsManager, IScryptChecker {
       increaseDeposit(_submitter, msg.value);
     }
 
-    require(deposits[_submitter] >= minDeposit);
+
+    // require(deposits[_submitter] >= minDeposit);
 
 //    uint claimId = numClaims;
 //    uint claimId = uint(keccak256(_submitter, _plaintext, _hash, numClaims));
@@ -143,7 +144,7 @@ contract ClaimManager is DepositsManager, IScryptChecker {
     claim.proposalId = _proposalId;
     claim.scryptDependent = _scryptDependent;
 
-    bondDeposit(claimId, claim.claimant, minDeposit);
+    // bondDeposit(claimId, claim.claimant, minDeposit);
     ClaimCreated(claimId, claim.claimant, claim.plaintext, claim.blockHash);
   }
 
@@ -253,7 +254,7 @@ contract ClaimManager is DepositsManager, IScryptChecker {
 
     claim.decided = true;
 
-    IDogeRelay(claim.scryptDependent).scryptVerified(claim.proposalId);
+    claim.scryptDependent.scryptVerified(claim.proposalId);
 
     unbondDeposit(claimID, claim.claimant);
 

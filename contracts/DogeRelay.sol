@@ -1,12 +1,12 @@
 pragma solidity ^0.4.19;
 
-import "./TransactionProcessor.sol";
-import "./IScryptChecker.sol";
-import "./IDogeRelay.sol";
-import "./DogeParser/DogeTx.sol";
+import {TransactionProcessor} from "./TransactionProcessor.sol";
+import {IScryptChecker} from "./IScryptChecker.sol";
+import {IScryptCheckerListener} from "./IScryptCheckerListener.sol";
+import {DogeTx} from "./DogeParser/DogeTx.sol";
 
 
-contract DogeRelay is IDogeRelay {
+contract DogeRelay is IScryptCheckerListener {
 
     enum Network { MAINNET, TESTNET, REGTEST }
 
@@ -321,6 +321,12 @@ contract DogeRelay is IDogeRelay {
 
         StoreHeader(bytes32(blockSha256Hash), blockHeight);
         return blockHeight;
+    }
+
+    // @dev - Scrypt verification failed
+    function scryptFailed(bytes32 _proposalId) public returns (uint) {
+        _proposalId;
+        return 0;
     }
 
     // @dev - Implementation of DigiShield, almost directly translated from

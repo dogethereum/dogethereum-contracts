@@ -1,11 +1,11 @@
 pragma solidity ^0.4.19;
 
-import {IDogeRelay} from "./IDogeRelay.sol";
+import {IScryptCheckerListener} from "./IScryptCheckerListener.sol";
 import {IScryptChecker} from "./IScryptChecker.sol";
 
 contract ScryptCheckerDummy is IScryptChecker {
     // DogeRelay
-    IDogeRelay public dogeRelay;
+    IScryptCheckerListener public dogeRelay;
 
     // Accept all checks
     bool public acceptAll;
@@ -24,14 +24,14 @@ contract ScryptCheckerDummy is IScryptChecker {
     mapping (bytes32 => ScryptHashRequest) public pendingRequests;
 
 
-    constructor(IDogeRelay _dogeRelay, bool _acceptAll) public {
+    constructor(IScryptCheckerListener _dogeRelay, bool _acceptAll) public {
         dogeRelay = _dogeRelay;
         acceptAll = _acceptAll;
     }
 
-    function setDogeRelay(address _dogeRelay) public {
+    function setDogeRelay(IScryptCheckerListener _dogeRelay) public {
       require(address(dogeRelay) == 0);
-      dogeRelay = IDogeRelay(_dogeRelay);
+      dogeRelay = _dogeRelay;
     }
 
     // Mark to accept _hash as the scrypt hash of _data
@@ -61,5 +61,11 @@ contract ScryptCheckerDummy is IScryptChecker {
         ScryptHashRequest storage request = pendingRequests[_hash];
         require(request.hash == _hash);
         dogeRelay.scryptVerified(request.id);
+    }
+
+    function sendFailed(bytes32 _hash) public {
+        ScryptHashRequest storage request = pendingRequests[_hash];
+        require(request.hash == _hash);
+        dogeRelay.scryptFailed(request.id);
     }
 }
