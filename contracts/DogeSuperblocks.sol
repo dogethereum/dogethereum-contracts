@@ -57,9 +57,7 @@ contract DogeSuperblocks is DogeErrorCodes {
     }
 
     // @dev – the constructor
-    constructor(DogeRelay _dogeRelay) public {
-        dogeRelay = _dogeRelay;
-    }
+    constructor() public {}
 
     // @dev - sets ClaimManager instance associated with managing superblocks.
     // Once claimManager has been set, it cannot be changed.

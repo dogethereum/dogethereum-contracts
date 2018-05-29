@@ -66,6 +66,9 @@ contract DogeRelay is IScryptCheckerListener {
     // Scrypt checker
     IScryptChecker public scryptChecker;
 
+    // Superblocks
+    Superblocks public superblocks;
+
     // TODO: Make event parameters indexed so we can register filters on them
     event StoreHeader(bytes32 blockHash, uint returnCode);
     event GetHeader(bytes32 blockHash, uint returnCode);
@@ -90,6 +93,16 @@ contract DogeRelay is IScryptCheckerListener {
     function setScryptChecker(address _scryptChecker) public {
         require(address(scryptChecker) == 0x0 && _scryptChecker != 0x0);
         scryptChecker = IScryptChecker(_scryptChecker);
+    }
+
+    // @dev - sets ScryptChecker instance associated with this DogeRelay contract.
+    // Once scryptChecker has been set, it cannot be changed.
+    // An address of 0x0 means scryptChecker hasn't been set yet.
+    //
+    // @param _scryptChecker - address of the ScryptChecker contract to be associated with DogeRelay
+    function setSuperblocks(address _claimManager) public {
+        require(address(superblocks) == 0x0 && _claimManager != 0x0);
+        superblocks = Superblocks(_claimManager);
     }
 
     // @dev - setInitialParent can only be called once and allows testing of storing
@@ -281,7 +294,7 @@ contract DogeRelay is IScryptCheckerListener {
         //log2(bytes32(scoreBlock), bytes32(bits), bytes32(target));
         // bitcoinj (so libdohj, dogecoin java implemntation) uses 2**256 as a dividend.
         // Investigate: May dogerelay best block be different than libdohj best block in some border cases?
-        // Does libdohj matches dogecoin core?
+        // Does libdohj match dogecoin core?
         setScore(blockSha256Hash, scoreBlock);
 
         // equality allows block with same score to become an (alternate) tip, so that
@@ -891,8 +904,9 @@ contract DogeRelay is IScryptCheckerListener {
     uint constant ERR_BAD_FEE = 20010;
     uint constant ERR_CONFIRMATIONS = 20020;
     uint constant ERR_CHAIN = 20030;
-    uint constant ERR_MERKLE_ROOT = 20040;
-    uint constant ERR_TX_64BYTE = 20050;
+    uint constant ERR_SUPERBLOCK = 20040;
+    uint constant ERR_MERKLE_ROOT = 20050;
+    uint constant ERR_TX_64BYTE = 20060;
 
     // error codes for relayTx
     uint constant ERR_RELAY_VERIFY = 30010;

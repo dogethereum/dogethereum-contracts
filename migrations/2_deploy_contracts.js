@@ -23,6 +23,16 @@ const scryptCheckerAddress = '0xfeedbeeffeedbeeffeedbeeffeedbeeffeedbeef';
 const trustedDogeEthPriceOracleRopsten = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 const collateralRatio = 2;
 
+/* ---- CONSTANTS FOR GENESIS SUPERBLOCK ---- */
+
+// TODO: set these to their actual values
+const genesisSuperblockMerkleRoot = "0x3d2160a3b5dc4a9d62e7e66a295f70313ac808440ef7400d6c0772171ce973a5";
+const genesisSuperblockChainWork = 0;
+const genesisSuperblockLastBlockTimestamp = 1296688602;
+const genesisSuperblockLastBlockHash = "0x3d2160a3b5dc4a9d62e7e66a295f70313ac808440ef7400d6c0772171ce973a5";
+const genesisSuperblockParentId = "0x0";
+
+
 const DOGE_MAINNET = 0;
 const DOGE_REGTEST = 2;
 
@@ -53,6 +63,7 @@ async function deployDevelopment(deployer, network, accounts, networkId, trusted
 
   const dogeRelay = DogeRelayForTests.at(DogeRelayForTests.address);
   await dogeRelay.setScryptChecker(ScryptCheckerDummy.address);
+  await dogeRelay.setSuperblocks(Superblocks.address);
 
   const superblocks = DogeSuperblocks.at(DogeSuperblocks.address);
   await superblocks.setClaimManager(DogeClaimManager.address);
