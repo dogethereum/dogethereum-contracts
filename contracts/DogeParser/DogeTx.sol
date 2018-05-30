@@ -910,4 +910,16 @@ library DogeTx {
         }
         return result;
     }
+
+    // @dev - Bitcoin-way of computing the target from the 'bits' field of a block header
+    // based on http://www.righto.com/2014/02/bitcoin-mining-hard-way-algorithms.html//ref3
+    //
+    // @param _bits - difficulty in bits format
+    // @return - difficulty in target format
+    function targetFromBits(uint32 _bits) internal pure returns (uint) {
+        uint exp = _bits / 0x1000000;  // 2**24
+        uint mant = _bits & 0xffffff;
+        return mant * 256**(exp - 3);
+    }
+
 }

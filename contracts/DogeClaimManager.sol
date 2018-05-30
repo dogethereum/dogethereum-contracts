@@ -431,9 +431,9 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
             require(timestamp / superblockDuration <= claim.timestamp / superblockDuration);
             require(timestamp / superblockDuration >= claim.timestamp / superblockDuration - 1);
 
-            uint bits = DogeTx.getBytesLE(data, 32 + DOGECOIN_HEADER_DIFFICULTY_OFFSET, 32);
+            uint32 bits = uint32(DogeTx.getBytesLE(data, 32 + DOGECOIN_HEADER_DIFFICULTY_OFFSET, 32));
 
-            claim.accumulatedWork += targetToDiff(targetFromBits(bits));
+            claim.accumulatedWork += targetToDiff(DogeTx.targetFromBits(bits));
 
             if (blockSha256Hash == claim.blockHashes[claim.blockHashes.length - 1]) {
                 claim.lastBlockTimestamp = timestamp;
@@ -470,17 +470,6 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
             return true;
         }
         return false;
-    }
-
-    // @dev - Bitcoin-way of computing the target from the 'bits' field of a block header
-    // based on http://www.righto.com/2014/02/bitcoin-mining-hard-way-algorithms.html//ref3
-    //
-    // @param _bits - difficulty in bits format
-    // @return - difficulty in target format
-    function targetFromBits(uint _bits) internal pure returns (uint) {
-        uint exp = _bits / 0x1000000;  // 2**24
-        uint mant = _bits & 0xffffff;
-        return mant * 256**(exp - 3);
     }
 
     uint constant DOGECOIN_DIFFICULTY1 = 0xFFFFF * 256**(0x1e - 3);

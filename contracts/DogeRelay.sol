@@ -197,7 +197,7 @@ contract DogeRelay is IScryptCheckerListener {
         if (isMergeMined(bi._blockHeader)) {
             DogeTx.AuxPoW memory ap = DogeTx.parseAuxPoW(_blockHeaderBytes, pos, len);
 
-            if (DogeTx.flip32Bytes(ap.scryptHash) > targetFromBits(bi._blockHeader.bits)) {
+            if (DogeTx.flip32Bytes(ap.scryptHash) > DogeTx.targetFromBits(bi._blockHeader.bits)) {
                 StoreHeader(bytes32(blockSha256Hash), ERR_PROOF_OF_WORK);
                 return 0;
             }
@@ -212,7 +212,7 @@ contract DogeRelay is IScryptCheckerListener {
 
         } else {
             // Normal block
-            if (DogeTx.flip32Bytes(_proposedScryptBlockHash) > targetFromBits(bi._blockHeader.bits)) {
+            if (DogeTx.flip32Bytes(_proposedScryptBlockHash) > DogeTx.targetFromBits(bi._blockHeader.bits)) {
                 StoreHeader(bytes32(blockSha256Hash), ERR_PROOF_OF_WORK);
                 return 0;
             }
@@ -305,7 +305,7 @@ contract DogeRelay is IScryptCheckerListener {
         // Min difficulty for bitcoin is 0x1d00ffff
         //uint128 scoreBlock = scorePrevBlock + uint128 (0x00000000FFFF0000000000000000000000000000000000000000000000000000 / target);
         // Min difficulty for dogecoin is 0x1e0fffff
-        uint128 scoreBlock = scorePrevBlock + uint128 (0x00000FFFFF000000000000000000000000000000000000000000000000000000 / targetFromBits(bits));
+        uint128 scoreBlock = scorePrevBlock + uint128 (0x00000FFFFF000000000000000000000000000000000000000000000000000000 / DogeTx.targetFromBits(bits));
         //log2(bytes32(scoreBlock), bytes32(bits), bytes32(target));
         // bitcoinj (so libdohj, dogecoin java implemntation) uses 2**256 as a dividend.
         // Investigate: May dogerelay best block be different than libdohj best block in some border cases?
@@ -355,7 +355,7 @@ contract DogeRelay is IScryptCheckerListener {
         }
 
         // Retarget
-        uint bnNew = targetFromBits(_bits);
+        uint bnNew = DogeTx.targetFromBits(_bits);
         bnNew = bnNew * uint(nModulatedTimespan);
         bnNew = uint(bnNew) / uint(retargetTimespan);
 
@@ -793,17 +793,6 @@ contract DogeRelay is IScryptCheckerListener {
     // @return block's Merkle root in big-endian format
     function getMerkleRoot(uint _blockHash) private view returns (uint) {
         return myblocks[_blockHash]._blockHeader.merkleRoot;
-    }
-
-    // @dev - Bitcoin-way of computing the target from the 'bits' field of a block header
-    // based on http://www.righto.com/2014/02/bitcoin-mining-hard-way-algorithms.html//ref3
-    //
-    // @param _bits - difficulty in bits format
-    // @return - difficulty in target format
-    function targetFromBits(uint32 _bits) internal pure returns (uint) {
-        uint exp = _bits / 0x1000000;  // 2**24
-        uint mant = _bits & 0xffffff;
-        return mant * 256**(exp - 3);
     }
 
     // @dev - shift information to the right by a specified number of bits

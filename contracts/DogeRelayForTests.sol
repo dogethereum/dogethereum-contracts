@@ -78,7 +78,7 @@ contract DogeRelayForTests is DogeRelay {
     }
 
     function targetFromBitsPublic(uint32 bits) public pure returns (uint) {
-        return targetFromBits(bits) ;
+        return DogeTx.targetFromBits(bits) ;
     }
 
     function concatHashPublic(uint tx1, uint tx2) public pure returns (uint) {
