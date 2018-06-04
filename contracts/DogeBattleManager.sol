@@ -57,43 +57,49 @@ contract DogeBattleManager is DogeErrorCodes {
     }
 
     // @dev - Challenger makes a query for superblock hashes
-    function queryMerkleRootHashes(bytes32 claimId) internal;
+    function queryMerkleRootHashes(bytes32 claimId) internal returns (bool);
 
     // @dev - Challenger makes a query for block header data for a hash
-    function queryBlockHeader(bytes32 claimId, bytes32 blockHash) internal;
+    function queryBlockHeader(bytes32 claimId, bytes32 blockHash) internal returns (bool);
 
     // @dev - For the challenger to start a query
     function query(bytes32 sessionId, uint step, bytes32 data) onlyChallenger(sessionId) public {
         BattleSession storage session = sessions[sessionId];
         bytes32 claimId = session.claimId;
+        bool succeeded = false;
         if (step == 0) {
-            queryMerkleRootHashes(claimId);
+            succeeded = queryMerkleRootHashes(claimId);
         } else if (step == 1) {
-            queryBlockHeader(claimId, data);
+            succeeded = queryBlockHeader(claimId, data);
         }
 
-        session.lastChallengerMessage = block.number;
-        emit NewQuery(sessionId, session.claimant, step);
+        if (succeeded) {
+            session.lastChallengerMessage = block.number;
+            emit NewQuery(sessionId, session.claimant, step);
+        }
     }
 
     // @dev - Submitter send hashes to verify superblock merkle root
-    function verifyMerkleRootHashes(bytes32 claimId, bytes data) internal;
+    function verifyMerkleRootHashes(bytes32 claimId, bytes data) internal returns (bool);
 
     // @dev - Verify block header send by challenger
-    function verifyBlockHeader(bytes32 claimId, bytes data) internal;
+    function verifyBlockHeader(bytes32 claimId, bytes data) internal returns (bool);
 
     // @dev - For the submitter to respond to challenger queries
     function respond(bytes32 sessionId, uint step, bytes data) onlyClaimant(sessionId) public {
         BattleSession storage session = sessions[sessionId];
         bytes32 claimId = session.claimId;
+        bool succeeded = false;
         if (step == 0) {
-            verifyMerkleRootHashes(claimId, data);
+            succeeded = verifyMerkleRootHashes(claimId, data);
         } else if (step == 1) {
-            verifyBlockHeader(claimId, data);
+            succeeded = verifyBlockHeader(claimId, data);
         }
 
-        session.lastClaimantMessage = block.number;
-        emit NewResponse(sessionId, session.challenger);
+        if (succeeded) {
+            session.lastClaimantMessage = block.number;
+            emit NewResponse(sessionId, session.challenger);
+        }
     }
 
     // @dev - Verify a superblock data is consistent

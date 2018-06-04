@@ -373,15 +373,17 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
     }
 
     // @dev – Make a query for superblock hashes
-    function queryMerkleRootHashes(bytes32 claimId) internal {
+    function queryMerkleRootHashes(bytes32 claimId) internal returns (bool) {
         SuperblockClaim storage claim = claims[claimId];
         if (claim.challengeState == ChallengeState.Challenged) {
             claim.challengeState = ChallengeState.QueryMerkleRootHashes;
+            return true;
         }
+        return false;
     }
 
     // @dev – Verify an array of hashes matches superblock merkleroot
-    function verifyMerkleRootHashes(bytes32 claimId, bytes data) internal {
+    function verifyMerkleRootHashes(bytes32 claimId, bytes data) internal returns (bool) {
         SuperblockClaim storage claim = claims[claimId];
         require(claim.blockHashes.length == 0);
         if (claim.challengeState == ChallengeState.QueryMerkleRootHashes) {
@@ -391,11 +393,13 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
             require(lastHash == claim.blockHashes[claim.blockHashes.length - 1]);
             bytes32 merkleRoot = DogeTx.makeMerkle(claim.blockHashes);
             require(merkleRoot == superblocks.getSuperblockMerkleRoot(claim.superblockId));
+            return true;
         }
+        return false;
     }
 
     // @dev – Make a query for superblock block headers
-    function queryBlockHeader(bytes32 claimId, bytes32 blockHash) internal {
+    function queryBlockHeader(bytes32 claimId, bytes32 blockHash) internal returns (bool) {
         SuperblockClaim storage claim = claims[claimId];
         if ((claim.countBlockHeaderQueries == 0 && claim.challengeState == ChallengeState.RespondMerkleRootHashes) ||
             (claim.countBlockHeaderQueries > 0 && claim.challengeState == ChallengeState.RespondBlockHeader)) {
@@ -404,7 +408,9 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
             claim.countBlockHeaderQueries += 1;
             claim.blocksInfo[blockHash].status = 1;
             claim.challengeState = ChallengeState.QueryBlockHeader;
+            return true;
         }
+        return false;
     }
 
     uint constant DOGECOIN_HEADER_VERSION_OFFSET = 0;
@@ -415,7 +421,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
     uint constant DOGECOIN_HEADER_NONCE_OFFSET = 76;
 
     // @dev - Verify a block header data correspond to a block hash in the superblock
-    function verifyBlockHeader(bytes32 claimId, bytes data) internal {
+    function verifyBlockHeader(bytes32 claimId, bytes data) internal returns (bool) {
         SuperblockClaim storage claim = claims[claimId];
         if (claim.challengeState == ChallengeState.QueryBlockHeader) {
             bytes32 blockSha256Hash = bytes32(DogeTx.dblShaFlipMem(data, 32, 80));
@@ -446,7 +452,9 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
             } else {
                 claim.challengeState = ChallengeState.RespondBlockHeader;
             }
+            return true;
         }
+        return false;
     }
 
     // @dev - Verify all block header matches superblock accumulated work
