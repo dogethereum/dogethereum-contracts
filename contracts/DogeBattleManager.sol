@@ -57,7 +57,7 @@ contract DogeBattleManager is DogeErrorCodes {
     }
 
     // @dev - Challenger makes a query for superblock hashes
-    function queryHashes(bytes32 claimId) internal;
+    function queryMerkleRootHashes(bytes32 claimId) internal;
 
     // @dev - Challenger makes a query for block header data for a hash
     function queryBlockHeader(bytes32 claimId, bytes32 blockHash) internal;
@@ -67,7 +67,7 @@ contract DogeBattleManager is DogeErrorCodes {
         BattleSession storage session = sessions[sessionId];
         bytes32 claimId = session.claimId;
         if (step == 0) {
-            queryHashes(claimId);
+            queryMerkleRootHashes(claimId);
         } else if (step == 1) {
             queryBlockHeader(claimId, data);
         }
@@ -77,7 +77,7 @@ contract DogeBattleManager is DogeErrorCodes {
     }
 
     // @dev - Submitter send hashes to verify superblock merkle root
-    function verifyHashes(bytes32 claimId, bytes data) internal;
+    function verifyMerkleRootHashes(bytes32 claimId, bytes data) internal;
 
     // @dev - Verify block header send by challenger
     function verifyBlockHeader(bytes32 claimId, bytes data) internal;
@@ -87,7 +87,7 @@ contract DogeBattleManager is DogeErrorCodes {
         BattleSession storage session = sessions[sessionId];
         bytes32 claimId = session.claimId;
         if (step == 0) {
-            verifyHashes(claimId, data);
+            verifyMerkleRootHashes(claimId, data);
         } else if (step == 1) {
             verifyBlockHeader(claimId, data);
         }
