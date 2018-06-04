@@ -7,10 +7,13 @@ import {DogeErrorCodes} from "./DogeErrorCodes.sol";
 contract DogeBattleManager is DogeErrorCodes {
 
     event NewSession(bytes32 sessionId, address claimant, address challenger);
-    event NewQuery(bytes32 sessionId, address claimant, uint step);
-    event NewResponse(bytes32 sessionId, address challenger);
     event ChallengerConvicted(bytes32 sessionId, address challenger);
     event ClaimantConvicted(bytes32 sessionId, address claimant);
+
+    event QueryMerkleRootHashes(bytes32 sessionId, address claimant);
+    event RespondMerkleRootHashes(bytes32 sessionId, address challenger, bytes data);
+    event QueryBlockHeader(bytes32 sessionId, address claimant, bytes32 blockHash);
+    event RespondBlockHeader(bytes32 sessionId, address challenger, bytes data);
 
     event SessionError(bytes32 sessionId, uint err);
 
@@ -69,13 +72,14 @@ contract DogeBattleManager is DogeErrorCodes {
         bool succeeded = false;
         if (step == 0) {
             succeeded = queryMerkleRootHashes(claimId);
+            emit QueryMerkleRootHashes(sessionId, session.claimant);
         } else if (step == 1) {
             succeeded = queryBlockHeader(claimId, data);
+            emit QueryBlockHeader(sessionId, session.claimant, data);
         }
 
         if (succeeded) {
             session.lastChallengerMessage = block.number;
-            emit NewQuery(sessionId, session.claimant, step);
         }
     }
 
@@ -92,13 +96,14 @@ contract DogeBattleManager is DogeErrorCodes {
         bool succeeded = false;
         if (step == 0) {
             succeeded = verifyMerkleRootHashes(claimId, data);
+            emit RespondMerkleRootHashes(sessionId, session.challenger, data);
         } else if (step == 1) {
             succeeded = verifyBlockHeader(claimId, data);
+            emit RespondBlockHeader(sessionId, session.challenger, data);
         }
 
         if (succeeded) {
             session.lastClaimantMessage = block.number;
-            emit NewResponse(sessionId, session.challenger);
         }
     }
 

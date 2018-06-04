@@ -137,18 +137,18 @@ contract('DogeClaimManager', (accounts) => {
       session1 = result.logs[0].args.sessionId;
       assert.equal(result.logs[1].event, 'VerificationGameStarted', 'Battle started');
       result = await claimManager.query(session1, 0, 0, { from: challenger });
-      assert.equal(result.logs[0].event, 'NewQuery', 'Query hashes');
+      assert.equal(result.logs[0].event, 'QueryMerkleRootHashes', 'Query merkle root hashes');
       const data = utils.hashesToData([blockHash]);
       result = await claimManager.respond(session1, 0, data, { from: submitter });
-      assert.equal(result.logs[0].event, 'NewResponse', 'Hashes accepted');
+      assert.equal(result.logs[0].event, 'RespondMerkleRootHashes', 'Respond merkle root hashes');
     });
     it('Query and reply block header', async () => {
       let result;
       result = await claimManager.query(session1, 1, blockHash, { from: challenger });
-      assert.equal(result.logs[0].event, 'NewQuery', 'Query block header');
+      assert.equal(result.logs[0].event, 'QueryBlockHeader', 'Query block header');
       const data = utils.headerToData(blockHeader);
       result = await claimManager.respond(session1, 1, data, { from: submitter });
-      assert.equal(result.logs[0].event, 'NewResponse', 'Block header accepted');
+      assert.equal(result.logs[0].event, 'RespondBlockHeader', 'Respond block header');
     });
     it('Verify superblock', async () => {
       const result = await claimManager.performVerification(session1, { from: challenger });
@@ -215,22 +215,22 @@ contract('DogeClaimManager', (accounts) => {
       const session = await claimManager.getSession(claim1, challenger);
       assert.equal(session, session1, 'Sessions should match');
       result = await claimManager.query(session1, 0, 0, { from: challenger });
-      assert.equal(result.logs[0].event, 'NewQuery', 'Query hashes');
+      assert.equal(result.logs[0].event, 'QueryMerkleRootHashes', 'Query merkle root hashes');
     });
     it('Verify hashes', async () => {
       const data = utils.hashesToData(hashes);
       const result = await claimManager.respond(session1, 0, data, { from: submitter });
-      assert.equal(result.logs[0].event, 'NewResponse', 'Hashes accepted');
+      assert.equal(result.logs[0].event, 'RespondMerkleRootHashes', 'Respond merkle root hashes');
     });
     hashes.forEach((hash, idx) => {
       it(`Query blocks header ${hash.slice(0, 20)}..`, async () => {
         const result = await claimManager.query(session1, 1, hash, { from: challenger });
-        assert.equal(result.logs[0].event, 'NewQuery', 'Query block header');
+        assert.equal(result.logs[0].event, 'QueryBlockHeader', 'Query block header');
       });
       it(`Answer blocks header ${hash.slice(0, 20)}..`, async () => {
         const data = utils.headerToData(headers[idx]);
         const result = await claimManager.respond(session1, 1, data, { from: submitter });
-        assert.equal(result.logs[0].event, 'NewResponse', 'Block header accepted');
+        assert.equal(result.logs[0].event, 'RespondBlockHeader', 'Respond block header');
       });
     });
     it('Verify superblock', async () => {
@@ -290,7 +290,7 @@ contract('DogeClaimManager', (accounts) => {
       let result;
       await beginNewChallenge();
       result = await claimManager.query(session1, 0, 0, { from: challenger });
-      assert.equal(result.logs[0].event, 'NewQuery', 'Query hashes');
+      assert.equal(result.logs[0].event, 'QueryMerkleRootHashes', 'Query merkle root hashes');
       result = await claimManager.timeout(session1, { from: challenger });
       assert.equal(result.logs[0].event, 'SessionError', 'Timeout too early');
       await utils.mineBlocks(web3, 5);
@@ -302,10 +302,10 @@ contract('DogeClaimManager', (accounts) => {
       let result;
       await beginNewChallenge();
       result = await claimManager.query(session1, 0, 0, { from: challenger });
-      assert.equal(result.logs[0].event, 'NewQuery', 'Query hashes');
+      assert.equal(result.logs[0].event, 'QueryMerkleRootHashes', 'Query merkle root hashes');
       const data = utils.hashesToData(hashes);
       result = await claimManager.respond(session1, 0, data, { from: submitter });
-      assert.equal(result.logs[0].event, 'NewResponse', 'Hashes accepted');
+      assert.equal(result.logs[0].event, 'RespondMerkleRootHashes', 'Respond merkle root hashes');
       result = await claimManager.timeout(session1, { from: submitter });
       assert.equal(result.logs[0].event, 'SessionError', 'Timeout too early');
       await utils.mineBlocks(web3, 5);
@@ -317,12 +317,12 @@ contract('DogeClaimManager', (accounts) => {
       let result;
       await beginNewChallenge();
       result = await claimManager.query(session1, 0, 0, { from: challenger });
-      assert.equal(result.logs[0].event, 'NewQuery', 'Query hashes');
+      assert.equal(result.logs[0].event, 'QueryMerkleRootHashes', 'Query merkle root hashes');
       const data = utils.hashesToData(hashes);
       result = await claimManager.respond(session1, 0, data, { from: submitter });
-      assert.equal(result.logs[0].event, 'NewResponse', 'Hashes accepted');
+      assert.equal(result.logs[0].event, 'RespondMerkleRootHashes', 'Respond merkle root hashes');
       result = await claimManager.query(session1, 1, hashes[0], { from: challenger });
-      assert.equal(result.logs[0].event, 'NewQuery', 'Query block header');
+      assert.equal(result.logs[0].event, 'QueryBlockHeader', 'Query block header');
       result = await claimManager.timeout(session1, { from: challenger });
       assert.equal(result.logs[0].event, 'SessionError', 'Timeout too early');
       await utils.mineBlocks(web3, 5);
@@ -335,15 +335,15 @@ contract('DogeClaimManager', (accounts) => {
       let data;
       await beginNewChallenge();
       result = await claimManager.query(session1, 0, 0, { from: challenger });
-      assert.equal(result.logs[0].event, 'NewQuery', 'Query hashes');
+      assert.equal(result.logs[0].event, 'QueryMerkleRootHashes', 'Query merkle root hashes');
       data = utils.hashesToData(hashes);
       result = await claimManager.respond(session1, 0, data, { from: submitter });
-      assert.equal(result.logs[0].event, 'NewResponse', 'Hashes accepted');
+      assert.equal(result.logs[0].event, 'RespondMerkleRootHashes', 'Respond merkle root hashes');
       result = await claimManager.query(session1, 1, hashes[0], { from: challenger });
-      assert.equal(result.logs[0].event, 'NewQuery', 'Query block header');
+      assert.equal(result.logs[0].event, 'QueryBlockHeader', 'Query block header');
       data = utils.headerToData(headers[0]);
       result = await claimManager.respond(session1, 1, data, { from: submitter });
-      assert.equal(result.logs[0].event, 'NewResponse', 'Block header accepted');
+      assert.equal(result.logs[0].event, 'RespondBlockHeader', 'Respond block header');
       result = await claimManager.timeout(session1, { from: submitter });
       assert.equal(result.logs[0].event, 'SessionError', 'Timeout too early');
       await utils.mineBlocks(web3, 5);
@@ -356,15 +356,15 @@ contract('DogeClaimManager', (accounts) => {
       let data;
       await beginNewChallenge();
       result = await claimManager.query(session1, 0, 0, { from: challenger });
-      assert.equal(result.logs[0].event, 'NewQuery', 'Query hashes');
+      assert.equal(result.logs[0].event, 'QueryMerkleRootHashes', 'Query merkle root hashes');
       data = utils.hashesToData(hashes);
       result = await claimManager.respond(session1, 0, data, { from: submitter });
-      assert.equal(result.logs[0].event, 'NewResponse', 'Hashes accepted');
+      assert.equal(result.logs[0].event, 'RespondMerkleRootHashes', 'Respond merkle root hashes');
       result = await claimManager.query(session1, 1, hashes[0], { from: challenger });
-      assert.equal(result.logs[0].event, 'NewQuery', 'Query block header');
+      assert.equal(result.logs[0].event, 'QueryBlockHeader', 'Query block header');
       data = utils.headerToData(headers[0]);
       result = await claimManager.respond(session1, 1, data, { from: submitter });
-      assert.equal(result.logs[0].event, 'NewResponse', 'Block header accepted');
+      assert.equal(result.logs[0].event, 'RespondBlockHeader', 'Respond block header');
       result = await claimManager.performVerification(session1, { from: challenger });
       assert.equal(result.logs[0].event, 'SessionDecided', 'Superblock verified');
       assert.equal(result.logs[1].event, 'ChallengerConvicted', 'Should convict challenger');
