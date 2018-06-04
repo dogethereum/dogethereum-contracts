@@ -385,11 +385,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
         require(claim.blockHashes.length == 0);
         if (claim.challengeState == ChallengeState.QueryHashes) {
             claim.challengeState = ChallengeState.RespondHashes;
-            require(data.length % 32 == 0);
-            uint count = data.length / 32;
-            for (uint i=0; i<count; ++i) {
-                claim.blockHashes.push(DogeTx.readBytes32(data, 32*i));
-            }
+            claim.blockHashes = DogeTx.parseBytes32Array(data);
             bytes32 lastHash = superblocks.getSuperblockLastHash(claim.superblockId);
             require(lastHash == claim.blockHashes[claim.blockHashes.length - 1]);
             bytes32 merkleRoot = DogeTx.makeMerkle(claim.blockHashes);
@@ -433,7 +429,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
 
             uint32 bits = uint32(DogeTx.getBytesLE(data, 32 + DOGECOIN_HEADER_DIFFICULTY_OFFSET, 32));
 
-            claim.accumulatedWork += targetToDiff(DogeTx.targetFromBits(bits));
+            claim.accumulatedWork += DogeTx.targetToDiff(DogeTx.targetFromBits(bits));
 
             if (blockSha256Hash == claim.blockHashes[claim.blockHashes.length - 1]) {
                 claim.lastBlockTimestamp = timestamp;
@@ -470,13 +466,6 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
             return true;
         }
         return false;
-    }
-
-    uint constant DOGECOIN_DIFFICULTY1 = 0xFFFFF * 256**(0x1e - 3);
-
-    // @dev - Calculate dogecoin difficulty from target
-    function targetToDiff(uint target) internal pure returns (uint) {
-        return DOGECOIN_DIFFICULTY1 / target;
     }
 
     // @dev Scrypt verification succeeded

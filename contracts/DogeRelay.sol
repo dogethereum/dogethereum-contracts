@@ -301,11 +301,7 @@ contract DogeRelay is IScryptCheckerListener {
 
         delete onholdBlocks[uint(_proposalId)];
 
-        // https://en.bitcoin.it/wiki/Difficulty
-        // Min difficulty for bitcoin is 0x1d00ffff
-        //uint128 scoreBlock = scorePrevBlock + uint128 (0x00000000FFFF0000000000000000000000000000000000000000000000000000 / target);
-        // Min difficulty for dogecoin is 0x1e0fffff
-        uint128 scoreBlock = scorePrevBlock + uint128 (0x00000FFFFF000000000000000000000000000000000000000000000000000000 / DogeTx.targetFromBits(bits));
+        uint128 scoreBlock = scorePrevBlock + uint128(DogeTx.targetToDiff(DogeTx.targetFromBits(bits)));
         //log2(bytes32(scoreBlock), bytes32(bits), bytes32(target));
         // bitcoinj (so libdohj, dogecoin java implemntation) uses 2**256 as a dividend.
         // Investigate: May dogerelay best block be different than libdohj best block in some border cases?

@@ -741,7 +741,8 @@ library DogeTx {
     // root of the merkle tree.
     //
     // @return root of merkle tree
-    function makeMerkle(bytes32[] hashes) internal pure returns (bytes32) {
+    function makeMerkle(bytes32[] hashes2) external pure returns (bytes32) {
+        bytes32[] memory hashes = hashes2;
         uint length = hashes.length;
         if (length == 1) return hashes[0];
         require(length > 0);
@@ -749,22 +750,16 @@ library DogeTx {
         uint j;
         uint k;
         k = 0;
-        for (i=0; i<length; i += 2) {
-            j = i+1<length ? i+1 : length-1;
-            hashes[k] = sha256(abi.encodePacked(sha256(abi.encodePacked(flipBytes32(hashes[i]), flipBytes32(hashes[j])))));
-            k += 1;
-        }
-        length = k;
         while (length > 1) {
             k = 0;
             for (i = 0; i < length; i += 2) {
                 j = i+1<length ? i+1 : length-1;
-                hashes[k] = sha256(abi.encodePacked(sha256(abi.encodePacked(hashes[i], hashes[j]))));
+                hashes[k] = bytes32(concatHash(uint(hashes[i]), uint(hashes[j])));
                 k += 1;
             }
             length = k;
         }
-        return flipBytes32(hashes[0]);
+        return hashes[0];
     }
 
     // @dev - For a valid proof, returns the root of the Merkle tree.
@@ -927,4 +922,24 @@ library DogeTx {
         return mant * 256**(exp - 3);
     }
 
+    uint constant DOGECOIN_DIFFICULTY_ONE = 0xFFFFF * 256**(0x1e - 3);
+
+    // @dev - Calculate dogecoin difficulty from target
+    // https://en.bitcoin.it/wiki/Difficulty
+    // Min difficulty for bitcoin is 0x1d00ffff
+    // Min difficulty for dogecoin is 0x1e0fffff
+    function targetToDiff(uint target) internal pure returns (uint) {
+        return DOGECOIN_DIFFICULTY_ONE / target;
+    }
+
+    // @dev - Parse an array of bytes32
+    function parseBytes32Array(bytes data) external pure returns (bytes32[]) {
+        require(data.length % 32 == 0);
+        uint count = data.length / 32;
+        bytes32[] memory hashes = new bytes32[](count);
+        for (uint i=0; i<count; ++i) {
+            hashes[i] = readBytes32(data, 32*i);
+        }
+        return hashes;
+    }
 }
