@@ -399,6 +399,22 @@ contract DogeRelay is IScryptCheckerListener {
     // @param _siblings - transaction's Merkle siblings
     // @param _txBlockHash - hash of the block that might contain the transaction
     // @return - SHA-256 hash of _txBytes if the transaction is in the block, 0 otherwise
+    function verifyTx(bytes _txBytes, uint _txIndex, uint[] _siblings, bytes _txBlockHeaderBytes, bytes32 _txSuperblockHash) public returns (uint) {
+        uint txHash = DogeTx.dblShaFlip(_txBytes);
+
+        if (_txBytes.length == 64) {  // todo: is check 32 also needed?
+            VerifyTransaction(bytes32(txHash), ERR_TX_64BYTE);
+            return 0;
+        }
+
+        if (helperVerifyHash(txHash, _txIndex, _siblings, _txBlockHeaderBytes, _txSuperblockHash) == 1) {
+            return txHash;
+        } else {
+            // log is done via helperVerifyHash
+            return 0;
+        }
+    }
+
     function verifyTx(bytes _txBytes, uint _txIndex, uint[] _siblings, uint _txBlockHash) public returns (uint) {
         uint txHash = DogeTx.dblShaFlip(_txBytes);
 
@@ -427,7 +443,33 @@ contract DogeRelay is IScryptCheckerListener {
     // @param _txBlockHash - hash of the block that might contain the transaction
     // @return - 1 if the transaction is in the block and the block is in the main chain,
     // 20020 (ERR_CONFIRMATIONS) if the block is not in the main chain,
-    // 20040 (ERR_MERKLE_ROOT) if the block is in the main chain but the Merkle proof fails.
+    // 20050 (ERR_MERKLE_ROOT) if the block is in the main chain but the Merkle proof fails.
+    function helperVerifyHash(uint256 _txHash, uint _txIndex, uint[] _siblings, bytes _blockHeaderBytes, bytes32 _txSuperblockHash) private returns (uint) {
+        // TODO: implement when dealing with incentives
+        // if (!feePaid(_txBlockHash, getFeeAmount(_txBlockHash))) {  // in incentive.se
+        //    VerifyTransaction(bytes32(_txHash), ERR_BAD_FEE);
+        //    return (ERR_BAD_FEE);
+        // }
+
+        if (!superblocks.isApproved(_txSuperblockHash)) {
+            VerifyTransaction(bytes32(_txHash), ERR_CHAIN);
+            return (ERR_CHAIN);
+        }
+
+        uint merkle = getHeaderMerkleRoot(_blockHeaderBytes, 0);
+
+        if (DogeTx.computeMerkle(_txHash, _txIndex, _siblings) != merkle) {
+            log1(bytes32(DogeTx.computeMerkle(_txHash, _txIndex, _siblings)),
+                bytes32(merkle));
+            VerifyTransaction(bytes32(_txHash), ERR_MERKLE_ROOT);
+            return (ERR_MERKLE_ROOT);
+        }
+
+        VerifyTransaction(bytes32(_txHash), 1);
+        return (1);
+    }
+    
+
     function helperVerifyHash(uint256 _txHash, uint _txIndex, uint[] _siblings, uint _txBlockHash) private returns (uint) {
         // TODO: implement when dealing with incentives
         // if (!feePaid(_txBlockHash, getFeeAmount(_txBlockHash))) {  // in incentive.se

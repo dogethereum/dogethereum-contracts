@@ -368,6 +368,10 @@ contract DogeSuperblocks is DogeErrorCodes {
         return DogeTx.makeMerkle(hashes);
     }
 
+    function isApproved(bytes32 _superblockId) public view returns (bool) {
+        return (getSuperblockStatus(_superblockId) == Status.Approved);
+    }
+
     // @dev - write `_fourBytes` into `_word` starting from `_position`
     // This is useful for writing 32bit ints inside one 32 byte word
     //
