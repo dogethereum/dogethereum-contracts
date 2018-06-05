@@ -76,7 +76,7 @@ async function deployIntegration(deployer, network, accounts, networkId, trusted
   await deployer.link(ECRecovery, DogeToken);
 
   await deployer.deploy(DogeRelay, networkId, {gas: 4200000});
-  // await deployer.deploy(ScryptCheckerDummy, DogeRelay.address, true, {gas: 800000})
+  await deployer.deploy(ScryptCheckerDummy, DogeRelay.address, true, {gas: 1500000})
   await deployer.deploy(DogeToken, DogeRelay.address, trustedDogeEthPriceOracle, collateralRatio, {gas: 5300000});
 
   await deployer.link(DogeTx, DogeSuperblocks);
@@ -92,7 +92,7 @@ async function deployIntegration(deployer, network, accounts, networkId, trusted
   // await deployer.deploy(ScryptRunner, {gas: 3000000});
 
   const dogeRelay = DogeRelay.at(DogeRelay.address);
-  await dogeRelay.setScryptChecker(ClaimManager.address, {gas: 60000});
+  await dogeRelay.setScryptChecker(ScryptCheckerDummy.address, {gas: 60000});
 
   const superblocks = DogeSuperblocks.at(DogeSuperblocks.address);
   await superblocks.setClaimManager(DogeClaimManager.address, {gas: 60000});
