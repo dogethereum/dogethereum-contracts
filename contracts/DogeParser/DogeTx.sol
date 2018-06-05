@@ -107,6 +107,7 @@ library DogeTx {
     uint constant q = (p + 1) / 4;
 
     // Error codes
+    uint constant ERR_INVALID_HEADER = 10050;
     uint constant ERR_COINBASE_INDEX = 10060; // coinbase tx index within Litecoin merkle isn't 0
     uint constant ERR_NOT_MERGE_MINED = 10070; // trying to check AuxPoW on a block that wasn't merge mined
     uint constant ERR_FOUND_TWICE = 10080; // 0xfabe6d6d found twice
@@ -134,6 +135,19 @@ library DogeTx {
         uint coinbaseTxIndex; // index of coinbase tx within Litecoin tx tree
 
         uint parentNonce;
+    }
+
+    // Dogecoin block header stored as a struct, mostly for readability purposes.
+    // BlockHeader structs can be obtained by parsing a block header's first 80 bytes
+    // with parseHeaderBytes.
+    struct BlockHeader {
+        uint32 version;
+        uint32 time;
+        uint32 bits;
+        uint32 nonce;
+        uint blockHash;
+        uint prevBlock;
+        uint merkleRoot;
     }
 
     // Convert a variable integer into something useful and return it and
@@ -477,13 +491,7 @@ library DogeTx {
             }
         }
     }
-    function getHashPrevBlock(bytes memory data, uint pos) internal pure returns (uint) {
-        uint hashPrevBlock;
-        assembly {
-            hashPrevBlock := mload(add(add(data, 0x24), pos))
-        }
-        return flip32Bytes(hashPrevBlock);
-    }
+
     // @dev returns a portion of a given byte array specified by its starting and ending points
     // Should be private, made internal for testing
     // Breaks underscore naming convention for parameters because it raises a compiler error
@@ -722,19 +730,6 @@ library DogeTx {
         }
     }
 
-    // @dev - Reverse bytes of its inputs
-    function flipBytes32(bytes32 _input) internal pure returns (bytes32) {
-        bytes32 result;
-        assembly {
-            let pos := mload(0x40)
-            for { let i := 0 } lt(i, 32) { i := add(i, 1) } {
-                mstore8(add(pos, i), byte(sub(31, i), _input))
-            }
-            result := mload(pos)
-        }
-        return result;
-    }
-
     // @dev - Evaluate the merkle root
     //
     // Given an array of hashes it calculates the
@@ -941,5 +936,126 @@ library DogeTx {
             hashes[i] = readBytes32(data, 32*i);
         }
         return hashes;
+    }
+
+    // 0x00 version
+    // 0x04 prev block hash
+    // 0x24 merkle root
+    // 0x44 timestamp
+    // 0x48 bits
+    // 0x4c nonce
+
+    // @dev - extract version field from a raw Dogecoin block header
+    //
+    // @param _blockHeader - Dogecoin block header bytes
+    // @param pos - where to start reading version from
+    // @return - block's version in big endian format
+    function getVersion(bytes memory _blockHeader, uint pos) internal pure returns (uint32 version) {
+        assembly {
+            let word := mload(add(add(_blockHeader, 0x4), pos))
+            version := add(byte(24, word),
+                add(mul(byte(25, word), 0x100),
+                    add(mul(byte(26, word), 0x10000),
+                        mul(byte(27, word), 0x1000000))))
+        }
+    }
+
+    // @dev - extract previous block field from a raw Dogecoin block header
+    //
+    // @param _blockHeader - Dogecoin block header bytes
+    // @param pos - where to start reading hash from
+    // @return - hash of block's parent in big endian format
+    function getHashPrevBlock(bytes memory _blockHeader, uint pos) internal pure returns (uint) {
+        uint hashPrevBlock;
+        assembly {
+            hashPrevBlock := mload(add(add(_blockHeader, 0x24), pos))
+        }
+        return flip32Bytes(hashPrevBlock);
+    }
+
+    // @dev - extract Merkle root field from a raw Dogecoin block header
+    //
+    // @param _blockHeader - Dogecoin block header bytes
+    // @param pos - where to start reading root from
+    // @return - block's Merkle root in big endian format
+    function getHeaderMerkleRoot(bytes _blockHeader, uint pos) private pure returns (uint) {
+        uint merkle;
+        assembly {
+            merkle := mload(add(add(_blockHeader, 0x44), pos))
+        }
+        return flip32Bytes(merkle);
+    }
+
+    // @dev - extract bits field from a raw Dogecoin block header
+    //
+    // @param _blockHeader - Dogecoin block header bytes
+    // @param pos - where to start reading bits from
+    // @return - block's difficulty in bits format, also big-endian
+    function getBits(bytes memory _blockHeader, uint pos) internal pure returns (uint32 bits) {
+        assembly {
+            let word := mload(add(add(_blockHeader, 0x50), pos))
+            bits := add(byte(24, word),
+                add(mul(byte(25, word), 0x100),
+                    add(mul(byte(26, word), 0x10000),
+                        mul(byte(27, word), 0x1000000))))
+        }
+    }
+
+    // @dev - extract timestamp field from a raw Dogecoin block header
+    //
+    // @param _blockHeader - Dogecoin block header bytes
+    // @param pos - where to start reading bits from
+    // @return - block's timestamp in big-endian format
+    function getTimestamp(bytes memory _blockHeader, uint pos) internal pure returns (uint32 time) {
+        assembly {
+            let word := mload(add(add(_blockHeader, 0x4c), pos))
+            time := add(byte(24, word),
+                add(mul(byte(25, word), 0x100),
+                    add(mul(byte(26, word), 0x10000),
+                        mul(byte(27, word), 0x1000000))))
+        }
+    }
+
+    // @dev - converts raw bytes representation of a Dogecoin block header to struct representation
+    //
+    // @param _rawBytes - first 80 bytes of a block header
+    // @return - exact same header information in BlockHeader struct form
+    function parseHeaderBytes(bytes _rawBytes, uint pos) internal view returns (BlockHeader bh) {
+        bh.version = getVersion(_rawBytes, pos);
+        bh.time = getTimestamp(_rawBytes, pos);
+        bh.bits = getBits(_rawBytes, pos);
+        bh.blockHash = dblShaFlipMem(_rawBytes, pos, 80);
+        bh.prevBlock = getHashPrevBlock(_rawBytes, pos);
+        bh.merkleRoot = getHeaderMerkleRoot(_rawBytes, pos);
+    }
+
+    uint32 constant VERSION_AUXPOW = (1 << 8);
+
+    // @dev - checks version to determine if a block has merge mining information
+    function isMergeMined(BlockHeader _blockHeader) internal pure returns (bool) {
+        return _blockHeader.version & VERSION_AUXPOW != 0;
+    }
+
+    // @dev - Verify block header
+    // @return - true when a the block header is valid
+    function verifyBlockHeader(bytes _blockHeaderBytes, uint pos, uint len, uint _scryptBlockHash) external view returns (uint, uint, uint) {
+        BlockHeader memory blockHeader = parseHeaderBytes(_blockHeaderBytes, pos);
+        uint blockSha256Hash = blockHeader.blockHash;
+        if (isMergeMined(blockHeader)) {
+            AuxPoW memory ap = parseAuxPoW(_blockHeaderBytes, pos, len);
+            if (flip32Bytes(ap.scryptHash) > targetFromBits(blockHeader.bits)) {
+                return (ERR_PROOF_OF_WORK, blockHeader.blockHash, ap.scryptHash);
+            }
+            uint auxPoWCode = checkAuxPoW(blockSha256Hash, ap);
+            if (auxPoWCode != 1) {
+                return (auxPoWCode, blockHeader.blockHash, ap.scryptHash);
+            }
+            return (0, blockHeader.blockHash, ap.scryptHash);
+        } else {
+            if (flip32Bytes(_scryptBlockHash) > targetFromBits(blockHeader.bits)) {
+                return (ERR_PROOF_OF_WORK, blockHeader.blockHash, _scryptBlockHash);
+            }
+            return (0, blockHeader.blockHash, _scryptBlockHash);
+        }
     }
 }

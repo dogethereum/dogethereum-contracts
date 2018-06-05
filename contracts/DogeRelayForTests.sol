@@ -1,7 +1,7 @@
 pragma solidity ^0.4.19;
 
-import "./DogeRelay.sol";
-import "./DogeParser/DogeTx.sol";
+import {DogeRelay} from "./DogeRelay.sol";
+import {DogeTx} from "./DogeParser/DogeTx.sol";
 
 contract DogeRelayForTests is DogeRelay {
 
@@ -55,7 +55,7 @@ contract DogeRelayForTests is DogeRelay {
 
     // returns the block header (zeros for a header that does not exist) when
     // sufficient payment is provided.  If payment is insufficient, returns 1-byte of zero.
-    function getBlockHeader(uint blockHash) internal returns (BlockHeader) {
+    function getBlockHeader(uint blockHash) internal returns (DogeTx.BlockHeader) {
         // TODO: incentives
         // if (feePaid(blockHash, m_getFeeAmount(blockHash))) {  // in incentive.se
         //     GetHeader (blockHash, 0);
@@ -98,6 +98,9 @@ contract DogeRelayForTests is DogeRelay {
     function bytesToUint32Flipped(bytes memory input, uint pos) internal pure returns (uint32 result) {
         result = uint32(input[pos]) + uint32(input[pos + 1])*(2**8) + uint32(input[pos + 2])*(2**16) + uint32(input[pos + 3])*(2**24);
     }
+
+    // Copied from DogeTx library
+    uint32 constant VERSION_AUXPOW = (1 << 8);
 
     // @dev - checks version to determine if a block has merge mining information
     function isMergeMined(bytes _rawBytes) private pure returns (bool) {

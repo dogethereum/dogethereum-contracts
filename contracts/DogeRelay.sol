@@ -38,23 +38,10 @@ contract DogeRelay is IScryptCheckerListener {
     // - _ancestor: stores 8 32bit ancestor indices for more efficient backtracking (see btcChain)
     // - _feeInfo is used for incentive.se (see getFeeInfo)
     struct BlockInformation {
-          BlockHeader _blockHeader;
+          DogeTx.BlockHeader _blockHeader;
           uint _info;
           uint _ancestor;
           // bytes _feeInfo;
-    }
-
-    // Dogecoin block header stored as a struct, mostly for readability purposes.
-    // BlockHeader structs can be obtained by parsing a block header's first 80 bytes
-    // with parseHeaderBytes.
-    struct BlockHeader {
-        uint32 version;
-        uint32 time;
-        uint32 bits;
-        uint32 nonce;
-        uint blockHash;
-        uint prevBlock;
-        uint merkleRoot;
     }
 
     //BlockInformation[] myblocks = new BlockInformation[](2**256);
@@ -190,34 +177,23 @@ contract DogeRelay is IScryptCheckerListener {
 
         ++onholdIdx;
         BlockInformation storage bi = onholdBlocks[onholdIdx];
-        bi._blockHeader = parseHeaderBytes(_blockHeaderBytes, pos);
+        bi._blockHeader = DogeTx.parseHeaderBytes(_blockHeaderBytes, pos);
 
-        uint blockSha256Hash = bi._blockHeader.blockHash;
+        uint err;
+        uint blockHash;
+        uint scryptHash;
+        (err, blockHash, scryptHash) = DogeTx.verifyBlockHeader(_blockHeaderBytes, pos, len, _proposedScryptBlockHash);
+        if (err != 0) {
+            emit StoreHeader(bytes32(blockHash), err);
+            return 0;
+        }
 
-        if (isMergeMined(bi._blockHeader)) {
-            DogeTx.AuxPoW memory ap = DogeTx.parseAuxPoW(_blockHeaderBytes, pos, len);
-
-            if (DogeTx.flip32Bytes(ap.scryptHash) > DogeTx.targetFromBits(bi._blockHeader.bits)) {
-                emit StoreHeader(bytes32(blockSha256Hash), ERR_PROOF_OF_WORK);
-                return 0;
-            }
-
-            uint auxPoWCode = DogeTx.checkAuxPoW(blockSha256Hash, ap);
-            if (auxPoWCode != 1) {
-                emit StoreHeader(bytes32(blockSha256Hash), auxPoWCode);
-                return 0;
-            }
-
-            scryptChecker.checkScrypt(DogeTx.sliceArray(_blockHeaderBytes, pos + len - 80, pos + len), bytes32(ap.scryptHash), bytes32(onholdIdx), msg.sender); //DogeTx.sliceArray(...) is a merge mined block header, therefore longer than a regular block header
-
+        if (DogeTx.isMergeMined(bi._blockHeader)) {
+            //DogeTx.sliceArray(...) is a merge mined block header, therefore longer than a regular block header
+            scryptChecker.checkScrypt(DogeTx.sliceArray(_blockHeaderBytes, pos + len - 80, pos + len), bytes32(scryptHash), bytes32(onholdIdx), msg.sender);
         } else {
-            // Normal block
-            if (DogeTx.flip32Bytes(_proposedScryptBlockHash) > DogeTx.targetFromBits(bi._blockHeader.bits)) {
-                emit StoreHeader(bytes32(blockSha256Hash), ERR_PROOF_OF_WORK);
-                return 0;
-            }
-
-            scryptChecker.checkScrypt(DogeTx.sliceArray(_blockHeaderBytes, 0, 80), bytes32(_proposedScryptBlockHash), bytes32(onholdIdx), msg.sender); //For normal blocks, we just need to slice the first 80 bytes
+            //For normal blocks, we just need to slice the first 80 bytes
+            scryptChecker.checkScrypt(DogeTx.sliceArray(_blockHeaderBytes, 0, 80), bytes32(_proposedScryptBlockHash), bytes32(onholdIdx), msg.sender);
         }
 
         return 1;
@@ -704,19 +680,6 @@ contract DogeRelay is IScryptCheckerListener {
         return out;
     }
 
-    // @dev - converts raw bytes representation of a Dogecoin block header to struct representation
-    //
-    // @param _rawBytes - first 80 bytes of a block header
-    // @return - exact same header information in BlockHeader struct form
-    function parseHeaderBytes(bytes _rawBytes, uint pos) internal view returns (BlockHeader bh) {
-        bh.version = getVersion(_rawBytes, pos);
-        bh.time = getTimestamp(_rawBytes, pos);
-        bh.bits = getBits(_rawBytes, pos);
-        bh.blockHash = DogeTx.dblShaFlipMem(_rawBytes, pos, 80);
-        bh.prevBlock = getHashPrevBlock(_rawBytes, pos);
-        bh.merkleRoot = getHeaderMerkleRoot(_rawBytes, pos);
-    }
-
     // @dev - checks whether the block identified by _blockHash is within 6 blocks of the chain's best block
     //
     // @param _blockHash - block hash
@@ -882,90 +845,6 @@ contract DogeRelay is IScryptCheckerListener {
     // @result - work put into the block identified by `_blockHash`
     function getScore(uint _blockHash) internal view returns (uint128) {
         return uint128(myblocks[_blockHash]._info * BYTES_16 / BYTES_16);
-    }
-
-    // 0x00 version
-    // 0x04 prev block hash
-    // 0x24 merkle root
-    // 0x44 timestamp
-    // 0x48 bits
-    // 0x4c nonce
-
-    // @dev - extract version field from a raw Dogecoin block header
-    //
-    // @param _blockHeader - Dogecoin block header bytes
-    // @param pos - where to start reading version from
-    // @return - block's version in big endian format
-    function getVersion(bytes memory _blockHeader, uint pos) internal pure returns (uint32 version) {
-        assembly {
-            let word := mload(add(add(_blockHeader, 0x4), pos))
-            version := add(byte(24, word),
-                add(mul(byte(25, word), 0x100),
-                    add(mul(byte(26, word), 0x10000),
-                        mul(byte(27, word), 0x1000000))))
-        }
-    }
-
-    // @dev - extract previous block field from a raw Dogecoin block header
-    //
-    // @param _blockHeader - Dogecoin block header bytes
-    // @param pos - where to start reading hash from
-    // @return - hash of block's parent in big endian format
-    function getHashPrevBlock(bytes memory _blockHeader, uint pos) internal pure returns (uint) {
-        uint hashPrevBlock;
-        assembly {
-            hashPrevBlock := mload(add(add(_blockHeader, 0x24), pos))
-        }
-        return DogeTx.flip32Bytes(hashPrevBlock);
-    }
-
-    // @dev - extract Merkle root field from a raw Dogecoin block header
-    //
-    // @param _blockHeader - Dogecoin block header bytes
-    // @param pos - where to start reading root from
-    // @return - block's Merkle root in big endian format
-    function getHeaderMerkleRoot(bytes _blockHeader, uint pos) private pure returns (uint) {
-        uint merkle;
-        assembly {
-            merkle := mload(add(add(_blockHeader, 0x44), pos))
-        }
-        return DogeTx.flip32Bytes(merkle);
-    }
-
-    // @dev - extract bits field from a raw Dogecoin block header
-    //
-    // @param _blockHeader - Dogecoin block header bytes
-    // @param pos - where to start reading bits from
-    // @return - block's difficulty in bits format, also big-endian
-    function getBits(bytes memory _blockHeader, uint pos) internal pure returns (uint32 bits) {
-        assembly {
-            let word := mload(add(add(_blockHeader, 0x50), pos))
-            bits := add(byte(24, word),
-                add(mul(byte(25, word), 0x100),
-                    add(mul(byte(26, word), 0x10000),
-                        mul(byte(27, word), 0x1000000))))
-        }
-    }
-
-    // @dev - extract timestamp field from a raw Dogecoin block header
-    //
-    // @param _blockHeader - Dogecoin block header bytes
-    // @param pos - where to start reading bits from
-    // @return - block's timestamp in big-endian format
-    function getTimestamp(bytes memory _blockHeader, uint pos) internal pure returns (uint32 time) {
-        assembly {
-            let word := mload(add(add(_blockHeader, 0x4c), pos))
-            time := add(byte(24, word),
-                add(mul(byte(25, word), 0x100),
-                    add(mul(byte(26, word), 0x10000),
-                        mul(byte(27, word), 0x1000000))))
-        }
-    }
-
-    uint32 constant VERSION_AUXPOW = (1 << 8);
-    // @dev - checks version to determine if a block has merge mining information
-    function isMergeMined(BlockHeader _block) private pure returns (bool) {
-        return _block.version & VERSION_AUXPOW != 0;
     }
 
     function getVersion(uint _blockHash) public view returns (uint) {

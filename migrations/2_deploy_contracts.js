@@ -33,23 +33,19 @@ async function deployDevelopment(deployer, network, accounts, networkId, trusted
   await deployer.deploy(ECRecovery);
 
   await deployer.link(Set, DogeTokenForTests);
-  await deployer.link(DogeTx, DogeTokenForTests);
+  await deployer.link(DogeTx, [DogeTokenForTests, DogeRelayForTests, DogeSuperblocks, DogeClaimManager]);
   await deployer.link(ECRecovery, DogeTokenForTests);
+  await deployer.link(SafeMath, ClaimManager);
 
   await deployer.deploy(DogeRelayForTests, networkId);
   await deployer.deploy(DogeTokenForTests, DogeRelayForTests.address, trustedDogeEthPriceOracle, collateralRatio);
 
   await deployer.deploy(DummyTransactionProcessor, DogeRelayForTests.address);
 
-  await deployer.link(DogeTx, DogeSuperblocks);
-  await deployer.link(DogeTx, DogeClaimManager);
-
   await deployer.deploy(DogeSuperblocks, DogeRelayForTests.address);
   await deployer.deploy(DogeClaimManager, DogeSuperblocks.address);
 
   await deployer.deploy(ScryptCheckerDummy, DogeRelayForTests.address, true)
-
-  await deployer.link(SafeMath, ClaimManager);
 
   await deployer.deploy(ScryptVerifier);
   await deployer.deploy(ClaimManager, ScryptVerifier.address);
@@ -67,7 +63,7 @@ async function deployDevelopment(deployer, network, accounts, networkId, trusted
 
 async function deployIntegration(deployer, network, accounts, networkId, trustedDogeEthPriceOracle, dogethereumRecipient) {
   await deployer.deploy(Set, {gas: 300000});
-  await deployer.deploy(DogeTx, {gas: 600000});
+  await deployer.deploy(DogeTx, {gas: 2000000});
   await deployer.deploy(SafeMath, {gas: 100000});
   await deployer.deploy(ECRecovery, {gas: 100000});
 
