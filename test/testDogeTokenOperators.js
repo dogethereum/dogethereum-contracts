@@ -8,14 +8,6 @@ contract('DogeToken - Operators', (accounts) => {
 
 
   describe('addOperator', () => {
-    //let dogeToken;
-    //before(async () => {
-    //  const trustedDogeEthPriceOracle = accounts[0]; // Tell DogeToken to trust accounts[0] as a price oracle
-    //  const trustedDogeRelay = accounts[1]; // Tell DogeToken to trust accounts[0] as it would be DogeRelay
-    //  const collateralRatio = 2;
-    //  dogeToken = await DogeToken.new(trustedDogeRelay, trustedDogeEthPriceOracle, collateralRatio);
-    //});
-
     it('addOperator simple', async () => {
       const dogeToken = await DogeToken.new(trustedDogeRelay, trustedDogeEthPriceOracle, collateralRatio);
       const operatorPublicKeyHash = '0x03cd041b0139d3240607b9fd1b2d1b691e22b5d6';
