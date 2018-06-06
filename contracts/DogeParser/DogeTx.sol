@@ -1031,6 +1031,17 @@ library DogeTx {
 
     uint32 constant VERSION_AUXPOW = (1 << 8);
 
+    // @dev - Converts a bytes of size 4 to uint32,
+    // e.g. for input [0x01, 0x02, 0x03 0x04] returns 0x01020304
+    function bytesToUint32Flipped(bytes input, uint pos) internal pure returns (uint32 result) {
+        result = uint32(input[pos]) + uint32(input[pos + 1])*(2**8) + uint32(input[pos + 2])*(2**16) + uint32(input[pos + 3])*(2**24);
+    }
+
+    // @dev - checks version to determine if a block has merge mining information
+    function isMergeMined(bytes _rawBytes, uint pos) internal pure returns (bool) {
+        return bytesToUint32Flipped(_rawBytes, pos) & VERSION_AUXPOW != 0;
+    }
+
     // @dev - checks version to determine if a block has merge mining information
     function isMergeMined(BlockHeader _blockHeader) internal pure returns (bool) {
         return _blockHeader.version & VERSION_AUXPOW != 0;

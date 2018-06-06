@@ -93,27 +93,13 @@ contract DogeRelayForTests is DogeRelay {
         return checkAuxPoWForTests(blockHash, auxBytes);
     }
 
-    // @dev - Converts a bytes of size 4 to uint32,
-    // e.g. for input [0x01, 0x02, 0x03 0x04] returns 0x01020304
-    function bytesToUint32Flipped(bytes memory input, uint pos) internal pure returns (uint32 result) {
-        result = uint32(input[pos]) + uint32(input[pos + 1])*(2**8) + uint32(input[pos + 2])*(2**16) + uint32(input[pos + 3])*(2**24);
-    }
-
-    // Copied from DogeTx library
-    uint32 constant VERSION_AUXPOW = (1 << 8);
-
-    // @dev - checks version to determine if a block has merge mining information
-    function isMergeMined(bytes _rawBytes) private pure returns (bool) {
-        return bytesToUint32Flipped(_rawBytes, 0) & VERSION_AUXPOW != 0;
-    }
-
     // doesn't check merge mining to see if other error codes work
     function checkAuxPoWForTests(uint _blockHash, bytes memory _auxBytes) internal view returns (uint) {
         DogeTx.AuxPoW memory ap = DogeTx.parseAuxPoW(_auxBytes, 0, _auxBytes.length);
 
         //uint32 version = bytesToUint32Flipped(_auxBytes, 0);
 
-        if (!isMergeMined(_auxBytes)) {
+        if (!DogeTx.isMergeMined(_auxBytes, 0)) {
             return ERR_NOT_MERGE_MINED;
         }
 
