@@ -9,6 +9,40 @@ import "./../ECRecovery.sol";
 contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), TransactionProcessor {
 
     address public trustedDogeRelay;
+    address public trustedDogeEthPriceOracle;
+    uint8 collateralRatio;
+
+    uint constant MIN_LOCK_VALUE = 150000000; // 1.5 doges
+    uint constant MIN_UNLOCK_VALUE = 300000000; // 3 doges
+    uint constant MIN_FEE = 100000000; // 1 doge
+    uint constant BASE_FEE = 50000000; // 0.5 doge
+    uint constant FEE_PER_INPUT = 100000000; // 1 doge
+
+    // counter for next unlock
+    uint32 public unlockIdx;
+    // Unlocks the investor has not sent a proof of unlock yet.
+    mapping (uint32 => Unlock) public unlocksPendingInvestorProof;
+    // Doge-Eth currencies current market price.
+    uint public dogeEthPrice;
+    // operatorPublicKeyHash to Operator
+    mapping (bytes20 => Operator) public operators;
+    // Doge transactions that were already processed by processTransaction()
+    Set.Data dogeTxHashesAlreadyProcessed;
+
+    event NewToken(address indexed user, uint value);
+    event UnlockRequest(uint32 id, bytes20 operatorPublicKeyHash);
+
+    // Represents an unlock request
+    struct Unlock {
+          address from;
+          string dogeAddress;
+          uint value;
+          uint timestamp;
+          // Values are indexes in storage array "utxos"
+          uint32[] selectedUtxos;
+          uint fee;
+          bytes20 operatorPublicKeyHash;
+    }
 
     struct Utxo {
           uint value;
@@ -25,22 +59,9 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         uint ethBalance;
     }
 
-    // operatorPublicKeyHash to Operator
-    mapping (bytes20 => Operator) public operators;
-
-    Set.Data dogeTxHashesAlreadyProcessed;
-    uint256 public minimumLockTxValue;
-
-    event NewToken(address indexed user, uint value);
-
-    uint8 collateralRatio;
-
-
-
     function DogeToken(address _trustedDogeRelay, address _trustedDogeEthPriceOracle, uint8 _collateralRatio) public {
         trustedDogeRelay = _trustedDogeRelay;
         trustedDogeEthPriceOracle = _trustedDogeEthPriceOracle;
-        minimumLockTxValue = 100000000;
         collateralRatio = _collateralRatio;
     }
 
@@ -147,34 +168,6 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
     }
 
     // Unlock section begin
-
-    uint constant MIN_UNLOCK_VALUE = 300000000; // 3 doges
-    uint constant MIN_FEE = 100000000; // 1 doge
-    uint constant BASE_FEE = 50000000; // 0.5 doge
-    uint constant FEE_PER_INPUT = 100000000; // 1 doge
-
-    // counter for next unlock
-    uint32 public unlockIdx;
-
-    // Unlocks the investor has not sent a proof of unlock yet.
-    mapping (uint32 => Unlock) public unlocksPendingInvestorProof;
-
-    // Represents an unlock request
-    struct Unlock {
-          address from;
-          string dogeAddress;
-          uint value;
-          uint timestamp;
-          // Values are indexes in storage array "utxos"
-          uint32[] selectedUtxos;
-          uint fee;
-          bytes20 operatorPublicKeyHash;
-    }
-
-    event UnlockRequest(uint32 id, bytes20 operatorPublicKeyHash);
-
-    address public trustedDogeEthPriceOracle;
-    uint public dogeEthPrice;
 
 
     // Request ERC20 tokens to be burnt and dogecoins be received on the doge blockchain
