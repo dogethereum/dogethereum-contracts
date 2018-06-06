@@ -478,7 +478,10 @@ library DogeTx {
     // Slice 20 contiguous bytes from bytes `data`, starting at `start`
     function sliceBytes20(bytes data, uint start) private pure returns (bytes20) {
         uint160 slice = 0;
-        for (uint160 i = 0; i < 20; i++) {
+        // FIXME: With solc v0.4.24 and optimizations enabled
+        // using uint160 for index i will generate an error
+        // "Error: VM Exception while processing transaction: Error: redPow(normalNum)"
+        for (uint256 i = 0; i < 20; i++) {
             slice += uint160(data[i + start]) << (8 * (19 - i));
         }
         return bytes20(slice);
