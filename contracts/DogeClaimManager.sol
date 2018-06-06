@@ -439,13 +439,22 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
 
             claim.accumulatedWork += DogeTx.targetToDiff(DogeTx.targetFromBits(bits));
 
+            bytes32 blockScryptHash = DogeTx.readBytes32(data, 0);
+            uint err;
+            uint blockHash;
+            uint scryptHash;
+            (err, blockHash, scryptHash) = DogeTx.verifyBlockHeader(data, 32, data.length - 32, uint(blockScryptHash));
+            require(err == 0);
+
+            if (DogeTx.isMergeMined(data, 32)) {
+                scryptChecker.checkScrypt(DogeTx.sliceArray(data, data.length - 80, data.length), blockScryptHash, 0, address(this));
+            } else {
+                scryptChecker.checkScrypt(DogeTx.sliceArray(data, 32, 32 + 80), blockScryptHash, 0, address(this));
+            }
+
             if (blockSha256Hash == claim.blockHashes[claim.blockHashes.length - 1]) {
                 claim.lastBlockTimestamp = timestamp;
             }
-
-            //FIXME: start scrypt hash verification
-            bytes32 blockScryptHash = DogeTx.readBytes32(data, 0);
-            scryptChecker.checkScrypt(DogeTx.sliceArray(data, 32, 32 + 80), blockScryptHash, 0, address(this));
 
             if (claim.countBlockHeaderResponses == claim.blockHashes.length) {
                 claim.challengeState = ChallengeState.PendingVerification;
