@@ -4,6 +4,10 @@ const btcProof = require('bitcoin-proof');
 const scryptsy = require('scryptsy');
 const sha256 = require('js-sha256').sha256;
 const keccak256 = require('js-sha3').keccak256;
+const bitcoreLib = require('bitcore-lib');
+const ECDSA = bitcoreLib.crypto.ECDSA;
+const bitcoreMessage = require('bitcore-message');
+
 
 const SEND_BATCH = true;
 
@@ -247,4 +251,23 @@ module.exports = {
   getBlockNumber,
   verifyThrow,
   calcSuperblockId,
+  operatorSignItsEthAddress: function(operatorPrivateKeyString, operatorEthAddress) {
+      const operatorPrivateKey = bitcoreLib.PrivateKey(module.exports.fromHex(operatorPrivateKeyString));
+      const operatorPublicKeyString = "0x" + operatorPrivateKey.toPublicKey().toString();
+
+      // Calculate operator eth address hash
+      const operatorEthAddressHash = bitcoreLib.crypto.Hash.sha256sha256(module.exports.fromHex(operatorEthAddress));
+
+      // Operator private key sign operator eth address hash
+      var ecdsa = new ECDSA();
+      ecdsa.hashbuf = operatorEthAddressHash;
+      ecdsa.privkey = operatorPrivateKey;
+      ecdsa.pubkey = operatorPrivateKey.toPublicKey();
+      ecdsa.signRandomK();
+      ecdsa.calci();
+      var ecdsaSig = ecdsa.sig;
+      var signature = "0x" + ecdsaSig.toCompact().toString('hex');
+      return [operatorPublicKeyString, signature];
+
+  }
 };
