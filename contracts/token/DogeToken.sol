@@ -18,6 +18,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
     // Error codes
     uint constant ERR_OPERATOR_SIGNATURE = 60010;
     uint constant ERR_OPERATOR_ALREADY_CREATED = 60020;
+    uint constant ERR_OPERATOR_NOT_CREATED_OR_WRONG_SENDER = 60020;
 
     // Variables sets by constructor
     // DogeRelay contract to trust. Only doge txs relayed from DogeRelay will be accepted.
@@ -131,7 +132,10 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
 
     function addOperatorDeposit(bytes20 operatorPublicKeyHash) public payable {
         Operator storage operator = operators[operatorPublicKeyHash];
-        require(operator.ethAddress == msg.sender);
+        if (operator.ethAddress != msg.sender) {
+            emit ErrorDogeToken(ERR_OPERATOR_NOT_CREATED_OR_WRONG_SENDER);
+            return;
+        }        
         operator.ethBalance += msg.value;
     }
 
