@@ -8,15 +8,25 @@ import "./../ECRecovery.sol";
 
 contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), TransactionProcessor {
 
-    address public trustedDogeRelay;
-    address public trustedDogeEthPriceOracle;
-    uint8 collateralRatio;
-
+    // Constants
     uint constant MIN_LOCK_VALUE = 150000000; // 1.5 doges
     uint constant MIN_UNLOCK_VALUE = 300000000; // 3 doges
     uint constant MIN_FEE = 100000000; // 1 doge
     uint constant BASE_FEE = 50000000; // 0.5 doge
     uint constant FEE_PER_INPUT = 100000000; // 1 doge
+
+    // Error codes
+    uint constant ERR_OPERATOR_SIGNATURE = 60010;
+    uint constant ERR_OPERATOR_ALREADY_CREATED = 60020;
+
+    // Variables sets by constructor
+    // DogeRelay contract to trust. Only doge txs relayed from DogeRelay will be accepted.
+    address public trustedDogeRelay;
+    // Doge-Eth price oracle to trust.
+    address public trustedDogeEthPriceOracle;
+    // Number of times the operator eth collateral should cover her doge holdings 
+    uint8 collateralRatio;
+
 
     // counter for next unlock
     uint32 public unlockIdx;
@@ -29,6 +39,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
     // Doge transactions that were already processed by processTransaction()
     Set.Data dogeTxHashesAlreadyProcessed;
 
+    event ErrorDogeToken(uint err);
     event NewToken(address indexed user, uint value);
     event UnlockRequest(uint32 id, bytes20 operatorPublicKeyHash);
 
@@ -65,6 +76,14 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         collateralRatio = _collateralRatio;
     }
 
+    // Adds an operator
+    // @param operatorPublicKey operator compressed public key (33 bytes). 
+    //                          operator[0] = odd
+    //                          operator[1-32] = x
+    // @param signature doubleSha256(msg.sender) signed by operator (65 bytes).
+    //                  signature[0] = v
+    //                  signature[1-32] = r
+    //                  signature[33-64] = s
     function addOperator(bytes operatorPublicKey, bytes signature) public {
         //log0(bytes32(operatorPublicKey.length));
         //log0(bytes32(signature.length));
@@ -83,16 +102,21 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         //log1(bytes20(msg.sender), signedMessage);
         address recoveredAddress = ECRecovery.recover(signedMessage, signature);
         //log1(bytes32(recoveredAddress),
-        //     bytes32(DogeTx.pub2address(uint(operatorPublicKeyX), operatorPublicKeyOdd)));        
-        require(recoveredAddress == DogeTx.pub2address(uint(operatorPublicKeyX), operatorPublicKeyOdd)); 
-        
+        //     bytes32(DogeTx.pub2address(uint(operatorPublicKeyX), operatorPublicKeyOdd)));                
+        if (recoveredAddress != DogeTx.pub2address(uint(operatorPublicKeyX), operatorPublicKeyOdd)) {
+            emit ErrorDogeToken(ERR_OPERATOR_SIGNATURE);
+            return;
+        }
         // Create operator
         bytes20 operatorPublicKeyHash = DogeTx.pub2PubKeyHash(operatorPublicKeyX, operatorPublicKeyOdd);
         //log0(operatorPublicKeyHash);
         Operator storage operator = operators[operatorPublicKeyHash];
         // Check operator does not exists yet
         //log1(bytes20(operator.ethAddress), bytes32((operator.ethAddress == 0) ? 0 : 1));
-        require(operator.ethAddress == 0);
+        if (operator.ethAddress != 0) {
+            emit ErrorDogeToken(ERR_OPERATOR_ALREADY_CREATED);
+            return;
+        }        
         operator.ethAddress = msg.sender;
     }
 
