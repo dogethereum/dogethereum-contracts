@@ -574,7 +574,7 @@ library DogeTx {
     }
 
     // Extract public key
-    function parsePubKey(bytes txBytes, uint pos) public pure
+    function parsePubKey(bytes txBytes, uint pos) private pure
              returns (bytes32, bool, uint)
     {
         uint8 op;
