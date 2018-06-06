@@ -96,14 +96,16 @@ contract DogeBattleManager is DogeErrorCodes {
         bool succeeded = false;
         if (step == 0) {
             succeeded = verifyMerkleRootHashes(claimId, data);
-            emit RespondMerkleRootHashes(sessionId, session.challenger, data);
+            if (succeeded) {
+                emit RespondMerkleRootHashes(sessionId, session.challenger, data);
+                session.lastClaimantMessage = block.number;
+            }
         } else if (step == 1) {
             succeeded = verifyBlockHeader(claimId, data);
-            emit RespondBlockHeader(sessionId, session.challenger, data);
-        }
-
-        if (succeeded) {
-            session.lastClaimantMessage = block.number;
+            if (succeeded) {
+                emit RespondBlockHeader(sessionId, session.challenger, data);
+                session.lastClaimantMessage = block.number;
+            }
         }
     }
 
