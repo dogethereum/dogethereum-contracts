@@ -123,7 +123,10 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
 
     function deleteOperator(bytes20 operatorPublicKeyHash) public {
         Operator storage operator = operators[operatorPublicKeyHash];
-        require(operator.ethAddress == msg.sender);
+        if (operator.ethAddress != msg.sender) {
+            emit ErrorDogeToken(ERR_OPERATOR_NOT_CREATED_OR_WRONG_SENDER);
+            return;
+        }        
         require(operator.dogeAvailableBalance == 0);
         require(operator.dogePendingBalance == 0);
         require(operator.ethBalance == 0);
@@ -141,7 +144,10 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
 
     function withdrawOperatorDeposit(bytes20 operatorPublicKeyHash, uint value) public {
         Operator storage operator = operators[operatorPublicKeyHash];
-        require(operator.ethAddress == msg.sender);
+        if (operator.ethAddress != msg.sender) {
+            emit ErrorDogeToken(ERR_OPERATOR_NOT_CREATED_OR_WRONG_SENDER);
+            return;
+        }        
         require ((operator.ethBalance - value) / dogeEthPrice > (operator.dogeAvailableBalance + operator.dogePendingBalance) * collateralRatio); 
         operator.ethBalance -= value;
         msg.sender.transfer(value);
