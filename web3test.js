@@ -10,7 +10,7 @@ web3.setProvider(new web3.providers.HttpProvider('http://localhost:8545'));
 
 let input = {
     'DogeParser/DogeTx.sol' : fs.readFileSync('./contracts/DogeParser/DogeTx.sol', 'utf8'),
-    'DogeProcessor.sol' : fs.readFileSync('./contracts/DogeProcessor.sol', 'utf8'),
+    'DummyTransactionProcessor.sol' : fs.readFileSync('./contracts/DummyTransactionProcessor.sol', 'utf8'),
     'IDogeRelay.sol' : fs.readFileSync('./contracts/IDogeRelay.sol', 'utf8'),
     'IScryptChecker.sol' : fs.readFileSync('./contracts/IScryptChecker.sol', 'utf8'),
     'ScryptCheckerDummy.sol' : fs.readFileSync('./contracts/ScryptCheckerDummy.sol', 'utf8'),
@@ -41,7 +41,7 @@ let deployedContracts = [
     'DogeClaimManager.sol:DogeClaimManager',
     'TransactionProcessor.sol:TransactionProcessor',
     'ScryptCheckerDummy.sol:ScryptCheckerDummy',
-    'DogeProcessor.sol:DogeProcessor'
+    'DummyTransactionProcessor.sol:DummyTransactionProcessor'
 ];
 
 for (i in deployedContracts) {

@@ -1,6 +1,6 @@
 const DogeRelay = artifacts.require('./DogeRelay.sol');
 const DogeRelayForTests = artifacts.require('./DogeRelayForTests.sol');
-const DogeProcessor = artifacts.require('./DogeProcessor.sol');
+const DummyTransactionProcessor = artifacts.require('./DummyTransactionProcessor.sol');
 const Set = artifacts.require('./token/Set.sol');
 const ECRecovery = artifacts.require('ECRecovery');
 const DogeToken = artifacts.require('./token/DogeToken.sol');
@@ -39,7 +39,7 @@ async function deployDevelopment(deployer, network, accounts, networkId, trusted
   await deployer.deploy(DogeRelayForTests, networkId);
   await deployer.deploy(DogeTokenForTests, DogeRelayForTests.address, trustedDogeEthPriceOracle, collateralRatio);
 
-  await deployer.deploy(DogeProcessor, DogeRelayForTests.address);
+  await deployer.deploy(DummyTransactionProcessor, DogeRelayForTests.address);
 
   await deployer.link(DogeTx, DogeSuperblocks);
   await deployer.link(DogeTx, DogeClaimManager);

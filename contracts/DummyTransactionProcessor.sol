@@ -8,13 +8,13 @@ pragma solidity ^0.4.19;
 
 import "./TransactionProcessor.sol";
 
-contract DogeProcessor is TransactionProcessor {
+contract DummyTransactionProcessor is TransactionProcessor {
     uint256 public lastTxHash;
     uint256 public ethBlock;
 
     address private _trustedDogeRelay;
 
-    function DogeProcessor(address trustedDogeRelay) public {
+    function DummyTransactionProcessor(address trustedDogeRelay) public {
         _trustedDogeRelay = trustedDogeRelay;
     }
 

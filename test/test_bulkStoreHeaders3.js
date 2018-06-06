@@ -1,15 +1,15 @@
 const DogeRelay = artifacts.require('DogeRelayForTests');
-const DogeProcessor = artifacts.require('DogeProcessor');
+const DummyTransactionProcessor = artifacts.require('DummyTransactionProcessor');
 const utils = require('./utils');
 
 
 contract('test_bulkStoreHeaders3', (accounts) => {
   let dogeRelay;
-  let dogeProcessor;
+  let dummyTransactionProcessor;
   before(async () => {
-    [dogeRelay, dogeProcessor] = await Promise.all([
+    [dogeRelay, dummyTransactionProcessor] = await Promise.all([
       DogeRelay.deployed(),
-      DogeProcessor.deployed()
+      DummyTransactionProcessor.deployed()
     ]);
   });
   it("testTx1In974402", async () => {
@@ -23,9 +23,9 @@ contract('test_bulkStoreHeaders3', (accounts) => {
     const siblings = utils.makeMerkleProof(headerAndHashes.hashes, txIndex)
       .map(sibling => `0x${sibling}`);
 
-    await dogeRelay.relayTx(txStr, operatorPublicKeyHash, txIndex, siblings, `0x${headerAndHashes.header.hash}`, dogeProcessor.address);
+    await dogeRelay.relayTx(txStr, operatorPublicKeyHash, txIndex, siblings, `0x${headerAndHashes.header.hash}`, dummyTransactionProcessor.address);
 
-    const lastTxHash = await dogeProcessor.lastTxHash();
-    assert.equal(utils.formatHexUint32(lastTxHash.toString(16)), txHash, "DogeProcessor's last tx hash is not the expected one");
+    const lastTxHash = await dummyTransactionProcessor.lastTxHash();
+    assert.equal(utils.formatHexUint32(lastTxHash.toString(16)), txHash, "DummyTransactionProcessor's last tx hash is not the expected one");
   });
 });
