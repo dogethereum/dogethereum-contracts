@@ -88,7 +88,7 @@ contract DogeRelay is IScryptCheckerListener {
     // @dev - the constructor
     // @param _network - Dogecoin network whose blocks DogeRelay is receiving (either mainnet or testnet).
     // It cannot be changed later.
-    function DogeRelay(Network _network) public {
+    constructor(Network _network) public {
         // gasPriceAndChangeRecipientFee in incentive.se
         // TODO incentive management
         // self.gasPriceAndChangeRecipientFee = 50 * 10**9 * BYTES_16 // 50 shannon and left-align

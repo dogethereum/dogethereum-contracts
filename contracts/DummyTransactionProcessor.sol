@@ -14,7 +14,7 @@ contract DummyTransactionProcessor is TransactionProcessor {
 
     address private _trustedDogeRelay;
 
-    function DummyTransactionProcessor(address trustedDogeRelay) public {
+    constructor(address trustedDogeRelay) public {
         _trustedDogeRelay = trustedDogeRelay;
     }
 

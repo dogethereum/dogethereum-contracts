@@ -5,7 +5,7 @@ import "./DogeParser/DogeTx.sol";
 
 contract DogeRelayForTests is DogeRelay {
 
-    function DogeRelayForTests(Network network) public DogeRelay(network) {}
+    constructor(Network network) public DogeRelay(network) {}
 
     function bytesToUint32Public(bytes memory input) public pure returns (uint32 result) {
         return bytesToUint32(input, 0);
