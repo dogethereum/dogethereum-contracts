@@ -33,7 +33,7 @@ contract DepositsManager {
   // @return – the user's updated deposit amount.
   function increaseDeposit(address who, uint amount) internal {
     deposits[who] += amount;
-    require(deposits[who] <= this.balance);
+    require(deposits[who] <= address(this).balance);
 
     emit DepositMade(who, amount);
   }

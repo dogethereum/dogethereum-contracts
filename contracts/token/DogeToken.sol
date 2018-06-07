@@ -234,7 +234,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         return true;
     }
 
-    function selectUtxosAndFee(uint valueToSend, Operator operator) private returns (uint32[] memory selectedUtxos, uint fee, uint changeValue) {
+    function selectUtxosAndFee(uint valueToSend, Operator operator) private pure returns (uint32[] memory selectedUtxos, uint fee, uint changeValue) {
         // There should be at least 1 utxo available
         require(operator.nextUnspentUtxoIndex < operator.utxos.length);
         fee = BASE_FEE;
