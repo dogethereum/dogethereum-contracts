@@ -140,7 +140,7 @@ library DogeTx {
     // the index to after it.
     function parseVarInt(bytes txBytes, uint pos) private pure returns (uint, uint) {
         // the first byte tells us how big the integer is
-        var ibit = uint8(txBytes[pos]);
+        uint8 ibit = uint8(txBytes[pos]);
         pos += 1;  // skip ibit
 
         if (ibit < 0xfd) {
@@ -246,7 +246,7 @@ library DogeTx {
         (output_values, script_starts, output_script_lens, pos) = scanOutputs(txBytes, pos, 2);
 
         for (uint i = 0; i < 2; i++) {
-            var pkhash = parseP2PKHOutputScript(txBytes, script_starts[i], output_script_lens[i]);
+            bytes20 pkhash = parseP2PKHOutputScript(txBytes, script_starts[i], output_script_lens[i]);
             output_public_key_hashes[i] = pkhash;
         }
 
@@ -288,11 +288,11 @@ library DogeTx {
         (,, pos) = scanInputs(txBytes, pos, 0);  // find end of inputs
 
         // scan *all* the outputs and find where they are
-        var (output_values, script_starts, output_script_lens,) = scanOutputs(txBytes, pos, 0);
+        uint[] (output_values, script_starts, output_script_lens,) = scanOutputs(txBytes, pos, 0);
 
         // look at each output and check whether it at least value to btcAddress
         for (uint i = 0; i < output_values.length; i++) {
-            var pkhash = parseOutputScript(txBytes, script_starts[i], output_script_lens[i]);
+            bytes20 pkhash = parseOutputScript(txBytes, script_starts[i], output_script_lens[i]);
             if (pkhash == btcAddress && output_values[i] >= value) {
                 return true;
             }
