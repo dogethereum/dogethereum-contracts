@@ -288,7 +288,10 @@ library DogeTx {
         (,, pos) = scanInputs(txBytes, pos, 0);  // find end of inputs
 
         // scan *all* the outputs and find where they are
-        var (output_values, script_starts, output_script_lens,) = scanOutputs(txBytes, pos, 0);
+        uint[] memory output_values;
+        uint[] memory script_starts;
+        uint[] memory output_script_lens;
+        (output_values, script_starts, output_script_lens,) = scanOutputs(txBytes, pos, 0);
 
         // look at each output and check whether it at least value to btcAddress
         for (uint i = 0; i < output_values.length; i++) {
