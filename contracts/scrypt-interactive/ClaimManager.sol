@@ -100,7 +100,7 @@ contract ClaimManager is DepositsManager, IScryptChecker {
   }
 
   function calcId(bytes, bytes32 _hash, address claimant, bytes32 _proposalId) public pure returns (uint) {
-    return uint(keccak256(claimant, _hash, _proposalId));
+    return uint(keccak256(abi.encodePacked(claimant, _hash, _proposalId)));
   }
 
   // @dev – check whether a DogeCoin blockHash was calculated correctly from the plaintext block header.
@@ -129,7 +129,7 @@ contract ClaimManager is DepositsManager, IScryptChecker {
 //    uint claimId = numClaims;
 //    uint claimId = uint(keccak256(_submitter, _plaintext, _hash, numClaims));
 
-    uint claimId = uint(keccak256(_submitter, _hash, _proposalId));
+    uint claimId = uint(keccak256(abi.encodePacked(_submitter, _hash, _proposalId)));
     require(!claimExists(claims[claimId]));
 
     ScryptClaim storage claim = claims[claimId];

@@ -34,7 +34,7 @@ contract ScryptFramework {
     * @return returns the hash
     */
     function hashState(State memory state) pure internal returns (bytes32) {
-        return keccak256(state.memoryHash, state.vars, state.inputHash);
+        return keccak256(abi.encodePacked(state.memoryHash, state.vars, state.inputHash));
     }
 
     /**
@@ -439,7 +439,7 @@ library KeyDeriv {
         }
         bytes32 threesix = 0x3636363636363636363636363636363636363636363636363636363636363636;
         bytes32 fivec = 0x5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c;
-        return sha256(fivec ^ keyl, fivec ^ keyr, sha256(threesix ^ keyl, threesix ^ keyr, message));
+        return sha256(abi.encodePacked(fivec ^ keyl, fivec ^ keyr, sha256(abi.encodePacked(threesix ^ keyl, threesix ^ keyr, message))));
     }
 
     /// PBKDF2 restricted to c=1, hash = hmacsha256 and dklen being a multiple of 32 not larger than 128

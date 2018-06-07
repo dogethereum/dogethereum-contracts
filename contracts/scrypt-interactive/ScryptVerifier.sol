@@ -174,12 +174,12 @@ contract ScryptVerifier is ScryptFramework, Verifier {
         internal
         returns (bytes32)
     {
-        bytes32 h = keccak256(proof[0], proof[1], proof[2], proof[3]);
+        bytes32 h = keccak256(abi.encodePacked(proof[0], proof[1], proof[2], proof[3]));
         for (uint step = 0; step < 10; step++) {
             if (index % 2 == 0) {
-                h = keccak256(h, proof[4 + step]);
+                h = keccak256(abi.encodePacked(h, proof[4 + step]));
             } else {
-                h = keccak256(proof[4 + step], h);
+                h = keccak256(abi.encodePacked(proof[4 + step], h));
             }
             index /= 2;
         }

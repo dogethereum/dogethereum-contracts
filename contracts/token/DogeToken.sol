@@ -99,7 +99,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         //log1(operatorPublicKeyX, bytes32(operatorPublicKeyOdd ? 1 : 0));
 
         // Check operatorPublicKey signed msg.sender hash
-        bytes32 signedMessage = sha256(sha256(msg.sender));
+        bytes32 signedMessage = sha256(abi.encodePacked(sha256(abi.encodePacked(msg.sender))));
         //log1(bytes20(msg.sender), signedMessage);
         address recoveredAddress = ECRecovery.recover(signedMessage, signature);
         //log1(bytes32(recoveredAddress),
