@@ -631,13 +631,13 @@ library DogeTx {
         }
         require(yy == mulmod(y, y, p));
         // Now, with uncompressed x and y, create the address
-        return address(keccak256(x, y));
+        return address(keccak256(abi.encodePacked(x, y)));
     }
 
     // Gets the public key hash given a public key
     function pub2PubKeyHash(bytes32 pub, bool odd) internal pure returns (bytes20) {
         byte firstByte = odd ? byte(0x03) : byte(0x02);
-        return ripemd160(sha256(firstByte, pub));
+        return ripemd160(abi.encodePacked(sha256(abi.encodePacked(firstByte, pub))));
     }
 
     // @dev - convert an unsigned integer from little-endian to big-endian representation
@@ -751,7 +751,7 @@ library DogeTx {
         k = 0;
         for (i=0; i<length; i += 2) {
             j = i+1<length ? i+1 : length-1;
-            hashes[k] = sha256(sha256(flipBytes32(hashes[i]), flipBytes32(hashes[j])));
+            hashes[k] = sha256(abi.encodePacked(sha256(abi.encodePacked(flipBytes32(hashes[i]), flipBytes32(hashes[j])))));
             k += 1;
         }
         length = k;
@@ -759,7 +759,7 @@ library DogeTx {
             k = 0;
             for (i = 0; i < length; i += 2) {
                 j = i+1<length ? i+1 : length-1;
-                hashes[k] = sha256(sha256(hashes[i], hashes[j]));
+                hashes[k] = sha256(abi.encodePacked(sha256(abi.encodePacked(hashes[i], hashes[j]))));
                 k += 1;
             }
             length = k;
@@ -837,7 +837,7 @@ library DogeTx {
     // @return - `_tx1` and `_tx2`'s parent, i.e. the result of concatenating them,
     // hashing that twice and flipping the bytes.
     function concatHash(uint _tx1, uint _tx2) internal pure returns (uint) {
-        return flip32Bytes(uint(sha256(sha256(flip32Bytes(_tx1), flip32Bytes(_tx2)))));
+        return flip32Bytes(uint(sha256(abi.encodePacked(sha256(abi.encodePacked(flip32Bytes(_tx1), flip32Bytes(_tx2)))))));
     }
 
     // @dev - checks if a merge-mined block's Merkle proofs are correct,
@@ -884,14 +884,14 @@ library DogeTx {
     // @param _dataBytes - raw data to be hashed
     // @return - result of applying SHA-256 twice to raw data and then flipping the bytes
     function dblShaFlip(bytes _dataBytes) internal pure returns (uint) {
-        return flip32Bytes(uint(sha256(sha256(_dataBytes))));
+        return flip32Bytes(uint(sha256(abi.encodePacked(sha256(abi.encodePacked(_dataBytes))))));
     }
 
     // @dev - Bitcoin-way of hashing
     // @param _dataBytes - raw data to be hashed
     // @return - result of applying SHA-256 twice to raw data and then flipping the bytes
     function dblShaFlipMem(bytes memory _rawBytes, uint offset, uint len) internal view returns (uint) {
-        return flip32Bytes(uint(sha256(sha256mem(_rawBytes, offset, len))));
+        return flip32Bytes(uint(sha256(abi.encodePacked(sha256mem(_rawBytes, offset, len)))));
     }
 
     // @dev – Read a bytes32 from an offset in the byte array

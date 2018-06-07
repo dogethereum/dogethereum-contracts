@@ -71,7 +71,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         uint ethBalance;
     }
 
-    function DogeToken(address _trustedDogeRelay, address _trustedDogeEthPriceOracle, uint8 _collateralRatio) public {
+    constructor (address _trustedDogeRelay, address _trustedDogeEthPriceOracle, uint8 _collateralRatio) public {
         trustedDogeRelay = _trustedDogeRelay;
         trustedDogeEthPriceOracle = _trustedDogeEthPriceOracle;
         collateralRatio = _collateralRatio;

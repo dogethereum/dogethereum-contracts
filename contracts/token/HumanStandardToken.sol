@@ -30,7 +30,7 @@ contract HumanStandardToken is StandardToken {
     string public symbol;                 //An identifier: eg SBX
     string public version = 'H0.1';       //human 0.1 standard. Just an arbitrary versioning scheme.
 
-    function HumanStandardToken(
+    constructor (
         uint256 _initialAmount,
         string _tokenName,
         uint8 _decimalUnits,
