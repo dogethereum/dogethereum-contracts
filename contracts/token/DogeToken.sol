@@ -20,6 +20,8 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
     uint constant ERR_OPERATOR_ALREADY_CREATED = 60020;
     uint constant ERR_OPERATOR_NOT_CREATED_OR_WRONG_SENDER = 60020;
     uint constant ERR_OPERATOR_HAS_BALANCE = 60030;
+    uint constant ERR_OPERATOR_WITHDRAWAL_NOT_ENOUGH_BALANCE = 60040;
+    uint constant ERR_OPERATOR_WITHDRAWAL_COLLATERAL_WOULD_BE_TOO_LOW = 60050;
 
     // Variables sets by constructor
     // DogeRelay contract to trust. Only doge txs relayed from DogeRelay will be accepted.
@@ -149,8 +151,15 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         if (operator.ethAddress != msg.sender) {
             emit ErrorDogeToken(ERR_OPERATOR_NOT_CREATED_OR_WRONG_SENDER);
             return;
+        }
+        if (operator.ethBalance < value) {
+            emit ErrorDogeToken(ERR_OPERATOR_WITHDRAWAL_NOT_ENOUGH_BALANCE);
+            return;
         }        
-        require ((operator.ethBalance - value) / dogeEthPrice > (operator.dogeAvailableBalance + operator.dogePendingBalance) * collateralRatio); 
+        if ((operator.ethBalance - value) / dogeEthPrice < (operator.dogeAvailableBalance + operator.dogePendingBalance) * collateralRatio) {
+            emit ErrorDogeToken(ERR_OPERATOR_WITHDRAWAL_COLLATERAL_WOULD_BE_TOO_LOW);
+            return;        
+        }
         operator.ethBalance -= value;
         msg.sender.transfer(value);
     }
