@@ -19,6 +19,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
     uint constant ERR_OPERATOR_SIGNATURE = 60010;
     uint constant ERR_OPERATOR_ALREADY_CREATED = 60020;
     uint constant ERR_OPERATOR_NOT_CREATED_OR_WRONG_SENDER = 60020;
+    uint constant ERR_OPERATOR_HAS_BALANCE = 60030;
 
     // Variables sets by constructor
     // DogeRelay contract to trust. Only doge txs relayed from DogeRelay will be accepted.
@@ -127,9 +128,10 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
             emit ErrorDogeToken(ERR_OPERATOR_NOT_CREATED_OR_WRONG_SENDER);
             return;
         }        
-        require(operator.dogeAvailableBalance == 0);
-        require(operator.dogePendingBalance == 0);
-        require(operator.ethBalance == 0);
+        if (operator.dogeAvailableBalance != 0 || operator.dogePendingBalance != 0 || operator.ethBalance != 0) {
+            emit ErrorDogeToken(ERR_OPERATOR_HAS_BALANCE);
+            return;
+        }        
         delete operators[operatorPublicKeyHash];
     }
 

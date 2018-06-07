@@ -39,7 +39,6 @@ contract('DogeToken - Operators', (accounts) => {
     });
   });
 
-
   describe('addOperatorDeposit', () => {
     it('addOperatorDeposit success', async () => {
       const dogeToken = await DogeToken.new(trustedDogeRelay, trustedDogeEthPriceOracle, collateralRatio);
@@ -63,9 +62,25 @@ contract('DogeToken - Operators', (accounts) => {
       var operator = await dogeToken.operators(operatorPublicKeyHash);
       assert.equal(operator[4], 0, 'Deposit credited');
     });
-
   });  
 
-
+  describe('deleteOperator', () => {
+    it('deleteOperator success', async () => {
+      const dogeToken = await DogeToken.new(trustedDogeRelay, trustedDogeEthPriceOracle, collateralRatio);
+      await sendAddOperator(dogeToken);
+      await dogeToken.deleteOperator(operatorPublicKeyHash, {from : operatorEthAddress});
+      var operator = await dogeToken.operators(operatorPublicKeyHash);      
+      assert.equal(operator[0], 0, 'Operator not deleted');
+    });
+    it('deleteOperator with eth balance', async () => {
+      const dogeToken = await DogeToken.new(trustedDogeRelay, trustedDogeEthPriceOracle, collateralRatio);
+      await sendAddOperator(dogeToken);
+      await dogeToken.addOperatorDeposit(operatorPublicKeyHash, {value: 1000000000000000000, from : operatorEthAddress});
+      var deleteOperatorTxReceipt = await dogeToken.deleteOperator(operatorPublicKeyHash, {from : operatorEthAddress});
+      assert.equal(60030, deleteOperatorTxReceipt.logs[0].args.err, "Expected ERR_OPERATOR_HAS_BALANCE error");
+      var operator = await dogeToken.operators(operatorPublicKeyHash);
+      assert.equal(operator[0], operatorEthAddress, 'Operator deleted when failure was expected');
+    });
+  });  
 
 });
