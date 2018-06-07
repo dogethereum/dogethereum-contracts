@@ -86,7 +86,7 @@ contract Verifier {
     // @TODO(shrugs) - this allows anyone to challenge an empty claim
     //  is this what we want?
     modifier onlyChallenger(uint sessionId) {
-        var session = sessions[sessionId];
+        VerificationSession storage session = sessions[sessionId];
         require(msg.sender == session.challenger);
         _;
     }
@@ -209,7 +209,7 @@ contract Verifier {
     function timeout(uint sessionId, uint claimID, ClaimManager claimManager)
         public
     {
-        var session = sessions[sessionId];
+        VerificationSession storage session = sessions[sessionId];
         require(session.claimant != 0);
         if (
             session.lastChallengerMessage > session.lastClaimantMessage &&

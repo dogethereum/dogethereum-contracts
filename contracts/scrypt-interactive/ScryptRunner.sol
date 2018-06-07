@@ -1,4 +1,4 @@
-pragma solidity ^0.4.19;
+pragma solidity ^0.4.24;
 
 import {ScryptFramework} from "./ScryptFramework.sol";
 
@@ -104,7 +104,7 @@ contract ScryptRunner is ScryptFramework {
     {
         require(step <= 2050);
 
-        var (state,) = getStateAndProof(input, step);
+        (bytes memory state,) = getStateAndProof(input, step);
         return keccak256(state);
     }
 
@@ -172,7 +172,7 @@ contract ScryptRunner is ScryptFramework {
             oldValues[2] = fullMem[4 * index + 2];
             oldValues[3] = fullMem[4 * index + 3];
         }
-        var (a, b, c, d) = (values[0], values[1], values[2], values[3]);
+        (uint a, uint b, uint c, uint d) = (values[0], values[1], values[2], values[3]);
         assembly {
             pos := add(pos, 0x20)
             mstore(add(fullMem, pos), a)
