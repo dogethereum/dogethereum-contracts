@@ -1,4 +1,4 @@
-pragma solidity ^0.4.19;
+pragma solidity ^0.4.24;
 
 /**
 * @title ScryptFramework
@@ -46,9 +46,9 @@ contract ScryptFramework {
     */
     function encodeState(State memory state) pure internal returns (bytes r) {
         r = new bytes(0x20 * 4 + 0x20 + 0x20);
-        var vars = state.vars;
-        var memoryHash = state.memoryHash;
-        var inputHash = state.inputHash;
+        uint[4] memory vars = state.vars;
+        bytes32 memoryHash = state.memoryHash;
+        bytes32 inputHash = state.inputHash;
         assembly {
             mstore(add(r, 0x20), mload(add(vars, 0x00)))
             mstore(add(r, 0x40), mload(add(vars, 0x20)))
@@ -70,7 +70,7 @@ contract ScryptFramework {
         if (encoded.length != 0x20 * 4 + 0x20 + 0x20) {
             return (true, state);
         }
-        var vars = state.vars;
+        uint[4] memory vars = state.vars;
         bytes32 memoryHash;
         bytes32 inputHash;
         assembly {
@@ -193,7 +193,7 @@ contract ScryptFramework {
     function uint4ToBytes(uint[4] memory val) pure internal returns (bytes memory r)
     {
         r = new bytes(4 * 32);
-        var v = val[0];
+        uint v = val[0];
         assembly { mstore(add(r, 0x20), v) }
         v = val[1];
         assembly { mstore(add(r, 0x40), v) }
@@ -224,8 +224,12 @@ contract ScryptFramework {
             writeMemory(state, step, state.vars, proofs);
             state.vars = Salsa8.round(state.vars);
         } else {
-            var readIndex = (state.vars[2] / 0x100000000000000000000000000000000000000000000000000000000) % 1024;
-            var (va, vb, vc, vd) = readMemory(state, readIndex, proofs);
+            uint readIndex = (state.vars[2] / 0x100000000000000000000000000000000000000000000000000000000) % 1024;
+            uint va;
+            uint vb;
+            uint vc;
+            uint vd;
+            (va, vb, vc, vd) = readMemory(state, readIndex, proofs);
             state.vars = Salsa8.round([
                 state.vars[0] ^ va,
                 state.vars[1] ^ vb,
@@ -306,7 +310,7 @@ library Salsa8 {
     */
     function rowround(uint first, uint second) pure internal returns (uint f, uint s)
     {
-        var (a,b,c,d) = quarter(uint32(first / m0), uint32(first / m1), uint32(first / m2), uint32(first / m3));
+        (uint32 a, uint32 b, uint32 c, uint32 d) = quarter(uint32(first / m0), uint32(first / m1), uint32(first / m2), uint32(first / m3));
         f = (((((uint(a) * 2**32) | uint(b)) * 2 ** 32) | uint(c)) * 2**32) | uint(d);
         (b,c,d,a) = quarter(uint32(first / m5), uint32(first / m6), uint32(first / m7), uint32(first / m4));
         f = (((((((f * 2**32) | uint(a)) * 2**32) | uint(b)) * 2 ** 32) | uint(c)) * 2**32) | uint(d);
@@ -326,7 +330,7 @@ library Salsa8 {
     */
     function columnround(uint first, uint second) pure internal returns (uint f, uint s)
     {
-        var (a,b,c,d) = quarter(uint32(first / m0), uint32(first / m4), uint32(second / m0), uint32(second / m4));
+        (uint32 a, uint32 b, uint32 c, uint32 d) = quarter(uint32(first / m0), uint32(first / m4), uint32(second / m0), uint32(second / m4));
         f = (uint(a) * m0) | (uint(b) * m4);
         s = (uint(c) * m0) | (uint(d) * m4);
         (a,b,c,d) = quarter(uint32(first / m5), uint32(second / m1), uint32(second / m5), uint32(first / m1));
@@ -405,7 +409,7 @@ library Salsa8 {
     * @return returns the result of running Salsa8 on the input values
     */
     function round(uint[4] values) pure internal returns (uint[4]) {
-        var (a, b, c, d) = (values[0], values[1], values[2], values[3]);
+        (uint a, uint b, uint c, uint d) = (values[0], values[1], values[2], values[3]);
         (a, b) = salsa20_8(a ^ c, b ^ d);
         (c, d) = salsa20_8(a ^ c, b ^ d);
         return [a, b, c, d];
@@ -449,7 +453,7 @@ library KeyDeriv {
     * @return returns the generated key
     */
     function pbkdf2(bytes key, bytes salt, uint dklen) pure internal returns (uint[4] r) {
-        var message = new bytes(salt.length + 4);
+        bytes memory message = new bytes(salt.length + 4);
         for (uint i = 0; i < salt.length; i++)
             message[i] = salt[i];
         for (i = 0; i * 32 < dklen; i++) {
