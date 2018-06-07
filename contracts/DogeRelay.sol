@@ -184,7 +184,7 @@ contract DogeRelay is IScryptCheckerListener {
         // If the block is merge mined, there are 2 Scrypts functions to execute, the one that checks PoW of the litecoin block
         // and the one that checks the block hash
         if (len < 80) {
-            StoreHeader(bytes32(0), ERR_INVALID_HEADER);
+            emit StoreHeader(bytes32(0), ERR_INVALID_HEADER);
             return 0;
         }
 
@@ -198,13 +198,13 @@ contract DogeRelay is IScryptCheckerListener {
             DogeTx.AuxPoW memory ap = DogeTx.parseAuxPoW(_blockHeaderBytes, pos, len);
 
             if (DogeTx.flip32Bytes(ap.scryptHash) > DogeTx.targetFromBits(bi._blockHeader.bits)) {
-                StoreHeader(bytes32(blockSha256Hash), ERR_PROOF_OF_WORK);
+                emit StoreHeader(bytes32(blockSha256Hash), ERR_PROOF_OF_WORK);
                 return 0;
             }
 
             uint auxPoWCode = DogeTx.checkAuxPoW(blockSha256Hash, ap);
             if (auxPoWCode != 1) {
-                StoreHeader(bytes32(blockSha256Hash), auxPoWCode);
+                emit StoreHeader(bytes32(blockSha256Hash), auxPoWCode);
                 return 0;
             }
 
@@ -213,7 +213,7 @@ contract DogeRelay is IScryptCheckerListener {
         } else {
             // Normal block
             if (DogeTx.flip32Bytes(_proposedScryptBlockHash) > DogeTx.targetFromBits(bi._blockHeader.bits)) {
-                StoreHeader(bytes32(blockSha256Hash), ERR_PROOF_OF_WORK);
+                emit StoreHeader(bytes32(blockSha256Hash), ERR_PROOF_OF_WORK);
                 return 0;
             }
 
@@ -234,7 +234,7 @@ contract DogeRelay is IScryptCheckerListener {
     // @return - newly stored block's height if all checks pass, 0 otherwise.
     function scryptVerified(bytes32 _proposalId) public returns (uint) {
         if (msg.sender != address(scryptChecker)) {
-            StoreHeader(bytes32(0), ERR_INVALID_HEADER);
+            emit StoreHeader(bytes32(0), ERR_INVALID_HEADER);
             return 0;
         }
 
@@ -247,13 +247,13 @@ contract DogeRelay is IScryptCheckerListener {
         uint128 scorePrevBlock = getScore(hashPrevBlock);
 
         if (scorePrevBlock == 0) {
-            StoreHeader(bytes32(blockSha256Hash), ERR_NO_PREV_BLOCK);
+            emit StoreHeader(bytes32(blockSha256Hash), ERR_NO_PREV_BLOCK);
             return 0;
         }
 
         if (getScore(blockSha256Hash) != 0) {
             // block already stored/exists
-            StoreHeader(bytes32(blockSha256Hash), ERR_BLOCK_ALREADY_EXISTS);
+            emit StoreHeader(bytes32(blockSha256Hash), ERR_BLOCK_ALREADY_EXISTS);
             return 0;
         }
 
@@ -272,7 +272,7 @@ contract DogeRelay is IScryptCheckerListener {
                 // the initial parent, but as these forks will have lower score than
                 // the main chain, they will not have impact.
                 if (bits != prevBits && prevBits != 0) {
-                    StoreHeader(bytes32(blockSha256Hash), ERR_DIFFICULTY);
+                    emit StoreHeader(bytes32(blockSha256Hash), ERR_DIFFICULTY);
                     return 0;
                 }
             } else if (ibIndex == 1) {
@@ -290,7 +290,7 @@ contract DogeRelay is IScryptCheckerListener {
 
                 // Difficulty adjustment verification
                 if (bits != newBits && newBits != 0) {  // newBits != 0 to allow first header
-                    StoreHeader(bytes32(blockSha256Hash), ERR_RETARGET);
+                    emit StoreHeader(bytes32(blockSha256Hash), ERR_RETARGET);
                     return 0;
                 }
             }
@@ -319,7 +319,7 @@ contract DogeRelay is IScryptCheckerListener {
             highScore = scoreBlock;
         }
 
-        StoreHeader(bytes32(blockSha256Hash), blockHeight);
+        emit StoreHeader(bytes32(blockSha256Hash), blockHeight);
         return blockHeight;
     }
 
@@ -418,7 +418,7 @@ contract DogeRelay is IScryptCheckerListener {
         uint txHash = DogeTx.dblShaFlip(_txBytes);
 
         if (_txBytes.length == 64) {  // todo: is check 32 also needed?
-            VerifyTransaction(bytes32(txHash), ERR_TX_64BYTE);
+            emit VerifyTransaction(bytes32(txHash), ERR_TX_64BYTE);
             return 0;
         }
 
@@ -451,21 +451,21 @@ contract DogeRelay is IScryptCheckerListener {
         // }
 
         if (within6Confirms(_txBlockHash)) {
-            VerifyTransaction(bytes32(_txHash), ERR_CONFIRMATIONS);
+            emit VerifyTransaction(bytes32(_txHash), ERR_CONFIRMATIONS);
             return (ERR_CONFIRMATIONS);
         }
 
        if (!inMainChain(_txBlockHash)) {
-           VerifyTransaction(bytes32(_txHash), ERR_CHAIN);
+           emit VerifyTransaction(bytes32(_txHash), ERR_CHAIN);
            return (ERR_CHAIN);
        }
 
         if (DogeTx.computeMerkle(_txHash, _txIndex, _siblings) != getMerkleRoot(_txBlockHash)) {
-          VerifyTransaction(bytes32(_txHash), ERR_MERKLE_ROOT);
+          emit VerifyTransaction(bytes32(_txHash), ERR_MERKLE_ROOT);
           return (ERR_MERKLE_ROOT);
         }
 
-        VerifyTransaction(bytes32(_txHash), 1);
+        emit VerifyTransaction(bytes32(_txHash), 1);
         return (1);
     }
 
@@ -487,11 +487,11 @@ contract DogeRelay is IScryptCheckerListener {
         uint txHash = verifyTx(_txBytes, _txIndex, _siblings, _txBlockHash);
         if (txHash != 0) {
             uint returnCode = _targetContract.processTransaction(_txBytes, txHash, operatorPublicKeyHash);
-            RelayTransaction(bytes32(txHash), returnCode);
+            emit RelayTransaction(bytes32(txHash), returnCode);
             return (returnCode);
         }
 
-        RelayTransaction(bytes32(0), ERR_RELAY_VERIFY);
+        emit RelayTransaction(bytes32(0), ERR_RELAY_VERIFY);
         return(ERR_RELAY_VERIFY);
     }
 

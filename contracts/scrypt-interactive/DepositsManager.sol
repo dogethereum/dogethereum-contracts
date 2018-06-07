@@ -35,7 +35,7 @@ contract DepositsManager {
     deposits[who] += amount;
     require(deposits[who] <= this.balance);
 
-    DepositMade(who, amount);
+    emit DepositMade(who, amount);
   }
 
   // @dev – allows a user to withdraw eth from their deposit.
@@ -47,7 +47,7 @@ contract DepositsManager {
     deposits[msg.sender] -= amount;
     msg.sender.transfer(amount);
 
-    DepositWithdrawn(msg.sender, amount);
+    emit DepositWithdrawn(msg.sender, amount);
     return deposits[msg.sender];
   }
 }

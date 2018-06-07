@@ -69,7 +69,7 @@ contract ClaimManager is DepositsManager, IScryptChecker {
     deposits[account] -= amount;
 
     claim.bondedDeposits[account] = claim.bondedDeposits[account].add(amount);
-    DepositBonded(claimID, account, amount);
+    emit DepositBonded(claimID, account, amount);
     return claim.bondedDeposits[account];
   }
 
@@ -94,7 +94,7 @@ contract ClaimManager is DepositsManager, IScryptChecker {
     uint bondedDeposit = claim.bondedDeposits[account];
     delete claim.bondedDeposits[account];
     deposits[account] = deposits[account].add(bondedDeposit);
-    DepositUnbonded(claimID, account, bondedDeposit);
+    emit DepositUnbonded(claimID, account, bondedDeposit);
 
     return bondedDeposit;
   }
@@ -145,7 +145,7 @@ contract ClaimManager is DepositsManager, IScryptChecker {
     claim.scryptDependent = _scryptDependent;
 
     // bondDeposit(claimId, claim.claimant, minDeposit);
-    ClaimCreated(claimId, claim.claimant, claim.plaintext, claim.blockHash);
+    emit ClaimCreated(claimId, claim.claimant, claim.plaintext, claim.blockHash);
   }
 
   // @dev – challenge an existing Scrypt claim.
@@ -166,7 +166,7 @@ contract ClaimManager is DepositsManager, IScryptChecker {
     claim.challengeTimeoutBlockNumber = block.number.add(defaultChallengeTimeout);
     claim.challengers.push(msg.sender);
     claim.numChallengers = claim.numChallengers.add(1);
-    ClaimChallenged(claimID, msg.sender);
+    emit ClaimChallenged(claimID, msg.sender);
   }
 
   // @dev – runs a verification game between the claimant and
@@ -186,7 +186,7 @@ contract ClaimManager is DepositsManager, IScryptChecker {
       // kick off a verification game.
       uint sessionId = scryptVerifier.claimComputation(claimID, claim.challengers[claim.currentChallenger], claim.claimant, claim.plaintext, claim.blockHash, 2049);
       claim.sessions[claim.challengers[claim.currentChallenger]] = sessionId;
-      VerificationGameStarted(claimID, claim.claimant, claim.challengers[claim.currentChallenger], sessionId);
+      emit VerificationGameStarted(claimID, claim.claimant, claim.challengers[claim.currentChallenger], sessionId);
 
       claim.verificationOngoing = true;
       claim.currentChallenger = claim.currentChallenger.add(1);
@@ -227,7 +227,7 @@ contract ClaimManager is DepositsManager, IScryptChecker {
       revert();
     }
 
-    SessionDecided(sessionId, winner, loser);
+    emit SessionDecided(sessionId, winner, loser);
   }
 
   // @dev – check whether a claim has successfully withstood all challenges.
@@ -258,7 +258,7 @@ contract ClaimManager is DepositsManager, IScryptChecker {
 
     unbondDeposit(claimID, claim.claimant);
 
-    ClaimSuccessful(claimID, claim.claimant, claim.plaintext, claim.blockHash);
+    emit ClaimSuccessful(claimID, claim.claimant, claim.plaintext, claim.blockHash);
   }
 
   function claimExists(ScryptClaim claim) pure private returns(bool) {

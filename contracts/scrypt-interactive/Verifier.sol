@@ -74,7 +74,7 @@ contract Verifier {
         require(isInitiallyValid(s));
         sessionsCount+=1;
 
-        NewSession(sessionId, claimant, challenger);
+        emit NewSession(sessionId, claimant, challenger);
         return sessionId;
     }
 
@@ -140,7 +140,7 @@ contract Verifier {
             s.medHash = bytes32(0);
         }
         s.lastChallengerMessage = now;
-        NewQuery(sessionId, s.claimant);
+        emit NewQuery(sessionId, s.claimant);
     }
 
     function respond(uint sessionId, uint step, bytes32 hash)
@@ -160,7 +160,7 @@ contract Verifier {
         s.lastClaimantMessage = now;
 
         // notify watchers
-        NewResponse(sessionId, s.challenger);
+        emit NewResponse(sessionId, s.challenger);
     }
 
     function performStepVerification(
@@ -232,7 +232,7 @@ contract Verifier {
         VerificationSession storage s = sessions[sessionId];
         claimManager.sessionDecided(sessionId, claimID, s.claimant, s.challenger);
         disable(sessionId);
-        ChallengerConvicted(sessionId, challenger);
+        emit ChallengerConvicted(sessionId, challenger);
     }
 
     function claimantConvicted(uint sessionId, address claimant, uint claimID,  ClaimManager claimManager)
@@ -241,7 +241,7 @@ contract Verifier {
         VerificationSession storage s = sessions[sessionId];
         claimManager.sessionDecided(sessionId, claimID, s.challenger, s.claimant);
         disable(sessionId);
-        ClaimantConvicted(sessionId, claimant);
+        emit ClaimantConvicted(sessionId, claimant);
     }
 
     function disable(uint sessionId)

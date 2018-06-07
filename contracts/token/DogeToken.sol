@@ -184,9 +184,9 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
             address destinationAddress = DogeTx.pub2address(uint(firstInputPublicKeyX), firstInputPublicKeyOdd);
 
             balances[destinationAddress] += value;
-            NewToken(destinationAddress, value);
+            emit NewToken(destinationAddress, value);
             // Hack to make etherscan show the event
-            Transfer(0, destinationAddress, value);
+            emit Transfer(0, destinationAddress, value);
 
             return value;        
         } else {
@@ -221,8 +221,8 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         uint changeValue;
         (selectedUtxos, fee, changeValue) = selectUtxosAndFee(value, operator);
         // Hack to make etherscan show the event
-        Transfer(msg.sender, 0, value);
-        UnlockRequest(unlockIdx, operatorPublicKeyHash);
+        emit Transfer(msg.sender, 0, value);
+        emit UnlockRequest(unlockIdx, operatorPublicKeyHash);
         //log1(bytes32(selectedUtxos.length), bytes32(selectedUtxos[0]));
         unlocksPendingInvestorProof[unlockIdx] = Unlock(msg.sender, dogeAddress, value, 
                                                         block.timestamp, selectedUtxos, fee, operatorPublicKeyHash);
