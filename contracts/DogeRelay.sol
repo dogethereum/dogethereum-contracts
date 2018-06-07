@@ -4,6 +4,7 @@ import {TransactionProcessor} from "./TransactionProcessor.sol";
 import {IScryptChecker} from "./IScryptChecker.sol";
 import {IScryptCheckerListener} from "./IScryptCheckerListener.sol";
 import {DogeTx} from "./DogeParser/DogeTx.sol";
+import {DogeSuperblocks} from "./DogeSuperblocks.sol";
 
 
 contract DogeRelay is IScryptCheckerListener {
@@ -67,7 +68,7 @@ contract DogeRelay is IScryptCheckerListener {
     IScryptChecker public scryptChecker;
 
     // Superblocks
-    Superblocks public superblocks;
+    DogeSuperblocks public superblocks;
 
     // TODO: Make event parameters indexed so we can register filters on them
     event StoreHeader(bytes32 blockHash, uint returnCode);
@@ -102,7 +103,7 @@ contract DogeRelay is IScryptCheckerListener {
     // @param _scryptChecker - address of the ScryptChecker contract to be associated with DogeRelay
     function setSuperblocks(address _claimManager) public {
         require(address(superblocks) == 0x0 && _claimManager != 0x0);
-        superblocks = Superblocks(_claimManager);
+        superblocks = DogeSuperblocks(_claimManager);
     }
 
     // @dev - setInitialParent can only be called once and allows testing of storing
