@@ -23,6 +23,7 @@ contract ClaimManager is DepositsManager, IScryptChecker {
   event ClaimChallenged(uint claimID, address challenger);
   event SessionDecided(uint sessionId, address winner, address loser);
   event ClaimSuccessful(uint claimID, address claimant, bytes plaintext, bytes blockHash);
+  event ClaimFailed(uint claimID, address claimant, bytes plaintext, bytes blockHash);
   event VerificationGameStarted(uint claimID, address claimant, address challenger, uint sessionId);//Rename to SessionStarted?
   event ClaimVerificationGamesEnded(uint claimID);
 
@@ -38,6 +39,7 @@ contract ClaimManager is DepositsManager, IScryptChecker {
     bool verificationOngoing;   // is the claim waiting for results from an ongoing verificationg game.
     mapping (address => uint) bondedDeposits;   // all deposits bonded in this claim.
     bool decided;
+    bool failed;
     uint challengeTimeoutBlockNumber;
     bytes32 proposalId;
     IScryptCheckerListener scryptDependent;
@@ -141,6 +143,7 @@ contract ClaimManager is DepositsManager, IScryptChecker {
     claim.verificationOngoing = false;
     claim.createdAt = block.number;
     claim.decided = false;
+    claim.failed = false;
     claim.proposalId = _proposalId;
     claim.scryptDependent = _scryptDependent;
 
@@ -219,6 +222,7 @@ contract ClaimManager is DepositsManager, IScryptChecker {
 
       //Trigger end of verification game
       claim.numChallengers = 0;
+      claim.failed = true;
       runNextVerificationGame(claimID);
     } else if (claim.claimant == winner) {
       // the claim continues.
@@ -252,6 +256,8 @@ contract ClaimManager is DepositsManager, IScryptChecker {
     // check that all verification games have been played.
     require(claim.numChallengers == claim.currentChallenger);
 
+    require(!claim.failed);
+
     claim.decided = true;
 
     claim.scryptDependent.scryptVerified(claim.proposalId);
@@ -259,6 +265,39 @@ contract ClaimManager is DepositsManager, IScryptChecker {
     unbondDeposit(claimID, claim.claimant);
 
     emit ClaimSuccessful(claimID, claim.claimant, claim.plaintext, claim.blockHash);
+  }
+
+  // @dev – check whether a claim has successfully withstood all challenges.
+  // if successful, it will trigger a callback to the DogeRelay contract,
+  // notifying it that the Scrypt blockhash was correctly calculated.
+  //
+  // @param claimID – the claim ID.
+  function checkClaimFailed(uint claimID) public {
+    ScryptClaim storage claim = claims[claimID];
+
+    require(claimExists(claim));
+
+    // check that there is no ongoing verification game.
+    require(claim.verificationOngoing == false);
+
+    // check that the claim has exceeded the default challenge timeout.
+    require(block.number.sub(claim.createdAt) > defaultChallengeTimeout);
+
+    //check that the claim has exceeded the claim's specific challenge timeout.
+    require(block.number > claim.challengeTimeoutBlockNumber);
+
+    // check that all verification games have been played.
+    require(claim.numChallengers == claim.currentChallenger);
+
+    require(claim.failed);
+
+    claim.decided = true;
+
+    claim.scryptDependent.scryptFailed(claim.proposalId);
+
+    unbondDeposit(claimID, claim.claimant);
+
+    emit ClaimFailed(claimID, claim.claimant, claim.plaintext, claim.blockHash);
   }
 
   function claimExists(ScryptClaim claim) pure private returns(bool) {
