@@ -83,7 +83,7 @@ async function deployIntegration(deployer, network, accounts, networkId, trusted
   await deployer.link(ECRecovery, DogeToken);
   await deployer.link(SafeMath, ClaimManager);
 
-  await deployer.deploy(DogeRelay, networkId, {gas: 4200000});
+  await deployer.deploy(DogeRelay, networkId, {gas: 42000000});
   await deployer.deploy(ScryptCheckerDummy, DogeRelay.address, true, {gas: 1500000})
   await deployer.deploy(DogeToken, DogeRelay.address, trustedDogeEthPriceOracle, collateralRatio, {gas: 5300000});
 
