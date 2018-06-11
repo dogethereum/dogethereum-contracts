@@ -23,8 +23,10 @@ contract('testRelayToDogeToken', function(accounts) {
       .map(sibling => `0x${sibling}`);
     await dogeRelay.relayTx(txData, operatorPublicKeyHash, txIndex, siblings, "0x" + headerAndHashes.header.hash, dogeToken.address);
     const address = '0x30d90d1dbf03aa127d58e6af83ca1da9e748c98d';
-    const value = 'd2e90efb4f';
+    const value = '905853205327'; 
     const balance = await dogeToken.balanceOf(address);
-    assert.equal(balance.toString(16), value, `DogeToken's ${address} balance is not the expected one`);
+    assert.equal(balance.toString(10), value, `DogeToken's ${address} balance is not the expected one`);
+    var operator = await dogeToken.operators(operatorPublicKeyHash);
+    assert.equal(operator[1].toString(10), value, 'operator dogeAvailableBalance is not the expected one');
   });
 });
