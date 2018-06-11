@@ -373,7 +373,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
     }
 
     // @dev – Make a query for superblock hashes
-    function queryMerkleRootHashes(bytes32 claimId) internal returns (bool) {
+    function doQueryMerkleRootHashes(bytes32 claimId) internal returns (bool) {
         SuperblockClaim storage claim = claims[claimId];
         if (claim.challengeState == ChallengeState.Challenged) {
             claim.challengeState = ChallengeState.QueryMerkleRootHashes;
@@ -399,7 +399,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
     }
 
     // @dev – Make a query for superblock block headers
-    function queryBlockHeader(bytes32 claimId, bytes32 blockHash) internal returns (bool) {
+    function doQueryBlockHeader(bytes32 claimId, bytes32 blockHash) internal returns (bool) {
         SuperblockClaim storage claim = claims[claimId];
         if ((claim.countBlockHeaderQueries == 0 && claim.challengeState == ChallengeState.RespondMerkleRootHashes) ||
             (claim.countBlockHeaderQueries > 0 && claim.challengeState == ChallengeState.RespondBlockHeader)) {

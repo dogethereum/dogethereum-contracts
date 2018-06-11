@@ -60,25 +60,31 @@ contract DogeBattleManager is DogeErrorCodes {
     }
 
     // @dev - Challenger makes a query for superblock hashes
-    function queryMerkleRootHashes(bytes32 claimId) internal returns (bool);
+    function doQueryMerkleRootHashes(bytes32 claimId) internal returns (bool);
 
     // @dev - Challenger makes a query for block header data for a hash
-    function queryBlockHeader(bytes32 claimId, bytes32 blockHash) internal returns (bool);
+    function doQueryBlockHeader(bytes32 claimId, bytes32 blockHash) internal returns (bool);
 
-    // @dev - For the challenger to start a query
-    function query(bytes32 sessionId, uint step, bytes32 data) onlyChallenger(sessionId) public {
+    // @dev - Challenger makes a query for superblock hashes
+    function queryMerkleRootHashes(bytes32 sessionId) onlyChallenger(sessionId) public {
         BattleSession storage session = sessions[sessionId];
         bytes32 claimId = session.claimId;
         bool succeeded = false;
-        if (step == 0) {
-            succeeded = queryMerkleRootHashes(claimId);
-            emit QueryMerkleRootHashes(sessionId, session.claimant);
-        } else if (step == 1) {
-            succeeded = queryBlockHeader(claimId, data);
-            emit QueryBlockHeader(sessionId, session.claimant, data);
-        }
-
+        succeeded = doQueryMerkleRootHashes(claimId);
         if (succeeded) {
+            emit QueryMerkleRootHashes(sessionId, session.claimant);
+            session.lastChallengerMessage = block.number;
+        }
+    }
+
+    // @dev - For the challenger to start a query
+    function queryBlockHeader(bytes32 sessionId, bytes32 blockHash) onlyChallenger(sessionId) public {
+        BattleSession storage session = sessions[sessionId];
+        bytes32 claimId = session.claimId;
+        bool succeeded = false;
+        succeeded = doQueryBlockHeader(claimId, blockHash);
+        if (succeeded) {
+            emit QueryBlockHeader(sessionId, session.claimant, blockHash);
             session.lastChallengerMessage = block.number;
         }
     }
@@ -90,22 +96,26 @@ contract DogeBattleManager is DogeErrorCodes {
     function verifyBlockHeader(bytes32 claimId, bytes data) internal returns (bool);
 
     // @dev - For the submitter to respond to challenger queries
-    function respond(bytes32 sessionId, uint step, bytes data) onlyClaimant(sessionId) public {
+    function respondMerkleRootHashes(bytes32 sessionId, bytes data) onlyClaimant(sessionId) public {
         BattleSession storage session = sessions[sessionId];
         bytes32 claimId = session.claimId;
         bool succeeded = false;
-        if (step == 0) {
-            succeeded = verifyMerkleRootHashes(claimId, data);
-            if (succeeded) {
-                emit RespondMerkleRootHashes(sessionId, session.challenger, data);
-                session.lastClaimantMessage = block.number;
-            }
-        } else if (step == 1) {
-            succeeded = verifyBlockHeader(claimId, data);
-            if (succeeded) {
-                emit RespondBlockHeader(sessionId, session.challenger, data);
-                session.lastClaimantMessage = block.number;
-            }
+        succeeded = verifyMerkleRootHashes(claimId, data);
+        if (succeeded) {
+            emit RespondMerkleRootHashes(sessionId, session.challenger, data);
+            session.lastClaimantMessage = block.number;
+        }
+    }
+
+    // @dev - For the submitter to respond to challenger queries
+    function respondBlockHeader(bytes32 sessionId, bytes data) onlyClaimant(sessionId) public {
+        BattleSession storage session = sessions[sessionId];
+        bytes32 claimId = session.claimId;
+        bool succeeded = false;
+        succeeded = verifyBlockHeader(claimId, data);
+        if (succeeded) {
+            emit RespondBlockHeader(sessionId, session.challenger, data);
+            session.lastClaimantMessage = block.number;
         }
     }
 
