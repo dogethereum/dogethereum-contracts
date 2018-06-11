@@ -3,7 +3,7 @@ var DogeToken = artifacts.require("./token/DogeTokenForTests.sol");
 var utils = require('./utils');
 
 
-contract('testDogeToken', function(accounts) {
+contract('testDogeTokenProcessTransaction', function(accounts) {
   const trustedDogeEthPriceOracle = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
   const trustedDogeRelay = accounts[0]; // Tell DogeToken to trust accounts[0] as it would be DogeRelay
   const collateralRatio = 2;
