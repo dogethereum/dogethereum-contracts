@@ -98,6 +98,8 @@ async function deployIntegration(deployer, network, accounts, networkId, trusted
   await dogeRelay.setScryptChecker(ScryptCheckerDummy.address, {gas: 60000});
 
   const superblocks = DogeSuperblocks.at(DogeSuperblocks.address);
+  await dogeRelay.setSuperblocks(DogeSuperblocks.address, {gas: 600000});
+  
   await superblocks.setClaimManager(DogeClaimManager.address, {gas: 60000});
 
   const dogeClaimManager = DogeClaimManager.at(DogeClaimManager.address);
