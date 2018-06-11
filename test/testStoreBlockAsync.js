@@ -8,7 +8,7 @@ contract('testStoreBlockAsync', function(accounts) {
   let scryptChecker;
   before(async () => {
     dogeRelay = await DogeRelay.new(0);
-    scryptChecker = await ScryptCheckerDummy.new(dogeRelay.address, false);
+    scryptChecker = await ScryptCheckerDummy.new(false);
     await dogeRelay.setScryptChecker(scryptChecker.address);
   });
   it("Valid async call to DogeRelay", async () => {
@@ -22,7 +22,7 @@ contract('testStoreBlockAsync', function(accounts) {
     const bestBlockHash = await dogeRelay.getBestBlockHash.call();
     assert.equal(utils.formatHexUint32(bestBlockHash.toString(16)), utils.remove0x(block974400Hash), "chain head hash is not the expected one");
     // Send block verification
-    await scryptChecker.sendVerification(blockScryptHash);
+    await scryptChecker.sendVerification(blockScryptHash, dogeRelay.address);
     // Verify new block has been accepted
     const bestBlockHash2 = await dogeRelay.getBestBlockHash.call();
     assert.equal(utils.formatHexUint32(bestBlockHash2.toString(16)), utils.remove0x(block974401Hash), "chain head hash is not the expected one");
@@ -42,17 +42,17 @@ contract('testStoreBlockAsync', function(accounts) {
     await dogeRelay.storeBlockHeader(block974402Header, block974402ScryptHash);
     await dogeRelay.storeBlockHeader(block974403Header, block974403ScryptHash);
     // Try to verify block second block first
-    await scryptChecker.sendVerification(block974403ScryptHash);
+    await scryptChecker.sendVerification(block974403ScryptHash, dogeRelay.address);
     // Best block should not change
     // Out of order blocks are not accepted
     const bestBlockHash2 = await dogeRelay.getBestBlockHash.call();
     assert.equal(utils.formatHexUint32(bestBlockHash2.toString(16)), utils.remove0x(block974401Hash), "chain head hash is not the expected one");
     // Send first block verification
-    await scryptChecker.sendVerification(block974402ScryptHash);
+    await scryptChecker.sendVerification(block974402ScryptHash, dogeRelay.address);
     const bestBlockHash3 = await dogeRelay.getBestBlockHash.call();
     assert.equal(utils.formatHexUint32(bestBlockHash3.toString(16)), utils.remove0x(block974402Hash), "chain head hash is not the expected one");
     // Now verify second block
-    await scryptChecker.sendVerification(block974403ScryptHash);
+    await scryptChecker.sendVerification(block974403ScryptHash, dogeRelay.address);
     const bestBlockHash4 = await dogeRelay.getBestBlockHash.call();
     assert.equal(utils.formatHexUint32(bestBlockHash4.toString(16)), utils.remove0x(block974403Hash), "chain head hash is not the expected one");
   });

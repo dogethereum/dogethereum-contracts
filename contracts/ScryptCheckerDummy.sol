@@ -4,9 +4,6 @@ import {IScryptCheckerListener} from "./IScryptCheckerListener.sol";
 import {IScryptChecker} from "./IScryptChecker.sol";
 
 contract ScryptCheckerDummy is IScryptChecker {
-    // DogeRelay
-    IScryptCheckerListener public dogeRelay;
-
     // Accept all checks
     bool public acceptAll;
 
@@ -24,14 +21,8 @@ contract ScryptCheckerDummy is IScryptChecker {
     mapping (bytes32 => ScryptHashRequest) public pendingRequests;
 
 
-    constructor(IScryptCheckerListener _dogeRelay, bool _acceptAll) public {
-        dogeRelay = _dogeRelay;
+    constructor(bool _acceptAll) public {
         acceptAll = _acceptAll;
-    }
-
-    function setDogeRelay(IScryptCheckerListener _dogeRelay) public {
-      require(address(dogeRelay) == 0);
-      dogeRelay = _dogeRelay;
     }
 
     // Mark to accept _hash as the scrypt hash of _data
@@ -44,9 +35,9 @@ contract ScryptCheckerDummy is IScryptChecker {
     // @param _hash – result of applying scrypt to data.
     // @param _submitter – the address of the submitter.
     // @param _requestId – request identifier of the call.
-    function checkScrypt(bytes _data, bytes32 _hash, bytes32 _proposalId, address _submitter) external payable {
+    function checkScrypt(bytes _data, bytes32 _hash, bytes32 _proposalId, address _submitter, IScryptCheckerListener _scryptDependent) external payable {
         if (acceptAll || hashStorage[keccak256(_data)] == _hash) {
-            dogeRelay.scryptVerified(_proposalId);
+            _scryptDependent.scryptVerified(_proposalId);
         } else {
             pendingRequests[_hash] = ScryptHashRequest({
                 data: _data,
@@ -57,15 +48,15 @@ contract ScryptCheckerDummy is IScryptChecker {
         }
     }
 
-    function sendVerification(bytes32 _hash) public {
+    function sendVerification(bytes32 _hash, IScryptCheckerListener _scryptDependent) public {
         ScryptHashRequest storage request = pendingRequests[_hash];
         require(request.hash == _hash);
-        dogeRelay.scryptVerified(request.id);
+        _scryptDependent.scryptVerified(request.id);
     }
 
-    function sendFailed(bytes32 _hash) public {
+    function sendFailed(bytes32 _hash, IScryptCheckerListener _scryptDependent) public {
         ScryptHashRequest storage request = pendingRequests[_hash];
         require(request.hash == _hash);
-        dogeRelay.scryptFailed(request.id);
+        _scryptDependent.scryptFailed(request.id);
     }
 }

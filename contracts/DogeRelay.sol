@@ -204,10 +204,10 @@ contract DogeRelay is IScryptCheckerListener {
 
         if (DogeTx.isMergeMined(bi._blockHeader)) {
             //DogeTx.sliceArray(...) is a merge mined block header, therefore longer than a regular block header
-            scryptChecker.checkScrypt(DogeTx.sliceArray(_blockHeaderBytes, pos + len - 80, pos + len), bytes32(scryptHash), bytes32(onholdIdx), msg.sender);
+            scryptChecker.checkScrypt(DogeTx.sliceArray(_blockHeaderBytes, pos + len - 80, pos + len), bytes32(scryptHash), bytes32(onholdIdx), msg.sender, IScryptCheckerListener(this));
         } else {
             //For normal blocks, we just need to slice the first 80 bytes
-            scryptChecker.checkScrypt(DogeTx.sliceArray(_blockHeaderBytes, 0, 80), bytes32(_proposedScryptBlockHash), bytes32(onholdIdx), msg.sender);
+            scryptChecker.checkScrypt(DogeTx.sliceArray(_blockHeaderBytes, 0, 80), bytes32(_proposedScryptBlockHash), bytes32(onholdIdx), msg.sender, IScryptCheckerListener(this));
         }
 
         return 1;

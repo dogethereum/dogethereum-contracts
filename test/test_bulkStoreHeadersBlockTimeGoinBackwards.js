@@ -7,7 +7,7 @@ contract('test_bulkStoreHeadersBlockTimeGoinBackwards', function(accounts) {
     let dr;
     before(async () => {
         dr = await DogeRelay.new(0);
-        const scryptChecker = await ScryptCheckerDummy.new(dr.address, true);
+        const scryptChecker = await ScryptCheckerDummy.new(true);
         await dr.setScryptChecker(scryptChecker.address);
     });
     it("testDifficulty", function() {

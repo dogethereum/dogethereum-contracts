@@ -7,7 +7,7 @@ contract('test_bulkStoreHeaders5', (accounts) => {
   let dogeRelay;
   before(async () => {
     dogeRelay = await DogeRelay.new(1);
-    const scryptChecker = await ScryptCheckerDummy.new(dogeRelay.address, true);
+    const scryptChecker = await ScryptCheckerDummy.new(true);
     await dogeRelay.setScryptChecker(scryptChecker.address);
   });
   it("testDifficulty", async () => {

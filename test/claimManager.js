@@ -30,7 +30,7 @@ contract('DogeClaimManager', (accounts) => {
     superblocks = await DogeSuperblocks.new();
     claimManager = await DogeClaimManager.new(superblocks.address);
     if (dummyChecker) {
-      scryptChecker = await ScryptCheckerDummy.new(claimManager.address, false);
+      scryptChecker = await ScryptCheckerDummy.new(false);
     } else {
       const scryptVerifier = await ScryptVerifier.new();
       scryptChecker = await ClaimManager.new(scryptVerifier.address);
