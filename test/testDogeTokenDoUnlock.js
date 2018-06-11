@@ -10,7 +10,7 @@ contract('testDogeTokenDoUnlock', function(accounts) {
   });
   it('doUnlock does not fail', async () => {
     const operatorPublicKeyHash = `0x4d905b4b815d483cdfabcd292c6f86509d0fad82`;
-    await dogeToken.addOperator2(operatorPublicKeyHash);
+    await dogeToken.addOperatorSimple(operatorPublicKeyHash);
 
     await dogeToken.assign(accounts[0], 2000000000);
     var balance = await dogeToken.balanceOf(accounts[0]);

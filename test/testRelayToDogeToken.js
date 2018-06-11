@@ -12,7 +12,7 @@ contract('testRelayToDogeToken', function(accounts) {
   });
   it('Relay tx to token', async () => {
     const operatorPublicKeyHash = `0x4d905b4b815d483cdfabcd292c6f86509d0fad82`;
-    await dogeToken.addOperator2(operatorPublicKeyHash);
+    await dogeToken.addOperatorSimple(operatorPublicKeyHash);
 
     const headerAndHashes = await utils.bulkStore10From974401(dogeRelay, accounts[0], accounts[2]);
     const txIndex = 2; // Third tx in the block

@@ -12,6 +12,7 @@ contract DogeTokenForTests is DogeToken {
         balances[_to] += _value;
     }
 
+    // Similar to DogeToken.addOperator() but makes no checks before adding the operator
     function addOperatorSimple(bytes20 operatorPublicKeyHash) public {
         Operator storage operator = operators[operatorPublicKeyHash];
         operator.ethAddress = msg.sender;
@@ -22,10 +23,4 @@ contract DogeTokenForTests is DogeToken {
         operator.utxos.push(Utxo(value, txHash, outputIndex));
         operator.dogeAvailableBalance += value;
     }
-
-    // Similar to DogeToken.addOperator() but makes no checks before adding the operator
-    function addOperator2(bytes20 operatorPublicKeyHash) public {
-        Operator storage operator = operators[operatorPublicKeyHash];
-        operator.ethAddress = msg.sender;
-    }    
 }
