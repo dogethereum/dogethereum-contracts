@@ -22,6 +22,8 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
     uint constant ERR_OPERATOR_HAS_BALANCE = 60030;
     uint constant ERR_OPERATOR_WITHDRAWAL_NOT_ENOUGH_BALANCE = 60040;
     uint constant ERR_OPERATOR_WITHDRAWAL_COLLATERAL_WOULD_BE_TOO_LOW = 60050;
+    uint constant ERR_OPERATOR_NOT_CREATED = 60060;
+    uint constant ERR_TX_ALREADY_PROCESSED = 60070;
 
     // Variables sets by constructor
     // DogeRelay contract to trust. Only doge txs relayed from DogeRelay will be accepted.
@@ -170,7 +172,10 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
 
         Operator storage operator = operators[operatorPublicKeyHash];
         // Check operator exists 
-        require(operator.ethAddress != 0);
+        if (operator.ethAddress == 0) {
+            emit ErrorDogeToken(ERR_OPERATOR_NOT_CREATED);
+            return;
+        }        
 
         uint value;
         bytes32 firstInputPublicKeyX;
@@ -178,8 +183,13 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         uint16 outputIndex;
         (value, firstInputPublicKeyX, firstInputPublicKeyOdd, outputIndex) = DogeTx.parseTransaction(dogeTx, operatorPublicKeyHash);
 
-        // Check tx was not processes already and add it to the dogeTxHashesAlreadyProcessed
-        require(Set.insert(dogeTxHashesAlreadyProcessed, txHash));
+        // Add tx to the dogeTxHashesAlreadyProcessed
+        bool inserted = Set.insert(dogeTxHashesAlreadyProcessed, txHash);
+        // Check tx was not already processed
+        if (!inserted) {
+            emit ErrorDogeToken(ERR_TX_ALREADY_PROCESSED);
+            return;        
+        }
 
         // Add utxo
         operator.utxos.push(Utxo(value, txHash, outputIndex));
