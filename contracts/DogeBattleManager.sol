@@ -11,9 +11,9 @@ contract DogeBattleManager is DogeErrorCodes {
     event ClaimantConvicted(bytes32 sessionId, address claimant);
 
     event QueryMerkleRootHashes(bytes32 sessionId, address claimant);
-    event RespondMerkleRootHashes(bytes32 sessionId, address challenger, bytes data);
+    event RespondMerkleRootHashes(bytes32 sessionId, address challenger, bytes32[] blockHashes);
     event QueryBlockHeader(bytes32 sessionId, address claimant, bytes32 blockHash);
-    event RespondBlockHeader(bytes32 sessionId, address challenger, bytes data);
+    event RespondBlockHeader(bytes32 sessionId, address challenger, bytes32 scryptBlockHash, bytes blockHeader);
 
     event SessionError(bytes32 sessionId, uint err);
 
@@ -90,31 +90,31 @@ contract DogeBattleManager is DogeErrorCodes {
     }
 
     // @dev - Submitter send hashes to verify superblock merkle root
-    function verifyMerkleRootHashes(bytes32 claimId, bytes data) internal returns (bool);
+    function verifyMerkleRootHashes(bytes32 claimId, bytes32[] blockHashes) internal returns (bool);
 
     // @dev - Verify block header send by challenger
-    function verifyBlockHeader(bytes32 claimId, bytes data) internal returns (bool);
+    function verifyBlockHeader(bytes32 claimId, bytes32 scryptBlockHash, bytes blockHeader) internal returns (bool);
 
     // @dev - For the submitter to respond to challenger queries
-    function respondMerkleRootHashes(bytes32 sessionId, bytes data) onlyClaimant(sessionId) public {
+    function respondMerkleRootHashes(bytes32 sessionId, bytes32[] blockHashes) onlyClaimant(sessionId) public {
         BattleSession storage session = sessions[sessionId];
         bytes32 claimId = session.claimId;
         bool succeeded = false;
-        succeeded = verifyMerkleRootHashes(claimId, data);
+        succeeded = verifyMerkleRootHashes(claimId, blockHashes);
         if (succeeded) {
-            emit RespondMerkleRootHashes(sessionId, session.challenger, data);
+            emit RespondMerkleRootHashes(sessionId, session.challenger, blockHashes);
             session.lastClaimantMessage = block.number;
         }
     }
 
     // @dev - For the submitter to respond to challenger queries
-    function respondBlockHeader(bytes32 sessionId, bytes data) onlyClaimant(sessionId) public {
+    function respondBlockHeader(bytes32 sessionId, bytes32 scryptBlockHash, bytes blockHeader) onlyClaimant(sessionId) public {
         BattleSession storage session = sessions[sessionId];
         bytes32 claimId = session.claimId;
         bool succeeded = false;
-        succeeded = verifyBlockHeader(claimId, data);
+        succeeded = verifyBlockHeader(claimId, scryptBlockHash, blockHeader);
         if (succeeded) {
-            emit RespondBlockHeader(sessionId, session.challenger, data);
+            emit RespondBlockHeader(sessionId, session.challenger, scryptBlockHash, blockHeader);
             session.lastClaimantMessage = block.number;
         }
     }

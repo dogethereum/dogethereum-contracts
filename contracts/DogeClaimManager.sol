@@ -383,12 +383,12 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
     }
 
     // @dev – Verify an array of hashes matches superblock merkleroot
-    function verifyMerkleRootHashes(bytes32 claimId, bytes data) internal returns (bool) {
+    function verifyMerkleRootHashes(bytes32 claimId, bytes32[] blockHashes) internal returns (bool) {
         SuperblockClaim storage claim = claims[claimId];
         require(claim.blockHashes.length == 0);
         if (claim.challengeState == ChallengeState.QueryMerkleRootHashes) {
             claim.challengeState = ChallengeState.RespondMerkleRootHashes;
-            claim.blockHashes = DogeTx.parseBytes32Array(data);
+            claim.blockHashes = blockHashes;
             bytes32 lastHash = superblocks.getSuperblockLastHash(claim.superblockId);
             require(lastHash == claim.blockHashes[claim.blockHashes.length - 1]);
             bytes32 merkleRoot = DogeTx.makeMerkle(claim.blockHashes);
@@ -421,35 +421,35 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
     uint constant DOGECOIN_HEADER_NONCE_OFFSET = 76;
 
     // @dev - Verify a block header data correspond to a block hash in the superblock
-    function verifyBlockHeader(bytes32 claimId, bytes data) internal returns (bool) {
+    function verifyBlockHeader(bytes32 claimId, bytes32 scryptBlockHash, bytes blockHeader) internal returns (bool) {
         SuperblockClaim storage claim = claims[claimId];
         if (claim.challengeState == ChallengeState.QueryBlockHeader) {
-            bytes32 blockSha256Hash = bytes32(DogeTx.dblShaFlipMem(data, 32, 80));
+            bytes32 blockSha256Hash = bytes32(DogeTx.dblShaFlipMem(blockHeader, 0, 80));
             require(claim.blocksInfo[blockSha256Hash].status == 1);
             claim.blocksInfo[blockSha256Hash].status = 2;
             claim.countBlockHeaderResponses += 1;
 
-            uint timestamp = DogeTx.getBytesLE(data, 32 + DOGECOIN_HEADER_TIMESTAMP_OFFSET, 32);
+            uint timestamp = DogeTx.getBytesLE(blockHeader, DOGECOIN_HEADER_TIMESTAMP_OFFSET, 32);
 
             // Block timestamp to be within the expected timestamp of the superblock
             require(timestamp / superblockDuration <= claim.timestamp / superblockDuration);
             require(timestamp / superblockDuration >= claim.timestamp / superblockDuration - 1);
 
-            uint32 bits = uint32(DogeTx.getBytesLE(data, 32 + DOGECOIN_HEADER_DIFFICULTY_OFFSET, 32));
+            uint32 bits = uint32(DogeTx.getBytesLE(blockHeader, DOGECOIN_HEADER_DIFFICULTY_OFFSET, 32));
 
             claim.accumulatedWork += DogeTx.targetToDiff(DogeTx.targetFromBits(bits));
 
-            bytes32 blockScryptHash = DogeTx.readBytes32(data, 0);
+            bytes32 blockScryptHash = scryptBlockHash;
             uint err;
             uint blockHash;
             uint scryptHash;
-            (err, blockHash, scryptHash) = DogeTx.verifyBlockHeader(data, 32, data.length - 32, uint(blockScryptHash));
+            (err, blockHash, scryptHash) = DogeTx.verifyBlockHeader(blockHeader, 0, blockHeader.length, uint(blockScryptHash));
             require(err == 0);
 
-            if (DogeTx.isMergeMined(data, 32)) {
-                scryptChecker.checkScrypt(DogeTx.sliceArray(data, data.length - 80, data.length), blockScryptHash, 0, address(this));
+            if (DogeTx.isMergeMined(blockHeader, 0)) {
+                scryptChecker.checkScrypt(DogeTx.sliceArray(blockHeader, blockHeader.length - 80, blockHeader.length), blockScryptHash, 0, address(this));
             } else {
-                scryptChecker.checkScrypt(DogeTx.sliceArray(data, 32, 32 + 80), blockScryptHash, 0, address(this));
+                scryptChecker.checkScrypt(DogeTx.sliceArray(blockHeader, 0, 80), blockScryptHash, 0, address(this));
             }
 
             if (blockSha256Hash == claim.blockHashes[claim.blockHashes.length - 1]) {
