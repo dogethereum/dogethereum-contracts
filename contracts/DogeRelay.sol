@@ -458,7 +458,7 @@ contract DogeRelay is IScryptCheckerListener {
         }
 
         // Verify tx Merkle root
-        uint merkle = getHeaderMerkleRoot(_blockHeaderBytes, 0);
+        uint merkle = DogeTx.getHeaderMerkleRoot(_blockHeaderBytes, 0);
         if (DogeTx.computeMerkle(_txHash, _txIndex, _siblings) != merkle) {
             log1(bytes32(DogeTx.computeMerkle(_txHash, _txIndex, _siblings)),
                 bytes32(merkle));
