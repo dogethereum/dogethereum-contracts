@@ -36,7 +36,7 @@ contract('testDogeTokenProcessTransaction', function(accounts) {
     let dogeToken = await DogeToken.new(trustedDogeRelay, trustedDogeEthPriceOracle, collateralRatio);
 
     var processTransactionTxReceipt = await dogeToken.processTransaction(txData, txHash, operatorPublicKeyHash);
-    assert.equal(60060, processTransactionTxReceipt.logs[0].args.err, "Expected ERR_OPERATOR_NOT_CREATED error");
+    assert.equal(60060, processTransactionTxReceipt.logs[0].args.err, "Expected ERR_PROCESS_OPERATOR_NOT_CREATED error");
   });
 
   it("processTransaction fail - tx already processed", async () => {
@@ -45,7 +45,7 @@ contract('testDogeTokenProcessTransaction', function(accounts) {
     await dogeToken.processTransaction(txData, txHash, operatorPublicKeyHash);
 
     var processTransactionTxReceipt = await dogeToken.processTransaction(txData, txHash, operatorPublicKeyHash);
-    assert.equal(60070, processTransactionTxReceipt.logs[0].args.err, "Expected ERR_TX_ALREADY_PROCESSED error");
+    assert.equal(60070, processTransactionTxReceipt.logs[0].args.err, "Expected ERR_PROCESS_TX_ALREADY_PROCESSED error");
   });
 
 });

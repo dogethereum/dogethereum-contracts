@@ -22,8 +22,17 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
     uint constant ERR_OPERATOR_HAS_BALANCE = 60030;
     uint constant ERR_OPERATOR_WITHDRAWAL_NOT_ENOUGH_BALANCE = 60040;
     uint constant ERR_OPERATOR_WITHDRAWAL_COLLATERAL_WOULD_BE_TOO_LOW = 60050;
-    uint constant ERR_OPERATOR_NOT_CREATED = 60060;
-    uint constant ERR_TX_ALREADY_PROCESSED = 60070;
+    uint constant ERR_PROCESS_OPERATOR_NOT_CREATED = 60060;
+    uint constant ERR_PROCESS_TX_ALREADY_PROCESSED = 60070;
+    uint constant ERR_UNLOCK_MIN_UNLOCK_VALUE = 60080;
+    uint constant ERR_UNLOCK_USER_BALANCE = 60090;
+    uint constant ERR_UNLOCK_OPERATOR_NOT_CREATED = 60100;
+    uint constant ERR_UNLOCK_OPERATOR_BALANCE = 60110;    
+    uint constant ERR_UNLOCK_NO_AVAILABLE_UTXOS = 60120;
+    uint constant ERR_UNLOCK_UTXOS_VALUE_LESS_THAN_VALUE_TO_SEND = 60130;
+    uint constant ERR_UNLOCK_VALUE_TO_SEND_LESS_THAN_FEE = 60140;
+
+
 
     // Variables sets by constructor
     // DogeRelay contract to trust. Only doge txs relayed from DogeRelay will be accepted.
@@ -173,7 +182,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         Operator storage operator = operators[operatorPublicKeyHash];
         // Check operator exists 
         if (operator.ethAddress == 0) {
-            emit ErrorDogeToken(ERR_OPERATOR_NOT_CREATED);
+            emit ErrorDogeToken(ERR_PROCESS_OPERATOR_NOT_CREATED);
             return;
         }        
 
@@ -187,7 +196,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         bool inserted = Set.insert(dogeTxHashesAlreadyProcessed, txHash);
         // Check tx was not already processed
         if (!inserted) {
-            emit ErrorDogeToken(ERR_TX_ALREADY_PROCESSED);
+            emit ErrorDogeToken(ERR_PROCESS_TX_ALREADY_PROCESSED);
             return;        
         }
 
@@ -227,20 +236,38 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
 
     // Request ERC20 tokens to be burnt and dogecoins be received on the doge blockchain
     function doUnlock(string dogeAddress, uint value, bytes20 operatorPublicKeyHash) public returns (bool success) {
-        require(value >= MIN_UNLOCK_VALUE);
-        require(balances[msg.sender] >= value);
+        if (value < MIN_UNLOCK_VALUE) {
+            emit ErrorDogeToken(ERR_UNLOCK_MIN_UNLOCK_VALUE);
+            return;
+        }
+        if (balances[msg.sender] < value) {
+            emit ErrorDogeToken(ERR_UNLOCK_USER_BALANCE);
+            return;
+        }
 
         Operator storage operator = operators[operatorPublicKeyHash];
         // Check operator exists 
-        require(operator.ethAddress != 0);
+        if (operator.ethAddress == 0) {
+            emit ErrorDogeToken(ERR_UNLOCK_OPERATOR_NOT_CREATED);
+            return;
+        }
         // Check operator available balance is enough
-        require(operator.dogeAvailableBalance >= value);
+        if (operator.dogeAvailableBalance < value) {
+            emit ErrorDogeToken(ERR_UNLOCK_OPERATOR_BALANCE);
+            return;
+        }
 
-        balances[msg.sender] -= value;
         uint32[] memory selectedUtxos;
         uint fee;
         uint changeValue;
-        (selectedUtxos, fee, changeValue) = selectUtxosAndFee(value, operator);
+        uint errorCode;
+        (errorCode, selectedUtxos, fee, changeValue) = selectUtxosAndFee(value, operator);
+        if (errorCode != 0) {
+            emit ErrorDogeToken(errorCode);
+            return;
+        }
+
+        balances[msg.sender] -= value;
         // Hack to make etherscan show the event
         emit Transfer(msg.sender, 0, value);
         emit UnlockRequest(unlockIdx, operatorPublicKeyHash);
@@ -255,9 +282,12 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         return true;
     }
 
-    function selectUtxosAndFee(uint valueToSend, Operator operator) private pure returns (uint32[] memory selectedUtxos, uint fee, uint changeValue) {
+    function selectUtxosAndFee(uint valueToSend, Operator operator) private pure returns (uint errorCode, uint32[] memory selectedUtxos, uint fee, uint changeValue) {
         // There should be at least 1 utxo available
-        require(operator.nextUnspentUtxoIndex < operator.utxos.length);
+        if (operator.nextUnspentUtxoIndex >= operator.utxos.length) {
+            errorCode = ERR_UNLOCK_NO_AVAILABLE_UTXOS;
+            return (errorCode, selectedUtxos, fee, changeValue);
+        }
         fee = BASE_FEE;
         uint selectedUtxosValue;
         uint32 firstSelectedUtxo = operator.nextUnspentUtxoIndex;
@@ -267,15 +297,22 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
             fee += FEE_PER_INPUT;
             lastSelectedUtxo++;
         }
-        require(selectedUtxosValue >= valueToSend);
-        require(valueToSend > fee);
+        if (selectedUtxosValue < valueToSend) {
+            errorCode = ERR_UNLOCK_UTXOS_VALUE_LESS_THAN_VALUE_TO_SEND;
+            return (errorCode, selectedUtxos, fee, changeValue);
+        }
+        if (valueToSend <= fee) {
+            errorCode = ERR_UNLOCK_VALUE_TO_SEND_LESS_THAN_FEE;
+            return (errorCode, selectedUtxos, fee, changeValue);
+        }
         uint32 numberOfSelectedUtxos = lastSelectedUtxo - firstSelectedUtxo;
         selectedUtxos = new uint32[](numberOfSelectedUtxos);
         for(uint32 i = 0; i < numberOfSelectedUtxos; i++) {
             selectedUtxos[i] = i + firstSelectedUtxo;
         }
         changeValue = selectedUtxosValue - valueToSend;
-        return (selectedUtxos, fee, changeValue);
+        errorCode = 0;
+        return (errorCode, selectedUtxos, fee, changeValue);
     }
 
     function setDogeEthPrice(uint _dogeEthPrice) public {
