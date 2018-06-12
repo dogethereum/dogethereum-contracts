@@ -29,6 +29,11 @@ contract('DogeToken - Operators', (accounts) => {
       var addOperatorTxReceipt = await sendAddOperator(dogeToken);
       var operator = await dogeToken.operators(operatorPublicKeyHash);
       assert.equal(operator[0], operatorEthAddress, 'Operator not created');
+      var operatorKeys = await dogeToken.operatorKeys(0);
+      assert.equal(operatorKeys[0], operatorPublicKeyHash, 'operatorKeys[0] not what expected');
+      assert.equal(operatorKeys[1], false, 'operatorKeys[1] not what expected');
+      var operatorsLength = await dogeToken.getOperatorsLength();
+      assert.equal(operatorsLength, 1, 'operatorsLength not what expected');
     });
     it('addOperator fail - wrong signature', async () => {
       const dogeToken = await DogeToken.new(trustedDogeRelay, trustedDogeEthPriceOracle, collateralRatio);
@@ -47,7 +52,7 @@ contract('DogeToken - Operators', (accounts) => {
       var operator = await dogeToken.operators(operatorPublicKeyHash);
       assert.equal(operator[4], 1000000000000000000, 'Deposit not credited');
     });
-    it('addOperatorDeposit faril - operator not created', async () => {
+    it('addOperatorDeposit fail - operator not created', async () => {
       const dogeToken = await DogeToken.new(trustedDogeRelay, trustedDogeEthPriceOracle, collateralRatio);
       var addOperatorDepositTxReceipt = await dogeToken.addOperatorDeposit(operatorPublicKeyHash, {value: 1000000000000000000, from : operatorEthAddress});
       assert.equal(60020, addOperatorDepositTxReceipt.logs[0].args.err, "Expected ERR_OPERATOR_NOT_CREATED_OR_WRONG_SENDER error");
@@ -71,6 +76,11 @@ contract('DogeToken - Operators', (accounts) => {
       await dogeToken.deleteOperator(operatorPublicKeyHash, {from : operatorEthAddress});
       var operator = await dogeToken.operators(operatorPublicKeyHash);      
       assert.equal(operator[0], 0, 'Operator not deleted');
+      var operatorKeys = await dogeToken.operatorKeys(0);
+      assert.equal(operatorKeys[0], operatorPublicKeyHash, 'operatorKeys[0] not what expected');
+      assert.equal(operatorKeys[1], true, 'operatorKeys[1] not what expected');
+      var operatorsLength = await dogeToken.getOperatorsLength();
+      assert.equal(operatorsLength, 1, 'operatorsLength not what expected');
     });
     it('deleteOperator fail - operator has eth balance', async () => {
       const dogeToken = await DogeToken.new(trustedDogeRelay, trustedDogeEthPriceOracle, collateralRatio);

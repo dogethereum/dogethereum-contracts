@@ -51,6 +51,8 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
     uint public dogeEthPrice;
     // operatorPublicKeyHash to Operator
     mapping (bytes20 => Operator) public operators;
+    OperatorKey[] public operatorKeys;
+
     // Doge transactions that were already processed by processTransaction()
     Set.Data dogeTxHashesAlreadyProcessed;
 
@@ -83,6 +85,12 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         Utxo[] utxos;
         uint32 nextUnspentUtxoIndex;
         uint ethBalance;
+        uint24 operatorKeyIndex;
+    }
+
+    struct OperatorKey { 
+        bytes20 key; 
+        bool deleted;
     }
 
     constructor (address _trustedDogeRelay, address _trustedDogeEthPriceOracle, uint8 _collateralRatio) public {
@@ -133,6 +141,9 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
             return;
         }        
         operator.ethAddress = msg.sender;
+        operator.operatorKeyIndex = uint24(operatorKeys.length);
+        operatorKeys.push(OperatorKey(operatorPublicKeyHash, false));
+        
     }
 
     function deleteOperator(bytes20 operatorPublicKeyHash) public {
@@ -145,8 +156,16 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
             emit ErrorDogeToken(ERR_OPERATOR_HAS_BALANCE);
             return;
         }        
+
+        OperatorKey storage operatorKey = operatorKeys[operator.operatorKeyIndex]; 
+        operatorKey.deleted = true;
         delete operators[operatorPublicKeyHash];
     }
+
+    function getOperatorsLength() public view returns (uint24) {
+        return uint24(operatorKeys.length);
+    }
+
 
     function addOperatorDeposit(bytes20 operatorPublicKeyHash) public payable {
         Operator storage operator = operators[operatorPublicKeyHash];
