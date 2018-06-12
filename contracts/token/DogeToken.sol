@@ -274,11 +274,11 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         //log1(bytes32(selectedUtxos.length), bytes32(selectedUtxos[0]));
         unlocksPendingInvestorProof[unlockIdx] = Unlock(msg.sender, dogeAddress, value, 
                                                         block.timestamp, selectedUtxos, fee, operatorPublicKeyHash);
-        ++unlockIdx;
         // Update operator's doge balance
         operator.dogeAvailableBalance -= (value + changeValue);
         operator.dogePendingBalance += changeValue;
         operator.nextUnspentUtxoIndex += uint32(selectedUtxos.length);
+        unlockIdx++;
         return true;
     }
 

@@ -36,6 +36,13 @@ contract('testDogeTokenDoUnlock2', function(accounts) {
     assert.equal(unlockPendingInvestorProof[5].toNumber(), 350000000, `Unlock fee is not the expected one`);
     balance = await dogeToken.balanceOf(accounts[0]);
     assert.equal(balance, 4600000000, `DogeToken's ${accounts[0]} balance after unlock is not the expected one`);
+    var unlockIdx = await dogeToken.unlockIdx();
+    assert.equal(unlockIdx, 1, 'unlockIdx is not the expected one');
+    var operator = await dogeToken.operators(operatorPublicKeyHash);
+    assert.equal(operator[1].toString(10), 4400000000, 'operator dogeAvailableBalance is not the expected one');
+    assert.equal(operator[2].toString(10),  200000000, 'operator dogePendingBalance is not the expected one');
+    assert.equal(operator[3], 3, 'operator nextUnspentUtxoIndex is not the expected one');
+
 
     // Unlock Request 2
     await dogeToken.doUnlock(dogeAddress, 1500000000, operatorPublicKeyHash);
@@ -44,6 +51,12 @@ contract('testDogeTokenDoUnlock2', function(accounts) {
     assert.equal(unlockPendingInvestorProof[5].toNumber(), 250000000, `Unlock fee is not the expected one`);
     balance = await dogeToken.balanceOf(accounts[0]);
     assert.equal(balance, 3100000000, `DogeToken's ${accounts[0]} balance after unlock is not the expected one`);
+    unlockIdx = await dogeToken.unlockIdx();
+    assert.equal(unlockIdx, 2, 'unlockIdx is not the expected one');
+    operator = await dogeToken.operators(operatorPublicKeyHash);
+    assert.equal(operator[1].toString(10), 2700000000, 'operator dogeAvailableBalance is not the expected one');
+    assert.equal(operator[2].toString(10),  400000000, 'operator dogePendingBalance is not the expected one');
+    assert.equal(operator[3], 5, 'operator nextUnspentUtxoIndex is not the expected one');
 
 
   });
