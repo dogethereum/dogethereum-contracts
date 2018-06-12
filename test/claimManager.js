@@ -27,7 +27,7 @@ contract('DogeClaimManager', (accounts) => {
   );
 
   async function initSuperblocks(dummyChecker = true) {
-    superblocks = await DogeSuperblocks.new(0x0);
+    superblocks = await DogeSuperblocks.new();
     claimManager = await DogeClaimManager.new(superblocks.address);
     if (dummyChecker) {
       scryptChecker = await ScryptCheckerDummy.new(claimManager.address, false);

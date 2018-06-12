@@ -4,6 +4,7 @@ import {TransactionProcessor} from "./TransactionProcessor.sol";
 import {IScryptChecker} from "./IScryptChecker.sol";
 import {IScryptCheckerListener} from "./IScryptCheckerListener.sol";
 import {DogeTx} from "./DogeParser/DogeTx.sol";
+import {DogeSuperblocks} from "./DogeSuperblocks.sol";
 
 
 contract DogeRelay is IScryptCheckerListener {
@@ -66,6 +67,9 @@ contract DogeRelay is IScryptCheckerListener {
     // Scrypt checker
     IScryptChecker public scryptChecker;
 
+    // Superblocks
+    DogeSuperblocks public superblocks;
+
     // TODO: Make event parameters indexed so we can register filters on them
     event StoreHeader(bytes32 blockHash, uint returnCode);
     event GetHeader(bytes32 blockHash, uint returnCode);
@@ -90,6 +94,16 @@ contract DogeRelay is IScryptCheckerListener {
     function setScryptChecker(address _scryptChecker) public {
         require(address(scryptChecker) == 0x0 && _scryptChecker != 0x0);
         scryptChecker = IScryptChecker(_scryptChecker);
+    }
+
+    // @dev - sets ScryptChecker instance associated with this DogeRelay contract.
+    // Once scryptChecker has been set, it cannot be changed.
+    // An address of 0x0 means scryptChecker hasn't been set yet.
+    //
+    // @param _scryptChecker - address of the ScryptChecker contract to be associated with DogeRelay
+    function setSuperblocks(address _claimManager) public {
+        require(address(superblocks) == 0x0 && _claimManager != 0x0);
+        superblocks = DogeSuperblocks(_claimManager);
     }
 
     // @dev - setInitialParent can only be called once and allows testing of storing
@@ -281,7 +295,7 @@ contract DogeRelay is IScryptCheckerListener {
         //log2(bytes32(scoreBlock), bytes32(bits), bytes32(target));
         // bitcoinj (so libdohj, dogecoin java implemntation) uses 2**256 as a dividend.
         // Investigate: May dogerelay best block be different than libdohj best block in some border cases?
-        // Does libdohj matches dogecoin core?
+        // Does libdohj match dogecoin core?
         setScore(blockSha256Hash, scoreBlock);
 
         // equality allows block with same score to become an (alternate) tip, so that
@@ -386,6 +400,22 @@ contract DogeRelay is IScryptCheckerListener {
     // @param _siblings - transaction's Merkle siblings
     // @param _txBlockHash - hash of the block that might contain the transaction
     // @return - SHA-256 hash of _txBytes if the transaction is in the block, 0 otherwise
+    function verifyTx(bytes _txBytes, uint _txIndex, uint[] _siblings, bytes _txBlockHeaderBytes, bytes32 _txSuperblockId) public returns (uint) {
+        uint txHash = DogeTx.dblShaFlip(_txBytes);
+
+        if (_txBytes.length == 64) {  // todo: is check 32 also needed?
+            emit VerifyTransaction(bytes32(txHash), ERR_TX_64BYTE);
+            return 0;
+        }
+
+        if (helperVerifyHash(txHash, _txIndex, _siblings, _txBlockHeaderBytes, _txSuperblockId) == 1) {
+            return txHash;
+        } else {
+            // log is done via helperVerifyHash
+            return 0;
+        }
+    }
+
     function verifyTx(bytes _txBytes, uint _txIndex, uint[] _siblings, uint _txBlockHash) public returns (uint) {
         uint txHash = DogeTx.dblShaFlip(_txBytes);
 
@@ -414,7 +444,33 @@ contract DogeRelay is IScryptCheckerListener {
     // @param _txBlockHash - hash of the block that might contain the transaction
     // @return - 1 if the transaction is in the block and the block is in the main chain,
     // 20020 (ERR_CONFIRMATIONS) if the block is not in the main chain,
-    // 20040 (ERR_MERKLE_ROOT) if the block is in the main chain but the Merkle proof fails.
+    // 20050 (ERR_MERKLE_ROOT) if the block is in the main chain but the Merkle proof fails.
+    function helperVerifyHash(uint256 _txHash, uint _txIndex, uint[] _siblings, bytes _blockHeaderBytes, bytes32 _txSuperblockId) private returns (uint) {
+        // TODO: implement when dealing with incentives
+        // if (!feePaid(_txBlockHash, getFeeAmount(_txBlockHash))) {  // in incentive.se
+        //    VerifyTransaction(bytes32(_txHash), ERR_BAD_FEE);
+        //    return (ERR_BAD_FEE);
+        // }
+
+        if (!superblocks.isApproved(_txSuperblockId)) {
+            emit VerifyTransaction(bytes32(_txHash), ERR_CHAIN);
+            return (ERR_CHAIN);
+        }
+
+        // Verify tx Merkle root
+        uint merkle = DogeTx.getHeaderMerkleRoot(_blockHeaderBytes, 0);
+        if (DogeTx.computeMerkle(_txHash, _txIndex, _siblings) != merkle) {
+            log1(bytes32(DogeTx.computeMerkle(_txHash, _txIndex, _siblings)),
+                bytes32(merkle));
+            emit VerifyTransaction(bytes32(_txHash), ERR_MERKLE_ROOT);
+            return (ERR_MERKLE_ROOT);
+        }
+
+        emit VerifyTransaction(bytes32(_txHash), 1);
+        return (1);
+    }
+    
+
     function helperVerifyHash(uint256 _txHash, uint _txIndex, uint[] _siblings, uint _txBlockHash) private returns (uint) {
         // TODO: implement when dealing with incentives
         // if (!feePaid(_txBlockHash, getFeeAmount(_txBlockHash))) {  // in incentive.se
@@ -461,6 +517,29 @@ contract DogeRelay is IScryptCheckerListener {
             uint returnCode = _targetContract.processTransaction(_txBytes, txHash, operatorPublicKeyHash);
             emit RelayTransaction(bytes32(txHash), returnCode);
             return (returnCode);
+        }
+
+        emit RelayTransaction(bytes32(0), ERR_RELAY_VERIFY);
+        return(ERR_RELAY_VERIFY);
+    }
+
+    // Temporary!
+    function relayTx(bytes _txBytes, uint _txIndex, uint[] _txSiblings, bytes _dogeBlockHeader, uint _dogeBlockIndex, uint[] _dogeBlockSiblings, bytes32 _superblockId, TransactionProcessor _targetContract) public returns (uint) {
+        uint dogeBlockHash = DogeTx.dblShaFlip(_dogeBlockHeader);
+
+        // Check if Doge block belongs to given superblock
+        if (bytes32(DogeTx.computeMerkle(dogeBlockHash, _dogeBlockIndex, _dogeBlockSiblings))
+            != superblocks.getSuperblockMerkleRoot(_superblockId)) {
+            // Doge block is not in superblock
+            emit VerifyTransaction(bytes32(DogeTx.dblShaFlip(_txBytes)), ERR_SUPERBLOCK);
+            return (ERR_SUPERBLOCK);
+        }
+
+        uint txHash = verifyTx(_txBytes, _txIndex, _txSiblings, _dogeBlockHeader, _superblockId);
+        
+        if (txHash != 0) {
+             emit RelayTransaction(bytes32(txHash), 0);
+            return 0;
         }
 
         emit RelayTransaction(bytes32(0), ERR_RELAY_VERIFY);
@@ -891,8 +970,9 @@ contract DogeRelay is IScryptCheckerListener {
     uint constant ERR_BAD_FEE = 20010;
     uint constant ERR_CONFIRMATIONS = 20020;
     uint constant ERR_CHAIN = 20030;
-    uint constant ERR_MERKLE_ROOT = 20040;
-    uint constant ERR_TX_64BYTE = 20050;
+    uint constant ERR_SUPERBLOCK = 20040;
+    uint constant ERR_MERKLE_ROOT = 20050;
+    uint constant ERR_TX_64BYTE = 20060;
 
     // error codes for relayTx
     uint constant ERR_RELAY_VERIFY = 30010;

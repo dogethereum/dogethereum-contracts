@@ -39,7 +39,7 @@ contract('DogeSuperblocks', (accounts) => {
       "0x38d3dffed604f5a160b327ecde5147eb1aa46e3d154b98644cd2a39f0f9ab915"
     ]
     before(async () => {
-      superblocks = await DogeSuperblocks.new(0x0);
+      superblocks = await DogeSuperblocks.new();
       await superblocks.setClaimManager(claimManager);
     });
     it('Merkle javascript', async () => {
@@ -90,7 +90,7 @@ contract('DogeSuperblocks', (accounts) => {
     const lastHash = '0x0000000000000000000000000000000000000000000000000000000000000000';
     const parentHash = '0x0000000000000000000000000000000000000000000000000000000000000000';
     before(async () => {
-      superblocks = await DogeSuperblocks.new(0x0);
+      superblocks = await DogeSuperblocks.new();
       await superblocks.setClaimManager(claimManager);
     });
     it('Initialized', async () => {
@@ -165,7 +165,7 @@ contract('DogeSuperblocks', (accounts) => {
     const lastHash = '0x00';
     const parentHash = '0x00';
     before(async () => {
-      superblocks = await DogeSuperblocks.new(0x0);
+      superblocks = await DogeSuperblocks.new();
       await superblocks.setClaimManager(claimManager);
     });
     it('Initialized', async () => {
@@ -226,7 +226,7 @@ contract('DogeSuperblocks', (accounts) => {
     const lastHash = '0x0000000000000000000000000000000000000000000000000000000000000000';
     const parentHash = '0x0000000000000000000000000000000000000000000000000000000000000000';
     before(async () => {
-      superblocks = await DogeSuperblocks.new(0x0);
+      superblocks = await DogeSuperblocks.new();
       await superblocks.setClaimManager(claimManager);
     });
     it('Initialized', async () => {

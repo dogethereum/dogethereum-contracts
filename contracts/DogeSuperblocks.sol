@@ -57,9 +57,7 @@ contract DogeSuperblocks is DogeErrorCodes {
     }
 
     // @dev – the constructor
-    constructor(DogeRelay _dogeRelay) public {
-        dogeRelay = _dogeRelay;
-    }
+    constructor() public {}
 
     // @dev - sets ClaimManager instance associated with managing superblocks.
     // Once claimManager has been set, it cannot be changed.
@@ -368,6 +366,10 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @dev - Calculte merkle root from hashes
     function makeMerkle(bytes32[] hashes) public pure returns (bytes32) {
         return DogeTx.makeMerkle(hashes);
+    }
+
+    function isApproved(bytes32 _superblockId) public view returns (bool) {
+        return (getSuperblockStatus(_superblockId) == Status.Approved);
     }
 
     // @dev - write `_fourBytes` into `_word` starting from `_position`

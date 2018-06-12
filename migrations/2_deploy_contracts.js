@@ -23,6 +23,16 @@ const scryptCheckerAddress = '0xfeedbeeffeedbeeffeedbeeffeedbeeffeedbeef';
 const trustedDogeEthPriceOracleRopsten = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 const collateralRatio = 2;
 
+/* ---- CONSTANTS FOR GENESIS SUPERBLOCK ---- */
+
+// TODO: set these to their actual values
+const genesisSuperblockMerkleRoot = "0x3d2160a3b5dc4a9d62e7e66a295f70313ac808440ef7400d6c0772171ce973a5";
+const genesisSuperblockChainWork = 0;
+const genesisSuperblockLastBlockTimestamp = 1296688602;
+const genesisSuperblockLastBlockHash = "0x3d2160a3b5dc4a9d62e7e66a295f70313ac808440ef7400d6c0772171ce973a5";
+const genesisSuperblockParentId = "0x0";
+
+
 const DOGE_MAINNET = 0;
 const DOGE_REGTEST = 2;
 
@@ -42,7 +52,7 @@ async function deployDevelopment(deployer, network, accounts, networkId, trusted
 
   await deployer.deploy(DummyTransactionProcessor, DogeRelayForTests.address);
 
-  await deployer.deploy(DogeSuperblocks, DogeRelayForTests.address);
+  await deployer.deploy(DogeSuperblocks);
   await deployer.deploy(DogeClaimManager, DogeSuperblocks.address);
 
   await deployer.deploy(ScryptCheckerDummy, DogeRelayForTests.address, true)
@@ -53,6 +63,7 @@ async function deployDevelopment(deployer, network, accounts, networkId, trusted
 
   const dogeRelay = DogeRelayForTests.at(DogeRelayForTests.address);
   await dogeRelay.setScryptChecker(ScryptCheckerDummy.address);
+  await dogeRelay.setSuperblocks(DogeSuperblocks.address);
 
   const superblocks = DogeSuperblocks.at(DogeSuperblocks.address);
   await superblocks.setClaimManager(DogeClaimManager.address);
@@ -72,11 +83,11 @@ async function deployIntegration(deployer, network, accounts, networkId, trusted
   await deployer.link(ECRecovery, DogeToken);
   await deployer.link(SafeMath, ClaimManager);
 
-  await deployer.deploy(DogeRelay, networkId, {gas: 4200000});
+  await deployer.deploy(DogeRelay, networkId, {gas: 42000000});
   await deployer.deploy(ScryptCheckerDummy, DogeRelay.address, true, {gas: 1500000})
   await deployer.deploy(DogeToken, DogeRelay.address, trustedDogeEthPriceOracle, collateralRatio, {gas: 5300000});
 
-  await deployer.deploy(DogeSuperblocks, DogeRelay.address, {gas: 2700000});
+  await deployer.deploy(DogeSuperblocks, {gas: 2700000});
   await deployer.deploy(DogeClaimManager, DogeSuperblocks.address, {gas: 7500000});
 
   await deployer.deploy(ScryptVerifier, {gas: 4200000});
@@ -87,6 +98,8 @@ async function deployIntegration(deployer, network, accounts, networkId, trusted
   await dogeRelay.setScryptChecker(ScryptCheckerDummy.address, {gas: 60000});
 
   const superblocks = DogeSuperblocks.at(DogeSuperblocks.address);
+  await dogeRelay.setSuperblocks(DogeSuperblocks.address, {gas: 600000});
+  
   await superblocks.setClaimManager(DogeClaimManager.address, {gas: 60000});
 
   const dogeClaimManager = DogeClaimManager.at(DogeClaimManager.address);

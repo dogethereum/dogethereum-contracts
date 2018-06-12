@@ -218,7 +218,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
             // Hack to make etherscan show the event
             emit Transfer(0, destinationAddress, value);
 
-            return value;        
+            return value;
         } else {
             // this is an unlock tx
             // Update operator's doge balance
