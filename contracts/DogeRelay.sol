@@ -404,7 +404,7 @@ contract DogeRelay is IScryptCheckerListener {
         uint txHash = DogeTx.dblShaFlip(_txBytes);
 
         if (_txBytes.length == 64) {  // todo: is check 32 also needed?
-            VerifyTransaction(bytes32(txHash), ERR_TX_64BYTE);
+            emit VerifyTransaction(bytes32(txHash), ERR_TX_64BYTE);
             return 0;
         }
 
@@ -453,7 +453,7 @@ contract DogeRelay is IScryptCheckerListener {
         // }
 
         if (!superblocks.isApproved(_txSuperblockId)) {
-            VerifyTransaction(bytes32(_txHash), ERR_CHAIN);
+            emit VerifyTransaction(bytes32(_txHash), ERR_CHAIN);
             return (ERR_CHAIN);
         }
 
@@ -462,11 +462,11 @@ contract DogeRelay is IScryptCheckerListener {
         if (DogeTx.computeMerkle(_txHash, _txIndex, _siblings) != merkle) {
             log1(bytes32(DogeTx.computeMerkle(_txHash, _txIndex, _siblings)),
                 bytes32(merkle));
-            VerifyTransaction(bytes32(_txHash), ERR_MERKLE_ROOT);
+            emit VerifyTransaction(bytes32(_txHash), ERR_MERKLE_ROOT);
             return (ERR_MERKLE_ROOT);
         }
 
-        VerifyTransaction(bytes32(_txHash), 1);
+        emit VerifyTransaction(bytes32(_txHash), 1);
         return (1);
     }
     
@@ -531,18 +531,18 @@ contract DogeRelay is IScryptCheckerListener {
         if (bytes32(DogeTx.computeMerkle(dogeBlockHash, _dogeBlockIndex, _dogeBlockSiblings))
             != superblocks.getSuperblockMerkleRoot(_superblockId)) {
             // Doge block is not in superblock
-            VerifyTransaction(bytes32(DogeTx.dblShaFlip(_txBytes)), ERR_SUPERBLOCK);
+            emit VerifyTransaction(bytes32(DogeTx.dblShaFlip(_txBytes)), ERR_SUPERBLOCK);
             return (ERR_SUPERBLOCK);
         }
 
         uint txHash = verifyTx(_txBytes, _txIndex, _txSiblings, _dogeBlockHeader, _superblockId);
         
         if (txHash != 0) {
-            RelayTransaction(bytes32(txHash), 0);
+             emit RelayTransaction(bytes32(txHash), 0);
             return 0;
         }
 
-        RelayTransaction(bytes32(0), ERR_RELAY_VERIFY);
+        emit RelayTransaction(bytes32(0), ERR_RELAY_VERIFY);
         return(ERR_RELAY_VERIFY);
     }
 
