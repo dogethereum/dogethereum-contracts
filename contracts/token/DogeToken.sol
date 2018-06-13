@@ -9,8 +9,8 @@ import "./../ECRecovery.sol";
 contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), TransactionProcessor {
 
     // Constants
-    uint constant MIN_LOCK_VALUE = 150000000; // 1.5 doges
-    uint constant MIN_UNLOCK_VALUE = 300000000; // 3 doges
+    uint public constant MIN_LOCK_VALUE = 150000000; // 1.5 doges
+    uint public constant MIN_UNLOCK_VALUE = 300000000; // 3 doges
     uint constant MIN_FEE = 100000000; // 1 doge
     uint constant BASE_FEE = 50000000; // 0.5 doge
     uint constant FEE_PER_INPUT = 100000000; // 1 doge

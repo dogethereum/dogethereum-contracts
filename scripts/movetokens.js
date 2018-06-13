@@ -42,9 +42,31 @@ module.exports = async function(DogeToken, web3, command, callback) {
     await dt.transfer(tokenHolderAddress2, valueToTransfer, {from: tokenHolderAddress});     
   } else if (command == "unlock") {
     // Do unlock
-    const regtestOperatorPublicKeyHash = '0x03cd041b0139d3240607b9fd1b2d1b691e22b5d6';
-    console.log("Unlocking " + valueToTransfer + " DogeTokens from " + tokenHolderAddress + " using operator " + regtestOperatorPublicKeyHash);     
-    await dt.doUnlock("ncbC7ZY1K9EcMVjvwbgSBWKQ4bwDWS4d5P", valueToTransfer, regtestOperatorPublicKeyHash, {from: tokenHolderAddress});     
+    var minUnlockValue = await dt.MIN_UNLOCK_VALUE();
+    minUnlockValue = minUnlockValue.toNumber();
+    const operatorsLength = await dt.getOperatorsLength();
+    var valueTransferred = 0;
+    for (var i = 0; i < operatorsLength; i++) {      
+      let operatorKey = await dt.operatorKeys(i);
+      if (operatorKey[1] == false) {
+        // not deleted
+        let operatorPublicKeyHash = operatorKey[0];
+        let operator = await dt.operators(operatorPublicKeyHash);
+        var dogeAvailableBalance = operator[1].toNumber();
+        if (dogeAvailableBalance >= minUnlockValue) {
+          // dogeAvailableBalance >= MIN_UNLOCK_VALUE  
+          var valueToTransferWithThisOperator = Math.min(valueToTransfer - valueTransferred, dogeAvailableBalance);
+          console.log("Unlocking " + valueToTransferWithThisOperator + " DogeTokens using operator " + operatorPublicKeyHash);     
+          await dt.doUnlock("ncbC7ZY1K9EcMVjvwbgSBWKQ4bwDWS4d5P", valueToTransfer, operatorPublicKeyHash, {from: tokenHolderAddress});
+          // assert.equal(operator[1].toString(10), 0, 'operator dogeAvailableBalance is not the expected one');
+          valueTransferred += valueToTransferWithThisOperator;
+        }
+      }
+      if (valueTransferred == valueToTransfer) {
+        break;
+      }
+    }
+    console.log("Total unlocked " + valueTransferred + " DogeTokens from " + tokenHolderAddress);     
   }
 
   // Print DogeToken balances after transfer
