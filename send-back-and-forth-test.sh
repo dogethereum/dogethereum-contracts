@@ -41,9 +41,11 @@ truffle exec  --network integrationDogeRegtest scripts/debug.js
 echo "Please, start the agent..."
 # Wait for agent to relay doge lock tx to eth and dogetokens minted
 truffle exec  --network integrationDogeRegtest scripts/wait_token_balance.js 
+# Prepare sender address to do unlocks
+truffle exec  --network integrationDogeRegtest scripts/prepare_sender.js
 for i in $(seq 1 2); do 
 	# Send eth unlock tx 
-	truffle exec  --network integrationDogeRegtest scripts/unlock.js
+	truffle exec  --network integrationDogeRegtest scripts/user/unlock.js 0xd2394f3fad76167e7583a876c292c86ed10305da ncbC7ZY1K9EcMVjvwbgSBWKQ4bwDWS4d5P 300000000
 	# Print debug.js status
 	truffle exec  --network integrationDogeRegtest scripts/debug.js 
 	# Mine 5 eth blocks so unlock eth tx has enought confirmations
