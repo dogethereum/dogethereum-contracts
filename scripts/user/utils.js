@@ -29,7 +29,7 @@ module.exports = {
   }
   ,
   printDogeTokenBalances: async function (dt, sender, receiver) {
-    // Print sender DogeToken balance before transfer
+    // Print sender DogeToken balance
     var senderDogeTokenBalance = await dt.balanceOf.call(sender);     
     console.log("Sender doge token balance : " + module.exports.dogeToSatoshi(senderDogeTokenBalance.toNumber())  + " doge tokens.");     
 
