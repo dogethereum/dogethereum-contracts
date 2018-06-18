@@ -16,14 +16,14 @@ module.exports = {
     integrationDogeMain: {
       host: "localhost",
       port: 8545,
-      network_id: "*", // Match any network id
+      network_id: "32000", 
       gas: 4700000,
       gasPrice: 1
     },
     integrationDogeRegtest: {
       host: "localhost",
       port: 8545,
-      network_id: "*", // Match any network id
+      network_id: "32001",
       gas: 4700000,
       gasPrice: 1
     },
