@@ -22,7 +22,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/oscarguindzberg/dogerelay.git"
+    "url": "git+https://github.com/dogethereum/dogethereum-contracts.git"
   },
   "author": "",
   "license": "ISC",
