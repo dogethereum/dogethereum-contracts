@@ -9,7 +9,6 @@ module.exports = {
       console.log("Can't connect to ethereum node.");
       return false;
     }
-    // TODO: Do this check programatically and print msg 
     try {
       web3.eth.sign(sender, "sample message");
     } catch(err) {
