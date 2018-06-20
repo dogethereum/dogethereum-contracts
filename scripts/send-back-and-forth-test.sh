@@ -9,7 +9,7 @@ dogecoinQtRpcuser=aaa
 dogecoinQtRpcpassword=bbb
 agentCodeDir=/path/dogesubmitter
 agentDataDir=/path/agentDataDir
-dogeRelayCodeDir=/path/dogeRelayCodeDir
+dogethereumContractsCodeDir=/path/dogethereumContractsCodeDir
 
 # Print instructions on the console
 set -o xtrace
@@ -31,7 +31,7 @@ kill $(ps aux | grep ganache | grep -v grep | awk '{print $2}')
 sleep 1s
 ganache-cli --gasLimit 400000000000 > ganachelog.txt &
 # Remove compiled contract to force recompiling
-rm -rf $dogeRelayCodeDir/build/contracts/
+rm -rf $dogethereumContractsCodeDir/build/contracts/
 # Compile and deploy contracts
 truffle deploy --network integrationDogeRegtest | grep Error
 # Init contracts: initial doge header and operator
