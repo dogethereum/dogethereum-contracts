@@ -18,11 +18,11 @@ module.exports = async function(callback) {
   const operatorEthAddress = web3.eth.accounts[3];  
 
   var operatorSignItsEthAddressResult = utils.operatorSignItsEthAddress(operatorPrivateKeyString, operatorEthAddress)
-  var operatorPublicKeyString = operatorSignItsEthAddressResult[0];
+  var operatorPublicKeyCompressedString = operatorSignItsEthAddressResult[0];
   var signature = operatorSignItsEthAddressResult[1];
 
   var dt = await DogeToken.deployed();
-  await dt.addOperator(operatorPublicKeyString, signature, {from: operatorEthAddress});
+  await dt.addOperator(operatorPublicKeyCompressedString, signature, {from: operatorEthAddress});
   await dt.addOperatorDeposit(operatorPublicKeyHash, {value: 1000000000000000000, from : operatorEthAddress});
 
 
