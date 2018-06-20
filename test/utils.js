@@ -252,22 +252,28 @@ module.exports = {
   verifyThrow,
   calcSuperblockId,
   operatorSignItsEthAddress: function(operatorPrivateKeyString, operatorEthAddress) {
-      const operatorPrivateKey = bitcoreLib.PrivateKey(module.exports.fromHex(operatorPrivateKeyString));
-      const operatorPublicKeyString = "0x" + operatorPrivateKey.toPublicKey().toString();
+      // bitcoreLib.PrivateKey marks the private key as compressed if it receives a String as a parameter.
+      // bitcoreLib.PrivateKey marks the private key as uncompressed if it receives a Buffer as a parameter.
+      // In fact, private keys are not compressed/uncompressed. The compressed/uncompressed attribute
+      // is used when generating a compressed/uncompressed public key from the private key.
+      // Ethereum addresses are first 20 bytes of keccak256(uncompressed public key)
+      // Dogecoin public key hashes are calculated: ripemd160((sha256(compressed public key));
+      const operatorPrivateKeyCompressed = bitcoreLib.PrivateKey(module.exports.remove0x(operatorPrivateKeyString));
+      const operatorPrivateKeyUncompressed = bitcoreLib.PrivateKey(module.exports.fromHex(operatorPrivateKeyString))
+      const operatorPublicKeyCompressedString = "0x" + operatorPrivateKeyCompressed.toPublicKey().toString();
 
-      // Calculate operator eth address hash
+      // Generate the msg to be signed: double sha256 of operator eth address
       const operatorEthAddressHash = bitcoreLib.crypto.Hash.sha256sha256(module.exports.fromHex(operatorEthAddress));
 
-      // Operator private key sign operator eth address hash
+      // Operator private key uncompressed sign msg
       var ecdsa = new ECDSA();
       ecdsa.hashbuf = operatorEthAddressHash;
-      ecdsa.privkey = operatorPrivateKey;
-      ecdsa.pubkey = operatorPrivateKey.toPublicKey();
+      ecdsa.privkey = operatorPrivateKeyUncompressed;
+      ecdsa.pubkey = operatorPrivateKeyUncompressed.toPublicKey();
       ecdsa.signRandomK();
       ecdsa.calci();
       var ecdsaSig = ecdsa.sig;
       var signature = "0x" + ecdsaSig.toCompact().toString('hex');
-      return [operatorPublicKeyString, signature];
-
+      return [operatorPublicKeyCompressedString, signature];
   }
 };
