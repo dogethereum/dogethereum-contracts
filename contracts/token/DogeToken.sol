@@ -100,27 +100,27 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
     }
 
     // Adds an operator
-    // @param operatorPublicKey operator compressed public key (33 bytes). 
-    //                          operator[0] = odd
-    //                          operator[1-32] = x
+    // @param operatorPublicKeyCompressed operator compressed public key (33 bytes). 
+    //                          operatorPublicKeyCompressed[0] = odd (0x02 or 0x03)
+    //                          operatorPublicKeyCompressed[1-32] = x
     // @param signature doubleSha256(msg.sender) signed by operator (65 bytes).
     //                  signature[0] = v
     //                  signature[1-32] = r
     //                  signature[33-64] = s
-    function addOperator(bytes operatorPublicKey, bytes signature) public {
-        //log0(bytes32(operatorPublicKey.length));
+    function addOperator(bytes operatorPublicKeyCompressed, bytes signature) public {
+        //log0(bytes32(operatorPublicKeyCompressed.length));
         //log0(bytes32(signature.length));
 
-        // Parse operatorPublicKey
+        // Parse operatorPublicKeyCompressed
         bytes32 operatorPublicKeyX;
         bool operatorPublicKeyOdd;
-        operatorPublicKeyOdd = operatorPublicKey[0] == 0x03;
+        operatorPublicKeyOdd = operatorPublicKeyCompressed[0] == 0x03;
         assembly {
-            operatorPublicKeyX := mload(add(operatorPublicKey, 0x21))
+            operatorPublicKeyX := mload(add(operatorPublicKeyCompressed, 0x21))
         }
         //log1(operatorPublicKeyX, bytes32(operatorPublicKeyOdd ? 1 : 0));
 
-        // Check operatorPublicKey signed msg.sender hash
+        // Check the non compressed version of operatorPublicKeyCompressed signed msg.sender hash
         bytes32 signedMessage = sha256(abi.encodePacked(sha256(abi.encodePacked(msg.sender))));
         //log1(bytes20(msg.sender), signedMessage);
         address recoveredAddress = ECRecovery.recover(signedMessage, signature);

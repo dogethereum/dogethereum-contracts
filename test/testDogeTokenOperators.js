@@ -13,12 +13,12 @@ contract('DogeToken - Operators', (accounts) => {
 
   async function sendAddOperator(dogeToken, wrongSignature) {
       var operatorSignItsEthAddressResult = utils.operatorSignItsEthAddress(operatorPrivateKeyString, operatorEthAddress);
-      var operatorPublicKeyString = operatorSignItsEthAddressResult[0];
+      var operatorPublicKeyCompressedString = operatorSignItsEthAddressResult[0];
       var signature = operatorSignItsEthAddressResult[1];
       if (wrongSignature) {
         signature += "ff";        
       }
-      var addOperatorTxReceipt = await dogeToken.addOperator(operatorPublicKeyString, signature, {from: operatorEthAddress});
+      var addOperatorTxReceipt = await dogeToken.addOperator(operatorPublicKeyCompressedString, signature, {from: operatorEthAddress});
       return addOperatorTxReceipt;
   }
 
