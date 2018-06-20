@@ -28,19 +28,27 @@ module.exports = async function(callback) {
   console.log("Doge-Eth price : " + dogeEthPrice);
 
   // Operators
-  const operatorPublicKeyHash = '0x03cd041b0139d3240607b9fd1b2d1b691e22b5d6';
-  const operator = await dt.operators.call(operatorPublicKeyHash);
-  console.log("operator [" + operatorPublicKeyHash + "]: " + 
-              "eth address : " + operator[0].toString(16) + ", " + 
-              "dogeAvailableBalance : " + operator[1] + ", " + 
-              "dogePendingBalance : " + operator[2] + ", " + 
-              "nextUnspentUtxoIndex : " + operator[3] + ", " + 
-              "ethBalance : " + web3.fromWei(operator[4]));
-  const utxosLength = await dt.getUtxosLength(operatorPublicKeyHash);
-  console.log("utxosLength : " + utxosLength);  
-  for (var i = 0; i < utxosLength; i++) {
-    var utxo = await dt.getUtxo(operatorPublicKeyHash, i);
-    console.log("utxo [" + i + "]: " + utils.formatHexUint32(utxo[1].toString(16)) + ", " + utxo[2] + ", " + utxo[0]);  
+  const operatorsLength = await dt.getOperatorsLength();
+  console.log("operators length : " + operatorsLength);
+  for (var i = 0; i < operatorsLength; i++) {      
+    let operatorKey = await dt.operatorKeys(i);
+    if (operatorKey[1] == false) {
+      // not deleted
+      let operatorPublicKeyHash = operatorKey[0];
+      let operator = await dt.operators(operatorPublicKeyHash);
+      console.log("operator [" + operatorPublicKeyHash + "]: " + 
+                  "eth address : " + operator[0].toString(16) + ", " + 
+                  "dogeAvailableBalance : " + operator[1] + ", " + 
+                  "dogePendingBalance : " + operator[2] + ", " + 
+                  "nextUnspentUtxoIndex : " + operator[3] + ", " + 
+                  "ethBalance : " + web3.fromWei(operator[4]));
+      const utxosLength = await dt.getUtxosLength(operatorPublicKeyHash);
+      console.log("utxosLength : " + utxosLength);  
+      for (var j = 0; j < utxosLength; j++) {
+        var utxo = await dt.getUtxo(operatorPublicKeyHash, j);
+        console.log("utxo [" + j + "]: " + utils.formatHexUint32(utxo[1].toString(16)) + ", " + utxo[2] + ", " + utxo[0]);  
+      }    
+    }
   }
  
   // Current block number 
@@ -50,7 +58,7 @@ module.exports = async function(callback) {
   var unlockRequestEvent = dt.UnlockRequest({}, {fromBlock: 0, toBlock: "latest"});
   var myResults = unlockRequestEvent.get(async function(error, unlockRequestEvents){ 
      if (error) console.log("error : " + error);
-     if (unlockRequestEvents.length == 0) console.log("unlockRequestEvents.length is 0");
+     console.log("unlockRequestEvents length : " + unlockRequestEvents.length);
      for (var i = 0; i < unlockRequestEvents.length; i++) {
         console.log("unlockRequestEvent [" + unlockRequestEvents[i].args.id + "]: ");
         console.log("  tx block number : " + unlockRequestEvents[i].blockNumber);
