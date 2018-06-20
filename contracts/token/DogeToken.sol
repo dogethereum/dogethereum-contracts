@@ -17,7 +17,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
 
     // Error codes
     uint constant ERR_OPERATOR_SIGNATURE = 60010;
-    uint constant ERR_OPERATOR_ALREADY_CREATED = 60020;
+    uint constant ERR_OPERATOR_ALREADY_CREATED = 60015;
     uint constant ERR_OPERATOR_NOT_CREATED_OR_WRONG_SENDER = 60020;
     uint constant ERR_OPERATOR_HAS_BALANCE = 60030;
     uint constant ERR_OPERATOR_WITHDRAWAL_NOT_ENOUGH_BALANCE = 60040;

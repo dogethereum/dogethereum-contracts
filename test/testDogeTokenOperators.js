@@ -35,6 +35,12 @@ contract('DogeToken - Operators', (accounts) => {
       var operatorsLength = await dogeToken.getOperatorsLength();
       assert.equal(operatorsLength, 1, 'operatorsLength not what expected');
     });
+    it('addOperator fail - try adding the same operator twice', async () => {
+      const dogeToken = await DogeToken.new(trustedDogeRelay, trustedDogeEthPriceOracle, collateralRatio);
+      var addOperatorTxReceipt = await sendAddOperator(dogeToken);
+      addOperatorTxReceipt = await sendAddOperator(dogeToken);
+      assert.equal(60015, addOperatorTxReceipt.logs[0].args.err, "Expected ERR_OPERATOR_ALREADY_CREATED error");
+    });
     it('addOperator fail - wrong signature', async () => {
       const dogeToken = await DogeToken.new(trustedDogeRelay, trustedDogeEthPriceOracle, collateralRatio);
       var addOperatorTxReceipt = await sendAddOperator(dogeToken, true);
