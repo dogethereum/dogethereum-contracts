@@ -40,7 +40,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
     // Doge-Eth price oracle to trust.
     address public trustedDogeEthPriceOracle;
     // Number of times the operator eth collateral should cover her doge holdings 
-    uint8 collateralRatio;
+    uint8 public collateralRatio;
 
 
     // counter for next unlock
