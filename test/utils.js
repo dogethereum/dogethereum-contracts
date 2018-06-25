@@ -86,6 +86,8 @@ function getBlockDifficulty(blockHeader) {
 
 const timeout = async (ms) => new Promise((resolve, reject) => setTimeout(resolve, ms));
 
+const timeoutSeconds = async (s) => new Promise((resolve, reject) => setTimeout(resolve, s * 1000));
+
 const mineBlocks = async (web3, n) => {
   for (let i = 0; i < n; i++) {
     await web3.currentProvider.send({
@@ -247,6 +249,8 @@ module.exports = {
   calcBlockSha256Hash,
   getBlockTimestamp,
   getBlockDifficulty,
+  timeout,
+  timeoutSeconds,
   mineBlocks,
   getBlockNumber,
   verifyThrow,

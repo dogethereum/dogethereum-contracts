@@ -14,8 +14,8 @@ import {IScryptCheckerListener} from "./IScryptCheckerListener.sol";
 contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
     uint public minDeposit = 1;
 
-    uint public challengeTimeout = 5;
-    uint public superblockDuration = 1 hours;
+    uint public superblockDuration;     // Superblock duration (in seconds)
+    uint public superblockDelay;        // Delay required to submit superblocks (in seconds)
 
     event DepositBonded(bytes32 claimId, address account, uint amount);
     event DepositUnbonded(bytes32 claimId, address account, uint amount);
@@ -56,7 +56,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
         uint currentChallenger;                     // Index of challenger in current session
         mapping (address => bytes32) sessions;      // Challenge sessions
 
-        uint challengeTimeoutBlockNumber;           // Next timeout
+        uint challengeTimeout;                      // Next timeout
         bool verificationOngoing;                   // Challenge session has started
 
         bool decided;                               // If the claim was decided
@@ -82,8 +82,14 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
 
     // @dev – Configures the contract storing the superblocks
     // @param _superblocks Contract that manages superblocks
-    constructor(DogeSuperblocks _superblocks) public {
+    // @param _superblockDuration Superblock duration (in seconds)
+    // @param _superblockDelay Delay to accept a superblock submition (in seconds)
+    // @param _superblockTimeout Time to wait for challenges (in seconds)
+    constructor(DogeSuperblocks _superblocks, uint _superblockDuration, uint _superblockDelay, uint _superblockTimeout)
+        DogeBattleManager(_superblockTimeout) public {
         superblocks = _superblocks;
+        superblockDuration = _superblockDuration;
+        superblockDelay = _superblockDelay;
     }
 
     // @dev - sets ScryptChecker instance associated with this DogeClaimManager contract.
@@ -158,6 +164,11 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
             return (ERR_SUPERBLOCK_MIN_DEPOSIT, 0);
         }
 
+        if (_timestamp + superblockDelay > block.timestamp) {
+            emit ErrorClaim(0, ERR_SUPERBLOCK_BAD_TIMESTAMP);
+            return (ERR_SUPERBLOCK_BAD_TIMESTAMP, 0);
+        }
+
         uint err;
         bytes32 superblockId;
         (err, superblockId) = superblocks.propose(_blocksMerkleRoot, _accumulatedWork, _timestamp, _lastHash, _parentHash, msg.sender);
@@ -179,7 +190,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
         claim.invalid = false;
         claim.verificationOngoing = false;
         claim.createdAt = block.number;
-        claim.challengeTimeoutBlockNumber = block.number + challengeTimeout;
+        claim.challengeTimeout = block.timestamp + superblockTimeout;
         claim.superblockId = superblockId;
         claim.challengeState = ChallengeState.Unchallenged;
         claim.timestamp = _timestamp;
@@ -226,7 +237,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
 
         bondDeposit(claimId, msg.sender, minDeposit);
 
-        claim.challengeTimeoutBlockNumber += challengeTimeout;
+        claim.challengeTimeout += superblockTimeout;
         claim.challengers.push(msg.sender);
         claim.idxChallengers[msg.sender] = claim.challengers.length;
         claim.challengeState = ChallengeState.Challenged;
@@ -331,7 +342,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
         }
 
         //check that the claim has exceeded the claim's specific challenge timeout.
-        if (block.number <= claim.challengeTimeoutBlockNumber) {
+        if (block.timestamp <= claim.challengeTimeout) {
             emit ErrorClaim(claimId, ERR_SUPERBLOCK_NO_TIMEOUT);
             return false;
         }

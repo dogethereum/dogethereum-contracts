@@ -17,15 +17,15 @@ contract DogeBattleManager is DogeErrorCodes {
 
     event SessionError(bytes32 sessionId, uint err);
 
-    uint constant responseTimeout = 5;  // @dev - In blocks
-
     struct BattleSession {
         bytes32 id;
         bytes32 claimId;
         address claimant;
         address challenger;
-        uint lastClaimantMessage;
-        uint lastChallengerMessage;
+        uint lastActionTimestamp;         // Last action timestamp
+        uint lastActionClaimant;          // Number last action claimant
+        uint lastActionChallenger;        // Number last action challenger
+        uint actionsCounter;              // Counter session actions
     }
 
     modifier onlyClaimant(bytes32 sessionId) {
@@ -42,6 +42,12 @@ contract DogeBattleManager is DogeErrorCodes {
 
     uint public sessionsCount = 0;
 
+    uint public superblockTimeout;        // Timeout action (in seconds)
+
+    constructor(uint _superblockTimeout) public {
+        superblockTimeout = _superblockTimeout;
+    }
+
     // @dev - Start a battle session
     function beginBattleSession(bytes32 claimId, address challenger, address claimant) public returns (bytes32) {
         bytes32 sessionId = keccak256(abi.encode(claimId, msg.sender, sessionsCount));
@@ -50,8 +56,10 @@ contract DogeBattleManager is DogeErrorCodes {
         session.claimId = claimId;
         session.claimant = claimant;
         session.challenger = challenger;
-        session.lastClaimantMessage = block.number;
-        session.lastChallengerMessage = block.number;
+        session.lastActionTimestamp = block.timestamp;
+        session.lastActionChallenger = 0;
+        session.lastActionClaimant = 1;     // Force challenger to start
+        session.actionsCounter = 1;
 
         sessionsCount += 1;
 
@@ -72,8 +80,10 @@ contract DogeBattleManager is DogeErrorCodes {
         bool succeeded = false;
         succeeded = doQueryMerkleRootHashes(claimId);
         if (succeeded) {
+            session.actionsCounter += 1;
+            session.lastActionTimestamp = block.timestamp;
+            session.lastActionChallenger = session.actionsCounter;
             emit QueryMerkleRootHashes(sessionId, session.claimant);
-            session.lastChallengerMessage = block.number;
         }
     }
 
@@ -84,8 +94,10 @@ contract DogeBattleManager is DogeErrorCodes {
         bool succeeded = false;
         succeeded = doQueryBlockHeader(claimId, blockHash);
         if (succeeded) {
+            session.actionsCounter += 1;
+            session.lastActionTimestamp = block.timestamp;
+            session.lastActionChallenger = session.actionsCounter;
             emit QueryBlockHeader(sessionId, session.claimant, blockHash);
-            session.lastChallengerMessage = block.number;
         }
     }
 
@@ -102,8 +114,10 @@ contract DogeBattleManager is DogeErrorCodes {
         bool succeeded = false;
         succeeded = verifyMerkleRootHashes(claimId, blockHashes);
         if (succeeded) {
+            session.actionsCounter += 1;
+            session.lastActionTimestamp = block.timestamp;
+            session.lastActionClaimant = session.actionsCounter;
             emit RespondMerkleRootHashes(sessionId, session.challenger, blockHashes);
-            session.lastClaimantMessage = block.number;
         }
     }
 
@@ -114,8 +128,10 @@ contract DogeBattleManager is DogeErrorCodes {
         bool succeeded = false;
         succeeded = verifyBlockHeader(claimId, scryptBlockHash, blockHeader);
         if (succeeded) {
+            session.actionsCounter += 1;
+            session.lastActionTimestamp = block.timestamp;
+            session.lastActionClaimant = session.actionsCounter;
             emit RespondBlockHeader(sessionId, session.challenger, scryptBlockHash, blockHeader);
-            session.lastClaimantMessage = block.number;
         }
     }
 
@@ -139,14 +155,14 @@ contract DogeBattleManager is DogeErrorCodes {
         BattleSession storage session = sessions[sessionId];
         bytes32 claimId = session.claimId;
         if (
-            session.lastChallengerMessage > session.lastClaimantMessage &&
-            block.number> session.lastChallengerMessage + responseTimeout
+            session.lastActionChallenger > session.lastActionClaimant &&
+            block.timestamp > session.lastActionTimestamp + superblockTimeout
         ) {
             claimantConvicted(sessionId, session.claimant, claimId);
             return ERR_SUPERBLOCK_OK;
         } else if (
-            session.lastClaimantMessage >= session.lastChallengerMessage &&
-            block.number > session.lastClaimantMessage + responseTimeout
+            session.lastActionClaimant > session.lastActionChallenger &&
+            block.timestamp > session.lastActionTimestamp + superblockTimeout
         ) {
             challengerConvicted(sessionId, session.challenger, claimId);
             return ERR_SUPERBLOCK_OK;
