@@ -169,7 +169,7 @@ contract DogeSuperblocks is DogeErrorCodes {
     //
     // @param _superblockId Id of the superblock to confirm
     // @return Error code and superblockId
-    function confirm(bytes32 _superblockId) public returns (uint, bytes32) {
+    function confirm(bytes32 _superblockId, address validator) public returns (uint, bytes32) {
         if (msg.sender != claimManager) {
             emit ErrorSuperblock(_superblockId, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
             return (ERR_SUPERBLOCK_NOT_CLAIMMANAGER, 0);
@@ -189,7 +189,7 @@ contract DogeSuperblocks is DogeErrorCodes {
             bestSuperblock = _superblockId;
             bestSuperblockAccumulatedWork = superblock.accumulatedWork;
         }
-        emit ApprovedSuperblock(_superblockId, superblock.submitter);
+        emit ApprovedSuperblock(_superblockId, validator);
         return (ERR_SUPERBLOCK_OK, _superblockId);
     }
 
@@ -200,7 +200,7 @@ contract DogeSuperblocks is DogeErrorCodes {
     //
     // @param _superblockId Id of the superblock to challenge
     // @return Error code and superblockId
-    function challenge(bytes32 _superblockId) public returns (uint, bytes32) {
+    function challenge(bytes32 _superblockId, address challenger) public returns (uint, bytes32) {
         if (msg.sender != claimManager) {
             emit ErrorSuperblock(_superblockId, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
             return (ERR_SUPERBLOCK_NOT_CLAIMMANAGER, 0);
@@ -211,7 +211,7 @@ contract DogeSuperblocks is DogeErrorCodes {
             return (ERR_SUPERBLOCK_BAD_STATUS, 0);
         }
         superblock.status = Status.InBattle;
-        emit ChallengeSuperblock(_superblockId, superblock.submitter);
+        emit ChallengeSuperblock(_superblockId, challenger);
         return (ERR_SUPERBLOCK_OK, _superblockId);
     }
 
@@ -223,7 +223,7 @@ contract DogeSuperblocks is DogeErrorCodes {
     //
     // @param _superblockId Id of the superblock to semi-approve
     // @return Error code and superblockId
-    function semiApprove(bytes32 _superblockId) public returns (uint, bytes32) {
+    function semiApprove(bytes32 _superblockId, address validator) public returns (uint, bytes32) {
         if (msg.sender != claimManager) {
             emit ErrorSuperblock(_superblockId, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
             return (ERR_SUPERBLOCK_NOT_CLAIMMANAGER, 0);
@@ -234,7 +234,7 @@ contract DogeSuperblocks is DogeErrorCodes {
             return (ERR_SUPERBLOCK_BAD_STATUS, 0);
         }
         superblock.status = Status.SemiApproved;
-        emit SemiApprovedSuperblock(_superblockId, superblock.submitter);
+        emit SemiApprovedSuperblock(_superblockId, validator);
         return (ERR_SUPERBLOCK_OK, _superblockId);
     }
 
@@ -246,7 +246,7 @@ contract DogeSuperblocks is DogeErrorCodes {
     //
     // @param _superblockId Id of the superblock to invalidate
     // @return Error code and superblockId
-    function invalidate(bytes32 _superblockId) public returns (uint, bytes32) {
+    function invalidate(bytes32 _superblockId, address validator) public returns (uint, bytes32) {
         if (msg.sender != claimManager) {
             emit ErrorSuperblock(_superblockId, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
             return (ERR_SUPERBLOCK_NOT_CLAIMMANAGER, 0);
@@ -257,7 +257,7 @@ contract DogeSuperblocks is DogeErrorCodes {
             return (ERR_SUPERBLOCK_BAD_STATUS, 0);
         }
         superblock.status = Status.Invalid;
-        emit InvalidSuperblock(_superblockId, superblock.submitter);
+        emit InvalidSuperblock(_superblockId, validator);
         return (ERR_SUPERBLOCK_OK, _superblockId);
     }
 

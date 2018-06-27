@@ -229,7 +229,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
         }
 
         uint err;
-        (err, ) = superblocks.challenge(superblockId);
+        (err, ) = superblocks.challenge(superblockId, msg.sender);
         if (err != 0) {
             emit ErrorClaim(claimId, err);
             return (err, 0);
@@ -357,14 +357,14 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
 
         // If the claim is invalid superblock data didn't match provided input
         if (claim.invalid) {
-            superblocks.invalidate(claim.superblockId);
+            superblocks.invalidate(claim.superblockId, msg.sender);
             emit SuperblockClaimFailed(claimId, claim.claimant, claim.superblockId);
         } else {
             // If no challengers confirm immediately
             if (claim.challengers.length == 0) {
-                superblocks.confirm(claim.superblockId);
+                superblocks.confirm(claim.superblockId, msg.sender);
             } else {
-                superblocks.semiApprove(claim.superblockId);
+                superblocks.semiApprove(claim.superblockId, msg.sender);
             }
             unbondDeposit(claimId, claim.claimant);
             emit SuperblockClaimSuccessful(claimId, claim.claimant, claim.superblockId);

@@ -112,7 +112,7 @@ contract('DogeSuperblocks', (accounts) => {
       assert.equal(result.logs[0].event, 'ErrorSuperblock', 'Superblock parent does not exist');
     });
     it('Approve', async () => {
-      const result = await superblocks.confirm(id1, { from: claimManager });
+      const result = await superblocks.confirm(id1, claimManager, { from: claimManager });
       assert.equal(result.logs[0].event, 'ApprovedSuperblock', 'Superblock confirmed');
     });
     it('Propose bis', async () => {
@@ -121,19 +121,19 @@ contract('DogeSuperblocks', (accounts) => {
       id2 = result.logs[0].args.superblockId;
     });
     it('Challenge', async () => {
-      const result = await superblocks.challenge(id2, { from: claimManager });
+      const result = await superblocks.challenge(id2, claimManager, { from: claimManager });
       assert.equal(result.logs[0].event, 'ChallengeSuperblock', 'Superblock challenged');
     });
     it('Semi-Approve', async () => {
-      const result = await superblocks.semiApprove(id2, { from: claimManager });
+      const result = await superblocks.semiApprove(id2, claimManager, { from: claimManager });
       assert.equal(result.logs[0].event, 'SemiApprovedSuperblock', 'Superblock semi-approved');
     });
     it('Approve bis', async () => {
-      const result = await superblocks.confirm(id2, { from: claimManager });
+      const result = await superblocks.confirm(id2, claimManager, { from: claimManager });
       assert.equal(result.logs[0].event, 'ApprovedSuperblock', 'Superblock confirmed');
     });
     it('Invalidate bad', async () => {
-      const result = await superblocks.invalidate(id2, { from: claimManager });
+      const result = await superblocks.invalidate(id2, claimManager, { from: claimManager });
       assert.equal(result.logs[0].event, 'ErrorSuperblock', 'Superblock cannot invalidate');
     });
     it('Propose tris', async () => {
@@ -142,15 +142,15 @@ contract('DogeSuperblocks', (accounts) => {
       id3 = result.logs[0].args.superblockId;
     });
     it('Challenge bis', async () => {
-      const result = await superblocks.challenge(id3, { from: claimManager });
+      const result = await superblocks.challenge(id3, claimManager, { from: claimManager });
       assert.equal(result.logs[0].event, 'ChallengeSuperblock', 'Superblock challenged');
     });
     it('Invalidate', async () => {
-      const result = await superblocks.invalidate(id3, { from: claimManager });
+      const result = await superblocks.invalidate(id3, claimManager, { from: claimManager });
       assert.equal(result.logs[0].event, 'InvalidSuperblock', 'Superblock invalidated');
     });
     it('Approve bad', async () => {
-      const result = await superblocks.confirm(id3, { from: claimManager });
+      const result = await superblocks.confirm(id3, claimManager, { from: claimManager });
       assert.equal(result.logs[0].event, 'ErrorSuperblock', 'Superblock cannot approve');
     });
   });
@@ -181,37 +181,37 @@ contract('DogeSuperblocks', (accounts) => {
       id1 = result.logs[0].args.superblockId;
     });
     it('Approve', async () => {
-      let result = await superblocks.confirm(id1);
+      let result = await superblocks.confirm(id1, claimManager);
       assert.equal(result.logs[0].event, 'ErrorSuperblock', 'Only claimManager can propose');
-      result = await superblocks.confirm(id1, { from: claimManager });
+      result = await superblocks.confirm(id1, claimManager, { from: claimManager });
       assert.equal(result.logs[0].event, 'ApprovedSuperblock', 'Only claimManager can propose');
     });
     it('Challenge', async () => {
       let result = await superblocks.propose(merkleRoot, accumulatedWork, timestamp, lastHash, id1, claimManager, { from: claimManager });
       assert.equal(result.logs[0].event, 'NewSuperblock', 'ClaimManager can propose');
       id2 = result.logs[0].args.superblockId;
-      result = await superblocks.challenge(id2);
+      result = await superblocks.challenge(id2, claimManager);
       assert.equal(result.logs[0].event, 'ErrorSuperblock', 'Only claimManager can propose');
-      result = await superblocks.challenge(id2, { from: claimManager });
+      result = await superblocks.challenge(id2, claimManager, { from: claimManager });
       assert.equal(result.logs[0].event, 'ChallengeSuperblock', 'Superblock challenged');
     });
     it('Semi-Approve', async () => {
-      let result = await superblocks.semiApprove(id2);
+      let result = await superblocks.semiApprove(id2, claimManager);
       assert.equal(result.logs[0].event, 'ErrorSuperblock', 'Only claimManager can semi-approve');
-      result = await superblocks.semiApprove(id2, { from: claimManager });
+      result = await superblocks.semiApprove(id2, claimManager, { from: claimManager });
       assert.equal(result.logs[0].event, 'SemiApprovedSuperblock', 'Superblock semi-approved');
-      result = await superblocks.confirm(id2, { from: claimManager });
+      result = await superblocks.confirm(id2, claimManager, { from: claimManager });
       assert.equal(result.logs[0].event, 'ApprovedSuperblock', 'Superblock confirmed');
     });
     it('Invalidate', async () => {
       let result = await superblocks.propose(merkleRoot, accumulatedWork, timestamp, lastHash, id2, claimManager, { from: claimManager });
       assert.equal(result.logs[0].event, 'NewSuperblock', 'New superblock proposed');
       id3 = result.logs[0].args.superblockId;
-      result = await superblocks.challenge(id3, { from: claimManager });
+      result = await superblocks.challenge(id3, claimManager, { from: claimManager });
       assert.equal(result.logs[0].event, 'ChallengeSuperblock', 'Superblock challenged');
-      result = await superblocks.invalidate(id3);
+      result = await superblocks.invalidate(id3, claimManager);
       assert.equal(result.logs[0].event, 'ErrorSuperblock', 'Only claimManager can invalidate');
-      result = await superblocks.invalidate(id3, { from: claimManager });
+      result = await superblocks.invalidate(id3, claimManager, { from: claimManager });
       assert.equal(result.logs[0].event, 'InvalidSuperblock', 'Superblock invalidated');
     });
   });
@@ -248,7 +248,7 @@ contract('DogeSuperblocks', (accounts) => {
         result = await superblocks.propose(merkleRoot, work, work, lastHash, parentId, claimManager, { from: claimManager });
         assert.equal(result.logs[0].event, 'NewSuperblock', 'ClaimManager can propose');
         superblockId = result.logs[0].args.superblockId;
-        result = await superblocks.confirm(superblockId, { from: claimManager });
+        result = await superblocks.confirm(superblockId, claimManager, { from: claimManager });
         assert.equal(result.logs[0].event, 'ApprovedSuperblock', 'Only claimManager can propose');
         locator = await superblocks.getSuperblockLocator();
         assert.equal(locator[0], superblockId, 'Position 0 current best superblock');
