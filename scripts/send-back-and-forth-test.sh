@@ -45,7 +45,7 @@ truffle exec  --network integrationDogeRegtest scripts/wait_token_balance.js
 truffle exec  --network integrationDogeRegtest scripts/prepare_sender.js
 for i in $(seq 1 2); do 
 	# Send eth unlock tx 
-	node ../dogethereum-tools/user/unlock.js --network integrationDogeRegtest --sender 0xd2394f3fad76167e7583a876c292c86ed10305da --receiver ncbC7ZY1K9EcMVjvwbgSBWKQ4bwDWS4d5P --value 300000000
+	node ../dogethereum-tools/user/unlock.js --network integrationDogeRegtest --json $dogethereumContractsCodeDir/build/contracts/DogeToken.json --sender 0xd2394f3fad76167e7583a876c292c86ed10305da --receiver ncbC7ZY1K9EcMVjvwbgSBWKQ4bwDWS4d5P --value 300000000
 	# Print debug.js status
 	truffle exec  --network integrationDogeRegtest scripts/debug.js 
 	# Mine 5 eth blocks so unlock eth tx has enought confirmations
