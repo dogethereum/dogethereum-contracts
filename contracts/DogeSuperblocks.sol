@@ -363,6 +363,13 @@ contract DogeSuperblocks is DogeErrorCodes {
         return superblocks[_superblockId].status;
     }
 
+    // @dev - Return indexNextSuperblock
+    function getIndexNextSuperblock() public view returns (uint32) {
+        return indexNextSuperblock;
+    }
+
+
+
     // @dev - Calculte merkle root from hashes
     function makeMerkle(bytes32[] hashes) public pure returns (bytes32) {
         return DogeTx.makeMerkle(hashes);
