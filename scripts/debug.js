@@ -1,4 +1,5 @@
 var DogeRelay = artifacts.require("./DogeRelay.sol");
+var DogeSuperblocks = artifacts.require("./DogeSuperblocks.sol");
 var DogeToken = artifacts.require("./token/DogeToken.sol");
 var utils = require('../test/utils');
 
@@ -17,6 +18,20 @@ module.exports = async function(callback) {
   });    
   console.log("Locator : " + blockLocatorFormatted);
   
+
+  var ds  = await DogeSuperblocks.deployed();
+  console.log("Superblocks");
+  console.log("---------");
+  var bestSuperblockHash = await ds.getBestSuperblock.call(); 
+  console.log("Best superblock hash : " + bestSuperblockHash.toString(16));
+  var bestSuperblockHeight = await ds.getSuperblockHeight.call(bestSuperblockHash);
+  console.log("Best superblock height : " + bestSuperblockHeight);
+  var lastHash = await ds.getSuperblockLastHash.call(bestSuperblockHash);
+  console.log("lastHash : " + lastHash);
+  var indexNextSuperblock = await ds.getIndexNextSuperblock.call();
+  console.log("indexNextSuperblock : " + indexNextSuperblock);
+
+
   console.log("DogeToken");
   console.log("---------");
   var dt = await DogeToken.deployed();
