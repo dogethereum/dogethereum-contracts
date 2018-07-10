@@ -150,6 +150,29 @@ function calcSuperblockId(merkleRoot, accumulatedWork, timestamp, lastHash, pare
   )).toString('hex')}`;
 }
 
+// Construct a superblock from an array of block headers
+function makeSuperblock(headers, parentId, parentAccumulatedWork) {
+  const blockHashes = headers.map(header => calcBlockSha256Hash(header));
+  const accumulatedWork = headers.reduce((work, header) => work.plus(getBlockDifficulty(header)), web3.toBigNumber(parentAccumulatedWork));
+  const merkleRoot = makeMerkle(blockHashes);
+  const timestamp = getBlockTimestamp(headers[headers.length - 1]);
+  const lastHash = calcBlockSha256Hash(headers[headers.length - 1]);
+  return {
+    merkleRoot,
+    accumulatedWork,
+    timestamp,
+    lastHash,
+    parentId,
+    superblockId: calcSuperblockId(
+      merkleRoot,
+      accumulatedWork,
+      timestamp,
+      lastHash,
+      parentId,
+    ),
+  };
+}
+
 module.exports = {
   formatHexUint32: function (str) {
     while (str.length < 64) {
@@ -255,6 +278,7 @@ module.exports = {
   getBlockNumber,
   verifyThrow,
   calcSuperblockId,
+  makeSuperblock,
   operatorSignItsEthAddress: function(operatorPrivateKeyString, operatorEthAddress) {
       // bitcoreLib.PrivateKey marks the private key as compressed if it receives a String as a parameter.
       // bitcoreLib.PrivateKey marks the private key as uncompressed if it receives a Buffer as a parameter.
