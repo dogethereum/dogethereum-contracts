@@ -153,7 +153,7 @@ contract('DogeClaimManager', (accounts) => {
     it('Query and verify hashes', async () => {
       let result;
       result = await claimManager.runNextBattleSession(claim1, { from: challenger });
-      assert.equal(result.logs[0].event, 'NewSession', 'New battle session');
+      assert.equal(result.logs[0].event, 'NewBattle', 'New battle session');
       session1 = result.logs[0].args.sessionId;
       assert.equal(result.logs[1].event, 'VerificationGameStarted', 'Battle started');
       result = await claimManager.queryMerkleRootHashes(session1, { from: challenger });
@@ -170,8 +170,8 @@ contract('DogeClaimManager', (accounts) => {
       assert.equal(result.logs[0].event, 'RespondBlockHeader', 'Respond block header');
     });
     it('Verify superblock', async () => {
-      const result = await claimManager.performVerification(session1, { from: challenger });
-      assert.equal(result.logs[0].event, 'SessionDecided', 'Superblock verified');
+      const result = await claimManager.verifySuperblock(session1, { from: challenger });
+      assert.equal(result.logs[0].event, 'SuperblockBattleDecided', 'Superblock verified');
     });
     it('Confirm', async () => {
       await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
@@ -215,7 +215,7 @@ contract('DogeClaimManager', (accounts) => {
     it('Query hashes', async () => {
       let result;
       result = await claimManager.runNextBattleSession(claim1, { from: challenger });
-      assert.equal(result.logs[0].event, 'NewSession', 'New battle session');
+      assert.equal(result.logs[0].event, 'NewBattle', 'New battle session');
       session1 = result.logs[0].args.sessionId;
       assert.equal(result.logs[1].event, 'VerificationGameStarted', 'Battle started');
       const session = await claimManager.getSession(claim1, challenger);
@@ -239,8 +239,8 @@ contract('DogeClaimManager', (accounts) => {
       });
     });
     it('Verify superblock', async () => {
-      const result = await claimManager.performVerification(session1, { from: challenger });
-      assert.equal(result.logs[0].event, 'SessionDecided', 'Superblock verified');
+      const result = await claimManager.verifySuperblock(session1, { from: challenger });
+      assert.equal(result.logs[0].event, 'SuperblockBattleDecided', 'Superblock verified');
     });
     it('Accept superblock', async () => {
       await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
@@ -283,10 +283,10 @@ contract('DogeClaimManager', (accounts) => {
     it('Timeout query hashes', async () => {
       let result;
       result = await claimManager.timeout(session1, { from: submitter });
-      assert.equal(result.logs[0].event, 'SessionError', 'Timeout too early');
+      assert.equal(result.logs[0].event, 'ErrorBattle', 'Timeout too early');
       await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
       result = await claimManager.timeout(session1, { from: submitter });
-      assert.equal(result.logs[0].event, 'SessionDecided', 'Session decided');
+      assert.equal(result.logs[0].event, 'SuperblockBattleDecided', 'Session decided');
       assert.equal(result.logs[1].event, 'ChallengerConvicted', 'Should convict challenger');
     });
     it('Timeout reply hashes', async () => {
@@ -294,11 +294,11 @@ contract('DogeClaimManager', (accounts) => {
       result = await claimManager.queryMerkleRootHashes(session1, { from: challenger });
       assert.equal(result.logs[0].event, 'QueryMerkleRootHashes', 'Query merkle root hashes');
       result = await claimManager.timeout(session1, { from: challenger });
-      assert.equal(result.logs[0].event, 'SessionError', 'Timeout too early');
+      assert.equal(result.logs[0].event, 'ErrorBattle', 'Timeout too early');
       await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
       result = await claimManager.timeout(session1, { from: challenger });
-      assert.equal(result.logs[0].event, 'SessionDecided', 'Session decided');
-      assert.equal(result.logs[1].event, 'ClaimantConvicted', 'Should convict claimant');
+      assert.equal(result.logs[0].event, 'SuperblockBattleDecided', 'Session decided');
+      assert.equal(result.logs[1].event, 'SubmitterConvicted', 'Should convict claimant');
     });
     it('Timeout query block headers', async () => {
       let result;
@@ -307,10 +307,10 @@ contract('DogeClaimManager', (accounts) => {
       result = await claimManager.respondMerkleRootHashes(session1, [hashes[0]], { from: submitter });
       assert.equal(result.logs[0].event, 'RespondMerkleRootHashes', 'Respond merkle root hashes');
       result = await claimManager.timeout(session1, { from: submitter });
-      assert.equal(result.logs[0].event, 'SessionError', 'Timeout too early');
+      assert.equal(result.logs[0].event, 'ErrorBattle', 'Timeout too early');
       await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
       result = await claimManager.timeout(session1, { from: submitter });
-      assert.equal(result.logs[0].event, 'SessionDecided', 'Session decided');
+      assert.equal(result.logs[0].event, 'SuperblockBattleDecided', 'Session decided');
       assert.equal(result.logs[1].event, 'ChallengerConvicted', 'Should convict challenger');
     });
     it('Timeout reply block headers', async () => {
@@ -322,11 +322,11 @@ contract('DogeClaimManager', (accounts) => {
       result = await claimManager.queryBlockHeader(session1, hashes[0], { from: challenger });
       assert.equal(result.logs[0].event, 'QueryBlockHeader', 'Query block header');
       result = await claimManager.timeout(session1, { from: challenger });
-      assert.equal(result.logs[0].event, 'SessionError', 'Timeout too early');
+      assert.equal(result.logs[0].event, 'ErrorBattle', 'Timeout too early');
       await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
       result = await claimManager.timeout(session1, { from: challenger });
-      assert.equal(result.logs[0].event, 'SessionDecided', 'Session decided');
-      assert.equal(result.logs[1].event, 'ClaimantConvicted', 'Should convict claimant');
+      assert.equal(result.logs[0].event, 'SuperblockBattleDecided', 'Session decided');
+      assert.equal(result.logs[1].event, 'SubmitterConvicted', 'Should convict claimant');
     });
     it('Timeout verify superblock', async () => {
       let result;
@@ -342,10 +342,10 @@ contract('DogeClaimManager', (accounts) => {
       result = await claimManager.respondBlockHeader(session1, scryptHash, `0x${headers[0]}`, { from: submitter });
       assert.equal(result.logs[0].event, 'RespondBlockHeader', 'Respond block header');
       result = await claimManager.timeout(session1, { from: submitter });
-      assert.equal(result.logs[0].event, 'SessionError', 'Timeout too early');
+      assert.equal(result.logs[0].event, 'ErrorBattle', 'Timeout too early');
       await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
       result = await claimManager.timeout(session1, { from: submitter });
-      assert.equal(result.logs[0].event, 'SessionDecided', 'Session decided');
+      assert.equal(result.logs[0].event, 'SuperblockBattleDecided', 'Session decided');
       assert.equal(result.logs[1].event, 'ChallengerConvicted', 'Should convict challenger');
     });
     it('Verify superblock', async () => {
@@ -361,8 +361,8 @@ contract('DogeClaimManager', (accounts) => {
       const scryptHash = `0x${utils.calcHeaderPoW(headers[0])}`;
       result = await claimManager.respondBlockHeader(session1, scryptHash, `0x${headers[0]}`, { from: submitter });
       assert.equal(result.logs[0].event, 'RespondBlockHeader', 'Respond block header');
-      result = await claimManager.performVerification(session1, { from: challenger });
-      assert.equal(result.logs[0].event, 'SessionDecided', 'Superblock verified');
+      result = await claimManager.verifySuperblock(session1, { from: challenger });
+      assert.equal(result.logs[0].event, 'SuperblockBattleDecided', 'Superblock verified');
       assert.equal(result.logs[1].event, 'ChallengerConvicted', 'Should convict challenger');
     });
   });

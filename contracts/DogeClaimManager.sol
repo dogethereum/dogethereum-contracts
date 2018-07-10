@@ -11,74 +11,48 @@ import {IScryptCheckerListener} from "./IScryptCheckerListener.sol";
 // @dev - Manager of superblock claims
 //
 // Manages superblocks proposal and challenges
-contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
-    uint public minDeposit = 1;
-
-    uint public superblockDuration;     // Superblock duration (in seconds)
-    uint public superblockDelay;        // Delay required to submit superblocks (in seconds)
-
-    event DepositBonded(bytes32 claimId, address account, uint amount);
-    event DepositUnbonded(bytes32 claimId, address account, uint amount);
-    event SuperblockClaimCreated(bytes32 claimId, address claimant, bytes32 superblockId);
-    event SuperblockClaimChallenged(bytes32 claimId, address challenger);
-    event SessionDecided(bytes32 sessionId, address winner, address loser);
-    event SuperblockClaimSuccessful(bytes32 claimId, address claimant, bytes32 superblockId);
-    event SuperblockClaimFailed(bytes32 claimId, address claimant, bytes32 superblockId);
-    event VerificationGameStarted(bytes32 claimId, address claimant, address challenger, bytes32 sessionId);
-
-    event ErrorClaim(bytes32 claimId, uint err);
-
-    enum ChallengeState {
-        Unchallenged,             // Unchallenged claim
-        Challenged,               // Claims was challenged
-        QueryMerkleRootHashes,    // Challenger expecting block hashes
-        RespondMerkleRootHashes,  // Blcok hashes were received and verified
-        QueryBlockHeader,         // Challenger is requesting block headers
-        RespondBlockHeader,       // All block headers were received
-        PendingVerification,      // Pending superblock verification
-        SuperblockVerified        // Superblock was verified
-    }
-
-    struct BlockInfo {
-        uint status;        // 0 - none, 1 - required, 2 - replied
-    }
+contract DogeClaimManager is DogeDepositsManager, DogeBattleManager, IScryptCheckerListener {
 
     struct SuperblockClaim {
-        address claimant;                           // Superblock submitter
         bytes32 superblockId;                       // Superblock Id
-        uint createdAt;                             // Block when claim was created
-        uint timestamp;                             // Superblock timestamp
+        address claimant;                           // Superblock submitter
+        uint createdAt;                             // Superblock creation
 
         address[] challengers;                      // List of challengers
-        mapping (address => uint) idxChallengers;   // Index of challengers (position + 1 in challengers array)
         mapping (address => uint) bondedDeposits;   // Deposit associated to challengers
 
         uint currentChallenger;                     // Index of challenger in current session
         mapping (address => bytes32) sessions;      // Challenge sessions
 
-        uint challengeTimeout;                      // Next timeout
+        uint challengeTimeout;                      // Claim timeout
+
         bool verificationOngoing;                   // Challenge session has started
 
         bool decided;                               // If the claim was decided
         bool invalid;                               // If superblock is invalid
-
-        ChallengeState challengeState;              // Claim state
-        bytes32[] blockHashes;                      // Block hashes
-        uint countBlockHeaderQueries;               // Number of block header queries
-        uint countBlockHeaderResponses;             // Number of block header responses
-        mapping(bytes32 => BlockInfo) blocksInfo;
-        uint accumulatedWork;
-        uint lastBlockTimestamp;
     }
 
+    uint public minDeposit = 1;
+
     // Active Superblock claims
-    mapping(bytes32 => SuperblockClaim) private claims;
+    mapping (bytes32 => SuperblockClaim) public claims;
 
     // Superblocks contract
-    DogeSuperblocks superblocks;
+    DogeSuperblocks public superblocks;
 
-    // Scrypt checker
+    // ScryptHash checker
     IScryptChecker public scryptChecker;
+
+    event DepositBonded(bytes32 claimId, address account, uint amount);
+    event DepositUnbonded(bytes32 claimId, address account, uint amount);
+    event SuperblockClaimCreated(bytes32 claimId, address claimant, bytes32 superblockId);
+    event SuperblockClaimChallenged(bytes32 claimId, address challenger);
+    event SuperblockBattleDecided(bytes32 sessionId, address winner, address loser);
+    event SuperblockClaimSuccessful(bytes32 claimId, address claimant, bytes32 superblockId);
+    event SuperblockClaimFailed(bytes32 claimId, address claimant, bytes32 superblockId);
+    event VerificationGameStarted(bytes32 claimId, address claimant, address challenger, bytes32 sessionId);
+
+    event ErrorClaim(bytes32 claimId, uint err);
 
     // @dev – Configures the contract storing the superblocks
     // @param _superblocks Contract that manages superblocks
@@ -86,10 +60,8 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
     // @param _superblockDelay Delay to accept a superblock submition (in seconds)
     // @param _superblockTimeout Time to wait for challenges (in seconds)
     constructor(DogeSuperblocks _superblocks, uint _superblockDuration, uint _superblockDelay, uint _superblockTimeout)
-        DogeBattleManager(_superblockTimeout) public {
+        DogeBattleManager(_superblockDuration, _superblockDelay, _superblockTimeout) public {
         superblocks = _superblocks;
-        superblockDuration = _superblockDuration;
-        superblockDelay = _superblockDelay;
     }
 
     // @dev - sets ScryptChecker instance associated with this DogeClaimManager contract.
@@ -192,8 +164,6 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
         claim.createdAt = block.number;
         claim.challengeTimeout = block.timestamp + superblockTimeout;
         claim.superblockId = superblockId;
-        claim.challengeState = ChallengeState.Unchallenged;
-        claim.timestamp = _timestamp;
 
         bondDeposit(claimId, msg.sender, minDeposit);
 
@@ -223,10 +193,6 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
             emit ErrorClaim(claimId, ERR_SUPERBLOCK_MIN_DEPOSIT);
             return (ERR_SUPERBLOCK_MIN_DEPOSIT, claimId);
         }
-        if (claim.idxChallengers[msg.sender] != 0) {
-            emit ErrorClaim(claimId, ERR_SUPERBLOCK_BAD_CHALLENGER);
-            return (ERR_SUPERBLOCK_BAD_CHALLENGER, claimId);
-        }
 
         uint err;
         (err, ) = superblocks.challenge(superblockId, msg.sender);
@@ -239,8 +205,6 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
 
         claim.challengeTimeout += superblockTimeout;
         claim.challengers.push(msg.sender);
-        claim.idxChallengers[msg.sender] = claim.challengers.length;
-        claim.challengeState = ChallengeState.Challenged;
         emit SuperblockClaimChallenged(claimId, msg.sender);
 
         return (ERR_SUPERBLOCK_OK, claimId);
@@ -268,7 +232,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
 
         if (claim.currentChallenger < claim.challengers.length) {
 
-            bytes32 sessionId = beginBattleSession(claimId, claim.challengers[claim.currentChallenger], claim.claimant);
+            bytes32 sessionId = beginBattleSession(claimId, claim.claimant, claim.challengers[claim.currentChallenger]);
 
             claim.sessions[claim.challengers[claim.currentChallenger]] = sessionId;
             emit VerificationGameStarted(claimId, claim.claimant, claim.challengers[claim.currentChallenger], sessionId);
@@ -278,48 +242,6 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
         }
 
         return true;
-    }
-
-    // @dev – called when a battle session has ended.
-    //
-    // @param sessionId – the sessionId.
-    // @param claimId - Id of the superblock claim
-    // @param winner – winner of the verification game.
-    // @param loser – loser of the verification game.
-    function sessionDecided(bytes32 sessionId, bytes32 claimId, address winner, address loser) internal {
-        SuperblockClaim storage claim = claims[claimId];
-
-        require(claimExists(claim));
-
-        claim.verificationOngoing = false;
-
-        //TODO Fix reward splitting
-        // reward the winner, with the loser's bonded deposit.
-        //uint depositToTransfer = claim.bondedDeposits[loser];
-        //claim.bondedDeposits[winner] += depositToTransfer;
-        //delete claim.bondedDeposits[loser];
-
-        if (claim.claimant == loser) {
-            // the claim is over.
-            // note: no callback needed to the DogeRelay contract,
-            // because it by default does not save blocks.
-
-            //Trigger end of verification game
-            claim.invalid = true;
-
-            // It should not fail when called from sessionDecided
-            // the data should be verified and a out of gas will cause
-            // the whole transaction to revert
-            runNextBattleSession(claimId);
-        } else if (claim.claimant == winner) {
-            // the claim continues.
-            // It should not fail when called from sessionDecided
-            runNextBattleSession(claimId);
-        } else {
-            revert();
-        }
-
-        emit SessionDecided(sessionId, winner, loser);
     }
 
     // @dev – check whether a claim has successfully withstood all challenges.
@@ -373,6 +295,48 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
         return true;
     }
 
+    // @dev – called when a battle session has ended.
+    //
+    // @param sessionId – the sessionId.
+    // @param claimId - Id of the superblock claim
+    // @param winner – winner of the verification game.
+    // @param loser – loser of the verification game.
+    function sessionDecided(bytes32 sessionId, bytes32 claimId, address winner, address loser) internal {
+        SuperblockClaim storage claim = claims[claimId];
+
+        require(claimExists(claim));
+
+        claim.verificationOngoing = false;
+
+        //TODO Fix reward splitting
+        // reward the winner, with the loser's bonded deposit.
+        //uint depositToTransfer = claim.bondedDeposits[loser];
+        //claim.bondedDeposits[winner] += depositToTransfer;
+        //delete claim.bondedDeposits[loser];
+
+        if (claim.claimant == loser) {
+            // the claim is over.
+            // note: no callback needed to the DogeRelay contract,
+            // because it by default does not save blocks.
+
+            //Trigger end of verification game
+            claim.invalid = true;
+
+            // It should not fail when called from sessionDecided
+            // the data should be verified and a out of gas will cause
+            // the whole transaction to revert
+            runNextBattleSession(claimId);
+        } else if (claim.claimant == winner) {
+            // the claim continues.
+            // It should not fail when called from sessionDecided
+            runNextBattleSession(claimId);
+        } else {
+            revert();
+        }
+
+        emit SuperblockBattleDecided(sessionId, winner, loser);
+    }
+
     // @dev – Check if a claim exists
     function claimExists(SuperblockClaim claim) pure private returns(bool) {
         return (claim.claimant != 0x0);
@@ -383,134 +347,51 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
         return claims[claimId].sessions[challenger];
     }
 
-    // @dev – Make a query for superblock hashes
-    function doQueryMerkleRootHashes(bytes32 claimId) internal returns (bool) {
-        SuperblockClaim storage claim = claims[claimId];
-        if (claim.challengeState == ChallengeState.Challenged) {
-            claim.challengeState = ChallengeState.QueryMerkleRootHashes;
-            return true;
+    function doVerifyScryptHash(bytes32 sessionId, bytes32 blockSha256Hash, bytes32 blockScryptHash, bytes blockHeader, bool isMergeMined, address submitter) internal returns (bytes32) {
+        numScryptHashVerifications += 1;
+        bytes32 challengeId = keccak256(abi.encodePacked(blockScryptHash, submitter, numScryptHashVerifications));
+        if (isMergeMined) {
+            // Merge mined block
+            scryptChecker.checkScrypt(DogeTx.sliceArray(blockHeader, blockHeader.length - 80, blockHeader.length), blockScryptHash, challengeId, submitter, IScryptCheckerListener(this));
+        } else {
+            // Non merge mined block
+            scryptChecker.checkScrypt(DogeTx.sliceArray(blockHeader, 0, 80), blockScryptHash, challengeId, submitter, IScryptCheckerListener(this));
         }
-        return false;
-    }
+        scryptHashVerifications[challengeId] = ScryptHashVerification({
+            sessionId: sessionId,
+            blockSha256Hash: blockSha256Hash
+        }); sessionId;
 
-    // @dev – Verify an array of hashes matches superblock merkleroot
-    function verifyMerkleRootHashes(bytes32 claimId, bytes32[] blockHashes) internal returns (bool) {
-        SuperblockClaim storage claim = claims[claimId];
-        require(claim.blockHashes.length == 0);
-        if (claim.challengeState == ChallengeState.QueryMerkleRootHashes) {
-            claim.challengeState = ChallengeState.RespondMerkleRootHashes;
-            claim.blockHashes = blockHashes;
-            bytes32 lastHash = superblocks.getSuperblockLastHash(claim.superblockId);
-            require(lastHash == claim.blockHashes[claim.blockHashes.length - 1]);
-            bytes32 merkleRoot = DogeTx.makeMerkle(claim.blockHashes);
-            require(merkleRoot == superblocks.getSuperblockMerkleRoot(claim.superblockId));
-            return true;
-        }
-        return false;
-    }
-
-    // @dev – Make a query for superblock block headers
-    function doQueryBlockHeader(bytes32 claimId, bytes32 blockHash) internal returns (bool) {
-        SuperblockClaim storage claim = claims[claimId];
-        if ((claim.countBlockHeaderQueries == 0 && claim.challengeState == ChallengeState.RespondMerkleRootHashes) ||
-            (claim.countBlockHeaderQueries > 0 && claim.challengeState == ChallengeState.RespondBlockHeader)) {
-            require(claim.countBlockHeaderQueries < claim.blockHashes.length);
-            require(claim.blocksInfo[blockHash].status == 0);
-            claim.countBlockHeaderQueries += 1;
-            claim.blocksInfo[blockHash].status = 1;
-            claim.challengeState = ChallengeState.QueryBlockHeader;
-            return true;
-        }
-        return false;
-    }
-
-    uint constant DOGECOIN_HEADER_VERSION_OFFSET = 0;
-    uint constant DOGECOIN_HEADER_PARENT_OFFSET = 4;
-    uint constant DOGECOIN_HEADER_MERKLEROOT_OFFSET = 36;
-    uint constant DOGECOIN_HEADER_TIMESTAMP_OFFSET = 68;
-    uint constant DOGECOIN_HEADER_DIFFICULTY_OFFSET = 72;
-    uint constant DOGECOIN_HEADER_NONCE_OFFSET = 76;
-
-    // @dev - Verify a block header data correspond to a block hash in the superblock
-    function verifyBlockHeader(bytes32 claimId, bytes32 scryptBlockHash, bytes blockHeader) internal returns (bool) {
-        SuperblockClaim storage claim = claims[claimId];
-        if (claim.challengeState == ChallengeState.QueryBlockHeader) {
-            bytes32 blockSha256Hash = bytes32(DogeTx.dblShaFlipMem(blockHeader, 0, 80));
-            require(claim.blocksInfo[blockSha256Hash].status == 1);
-            claim.blocksInfo[blockSha256Hash].status = 2;
-            claim.countBlockHeaderResponses += 1;
-
-            uint timestamp = DogeTx.getBytesLE(blockHeader, DOGECOIN_HEADER_TIMESTAMP_OFFSET, 32);
-
-            // Block timestamp to be within the expected timestamp of the superblock
-            require(timestamp / superblockDuration <= claim.timestamp / superblockDuration);
-            require(timestamp / superblockDuration >= claim.timestamp / superblockDuration - 1);
-
-            uint32 bits = uint32(DogeTx.getBytesLE(blockHeader, DOGECOIN_HEADER_DIFFICULTY_OFFSET, 32));
-
-            claim.accumulatedWork += DogeTx.targetToDiff(DogeTx.targetFromBits(bits));
-
-            bytes32 blockScryptHash = scryptBlockHash;
-            uint err;
-            uint blockHash;
-            uint scryptHash;
-            bool isMergeMined;
-            (err, blockHash, scryptHash, isMergeMined) = DogeTx.verifyBlockHeader(blockHeader, 0, blockHeader.length, uint(blockScryptHash));
-            require(err == 0);
-
-            if (isMergeMined) {
-                scryptChecker.checkScrypt(DogeTx.sliceArray(blockHeader, blockHeader.length - 80, blockHeader.length), blockScryptHash, 0, claim.claimant, IScryptCheckerListener(this));
-            } else {
-                scryptChecker.checkScrypt(DogeTx.sliceArray(blockHeader, 0, 80), blockScryptHash, 0, claim.claimant, IScryptCheckerListener(this));
-            }
-
-            if (blockSha256Hash == claim.blockHashes[claim.blockHashes.length - 1]) {
-                claim.lastBlockTimestamp = timestamp;
-            }
-
-            if (claim.countBlockHeaderResponses == claim.blockHashes.length) {
-                claim.challengeState = ChallengeState.PendingVerification;
-            } else {
-                claim.challengeState = ChallengeState.RespondBlockHeader;
-            }
-            return true;
-        }
-        return false;
-    }
-
-    // @dev - Verify all block header matches superblock accumulated work
-    function verifySuperblock(bytes32 claimId) internal returns (bool) {
-        SuperblockClaim storage claim = claims[claimId];
-        if (claim.challengeState == ChallengeState.PendingVerification) {
-            bytes32 superblockId = claim.superblockId;
-
-            require(claim.lastBlockTimestamp != 0 && claim.lastBlockTimestamp == claim.timestamp);
-
-            uint accumulatedWork = superblocks.getSuperblockAccumulatedWork(superblockId);
-            bytes32 parentId = superblocks.getSuperblockParentId(superblockId);
-            uint parentAccumulatedWork = superblocks.getSuperblockAccumulatedWork(parentId);
-            require(parentAccumulatedWork + claim.accumulatedWork == accumulatedWork);
-
-            bytes32 lastHash = superblocks.getSuperblockLastHash(superblockId);
-            require(lastHash == claim.blockHashes[claim.blockHashes.length - 1]);
-
-            claim.challengeState = ChallengeState.SuperblockVerified;
-
-            return true;
-        }
-        return false;
+        return challengeId;
     }
 
     // @dev Scrypt verification succeeded
-    function scryptVerified(bytes32 _proposalId) external returns (uint) {
-        _proposalId;
+    function scryptVerified(bytes32 scryptChallengeId) external onlyFrom(scryptChecker) returns (uint) {
+        ScryptHashVerification storage verification = scryptHashVerifications[scryptChallengeId];
+        require(verification.sessionId != 0x0);
+        notifyScryptHashSucceeded(verification.sessionId, verification.blockSha256Hash);
+        delete scryptHashVerifications[scryptChallengeId];
         return 0;
     }
 
     // @dev Scrypt verification failed
-    function scryptFailed(bytes32 _proposalId) external returns (uint) {
-        _proposalId;
+    function scryptFailed(bytes32 scryptChallengeId) external onlyFrom(scryptChecker) returns (uint) {
+        ScryptHashVerification storage verification = scryptHashVerifications[scryptChallengeId];
+        require(verification.sessionId != 0x0);
+        notifyScryptHashFailed(verification.sessionId, verification.blockSha256Hash);
+        delete scryptHashVerifications[scryptChallengeId];
         return 0;
     }
 
+    function getSuperblockInfo(bytes32 superblockId) internal view returns (
+        bytes32 _blocksMerkleRoot,
+        uint _accumulatedWork,
+        uint _timestamp,
+        bytes32 _lastHash,
+        bytes32 _parentId,
+        address _submitter,
+        DogeSuperblocks.Status _status
+    ) {
+        return superblocks.getSuperblock(superblockId);
+    }
 }
