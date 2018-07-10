@@ -59,8 +59,8 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager, IScryptChec
     // @param _superblockDuration Superblock duration (in seconds)
     // @param _superblockDelay Delay to accept a superblock submition (in seconds)
     // @param _superblockTimeout Time to wait for challenges (in seconds)
-    constructor(DogeSuperblocks _superblocks, uint _superblockDuration, uint _superblockDelay, uint _superblockTimeout)
-        DogeBattleManager(_superblockDuration, _superblockDelay, _superblockTimeout) public {
+    constructor(Network _network, DogeSuperblocks _superblocks, uint _superblockDuration, uint _superblockDelay, uint _superblockTimeout)
+        DogeBattleManager(_network, _superblockDuration, _superblockDelay, _superblockTimeout) public {
         superblocks = _superblocks;
     }
 

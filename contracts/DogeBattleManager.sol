@@ -8,6 +8,8 @@ import {IScryptCheckerListener} from "./IScryptCheckerListener.sol";
 // @dev - Manages a battle session between superblock submitter and challenger
 contract DogeBattleManager is DogeErrorCodes {
 
+    enum Network { MAINNET, TESTNET, REGTEST }
+
     enum ChallengeState {
         Unchallenged,             // Unchallenged submission
         Challenged,               // Claims was challenged
@@ -75,6 +77,9 @@ contract DogeBattleManager is DogeErrorCodes {
 
     mapping (bytes32 => ScryptHashVerification) public scryptHashVerifications;
 
+    // network that the stored blocks belong to
+    Network private net;
+
     event NewBattle(bytes32 sessionId, address submitter, address challenger);
     event ChallengerConvicted(bytes32 sessionId, address challenger);
     event SubmitterConvicted(bytes32 sessionId, address submitter);
@@ -101,7 +106,8 @@ contract DogeBattleManager is DogeErrorCodes {
         _;
     }
 
-    constructor(uint _superblockDuration, uint _superblockDelay, uint _superblockTimeout) public {
+    constructor(Network _network, uint _superblockDuration, uint _superblockDelay, uint _superblockTimeout) public {
+        net = _network;
         superblockDuration = _superblockDuration;
         superblockDelay = _superblockDelay;
         superblockTimeout = _superblockTimeout;
@@ -287,7 +293,7 @@ contract DogeBattleManager is DogeErrorCodes {
         (, accWork, , , parentId, , ) = getSuperblockInfo(session.superblockId);
         (, parentWork, timestamp, prevBlock, , , ) = getSuperblockInfo(parentId);
         uint idx = 0;
-        uint work; // FIXME: parent work
+        uint work;
         while (idx < session.blockHashes.length) {
             bytes32 blockSha256Hash = session.blockHashes[idx];
             uint32 bits = session.blockInfos[blockSha256Hash].bits;
@@ -296,6 +302,9 @@ contract DogeBattleManager is DogeErrorCodes {
             }
             if (idx > 0) {
                 uint32 newBits = DogeTx.calculateDigishieldDifficulty(int64(timestamp) - int64(prevTimestamp), prevBits);
+                if (net == Network.TESTNET && session.blockInfos[blockSha256Hash].timestamp - timestamp > 120) {
+                    newBits = 0x1e0fffff;
+                }
                 if (bits != newBits) {
                     return ERR_SUPERBLOCK_BAD_BITS;
                 }

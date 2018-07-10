@@ -72,7 +72,7 @@ async function deployDevelopment(deployer, network, accounts, networkId, trusted
   await deployer.deploy(DummyTransactionProcessor, DogeRelayForTests.address);
 
   await deployer.deploy(DogeSuperblocks);
-  await deployer.deploy(DogeClaimManager, DogeSuperblocks.address, superblockTimes.DURATION, superblockTimes.DELAY, superblockTimes.TIMEOUT);
+  await deployer.deploy(DogeClaimManager, networkId, DogeSuperblocks.address, superblockTimes.DURATION, superblockTimes.DELAY, superblockTimes.TIMEOUT);
 
   await deployer.deploy(ScryptCheckerDummy, true)
 
@@ -107,7 +107,7 @@ async function deployIntegration(deployer, network, accounts, networkId, trusted
   await deployer.deploy(DogeToken, DogeRelay.address, trustedDogeEthPriceOracle, collateralRatio, {gas: 5300000});
 
   await deployer.deploy(DogeSuperblocks, {gas: 2700000});
-  await deployer.deploy(DogeClaimManager, DogeSuperblocks.address, superblockTimes.DURATION, superblockTimes.DELAY, superblockTimes.TIMEOUT, {gas: 7500000});
+  await deployer.deploy(DogeClaimManager, networkId, DogeSuperblocks.address, superblockTimes.DURATION, superblockTimes.DELAY, superblockTimes.TIMEOUT, {gas: 7500000});
 
   await deployer.deploy(ScryptVerifier, {gas: 4200000});
   await deployer.deploy(ClaimManager, ScryptVerifier.address, {gas: 5000000});

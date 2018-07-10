@@ -27,6 +27,10 @@ const SUPERBLOCK_TIMES_DOGE_REGTEST = {
   TIMEOUT: 5,       // 5 seconds
 };
 
+const DOGE_MAINNET = 0;
+const DOGE_TESTNET = 1;
+const DOGE_REGTEST = 2;
+
 contract('DogeClaimManager3', (accounts) => {
   const owner = accounts[0];
   const submitter = accounts[1];
@@ -43,7 +47,7 @@ contract('DogeClaimManager3', (accounts) => {
 
   async function initSuperblocks(dummyChecker, genesisSuperblock) {
     superblocks = await DogeSuperblocks.new();
-    claimManager = await DogeClaimManager.new(superblocks.address, SUPERBLOCK_TIMES_DOGE_REGTEST.DURATION, SUPERBLOCK_TIMES_DOGE_REGTEST.DELAY, SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+    claimManager = await DogeClaimManager.new(DOGE_MAINNET, superblocks.address, SUPERBLOCK_TIMES_DOGE_REGTEST.DURATION, SUPERBLOCK_TIMES_DOGE_REGTEST.DELAY, SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
     scryptVerifier = await ScryptVerifier.new();
     if (dummyChecker) {
       scryptChecker = await ScryptCheckerDummy.new(false);
