@@ -1051,25 +1051,29 @@ library DogeTx {
     }
 
     // @dev - Verify block header
-    // @return - true when a the block header is valid
-    function verifyBlockHeader(bytes _blockHeaderBytes, uint pos, uint len, uint _scryptBlockHash) external view returns (uint, uint, uint) {
-        BlockHeader memory blockHeader = parseHeaderBytes(_blockHeaderBytes, pos);
+    // @param _blockHeaderBytes array of bytes with the block header
+    // @param _pos starting position of the block header
+    // @param _len length of the block header
+    // @param _proposedBlockScryptash proposed block scrypt hash
+    // @return - [ErrorCode, BlockSha256Hash, BlockScryptHash, IsMergeMined] 
+    function verifyBlockHeader(bytes _blockHeaderBytes, uint _pos, uint _len, uint _proposedBlockScryptash) external view returns (uint, uint, uint, bool) {
+        BlockHeader memory blockHeader = parseHeaderBytes(_blockHeaderBytes, _pos);
         uint blockSha256Hash = blockHeader.blockHash;
         if (isMergeMined(blockHeader)) {
-            AuxPoW memory ap = parseAuxPoW(_blockHeaderBytes, pos, len);
+            AuxPoW memory ap = parseAuxPoW(_blockHeaderBytes, _pos, _len);
             if (flip32Bytes(ap.scryptHash) > targetFromBits(blockHeader.bits)) {
-                return (ERR_PROOF_OF_WORK, blockHeader.blockHash, ap.scryptHash);
+                return (ERR_PROOF_OF_WORK, blockHeader.blockHash, ap.scryptHash, true);
             }
             uint auxPoWCode = checkAuxPoW(blockSha256Hash, ap);
             if (auxPoWCode != 1) {
-                return (auxPoWCode, blockHeader.blockHash, ap.scryptHash);
+                return (auxPoWCode, blockHeader.blockHash, ap.scryptHash, true);
             }
-            return (0, blockHeader.blockHash, ap.scryptHash);
+            return (0, blockHeader.blockHash, ap.scryptHash, true);
         } else {
-            if (flip32Bytes(_scryptBlockHash) > targetFromBits(blockHeader.bits)) {
-                return (ERR_PROOF_OF_WORK, blockHeader.blockHash, _scryptBlockHash);
+            if (flip32Bytes(_proposedBlockScryptash) > targetFromBits(blockHeader.bits)) {
+                return (ERR_PROOF_OF_WORK, blockHeader.blockHash, _proposedBlockScryptash, false);
             }
-            return (0, blockHeader.blockHash, _scryptBlockHash);
+            return (0, blockHeader.blockHash, _proposedBlockScryptash, false);
         }
     }
 }

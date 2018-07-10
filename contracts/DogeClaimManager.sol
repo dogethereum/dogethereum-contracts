@@ -454,10 +454,11 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
             uint err;
             uint blockHash;
             uint scryptHash;
-            (err, blockHash, scryptHash) = DogeTx.verifyBlockHeader(blockHeader, 0, blockHeader.length, uint(blockScryptHash));
+            bool isMergeMined;
+            (err, blockHash, scryptHash, isMergeMined) = DogeTx.verifyBlockHeader(blockHeader, 0, blockHeader.length, uint(blockScryptHash));
             require(err == 0);
 
-            if (DogeTx.isMergeMined(blockHeader, 0)) {
+            if (isMergeMined) {
                 scryptChecker.checkScrypt(DogeTx.sliceArray(blockHeader, blockHeader.length - 80, blockHeader.length), blockScryptHash, 0, claim.claimant, IScryptCheckerListener(this));
             } else {
                 scryptChecker.checkScrypt(DogeTx.sliceArray(blockHeader, 0, 80), blockScryptHash, 0, claim.claimant, IScryptCheckerListener(this));

@@ -196,13 +196,14 @@ contract DogeRelay is IScryptCheckerListener {
         uint err;
         uint blockHash;
         uint scryptHash;
-        (err, blockHash, scryptHash) = DogeTx.verifyBlockHeader(_blockHeaderBytes, pos, len, _proposedScryptBlockHash);
+        bool isMergeMined;
+        (err, blockHash, scryptHash, isMergeMined) = DogeTx.verifyBlockHeader(_blockHeaderBytes, pos, len, _proposedScryptBlockHash);
         if (err != 0) {
             emit StoreHeader(bytes32(blockHash), err);
             return 0;
         }
 
-        if (DogeTx.isMergeMined(bi._blockHeader)) {
+        if (isMergeMined) {
             //DogeTx.sliceArray(...) is a merge mined block header, therefore longer than a regular block header
             scryptChecker.checkScrypt(DogeTx.sliceArray(_blockHeaderBytes, pos + len - 80, pos + len), bytes32(scryptHash), bytes32(onholdIdx), msg.sender, IScryptCheckerListener(this));
         } else {
