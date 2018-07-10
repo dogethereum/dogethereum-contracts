@@ -1076,4 +1076,110 @@ library DogeTx {
             return (0, blockHeader.blockHash, _proposedBlockScryptash, false);
         }
     }
+
+    // @dev - Calculate difficulty from block compact representation (bits)
+    function diffFromBits(uint32 bits) external pure returns (uint) {
+        return targetToDiff(targetFromBits(bits));
+    }
+
+    // For verifying Dogecoin difficulty
+    uint constant DIFFICULTY_ADJUSTMENT_INTERVAL = 1;  // Bitcoin adjusts every block
+    uint constant TARGET_TIMESPAN =  60;  // 1 minute
+    uint constant TARGET_TIMESPAN_DIV_4 = TARGET_TIMESPAN / 4;
+    uint constant TARGET_TIMESPAN_MUL_4 = TARGET_TIMESPAN * 4;
+    uint constant UNROUNDED_MAX_TARGET = 2**224 - 1;  // different from (2**16-1)*2**208 http =//bitcoin.stackexchange.com/questions/13803/how/ exactly-was-the-original-coefficient-for-difficulty-determined
+    uint constant POW_LIMIT = 0x00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
+
+    // @dev - Implementation of DigiShield, almost directly translated from
+    // C++ implementation of Dogecoin. See function CalculateDogecoinNextWorkRequired
+    // on dogecoin/src/dogecoin.cpp for more details.
+    // Calculates the next block's difficulty based on the current block's elapsed time
+    // and the desired mining time for a block, which is 60 seconds after block 145k.
+    //
+    // @param _actualTimespan - time elapsed from previous block creation til current block creation;
+    // i.e., how much time it took to mine the current block
+    // @param _bits - previous block header difficulty (in bits)
+    // @return - expected difficulty for the next block
+    function calculateDigishieldDifficulty(int64 _actualTimespan, uint32 _bits) external pure returns (uint32 result) {
+        int64 retargetTimespan = int64(TARGET_TIMESPAN);
+        int64 nModulatedTimespan = int64(_actualTimespan);
+
+        nModulatedTimespan = retargetTimespan + int64(nModulatedTimespan - retargetTimespan) / int64(8); //amplitude filter
+        int64 nMinTimespan = retargetTimespan - (int64(retargetTimespan) / int64(4));
+        int64 nMaxTimespan = retargetTimespan + (int64(retargetTimespan) / int64(2));
+
+        // Limit adjustment step
+        if (nModulatedTimespan < nMinTimespan) {
+            nModulatedTimespan = nMinTimespan;
+        } else if (nModulatedTimespan > nMaxTimespan) {
+            nModulatedTimespan = nMaxTimespan;
+        }
+
+        // Retarget
+        uint bnNew = targetFromBits(_bits);
+        bnNew = bnNew * uint(nModulatedTimespan);
+        bnNew = uint(bnNew) / uint(retargetTimespan);
+
+        if (bnNew > POW_LIMIT) {
+            bnNew = POW_LIMIT;
+        }
+
+        return toCompactBits(bnNew);
+    }
+
+    // @dev - shift information to the right by a specified number of bits
+    //
+    // @param _val - value to be shifted
+    // @param _shift - number of bits to shift
+    // @return - `_val` shifted `_shift` bits to the right, i.e. divided by 2**`_shift`
+    function shiftRight(uint _val, uint _shift) private pure returns (uint) {
+        return _val / uint(2)**_shift;
+    }
+
+    // @dev - shift information to the left by a specified number of bits
+    //
+    // @param _val - value to be shifted
+    // @param _shift - number of bits to shift
+    // @return - `_val` shifted `_shift` bits to the left, i.e. multiplied by 2**`_shift`
+    function shiftLeft(uint _val, uint _shift) private pure returns (uint) {
+        return _val * uint(2)**_shift;
+    }
+
+    // @dev - get the number of bits required to represent a given integer value without losing information
+    //
+    // @param _val - unsigned integer value
+    // @return - given value's bit length
+    function bitLen(uint _val) private pure returns (uint length) {
+        uint int_type = _val;
+        while (int_type > 0) {
+            int_type = shiftRight(int_type, 1);
+            length += 1;
+        }
+    }
+
+    // @dev - Convert uint256 to compact encoding
+    // based on https://github.com/petertodd/python-bitcoinlib/blob/2a5dda45b557515fb12a0a18e5dd48d2f5cd13c2/bitcoin/core/serialize.py
+    // Analogous to arith_uint256::GetCompact from C++ implementation
+    //
+    // @param _val - difficulty in target format
+    // @return - difficulty in bits format
+    function toCompactBits(uint _val) private pure returns (uint32) {
+        uint nbytes = uint (shiftRight((bitLen(_val) + 7), 3));
+        uint32 compact = 0;
+        if (nbytes <= 3) {
+            compact = uint32 (shiftLeft((_val & 0xFFFFFF), 8 * (3 - nbytes)));
+        } else {
+            compact = uint32 (shiftRight(_val, 8 * (nbytes - 3)));
+            compact = uint32 (compact & 0xFFFFFF);
+        }
+
+        // If the sign bit (0x00800000) is set, divide the mantissa by 256 and
+        // increase the exponent to get an encoding without it set.
+        if ((compact & 0x00800000) > 0) {
+            compact = uint32(shiftRight(compact, 8));
+            nbytes += 1;
+        }
+
+        return compact | uint32(shiftLeft(nbytes, 24));
+    }
 }
