@@ -11,12 +11,12 @@ let superblock1LastDogeBlockHash = "0x1ff78c993a7de8bf6c5e3f4a81c715adde8220ea8d
 let superblock1ParentId = "0x381be106bf5ac501957c128936ada535c863dcdb1f34180346979650df9f3e76";
 let superblock1Id = "0x398606391a81540afb940578239699ebfb94383f7655c707b28ff7d9d57790e7";
 
-let superblock2MerkleRoot = "0xcbe42b875399f4267cd4fa46dcfbb496062b77930bbd027c6de462e982a16dc5";
-let superblock2ChainWork = "0x8e";
-let superblock2LastDogeBlockTime = 1522179197;
-let superblock2LastDogeBlockHash = "0xcbe42b875399f4267cd4fa46dcfbb496062b77930bbd027c6de462e982a16dc5";
+let superblock2MerkleRoot = "0x07a69fef21fcd59b92ca1824ebcd91412bd39c7c6d1f8d754a7a84b0e05b8897";
+let superblock2ChainWork = "0x8c";
+let superblock2LastDogeBlockTime = 1522097137;
+let superblock2LastDogeBlockHash = "0x31ef1f22a3a22838c4ada500b8240e9ca773d9d1da811c0210c7afce9bd7a46e";
 let superblock2ParentId = superblock1Id;
-let superblock2Id = "0x249c091977946772e31f32f52c62ef0c72b985b6b87fb726ddd36b17fc5a0a0d";
+let superblock2Id = "0x6da6692f4f3003c764548d380c50be19cf3f9cc25238edf6e26350b6ddb84afc";
 
 let superblock3MerkleRoot = "0x49c9fee33f814e654979094f3694ebe109993c2f999b5141d425af28f93893f0";
 let superblock3ChainWork = "0x90";
@@ -81,25 +81,25 @@ contract('DogeSuperblocks', (accounts) => {
             assert.equal(parentId, superblock1ParentId, "Superblock 1 parent ID does not match");
         });
         
-        // it('Superblock 2', async() => {
-        //     dogeSuperblocksClaimManager = await dogeSuperblocks.claimManager;
+        it('Superblock 2', async() => {
+            dogeSuperblocksClaimManager = await dogeSuperblocks.claimManager;
             
-        //     await utils.mineBlocks(web3, 5);
-        //     await claimManager.checkClaimFinished(superblock2Id);
-        //     await utils.mineBlocks(web3, 5);
+            await utils.mineBlocks(web3, 5);
+            await claimManager.checkClaimFinished(superblock2Id);
+            await utils.mineBlocks(web3, 5);
             
-        //     merkleRoot = await dogeSuperblocks.getSuperblockMerkleRoot(superblock2Id);
-        //     chainWork = await dogeSuperblocks.getSuperblockAccumulatedWork(superblock2Id);
-        //     lastDogeBlockTime = await dogeSuperblocks.getSuperblockTimestamp(superblock2Id);
-        //     lastDogeBlockHash = await dogeSuperblocks.getSuperblockLastHash(superblock2Id);
-        //     parentId = await dogeSuperblocks.getSuperblockParentId(superblock2Id);
+            merkleRoot = await dogeSuperblocks.getSuperblockMerkleRoot(superblock2Id);
+            chainWork = await dogeSuperblocks.getSuperblockAccumulatedWork(superblock2Id);
+            lastDogeBlockTime = await dogeSuperblocks.getSuperblockTimestamp(superblock2Id);
+            lastDogeBlockHash = await dogeSuperblocks.getSuperblockLastHash(superblock2Id);
+            parentId = await dogeSuperblocks.getSuperblockParentId(superblock2Id);
             
-        //     assert.equal(merkleRoot, superblock2MerkleRoot, "Superblock 2 Merkle root does not match");
-        //     assert.equal(chainWork.toNumber(), superblock2ChainWork, "Superblock 2 chain work does not match");
-        //     assert.equal(lastDogeBlockTime, superblock2LastDogeBlockTime, "Superblock 2 last Doge block time does not match");
-        //     assert.equal(lastDogeBlockHash, superblock2LastDogeBlockHash, "Superblock 2 last Doge block hash does not match");
-        //     assert.equal(parentId, superblock2ParentId, "Superblock 2 parent ID does not match");
-        // });
+            assert.equal(merkleRoot, superblock2MerkleRoot, "Superblock 2 Merkle root does not match");
+            assert.equal(chainWork.toNumber(), superblock2ChainWork, "Superblock 2 chain work does not match");
+            assert.equal(lastDogeBlockTime, superblock2LastDogeBlockTime, "Superblock 2 last Doge block time does not match");
+            assert.equal(lastDogeBlockHash, superblock2LastDogeBlockHash, "Superblock 2 last Doge block hash does not match");
+            assert.equal(parentId, superblock2ParentId, "Superblock 2 parent ID does not match");
+        });
 
         // it('Superblock 3', async() => {
         //     dogeSuperblocksClaimManager = await dogeSuperblocks.claimManager;
