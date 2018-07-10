@@ -26,7 +26,7 @@ let superblock3ParentId = superblock2Id;
 let superblock3Id = "0xd2a92b0e691fddd3413d4c07e548b629a5655572a27337c0994728969ba1e086";
 
 contract('DogeSuperblocks', (accounts) => {
-    describe.only('Superblock proposal integration test', function() {
+    describe.skip('Superblock proposal integration test', function() {
         let dogeSuperblocks;
         let claimManager;
         
