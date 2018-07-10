@@ -348,7 +348,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         selectedUtxos = unlock.selectedUtxos;
         fee = unlock.fee;
         operatorPublicKeyHash = unlock.operatorPublicKeyHash;
-    }    
+    }
 
     function getUtxosLength(bytes20 operatorPublicKeyHash) public view returns (uint) {
         Operator storage operator = operators[operatorPublicKeyHash];

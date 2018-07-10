@@ -524,7 +524,7 @@ contract DogeRelay is IScryptCheckerListener {
     }
 
     // Temporary!
-    function relayTx(bytes _txBytes, bytes20 operatorPublicKeyHash, uint _txIndex, uint[] _txSiblings, bytes _dogeBlockHeader, uint _dogeBlockIndex, uint[] _dogeBlockSiblings, bytes32 _superblockId, TransactionProcessor _targetContract) public returns (uint) {
+    function relayTx(bytes _txBytes, bytes20 _operatorPublicKeyHash, uint _txIndex, uint[] _txSiblings, bytes _dogeBlockHeader, uint _dogeBlockIndex, uint[] _dogeBlockSiblings, bytes32 _superblockId, TransactionProcessor _targetContract) public returns (uint) {
         uint dogeBlockHash = DogeTx.dblShaFlip(_dogeBlockHeader);
 
         // Check if Doge block belongs to given superblock
@@ -538,9 +538,9 @@ contract DogeRelay is IScryptCheckerListener {
         uint txHash = verifyTx(_txBytes, _txIndex, _txSiblings, _dogeBlockHeader, _superblockId);
         
         if (txHash != 0) {
-            uint returnCode = _targetContract.processTransaction(_txBytes, txHash, operatorPublicKeyHash);
-            emit RelayTransaction(bytes32(txHash), 0);
-            return 0;
+            uint returnCode = _targetContract.processTransaction(_txBytes, txHash, _operatorPublicKeyHash);
+            emit RelayTransaction(bytes32(txHash), returnCode);
+            return (returnCode);
         }
 
         emit RelayTransaction(bytes32(0), ERR_RELAY_VERIFY);
