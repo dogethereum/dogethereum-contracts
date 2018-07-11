@@ -22,9 +22,10 @@ const toResult = (data) => ({
 });
 
 const SUPERBLOCK_TIMES_DOGE_REGTEST = {
-  DURATION: 600,     // 10 minute
+  DURATION: 600,    // 10 minute
   DELAY: 60,        // 1 minute
   TIMEOUT: 5,       // 5 seconds
+  CONFIMATIONS: 1,  // Superblocks required to confirm semi approved superblock
 };
 
 const DOGE_MAINNET = 0;
@@ -47,7 +48,7 @@ contract('DogeClaimManager3', (accounts) => {
 
   async function initSuperblocks(dummyChecker, genesisSuperblock) {
     superblocks = await DogeSuperblocks.new();
-    claimManager = await DogeClaimManager.new(DOGE_MAINNET, superblocks.address, SUPERBLOCK_TIMES_DOGE_REGTEST.DURATION, SUPERBLOCK_TIMES_DOGE_REGTEST.DELAY, SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+    claimManager = await DogeClaimManager.new(DOGE_MAINNET, superblocks.address, SUPERBLOCK_TIMES_DOGE_REGTEST.DURATION, SUPERBLOCK_TIMES_DOGE_REGTEST.DELAY, SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT, SUPERBLOCK_TIMES_DOGE_REGTEST.CONFIMATIONS);
     scryptVerifier = await ScryptVerifier.new();
     if (dummyChecker) {
       scryptChecker = await ScryptCheckerDummy.new(false);
@@ -233,7 +234,7 @@ contract('DogeClaimManager3', (accounts) => {
       // Confirm superblock
       await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
       result = await claimManager.checkClaimFinished(superblock1, { from: submitter });
-      assert.equal(result.logs[1].event, 'SuperblockClaimSuccessful', 'Superblock challenged');
+      assert.equal(result.logs[0].event, 'SuperblockClaimPending', 'Superblock challenged');
     });
     it('Reject invalid block scrypt hash', async () => {
       let result;

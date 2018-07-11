@@ -16,7 +16,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager, IScryptChec
     struct SuperblockClaim {
         bytes32 superblockId;                       // Superblock Id
         address claimant;                           // Superblock submitter
-        uint createdAt;                             // Superblock creation
+        uint createdAt;                             // Superblock creation time
 
         address[] challengers;                      // List of challengers
         mapping (address => uint) bondedDeposits;   // Deposit associated to challengers
@@ -43,25 +43,32 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager, IScryptChec
     // ScryptHash checker
     IScryptChecker public scryptChecker;
 
+    // Confirmations required to confirm semi approved superblocks
+    uint public superblockConfirmations;
+
     event DepositBonded(bytes32 claimId, address account, uint amount);
     event DepositUnbonded(bytes32 claimId, address account, uint amount);
     event SuperblockClaimCreated(bytes32 claimId, address claimant, bytes32 superblockId);
     event SuperblockClaimChallenged(bytes32 claimId, address challenger);
     event SuperblockBattleDecided(bytes32 sessionId, address winner, address loser);
     event SuperblockClaimSuccessful(bytes32 claimId, address claimant, bytes32 superblockId);
+    event SuperblockClaimPending(bytes32 claimId, address claimant, bytes32 superblockId);
     event SuperblockClaimFailed(bytes32 claimId, address claimant, bytes32 superblockId);
     event VerificationGameStarted(bytes32 claimId, address claimant, address challenger, bytes32 sessionId);
 
     event ErrorClaim(bytes32 claimId, uint err);
 
     // @dev – Configures the contract storing the superblocks
+    // @param _network Network type to use for block difficulty validation
     // @param _superblocks Contract that manages superblocks
     // @param _superblockDuration Superblock duration (in seconds)
     // @param _superblockDelay Delay to accept a superblock submition (in seconds)
     // @param _superblockTimeout Time to wait for challenges (in seconds)
-    constructor(Network _network, DogeSuperblocks _superblocks, uint _superblockDuration, uint _superblockDelay, uint _superblockTimeout)
+    // @param _superblockConfirmations Confirmations required to confirm semi approved superblocks
+    constructor(Network _network, DogeSuperblocks _superblocks, uint _superblockDuration, uint _superblockDelay, uint _superblockTimeout, uint _superblockConfirmations)
         DogeBattleManager(_network, _superblockDuration, _superblockDelay, _superblockTimeout) public {
         superblocks = _superblocks;
+        superblockConfirmations = _superblockConfirmations;
     }
 
     // @dev - sets ScryptChecker instance associated with this DogeClaimManager contract.
@@ -161,7 +168,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager, IScryptChec
         claim.decided = false;
         claim.invalid = false;
         claim.verificationOngoing = false;
-        claim.createdAt = block.number;
+        claim.createdAt = block.timestamp;
         claim.challengeTimeout = block.timestamp + superblockTimeout;
         claim.superblockId = superblockId;
 
@@ -282,17 +289,102 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager, IScryptChec
             superblocks.invalidate(claim.superblockId, msg.sender);
             emit SuperblockClaimFailed(claimId, claim.claimant, claim.superblockId);
         } else {
-            // If no challengers confirm immediately
+            bool confirmImmediately = false;
+            // No challengers and parent approved confirm immediately
             if (claim.challengers.length == 0) {
+                bytes32 parentId = superblocks.getSuperblockParentId(claim.superblockId);
+                DogeSuperblocks.Status status = superblocks.getSuperblockStatus(parentId);
+                if (status == DogeSuperblocks.Status.Approved) {
+                    confirmImmediately = true;
+                }
+            }
+
+            if (confirmImmediately) {
                 superblocks.confirm(claim.superblockId, msg.sender);
+                unbondDeposit(claimId, claim.claimant);
+                emit SuperblockClaimSuccessful(claimId, claim.claimant, claim.superblockId);
             } else {
                 superblocks.semiApprove(claim.superblockId, msg.sender);
+                emit SuperblockClaimPending(claimId, claim.claimant, claim.superblockId);
             }
-            unbondDeposit(claimId, claim.claimant);
-            emit SuperblockClaimSuccessful(claimId, claim.claimant, claim.superblockId);
+        }
+        return true;
+    }
+
+    // @dev – confirm semi approved superblock.
+    //
+    // @param claimId – the claim ID.
+    function confirmClaim(bytes32 claimId, bytes32 descendantId) public returns (bool) {
+        uint i = 0;
+        bytes32 id = descendantId;
+        DogeSuperblocks.Status status;
+        SuperblockClaim storage claim = claims[id];
+        while (true) {
+            if (!claimExists(claim)) {
+                emit ErrorClaim(id, ERR_SUPERBLOCK_BAD_CLAIM);
+                return false;
+            }
+
+            status = superblocks.getSuperblockStatus(id);
+            if (status != DogeSuperblocks.Status.SemiApproved) {
+                emit ErrorClaim(id, ERR_SUPERBLOCK_BAD_STATUS);
+                return false;
+            }
+
+            if (id == claimId) {
+                break;
+            }
+
+            id = superblocks.getSuperblockParentId(id);
+            i += 1;
+            claim = claims[id];
         }
 
-        return true;
+        if (i < superblockConfirmations) {
+            emit ErrorClaim(id, ERR_SUPERBLOCK_MISSING_CONFIRMATIONS);
+            return false;
+        }
+
+        bytes32 parentId = superblocks.getSuperblockParentId(claimId);
+        status = superblocks.getSuperblockStatus(parentId);
+        if (status == DogeSuperblocks.Status.Approved) {
+            superblocks.confirm(claimId, msg.sender);
+            unbondDeposit(claimId, claim.claimant);
+            emit SuperblockClaimSuccessful(claimId, claim.claimant, claim.superblockId);
+            return true;
+        }
+
+        return false;
+    }
+
+    // @dev – confirm semi approved superblock.
+    //
+    // @param claimId – the claim ID.
+    function rejectClaim(bytes32 claimId) public returns (bool) {
+        SuperblockClaim storage claim = claims[claimId];
+        if (!claimExists(claim)) {
+            emit ErrorClaim(id, ERR_SUPERBLOCK_BAD_CLAIM);
+            return false;
+        }
+
+        uint height = superblocks.getSuperblockHeight(claimId);
+        bytes32 id = superblocks.getBestSuperblock();
+        if (superblocks.getSuperblockHeight(id) < height + superblockConfirmations) {
+            emit ErrorClaim(id, ERR_SUPERBLOCK_MISSING_CONFIRMATIONS);
+            return false;
+        }
+
+        while (superblocks.getSuperblockHeight(id) > height) {
+            id = superblocks.getSuperblockParentId(id);
+        }
+
+        if (id != claimId) {
+            //FIXME: Send deposit to challengers
+            unbondDeposit(claimId, claim.claimant);
+            emit SuperblockClaimFailed(claimId, claim.claimant, claim.superblockId);
+        }
+
+        return false;
     }
 
     // @dev – called when a battle session has ended.

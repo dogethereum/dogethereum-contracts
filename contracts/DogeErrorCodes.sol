@@ -22,4 +22,5 @@ contract DogeErrorCodes {
 
     uint constant ERR_SUPERBLOCK_BAD_ACCUMULATED_WORK = 50120;
     uint constant ERR_SUPERBLOCK_BAD_BITS = 50130;
+    uint constant ERR_SUPERBLOCK_MISSING_CONFIRMATIONS = 50140;
 }

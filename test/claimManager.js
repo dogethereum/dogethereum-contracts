@@ -6,9 +6,10 @@ const ScryptVerifier = artifacts.require('ScryptVerifier');
 const ClaimManager = artifacts.require('ClaimManager');
 
 const SUPERBLOCK_TIMES_DOGE_REGTEST = {
-  DURATION: 600,     // 10 minute
+  DURATION: 600,    // 10 minute
   DELAY: 60,        // 1 minute
   TIMEOUT: 5,       // 5 seconds
+  CONFIMATIONS: 1,  // Superblocks required to confirm semi approved superblock
 };
 
 const DOGE_MAINNET = 0;
@@ -38,7 +39,7 @@ contract('DogeClaimManager', (accounts) => {
 
   async function initSuperblocks(dummyChecker, genesisSuperblock) {
     superblocks = await DogeSuperblocks.new();
-    claimManager = await DogeClaimManager.new(DOGE_MAINNET, superblocks.address, SUPERBLOCK_TIMES_DOGE_REGTEST.DURATION, SUPERBLOCK_TIMES_DOGE_REGTEST.DELAY, SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+    claimManager = await DogeClaimManager.new(DOGE_MAINNET, superblocks.address, SUPERBLOCK_TIMES_DOGE_REGTEST.DURATION, SUPERBLOCK_TIMES_DOGE_REGTEST.DELAY, SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT, SUPERBLOCK_TIMES_DOGE_REGTEST.CONFIMATIONS);
     if (dummyChecker) {
       scryptChecker = await ScryptCheckerDummy.new(false);
     } else {
@@ -180,7 +181,7 @@ contract('DogeClaimManager', (accounts) => {
     it('Confirm', async () => {
       await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
       const result = await claimManager.checkClaimFinished(superblock1, { from: challenger });
-      assert.equal(result.logs[1].event, 'SuperblockClaimSuccessful', 'Superblock challenged');
+      assert.equal(result.logs[0].event, 'SuperblockClaimPending', 'Superblock challenged');
     });
   });
   describe('Challenge superblock', () => {
@@ -249,7 +250,7 @@ contract('DogeClaimManager', (accounts) => {
     it('Accept superblock', async () => {
       await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
       const result = await claimManager.checkClaimFinished(claim1, { from: submitter });
-      assert.equal(result.logs[1].event, 'SuperblockClaimSuccessful', 'Superblock accepted');
+      assert.equal(result.logs[0].event, 'SuperblockClaimPending', 'Superblock accepted');
     });
   });
   describe('Challenge timeouts', () => {
