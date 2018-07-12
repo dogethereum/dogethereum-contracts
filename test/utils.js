@@ -73,6 +73,13 @@ function getBlockTimestamp(blockHeader) {
   return timestamp;
 }
 
+// Get difficulty bits from block header
+function getBlockDifficultyBits(blockHeader) {
+  const headerBin = module.exports.fromHex(blockHeader).slice(0, 80);
+  const bits = headerBin[72] + 256 * headerBin[73] + 256 * 256 * headerBin[74] + 256 * 256 * 256 * headerBin[75];
+  return bits;
+}
+
 // Get difficulty from dogecoin block header
 function getBlockDifficulty(blockHeader) {
   const headerBin = module.exports.fromHex(blockHeader).slice(0, 80);
@@ -137,14 +144,29 @@ function toUint256(value) {
   return module.exports.formatHexUint32(value);
 }
 
+// Format a numeric or hexadecimal string to solidity uint32
+function toUint32(value) {
+  if (typeof value === 'string') {
+    // Assume data is hex formatted
+    value = module.exports.remove0x(value);
+  } else {
+    // Number or BignNumber
+    value = value.toString(16);
+  }
+  // Format as 4 bytes = 8 hexadecimal chars
+  return module.exports.formatHexUint(value, 8);
+}
+
 // Calculate a superblock id
-function calcSuperblockId(merkleRoot, accumulatedWork, timestamp, lastHash, parentId) {
+function calcSuperblockId(merkleRoot, accumulatedWork, timestamp, prevTimestamp, lastHash, lastBits, parentId) {
   return `0x${Buffer.from(keccak256.arrayBuffer(
     Buffer.concat([
       module.exports.fromHex(merkleRoot),
       module.exports.fromHex(toUint256(accumulatedWork)),
       module.exports.fromHex(toUint256(timestamp)),
+      module.exports.fromHex(toUint256(prevTimestamp)),
       module.exports.fromHex(lastHash),
+      module.exports.fromHex(toUint32(lastBits)),
       module.exports.fromHex(parentId)
     ])
   )).toString('hex')}`;
@@ -152,35 +174,48 @@ function calcSuperblockId(merkleRoot, accumulatedWork, timestamp, lastHash, pare
 
 // Construct a superblock from an array of block headers
 function makeSuperblock(headers, parentId, parentAccumulatedWork) {
+  if (headers.length < 2) {
+    throw new Error('Invalid header');
+  }
   const blockHashes = headers.map(header => calcBlockSha256Hash(header));
   const accumulatedWork = headers.reduce((work, header) => work.plus(getBlockDifficulty(header)), web3.toBigNumber(parentAccumulatedWork));
   const merkleRoot = makeMerkle(blockHashes);
   const timestamp = getBlockTimestamp(headers[headers.length - 1]);
+  const prevTimestamp = getBlockTimestamp(headers[headers.length - 2]);
+  const lastBits = getBlockDifficultyBits(headers[headers.length - 1]);
   const lastHash = calcBlockSha256Hash(headers[headers.length - 1]);
   return {
     merkleRoot,
     accumulatedWork,
     timestamp,
+    prevTimestamp,
     lastHash,
+    lastBits,
     parentId,
     superblockId: calcSuperblockId(
       merkleRoot,
       accumulatedWork,
       timestamp,
+      prevTimestamp,
       lastHash,
+      lastBits,
       parentId,
     ),
   };
 }
 
+function formatHexUint(str, length) {
+  while (str.length < length) {
+    str = "0" + str;
+  }
+  return str;
+}
+
 module.exports = {
   formatHexUint32: function (str) {
-    while (str.length < 64) {
-      str = "0" + str;
-    }
-    return str;
-  }
-  ,
+    // To format 32 bytes is 64 hexadecimal characters
+    return formatHexUint(str, 64);
+  },
   remove0x: function (str) {
     return (str.indexOf("0x")==0) ? str.substring(2) : str;
   }
@@ -266,11 +301,13 @@ module.exports = {
     });
     return output;
   },
+  formatHexUint,
   makeMerkle,
   hashesToData,
   headerToData,
   calcBlockSha256Hash,
   getBlockTimestamp,
+  getBlockDifficultyBits,
   getBlockDifficulty,
   timeout,
   timeoutSeconds,

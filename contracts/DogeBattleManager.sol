@@ -163,7 +163,7 @@ contract DogeBattleManager is DogeErrorCodes {
         if (session.challengeState == ChallengeState.QueryMerkleRootHashes) {
             bytes32 merkleRoot;
             bytes32 lastHash;
-            (merkleRoot, , , lastHash, , , ) = getSuperblockInfo(session.superblockId);
+            (merkleRoot, , , , lastHash, , , , ) = getSuperblockInfo(session.superblockId);
             require(lastHash == blockHashes[blockHashes.length - 1]);
             require(merkleRoot == DogeTx.makeMerkle(blockHashes));
             session.blockHashes = blockHashes;
@@ -231,7 +231,7 @@ contract DogeBattleManager is DogeErrorCodes {
         uint blockTimestamp = DogeTx.getTimestamp(blockHeader, 0);
         uint superblockTimestamp;
 
-        (, , superblockTimestamp, , , , ) = getSuperblockInfo(superblockId);
+        (, , superblockTimestamp, , , , , , ) = getSuperblockInfo(superblockId);
 
         // Block timestamp to be within the expected timestamp of the superblock
         return (blockTimestamp / superblockDuration <= superblockTimestamp / superblockDuration)
@@ -287,11 +287,11 @@ contract DogeBattleManager is DogeErrorCodes {
         uint parentWork;
         bytes32 parentId;
         bytes32 prevBlock;
-        uint timestamp;
-        uint prevTimestamp;
+        uint parentTimestamp;
+        uint gpTimestamp;
         uint32 prevBits;
-        (, accWork, , , parentId, , ) = getSuperblockInfo(session.superblockId);
-        (, parentWork, timestamp, prevBlock, , , ) = getSuperblockInfo(parentId);
+        (, accWork, , , , , parentId, , ) = getSuperblockInfo(session.superblockId);
+        (, parentWork, parentTimestamp, gpTimestamp, prevBlock, prevBits, , , ) = getSuperblockInfo(parentId);
         uint idx = 0;
         uint work;
         while (idx < session.blockHashes.length) {
@@ -300,20 +300,18 @@ contract DogeBattleManager is DogeErrorCodes {
             if (session.blockInfos[blockSha256Hash].prevBlock != prevBlock) {
                 return ERR_SUPERBLOCK_BAD_PARENT;
             }
-            if (idx > 0) {
-                uint32 newBits = DogeTx.calculateDigishieldDifficulty(int64(timestamp) - int64(prevTimestamp), prevBits);
-                if (net == Network.TESTNET && session.blockInfos[blockSha256Hash].timestamp - timestamp > 120) {
-                    newBits = 0x1e0fffff;
-                }
-                if (bits != newBits) {
-                    return ERR_SUPERBLOCK_BAD_BITS;
-                }
+            uint32 newBits = DogeTx.calculateDigishieldDifficulty(int64(parentTimestamp) - int64(gpTimestamp), prevBits);
+            if (net == Network.TESTNET && session.blockInfos[blockSha256Hash].timestamp - parentTimestamp > 120) {
+                newBits = 0x1e0fffff;
+            }
+            if (bits != newBits) {
+                return ERR_SUPERBLOCK_BAD_BITS;
             }
             work += DogeTx.diffFromBits(session.blockInfos[blockSha256Hash].bits);
             prevBlock = blockSha256Hash;
             prevBits = session.blockInfos[blockSha256Hash].bits;
-            prevTimestamp = timestamp;
-            timestamp = session.blockInfos[blockSha256Hash].timestamp;
+            gpTimestamp = parentTimestamp;
+            parentTimestamp = session.blockInfos[blockSha256Hash].timestamp;
             idx += 1;
         }
         if (parentWork + work != accWork) {
@@ -427,7 +425,9 @@ contract DogeBattleManager is DogeErrorCodes {
         bytes32 _blocksMerkleRoot,
         uint _accumulatedWork,
         uint _timestamp,
+        uint _prevTimestamp,
         bytes32 _lastHash,
+        uint32 _lastBits,
         bytes32 _parentId,
         address _submitter,
         DogeSuperblocks.Status _status

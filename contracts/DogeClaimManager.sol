@@ -132,10 +132,12 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager, IScryptChec
     // @param _blocksMerkleRoot Root of the merkle tree of blocks contained in a superblock
     // @param _accumulatedWork Accumulated proof of work of the last block in the superblock
     // @param _timestamp Timestamp of the last block in the superblock
+    // @param _prevTimestamp Timestamp of the block previous to the last
     // @param _lastHash Hash of the last block in the superblock
+    // @param _lastBits Difficulty bits of the last block in the superblock
     // @param _parentId Id of the parent superblock
     // @return Error code and superblockId
-    function proposeSuperblock(bytes32 _blocksMerkleRoot, uint _accumulatedWork, uint _timestamp, bytes32 _lastHash, bytes32 _parentHash) public returns (uint, bytes32) {
+    function proposeSuperblock(bytes32 _blocksMerkleRoot, uint _accumulatedWork, uint _timestamp, uint _prevTimestamp, bytes32 _lastHash, uint32 _lastBits, bytes32 _parentHash) public returns (uint, bytes32) {
         require(address(superblocks) != 0);
 
         if (deposits[msg.sender] < minDeposit) {
@@ -150,7 +152,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager, IScryptChec
 
         uint err;
         bytes32 superblockId;
-        (err, superblockId) = superblocks.propose(_blocksMerkleRoot, _accumulatedWork, _timestamp, _lastHash, _parentHash, msg.sender);
+        (err, superblockId) = superblocks.propose(_blocksMerkleRoot, _accumulatedWork, _timestamp, _prevTimestamp, _lastHash, _lastBits, _parentHash, msg.sender);
         if (err != 0) {
             emit ErrorClaim(superblockId, err);
             return (err, superblockId);
@@ -479,7 +481,9 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager, IScryptChec
         bytes32 _blocksMerkleRoot,
         uint _accumulatedWork,
         uint _timestamp,
+        uint _prevTimestamp,
         bytes32 _lastHash,
+        uint32 _lastBits,
         bytes32 _parentId,
         address _submitter,
         DogeSuperblocks.Status _status

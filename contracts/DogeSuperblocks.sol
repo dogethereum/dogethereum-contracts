@@ -17,10 +17,12 @@ contract DogeSuperblocks is DogeErrorCodes {
         bytes32 blocksMerkleRoot;
         uint accumulatedWork;
         uint timestamp;
+        uint prevTimestamp;
         bytes32 lastHash;
         bytes32 parentId;
         address submitter;
         bytes32 ancestors;
+        uint32 lastBits;
         uint32 index;
         uint32 height;
         Status status;
@@ -74,14 +76,16 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @param _blocksMerkleRoot Root of the merkle tree of blocks contained in a superblock
     // @param _accumulatedWork Accumulated proof of work of the last block in the superblock
     // @param _timestamp Timestamp of the last block in the superblock
+    // @param _prevTimestamp Timestamp of the block previous to the last
     // @param _lastHash Hash of the last block in the superblock
+    // @param _lastBits Difficulty bits of the last block in the superblock
     // @param _parentId Id of the parent superblock
     // @return Error code and superblockId
-    function initialize(bytes32 _blocksMerkleRoot, uint _accumulatedWork, uint _timestamp, bytes32 _lastHash, bytes32 _parentId) public returns (uint, bytes32) {
+    function initialize(bytes32 _blocksMerkleRoot, uint _accumulatedWork, uint _timestamp, uint _prevTimestamp, bytes32 _lastHash, uint32 _lastBits, bytes32 _parentId) public returns (uint, bytes32) {
         require(bestSuperblock == 0);
         require(_parentId == 0);
 
-        bytes32 superblockId = calcSuperblockId(_blocksMerkleRoot, _accumulatedWork, _timestamp, _lastHash, _parentId);
+        bytes32 superblockId = calcSuperblockId(_blocksMerkleRoot, _accumulatedWork, _timestamp, _prevTimestamp, _lastHash, _lastBits, _parentId);
         SuperblockInfo storage superblock = superblocks[superblockId];
 
         require(superblock.status == Status.Unitialized);
@@ -91,11 +95,13 @@ contract DogeSuperblocks is DogeErrorCodes {
         superblock.blocksMerkleRoot = _blocksMerkleRoot;
         superblock.accumulatedWork = _accumulatedWork;
         superblock.timestamp = _timestamp;
+        superblock.prevTimestamp = _prevTimestamp;
         superblock.lastHash = _lastHash;
         superblock.parentId = _parentId;
         superblock.submitter = msg.sender;
         superblock.index = indexNextSuperblock;
         superblock.height = 0;
+        superblock.lastBits = _lastBits;
         superblock.status = Status.Approved;
         superblock.ancestors = 0x0;
 
@@ -119,10 +125,12 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @param _blocksMerkleRoot Root of the merkle tree of blocks contained in a superblock
     // @param _accumulatedWork Accumulated proof of work of the last block in the superblock
     // @param _timestamp Timestamp of the last block in the superblock
+    // @param _prevTimestamp Timestamp of the block previous to the last
     // @param _lastHash Hash of the last block in the superblock
+    // @param _lastBits Difficulty bits of the last block in the superblock
     // @param _parentId Id of the parent superblock
     // @return Error code and superblockId
-    function propose(bytes32 _blocksMerkleRoot, uint _accumulatedWork, uint _timestamp, bytes32 _lastHash, bytes32 _parentId, address submitter) public returns (uint, bytes32) {
+    function propose(bytes32 _blocksMerkleRoot, uint _accumulatedWork, uint _timestamp, uint _prevTimestamp, bytes32 _lastHash, uint32 _lastBits, bytes32 _parentId, address submitter) public returns (uint, bytes32) {
         if (msg.sender != claimManager) {
             emit ErrorSuperblock(0, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
             return (ERR_SUPERBLOCK_NOT_CLAIMMANAGER, 0);
@@ -134,7 +142,7 @@ contract DogeSuperblocks is DogeErrorCodes {
             return (ERR_SUPERBLOCK_BAD_PARENT, 0);
         }
 
-        bytes32 superblockId = calcSuperblockId(_blocksMerkleRoot, _accumulatedWork, _timestamp, _lastHash, _parentId);
+        bytes32 superblockId = calcSuperblockId(_blocksMerkleRoot, _accumulatedWork, _timestamp, _prevTimestamp, _lastHash, _lastBits, _parentId);
         SuperblockInfo storage superblock = superblocks[superblockId];
         if (superblock.status != Status.Unitialized) {
             emit ErrorSuperblock(superblockId, ERR_SUPERBLOCK_EXIST);
@@ -146,11 +154,13 @@ contract DogeSuperblocks is DogeErrorCodes {
         superblock.blocksMerkleRoot = _blocksMerkleRoot;
         superblock.accumulatedWork = _accumulatedWork;
         superblock.timestamp = _timestamp;
+        superblock.prevTimestamp = _prevTimestamp;
         superblock.lastHash = _lastHash;
         superblock.parentId = _parentId;
         superblock.submitter = submitter;
         superblock.index = indexNextSuperblock;
         superblock.height = parent.height + 1;
+        superblock.lastBits = _lastBits;
         superblock.status = Status.New;
         superblock.ancestors = updateAncestors(parent.ancestors, parent.index, parent.height + 1);
 
@@ -268,11 +278,13 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @param _blocksMerkleRoot Root of the merkle tree of blocks contained in a superblock
     // @param _accumulatedWork Accumulated proof of work of the last block in the superblock
     // @param _timestamp Timestamp of the last block in the superblock
+    // @param _prevTimestamp Timestamp of the block previous to the last
     // @param _lastHash Hash of the last block in the superblock
+    // @param _lastBits Difficulty bits of the last block in the superblock
     // @param _parentId Id of the parent superblock
     // @return Superblock id
-    function calcSuperblockId(bytes32 _blocksMerkleRoot, uint _accumulatedWork, uint _timestamp, bytes32 _lastHash, bytes32 _parentId) public pure returns (bytes32) {
-        return keccak256(abi.encode(_blocksMerkleRoot, _accumulatedWork, _timestamp, _lastHash, _parentId));
+    function calcSuperblockId(bytes32 _blocksMerkleRoot, uint _accumulatedWork, uint _timestamp, uint _prevTimestamp, bytes32 _lastHash, uint32 _lastBits, bytes32 _parentId) public pure returns (bytes32) {
+        return keccak256(abi.encodePacked(_blocksMerkleRoot, _accumulatedWork, _timestamp, _prevTimestamp, _lastHash, _lastBits, _parentId));
     }
 
     // @dev - Returns the superblock with the most accumulated work
@@ -301,7 +313,9 @@ contract DogeSuperblocks is DogeErrorCodes {
         bytes32 _blocksMerkleRoot,
         uint _accumulatedWork,
         uint _timestamp,
+        uint _prevTimestamp,
         bytes32 _lastHash,
+        uint32 _lastBits,
         bytes32 _parentId,
         address _submitter,
         Status _status
@@ -311,7 +325,9 @@ contract DogeSuperblocks is DogeErrorCodes {
             superblock.blocksMerkleRoot,
             superblock.accumulatedWork,
             superblock.timestamp,
+            superblock.prevTimestamp,
             superblock.lastHash,
+            superblock.lastBits,
             superblock.parentId,
             superblock.submitter,
             superblock.status
@@ -341,6 +357,11 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @dev - Return superblock timestamp
     function getSuperblockTimestamp(bytes32 _superblockId) public view returns (uint) {
         return superblocks[_superblockId].timestamp;
+    }
+
+    // @dev - Return superblock prevTimestamp
+    function getSuperblockPrevTimestamp(bytes32 _superblockId) public view returns (uint) {
+        return superblocks[_superblockId].prevTimestamp;
     }
 
     // @dev - Return superblock last block hash
