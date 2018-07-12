@@ -41,18 +41,21 @@ const SUPERBLOCK_TIMES_DOGE_MAINNET = {
   DURATION: 3600,   // 60 minutes
   DELAY: 3 * 3600,  // 3 hours
   TIMEOUT: 300,     // 5 minutes
+  CONFIMATIONS: 3,  // Superblocks required to confirm semi approved superblock
 };
 
 const SUPERBLOCK_TIMES_DOGE_TESTNET = {
   DURATION: 180,    // 3 minutes
   DELAY: 180,       // 3 minutes
   TIMEOUT: 60,      // 1 minutes
+  CONFIMATIONS: 1,  // Superblocks required to confirm semi approved superblock
 };
 
 const SUPERBLOCK_TIMES_DOGE_REGTEST = {
   DURATION: 60,     // 1 minute
   DELAY: 60,        // 1 minute
   TIMEOUT: 10,      // 10 seconds
+  CONFIMATIONS: 1,  // Superblocks required to confirm semi approved superblock
 };
 
 async function deployDevelopment(deployer, network, accounts, networkId, trustedDogeEthPriceOracle, dogethereumRecipient, superblockTimes) {
@@ -72,7 +75,7 @@ async function deployDevelopment(deployer, network, accounts, networkId, trusted
   await deployer.deploy(DummyTransactionProcessor, DogeRelayForTests.address);
 
   await deployer.deploy(DogeSuperblocks);
-  await deployer.deploy(DogeClaimManager, DogeSuperblocks.address, superblockTimes.DURATION, superblockTimes.DELAY, superblockTimes.TIMEOUT);
+  await deployer.deploy(DogeClaimManager, networkId, DogeSuperblocks.address, superblockTimes.DURATION, superblockTimes.DELAY, superblockTimes.TIMEOUT, superblockTimes.CONFIMATIONS);
 
   await deployer.deploy(ScryptCheckerDummy, true)
 
@@ -107,7 +110,7 @@ async function deployIntegration(deployer, network, accounts, networkId, trusted
   await deployer.deploy(DogeToken, DogeRelay.address, trustedDogeEthPriceOracle, collateralRatio, {gas: 5300000});
 
   await deployer.deploy(DogeSuperblocks, {gas: 2700000});
-  await deployer.deploy(DogeClaimManager, DogeSuperblocks.address, superblockTimes.DURATION, superblockTimes.DELAY, superblockTimes.TIMEOUT, {gas: 7500000});
+  await deployer.deploy(DogeClaimManager, networkId, DogeSuperblocks.address, superblockTimes.DURATION, superblockTimes.DELAY, superblockTimes.TIMEOUT, superblockTimes.CONFIMATIONS, {gas: 7500000});
 
   await deployer.deploy(ScryptVerifier, {gas: 4200000});
   await deployer.deploy(ClaimManager, ScryptVerifier.address, {gas: 5000000});

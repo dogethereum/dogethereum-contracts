@@ -54,7 +54,7 @@ contract Verifier {
 
         //ClaimManager constraints don't allow for sessionId 0
         // check if there can be a replay attack with sessionId
-        uint sessionId = sessionsCount+1;
+        uint sessionId = uint(keccak256(abi.encodePacked(claimId, sessionsCount)));
         VerificationSession storage s = sessions[sessionId];
         s.id = sessionId;
         sessionsClaimId[sessionId] = claimId;
