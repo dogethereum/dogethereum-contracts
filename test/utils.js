@@ -173,15 +173,16 @@ function calcSuperblockId(merkleRoot, accumulatedWork, timestamp, prevTimestamp,
 }
 
 // Construct a superblock from an array of block headers
-function makeSuperblock(headers, parentId, parentAccumulatedWork) {
-  if (headers.length < 2) {
-    throw new Error('Invalid header');
+function makeSuperblock(headers, parentId, parentAccumulatedWork, parentTimestamp = 0) {
+  if (headers.length < 1) {
+    throw new Error('Requires at least one header to build a superblock');
   }
   const blockHashes = headers.map(header => calcBlockSha256Hash(header));
   const accumulatedWork = headers.reduce((work, header) => work.plus(getBlockDifficulty(header)), web3.toBigNumber(parentAccumulatedWork));
   const merkleRoot = makeMerkle(blockHashes);
   const timestamp = getBlockTimestamp(headers[headers.length - 1]);
-  const prevTimestamp = getBlockTimestamp(headers[headers.length - 2]);
+  const prevTimestamp = (headers.length >= 2) ? getBlockTimestamp(headers[headers.length - 2])
+    : parentTimestamp;
   const lastBits = getBlockDifficultyBits(headers[headers.length - 1]);
   const lastHash = calcBlockSha256Hash(headers[headers.length - 1]);
   return {
