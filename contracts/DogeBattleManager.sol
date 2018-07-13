@@ -282,6 +282,36 @@ contract DogeBattleManager is DogeErrorCodes {
         }
     }
 
+    function validateLastBlocks(BattleSession storage session) internal view returns (uint) {
+        if (session.blockHashes.length <= 0) {
+            return ERR_SUPERBLOCK_BAD_LASTBLOCK;
+        }
+        uint lastTimestamp;
+        uint prevTimestamp;
+        uint32 lastBits;
+        bytes32 parentId;
+        (, , lastTimestamp, prevTimestamp, , lastBits, parentId, , ) = getSuperblockInfo(session.superblockId);
+        bytes32 blockSha256Hash = session.blockHashes[session.blockHashes.length - 1];
+        if (session.blockInfos[blockSha256Hash].timestamp != lastTimestamp) {
+            return ERR_SUPERBLOCK_BAD_TIMESTAMP;
+        }
+        if (session.blockInfos[blockSha256Hash].bits != lastBits) {
+            return ERR_SUPERBLOCK_BAD_BITS;
+        }
+        if (session.blockHashes.length > 1) {
+            blockSha256Hash = session.blockHashes[session.blockHashes.length - 2];
+            if (session.blockInfos[blockSha256Hash].timestamp != prevTimestamp) {
+                return ERR_SUPERBLOCK_BAD_TIMESTAMP;
+            }
+        } else {
+            (, , lastTimestamp, , , , , , ) = getSuperblockInfo(parentId);
+            if (lastTimestamp != prevTimestamp) {
+                return ERR_SUPERBLOCK_BAD_TIMESTAMP;
+            }
+        }
+        return ERR_SUPERBLOCK_OK;
+    }
+
     function validateProofOfWork(BattleSession storage session) internal view returns (uint) {
         uint accWork;
         uint parentWork;
@@ -328,7 +358,13 @@ contract DogeBattleManager is DogeErrorCodes {
             confirmScryptHashVerification(session);
         }
         if (session.challengeState == ChallengeState.PendingVerification) {
-            uint err = validateProofOfWork(session);
+            uint err;
+            err = validateLastBlocks(session);
+            if (err != 0) {
+                emit ErrorBattle(sessionId, err);
+                return 2;
+            }
+            err = validateProofOfWork(session);
             if (err != 0) {
                 emit ErrorBattle(sessionId, err);
                 return 2;
