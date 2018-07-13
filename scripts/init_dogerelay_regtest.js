@@ -28,7 +28,8 @@ module.exports = async function(callback) {
 
   var sb = await Superblocks.deployed();
 //   TODO: save these in variables
-  await sb.initialize("0x3d2160a3b5dc4a9d62e7e66a295f70313ac808440ef7400d6c0772171ce973a5", 0, 1296688602, "0x3d2160a3b5dc4a9d62e7e66a295f70313ac808440ef7400d6c0772171ce973a5", "0x0");
+  await sb.initialize("0x3d2160a3b5dc4a9d62e7e66a295f70313ac808440ef7400d6c0772171ce973a5", 0, 1296688602, 0, "0x3d2160a3b5dc4a9d62e7e66a295f70313ac808440ef7400d6c0772171ce973a5", 0x207fffff, "0x0");
+
   console.log("Superblock initialisation successful!");
 
   console.log("init_dogerelay_regtest end");
