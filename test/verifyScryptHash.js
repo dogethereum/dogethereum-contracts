@@ -32,7 +32,7 @@ const DOGE_MAINNET = 0;
 const DOGE_TESTNET = 1;
 const DOGE_REGTEST = 2;
 
-contract('DogeClaimManager3', (accounts) => {
+contract('verifyScryptHash', (accounts) => {
   const owner = accounts[0];
   const submitter = accounts[1];
   const challenger = accounts[2];
