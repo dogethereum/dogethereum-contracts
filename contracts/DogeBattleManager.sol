@@ -157,28 +157,33 @@ contract DogeBattleManager is DogeErrorCodes {
     }
 
     // @dev - Submitter send hashes to verify superblock merkle root
-    function doVerifyMerkleRootHashes(bytes32 sessionId, bytes32[] blockHashes) internal returns (bool) {
+    function doVerifyMerkleRootHashes(bytes32 sessionId, bytes32[] blockHashes) internal returns (uint) {
         BattleSession storage session = sessions[sessionId];
         require(session.blockHashes.length == 0);
         if (session.challengeState == ChallengeState.QueryMerkleRootHashes) {
             bytes32 merkleRoot;
             bytes32 lastHash;
             (merkleRoot, , , , lastHash, , , , ) = getSuperblockInfo(session.superblockId);
-            require(lastHash == blockHashes[blockHashes.length - 1]);
-            require(merkleRoot == DogeTx.makeMerkle(blockHashes));
+            if (lastHash != blockHashes[blockHashes.length - 1]){
+                return ERR_SUPERBLOCK_BAD_LASTBLOCK;
+            }
+            if (merkleRoot != DogeTx.makeMerkle(blockHashes)) {
+                return ERR_SUPERBLOCK_INVALID_MERKLE;
+            }
             session.blockHashes = blockHashes;
             session.challengeState = ChallengeState.RespondMerkleRootHashes;
-            return true;
+            return ERR_SUPERBLOCK_OK;
         }
-        return false;
+        return ERR_SUPERBLOCK_BAD_STATUS;
     }
 
     // @dev - For the submitter to respond to challenger queries
     function respondMerkleRootHashes(bytes32 sessionId, bytes32[] blockHashes) onlyClaimant(sessionId) public {
         BattleSession storage session = sessions[sessionId];
-        bool succeeded = false;
-        succeeded = doVerifyMerkleRootHashes(sessionId, blockHashes);
-        if (succeeded) {
+        uint err = doVerifyMerkleRootHashes(sessionId, blockHashes);
+        if (err != 0) {
+            emit ErrorBattle(sessionId, err);
+        } else {
             session.actionsCounter += 1;
             session.lastActionTimestamp = block.timestamp;
             session.lastActionClaimant = session.actionsCounter;
@@ -239,20 +244,24 @@ contract DogeBattleManager is DogeErrorCodes {
     }
 
     // @dev - Verify block header send by challenger
-    function doVerifyBlockHeader(bytes32 sessionId, bytes32 blockScryptHash, bytes blockHeader) internal returns (bool) {
+    function doVerifyBlockHeader(bytes32 sessionId, bytes32 blockScryptHash, bytes blockHeader) internal returns (uint) {
         BattleSession storage session = sessions[sessionId];
         if (session.challengeState == ChallengeState.QueryBlockHeader) {
             bytes32 blockSha256Hash = bytes32(DogeTx.dblShaFlipMem(blockHeader, 0, 80));
             require(session.blockInfos[blockSha256Hash].status == BlockInfoStatus.Requested);
 
-            require(verifyTimestamp(session.superblockId, blockHeader));
+            if (!verifyTimestamp(session.superblockId, blockHeader)) {
+                return ERR_SUPERBLOCK_BAD_TIMESTAMP;
+            }
 
             uint err;
             uint blockHash;
             uint scryptHash;
             bool mergeMined;
             (err, blockHash, scryptHash, mergeMined) = DogeTx.verifyBlockHeader(blockHeader, 0, blockHeader.length, uint(blockScryptHash));
-            require(err == 0);
+            if (err != 0) {
+                return err;
+            }
 
             bytes32 pendingScryptHashId = doVerifyScryptHash(sessionId, blockSha256Hash, bytes32(scryptHash), blockHeader, mergeMined, session.submitter);
 
@@ -264,17 +273,18 @@ contract DogeBattleManager is DogeErrorCodes {
             session.countBlockHeaderResponses += 1;
             session.challengeState = ChallengeState.VerifyScryptHash;
             session.pendingScryptHashId = pendingScryptHashId;
-            return true;
+            return ERR_SUPERBLOCK_OK;
         }
-        return false;
+        return ERR_SUPERBLOCK_BAD_STATUS;
     }
 
     // @dev - For the submitter to respond to challenger queries
     function respondBlockHeader(bytes32 sessionId, bytes32 blockScryptHash, bytes blockHeader) onlyClaimant(sessionId) public {
         BattleSession storage session = sessions[sessionId];
-        bool succeeded = false;
-        succeeded = doVerifyBlockHeader(sessionId, blockScryptHash, blockHeader);
-        if (succeeded) {
+        uint err = doVerifyBlockHeader(sessionId, blockScryptHash, blockHeader);
+        if (err != 0) {
+            emit ErrorBattle(sessionId, err);
+        } else {
             session.actionsCounter += 1;
             session.lastActionTimestamp = block.timestamp;
             session.lastActionClaimant = session.actionsCounter;
@@ -398,10 +408,9 @@ contract DogeBattleManager is DogeErrorCodes {
             block.timestamp > session.lastActionTimestamp + superblockTimeout) {
             convictChallenger(sessionId, session.challenger, session.superblockId);
             return ERR_SUPERBLOCK_OK;
-        } else {
-            emit ErrorBattle(sessionId, ERR_SUPERBLOCK_NO_TIMEOUT);
-            return ERR_SUPERBLOCK_NO_TIMEOUT;
         }
+        emit ErrorBattle(sessionId, ERR_SUPERBLOCK_NO_TIMEOUT);
+        return ERR_SUPERBLOCK_NO_TIMEOUT;
     }
 
     // @dev - To be called when a challenger is convicted
