@@ -1,9 +1,9 @@
-const DogeRelay = artifacts.require('DogeRelayForTests');
+//const DogeRelay = artifacts.require('DogeRelayForTests');
 const DummyTransactionProcessor = artifacts.require('DummyTransactionProcessor');
 const utils = require('./utils');
 
 
-contract('test_bulkStoreHeaders3', (accounts) => {
+contract.skip('test_bulkStoreHeaders3', (accounts) => {
   let dogeRelay;
   let dummyTransactionProcessor;
   before(async () => {

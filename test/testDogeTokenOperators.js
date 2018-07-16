@@ -8,7 +8,7 @@ contract('DogeToken - Operators', (accounts) => {
 
   const operatorPublicKeyHash = '0x03cd041b0139d3240607b9fd1b2d1b691e22b5d6';
   const operatorPrivateKeyString = "105bd30419904ef409e9583da955037097f22b6b23c57549fe38ab8ffa9deaa3";
-  const operatorEthAddress = web3.eth.accounts[1];  
+  const operatorEthAddress = web3.eth.accounts[1];
 
 
   async function sendAddOperator(dogeToken, wrongSignature) {
@@ -16,13 +16,13 @@ contract('DogeToken - Operators', (accounts) => {
       var operatorPublicKeyCompressedString = operatorSignItsEthAddressResult[0];
       var signature = operatorSignItsEthAddressResult[1];
       if (wrongSignature) {
-        signature += "ff";        
+        signature += "ff";
       }
       var addOperatorTxReceipt = await dogeToken.addOperator(operatorPublicKeyCompressedString, signature, {from: operatorEthAddress});
       return addOperatorTxReceipt;
   }
 
-  
+
   describe('addOperator', () => {
     it('addOperator success', async () => {
       const dogeToken = await DogeToken.new(trustedDogeRelay, trustedDogeEthPriceOracle, collateralRatio);
@@ -73,14 +73,14 @@ contract('DogeToken - Operators', (accounts) => {
       var operator = await dogeToken.operators(operatorPublicKeyHash);
       assert.equal(operator[4], 0, 'Deposit credited');
     });
-  });  
+  });
 
   describe('deleteOperator', () => {
     it('deleteOperator success', async () => {
       const dogeToken = await DogeToken.new(trustedDogeRelay, trustedDogeEthPriceOracle, collateralRatio);
       await sendAddOperator(dogeToken);
       await dogeToken.deleteOperator(operatorPublicKeyHash, {from : operatorEthAddress});
-      var operator = await dogeToken.operators(operatorPublicKeyHash);      
+      var operator = await dogeToken.operators(operatorPublicKeyHash);
       assert.equal(operator[0], 0, 'Operator not deleted');
       var operatorKeys = await dogeToken.operatorKeys(0);
       assert.equal(operatorKeys[0], operatorPublicKeyHash, 'operatorKeys[0] not what expected');
@@ -97,7 +97,7 @@ contract('DogeToken - Operators', (accounts) => {
       var operator = await dogeToken.operators(operatorPublicKeyHash);
       assert.equal(operator[0], operatorEthAddress, 'Operator deleted when failure was expected');
     });
-  });  
+  });
 
 
   describe('withdrawOperatorDeposit', () => {
@@ -109,8 +109,8 @@ contract('DogeToken - Operators', (accounts) => {
       await dogeToken.setDogeEthPrice(1, {from : accounts[0]});
       var withdrawOperatorDepositTxReceipt = await dogeToken.withdrawOperatorDeposit(operatorPublicKeyHash, 400000000000000000, {from : operatorEthAddress});
       var operatorEthAddressBalanceAfterWithdraw = web3.eth.getBalance(operatorEthAddress);
-      var operator = await dogeToken.operators(operatorPublicKeyHash);      
-      assert.equal(operator[4], 600000000000000000, 'Deposit not what expected');      
+      var operator = await dogeToken.operators(operatorPublicKeyHash);
+      assert.equal(operator[4], 600000000000000000, 'Deposit not what expected');
       var tx = web3.eth.getTransaction(withdrawOperatorDepositTxReceipt.tx);
       var txCost = withdrawOperatorDepositTxReceipt.receipt.cumulativeGasUsed * tx.gasPrice;
       assert.equal(operatorEthAddressBalanceAfterWithdraw.sub(operatorEthAddressBalanceBeforeWithdraw).add(txCost).equals(web3.toBigNumber(400000000000000000)), true, 'balance not what expected');
@@ -124,8 +124,8 @@ contract('DogeToken - Operators', (accounts) => {
       await dogeToken.addUtxo(operatorPublicKeyHash, 400, 1, 1);
       var withdrawOperatorDepositTxReceipt = await dogeToken.withdrawOperatorDeposit(operatorPublicKeyHash, 100, {from : operatorEthAddress});
       var operatorEthAddressBalanceAfterWithdraw = web3.eth.getBalance(operatorEthAddress);
-      var operator = await dogeToken.operators(operatorPublicKeyHash);      
-      assert.equal(operator[4], 4900, 'Deposit not what expected');      
+      var operator = await dogeToken.operators(operatorPublicKeyHash);
+      assert.equal(operator[4], 4900, 'Deposit not what expected');
       var tx = web3.eth.getTransaction(withdrawOperatorDepositTxReceipt.tx);
       var txCost = withdrawOperatorDepositTxReceipt.receipt.cumulativeGasUsed * tx.gasPrice;
       assert.equal(operatorEthAddressBalanceAfterWithdraw.sub(operatorEthAddressBalanceBeforeWithdraw).add(txCost).equals(web3.toBigNumber(100)), true, 'balance not what expected');
@@ -151,5 +151,5 @@ contract('DogeToken - Operators', (accounts) => {
       var operator = await dogeToken.operators(operatorPublicKeyHash);
       assert.equal(operator[4], 5000, 'Operator eth balance was modified');
     });
-  }); 
+  });
 });

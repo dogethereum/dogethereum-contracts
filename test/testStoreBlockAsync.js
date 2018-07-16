@@ -1,9 +1,9 @@
-const DogeRelay = artifacts.require("./DogeRelayForTests.sol");
+//const DogeRelay = artifacts.require("./DogeRelayForTests.sol");
 const ScryptCheckerDummy = artifacts.require('./ScryptCheckerDummy.sol');
 const utils = require('./utils');
 
 
-contract('testStoreBlockAsync', function(accounts) {
+contract.skip('testStoreBlockAsync', function(accounts) {
   let dogeRelay;
   let scryptChecker;
   before(async () => {

@@ -1,9 +1,9 @@
-var DogeRelay = artifacts.require("./DogeRelayForTests.sol");
+//var DogeRelay = artifacts.require("./DogeRelayForTests.sol");
 var DogeToken = artifacts.require("./token/DogeTokenForTests.sol");
 var utils = require('./utils');
 
 
-contract('testDogeTokenDoUnlockRequires', function(accounts) {
+contract.skip('testDogeTokenDoUnlockRequires', function(accounts) {
   let dogeToken;
   before(async () => {
       dogeToken = await DogeToken.deployed();
@@ -11,16 +11,16 @@ contract('testDogeTokenDoUnlockRequires', function(accounts) {
   it('doUnlock fails when it should', async () => {
     const operatorPublicKeyHash = `0x4d905b4b815d483cdfabcd292c6f86509d0fad82`;
 
-    await dogeToken.assign(accounts[0], 3000000000);                                        
+    await dogeToken.assign(accounts[0], 3000000000);
     const dogeAddress = "DHx8ZyJJuiFM5xAHFypfz1k6bd2X85xNMy";
 
 
-    // unlock an amount below min value. 
+    // unlock an amount below min value.
     var doUnlockTxReceipt = await dogeToken.doUnlock(dogeAddress, 200000000, operatorPublicKeyHash);
     assert.equal(60080, doUnlockTxReceipt.logs[0].args.err, "Expected ERR_UNLOCK_MIN_UNLOCK_VALUE error");
 
 
-    // unlock an amount greater than user value. 
+    // unlock an amount greater than user value.
     doUnlockTxReceipt = await dogeToken.doUnlock(dogeAddress, 200000000000, operatorPublicKeyHash);
     assert.equal(60090, doUnlockTxReceipt.logs[0].args.err, "Expected ERR_UNLOCK_USER_BALANCE error");
 
@@ -48,7 +48,7 @@ contract('testDogeTokenDoUnlockRequires', function(accounts) {
     assert.equal(60130, doUnlockTxReceipt.logs[0].args.err, "Expected ERR_UNLOCK_UTXOS_VALUE_LESS_THAN_VALUE_TO_SEND error");
 
     // unlock when value to send is greater than fee
-    for (i = 0; i < 9; i++) { 
+    for (i = 0; i < 9; i++) {
       await dogeToken.addUtxo(operatorPublicKeyHash, 100000000, 1, 10);
     }
     var doUnlockTxReceipt = await dogeToken.doUnlock(dogeAddress, 1000000000, operatorPublicKeyHash)

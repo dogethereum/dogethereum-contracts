@@ -1,8 +1,8 @@
-const DogeRelay = artifacts.require('DogeRelayForTests');
+//const DogeRelay = artifacts.require('DogeRelayForTests');
 const utils = require('./utils');
 
 
-contract('errorCodes', (accounts) => {
+contract.skip('errorCodes', (accounts) => {
   let dogeRelay;
   before(async () => {
     dogeRelay = await DogeRelay.deployed();
@@ -36,7 +36,7 @@ contract('errorCodes', (accounts) => {
 
     errorCode = await dogeRelay.checkAuxPoWPublic("0x" + block974401Hash, "0x" + rawHeaders[1]);
     assert.equal(errorCode.toNumber(), 10080);
-    
+
     errorCode = await dogeRelay.checkAuxPoWPublic("0x" + block974401Hash, "0x" + rawHeaders[2]);
     assert.equal(errorCode.toNumber(), 10090);
 

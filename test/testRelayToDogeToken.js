@@ -1,9 +1,9 @@
-var DogeRelay = artifacts.require("./DogeRelayForTests.sol");
+//var DogeRelay = artifacts.require("./DogeRelayForTests.sol");
 var DogeToken = artifacts.require("./token/DogeTokenForTests.sol");
 var utils = require('./utils');
 
 
-contract('testRelayToDogeToken', function(accounts) {
+contract.skip('testRelayToDogeToken', function(accounts) {
   let dogeToken;
   let dogeRelay;
   before(async () => {
@@ -23,7 +23,7 @@ contract('testRelayToDogeToken', function(accounts) {
       .map(sibling => `0x${sibling}`);
     await dogeRelay.relayTx(txData, operatorPublicKeyHash, txIndex, siblings, "0x" + headerAndHashes.header.hash, dogeToken.address);
     const address = '0x30d90d1dbf03aa127d58e6af83ca1da9e748c98d';
-    const value = '905853205327'; 
+    const value = '905853205327';
     const balance = await dogeToken.balanceOf(address);
     assert.equal(balance.toString(10), value, `DogeToken's ${address} balance is not the expected one`);
     var operator = await dogeToken.operators(operatorPublicKeyHash);

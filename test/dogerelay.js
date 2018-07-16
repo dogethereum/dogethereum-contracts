@@ -1,7 +1,7 @@
-const DogeRelay = artifacts.require('DogeRelayForTests');
+//const DogeRelay = artifacts.require('DogeRelayForTests');
 
 
-contract('DogeRelay', (accounts) => {
+contract.skip('DogeRelay', (accounts) => {
   let dogeRelay;
   before(async () => {
     dogeRelay = await DogeRelay.deployed();

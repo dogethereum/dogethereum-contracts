@@ -1,9 +1,9 @@
-var DogeRelay = artifacts.require('./DogeRelayForTests.sol');
+//var DogeRelay = artifacts.require('./DogeRelayForTests.sol');
 var ScryptCheckerDummy = artifacts.require('./ScryptCheckerDummy.sol');
 var utils = require('./utils');
 
 
-contract('test_bulkStoreHeadersBlockTimeGoinBackwards', function(accounts) {
+contract.skip('test_bulkStoreHeadersBlockTimeGoinBackwards', function(accounts) {
     let dr;
     before(async () => {
         dr = await DogeRelay.new(0);
