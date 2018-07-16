@@ -1,8 +1,8 @@
 pragma solidity ^0.4.19;
 
 import {DogeTx} from "./DogeParser/DogeTx.sol";
-import {DogeRelay} from "./DogeRelay.sol";
 import {DogeErrorCodes} from "./DogeErrorCodes.sol";
+import {TransactionProcessor} from "./TransactionProcessor.sol";
 
 
 // @dev - Manages superblocks
@@ -47,11 +47,11 @@ contract DogeSuperblocks is DogeErrorCodes {
 
     event ErrorSuperblock(bytes32 superblockId, uint err);
 
+    event VerifyTransaction(bytes32 txHash, uint returnCode);
+    event RelayTransaction(bytes32 txHash, uint returnCode);
+
     // ClaimManager
     address public claimManager;
-
-    // DogeRelay
-    address public dogeRelay;
 
     modifier onlyClaimManager() {
         require(msg.sender == claimManager);
@@ -269,6 +269,130 @@ contract DogeSuperblocks is DogeErrorCodes {
         superblock.status = Status.Invalid;
         emit InvalidSuperblock(_superblockId, validator);
         return (ERR_SUPERBLOCK_OK, _superblockId);
+    }
+
+    // @dev - relays transaction `_txBytes` to `_targetContract`'s processTransaction() method.
+    // Also logs the value of processTransaction.
+    // Note: callers cannot be 100% certain when an ERR_RELAY_VERIFY occurs because
+    // it may also have been returned by processTransaction(). Callers should be
+    // aware of the contract that they are relaying transactions to and
+    // understand what that contract's processTransaction method returns.
+    //
+    // @param _txBytes - transaction bytes
+    // @param _operatorPublicKeyHash
+    // @param _txIndex - transaction's index within the block
+    // @param _txSiblings - transaction's Merkle siblings
+    // @param _dogeBlockHeader - block header containing transaction
+    // @param _dogeBlockIndex - block's index withing superblock
+    // @param _dogeBlockSiblings - block's merkle siblings
+    // @param _superblockId - superblock containing block header
+    // @param _targetContract -
+    function relayTx(
+        bytes _txBytes,
+        bytes20 _operatorPublicKeyHash,
+        uint _txIndex,
+        uint[] _txSiblings,
+        bytes _dogeBlockHeader,
+        uint _dogeBlockIndex,
+        uint[] _dogeBlockSiblings,
+        bytes32 _superblockId,
+        TransactionProcessor _targetContract
+    ) public returns (uint) {
+        uint dogeBlockHash = DogeTx.dblShaFlip(_dogeBlockHeader);
+
+        // Check if Doge block belongs to given superblock
+        if (bytes32(DogeTx.computeMerkle(dogeBlockHash, _dogeBlockIndex, _dogeBlockSiblings))
+            != getSuperblockMerkleRoot(_superblockId)) {
+            // Doge block is not in superblock
+            emit VerifyTransaction(bytes32(DogeTx.dblShaFlip(_txBytes)), ERR_SUPERBLOCK);
+            return ERR_SUPERBLOCK;
+        }
+
+        uint txHash = verifyTx(_txBytes, _txIndex, _txSiblings, _dogeBlockHeader, _superblockId);
+        if (txHash != 0) {
+            uint returnCode = _targetContract.processTransaction(_txBytes, txHash, _operatorPublicKeyHash);
+            emit RelayTransaction(bytes32(txHash), returnCode);
+            return (returnCode);
+        }
+
+        emit RelayTransaction(bytes32(0), ERR_RELAY_VERIFY);
+        return(ERR_RELAY_VERIFY);
+    }
+
+    // @dev - Checks whether the transaction given by `_txBytes` is in the block identified by `_txBlockHash`.
+    // First it guards against a Merkle tree collision attack by raising an error if the transaction is exactly 64 bytes long,
+    // then it calls helperVerifyHash to do the actual check.
+    //
+    // @param _txBytes - transaction bytes
+    // @param _txIndex - transaction's index within the block
+    // @param _siblings - transaction's Merkle siblings
+    // @param _txBlockHeaderBytes - block header containing transaction
+    // @param _txSuperblockId - superblock containing block header
+    // @return - SHA-256 hash of _txBytes if the transaction is in the block, 0 otherwise
+    function verifyTx(
+        bytes _txBytes,
+        uint _txIndex,
+        uint[] _siblings,
+        bytes _txBlockHeaderBytes,
+        bytes32 _txSuperblockId
+    ) public returns (uint) {
+        uint txHash = DogeTx.dblShaFlip(_txBytes);
+
+        if (_txBytes.length == 64) {  // todo: is check 32 also needed?
+            emit VerifyTransaction(bytes32(txHash), ERR_TX_64BYTE);
+            return 0;
+        }
+
+        if (helperVerifyHash(txHash, _txIndex, _siblings, _txBlockHeaderBytes, _txSuperblockId) == 1) {
+            return txHash;
+        } else {
+            // log is done via helperVerifyHash
+            return 0;
+        }
+    }
+
+    // @dev - Checks whether the transaction identified by `_txHash` is in the block identified by `_txBlockHash`
+    // and whether the block is in Dogecoin's main chain. Transaction check is done via Merkle proof.
+    // Note: no verification is performed to prevent txHash from just being an
+    // internal hash in the Merkle tree. Thus this helper method should NOT be used
+    // directly and is intended to be private.
+    //
+    // @param _txHash - transaction hash
+    // @param _txIndex - transaction's index within the block
+    // @param _siblings - transaction's Merkle siblings
+    // @param _blockHeaderBytes - block header containing transaction
+    // @param _txSuperblockId - superblock containing block header
+    // @return - 1 if the transaction is in the block and the block is in the main chain,
+    // 20020 (ERR_CONFIRMATIONS) if the block is not in the main chain,
+    // 20050 (ERR_MERKLE_ROOT) if the block is in the main chain but the Merkle proof fails.
+    function helperVerifyHash(
+        uint256 _txHash,
+        uint _txIndex,
+        uint[] _siblings,
+        bytes _blockHeaderBytes,
+        bytes32 _txSuperblockId
+    ) private returns (uint) {
+        // TODO: implement when dealing with incentives
+        // if (!feePaid(_txBlockHash, getFeeAmount(_txBlockHash))) {  // in incentive.se
+        //    VerifyTransaction(bytes32(_txHash), ERR_BAD_FEE);
+        //    return (ERR_BAD_FEE);
+        // }
+
+        //TODO: Verify superblock is in superblock's main chain
+        if (!isApproved(_txSuperblockId)) {
+            emit VerifyTransaction(bytes32(_txHash), ERR_CHAIN);
+            return (ERR_CHAIN);
+        }
+
+        // Verify tx Merkle root
+        uint merkle = DogeTx.getHeaderMerkleRoot(_blockHeaderBytes, 0);
+        if (DogeTx.computeMerkle(_txHash, _txIndex, _siblings) != merkle) {
+            emit VerifyTransaction(bytes32(_txHash), ERR_MERKLE_ROOT);
+            return (ERR_MERKLE_ROOT);
+        }
+
+        emit VerifyTransaction(bytes32(_txHash), 1);
+        return (1);
     }
 
     // @dev - Evaluate the SuperblockId

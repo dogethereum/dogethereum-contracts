@@ -24,4 +24,15 @@ contract DogeErrorCodes {
     uint constant ERR_SUPERBLOCK_BAD_BITS = 50130;
     uint constant ERR_SUPERBLOCK_MISSING_CONFIRMATIONS = 50140;
     uint constant ERR_SUPERBLOCK_BAD_LASTBLOCK = 50150;
+
+    // error codes for verifyTx
+    uint constant ERR_BAD_FEE = 20010;
+    uint constant ERR_CONFIRMATIONS = 20020;
+    uint constant ERR_CHAIN = 20030;
+    uint constant ERR_SUPERBLOCK = 20040;
+    uint constant ERR_MERKLE_ROOT = 20050;
+    uint constant ERR_TX_64BYTE = 20060;
+
+    // error codes for relayTx
+    uint constant ERR_RELAY_VERIFY = 30010;
 }
