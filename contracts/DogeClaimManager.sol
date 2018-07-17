@@ -455,7 +455,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager, IScryptChec
         return claims[superblockId].verificationOngoing;
     }
 
-    uint getClaimChallengeTimeout(bytes32 superblockId) public view returns (uint) {
+    function getClaimChallengeTimeout(bytes32 superblockId) public view returns (uint) {
         return claims[superblockId].challengeTimeout;
     }
 
@@ -463,7 +463,6 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager, IScryptChec
     function getSession(bytes32 claimId, address challenger) public view returns(bytes32) {
         return claims[claimId].sessions[challenger];
     }
-    
 
     function doVerifyScryptHash(bytes32 sessionId, bytes32 blockSha256Hash, bytes32 blockScryptHash, bytes blockHeader, bool isMergeMined, address submitter) internal returns (bytes32) {
         numScryptHashVerifications += 1;

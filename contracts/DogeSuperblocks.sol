@@ -513,8 +513,6 @@ contract DogeSuperblocks is DogeErrorCodes {
         return indexNextSuperblock;
     }
 
-
-
     // @dev - Calculte merkle root from hashes
     function makeMerkle(bytes32[] hashes) public pure returns (bytes32) {
         return DogeTx.makeMerkle(hashes);
