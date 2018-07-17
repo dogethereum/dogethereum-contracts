@@ -455,6 +455,10 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager, IScryptChec
         return claims[superblockId].verificationOngoing;
     }
 
+    uint getClaimChallengeTimeout(bytes32 superblockId) public view returns (uint) {
+        return claims[superblockId].challengeTimeout;
+    }
+
     // @dev – Return session by challenger
     function getSession(bytes32 claimId, address challenger) public view returns(bytes32) {
         return claims[claimId].sessions[challenger];
