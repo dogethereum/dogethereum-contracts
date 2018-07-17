@@ -1,4 +1,3 @@
-var DogeRelay = artifacts.require("./DogeRelay.sol");
 var DogeToken = artifacts.require("./DogeToken.sol");
 var Superblocks = artifacts.require("./DogeSuperblocks.sol");
 // var ClaimManager = artifacts.require("./ClaimManager.sol");
@@ -8,9 +7,7 @@ module.exports = async function(callback) {
   console.log("init_dogerelay_regtest begin");
   
   // Set DogeRelay inital parent 
-  var dr = await DogeRelay.deployed();
   var block57Hash = "0x77aed6d055e6a6249bf49cd6c3283fe7cf3f32dc5388deec2d73b8a9d6e89466";  
-  var result = await dr.setInitialParent(block57Hash, 57, 1, {gas: 100000});
   
   // Calculate operator public key
   const operatorPublicKeyHash = '0x03cd041b0139d3240607b9fd1b2d1b691e22b5d6';
