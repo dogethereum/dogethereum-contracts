@@ -212,7 +212,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager, IScryptChec
 
         bondDeposit(claimId, msg.sender, minDeposit);
 
-        claim.challengeTimeout += superblockTimeout;
+        claim.challengeTimeout = block.timestamp + superblockTimeout;
         claim.challengers.push(msg.sender);
         emit SuperblockClaimChallenged(claimId, msg.sender);
 
