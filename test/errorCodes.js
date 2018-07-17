@@ -1,11 +1,11 @@
-//const DogeRelay = artifacts.require('DogeRelayForTests');
+const DogeTxForTests = artifacts.require('DogeTxForTests');
 const utils = require('./utils');
 
 
-contract.skip('errorCodes', (accounts) => {
-  let dogeRelay;
+contract('errorCodes', (accounts) => {
+  let dogeTxForTests;
   before(async () => {
-    dogeRelay = await DogeRelay.deployed();
+    dogeTxForTests = await DogeTxForTests.deployed();
   });
   it("errorCodes", async () => {
     const block974400Hash = "0xa84956d6535a1be26b77379509594bdb8f186b29c3b00143dcb468015bdd16da";
@@ -31,31 +31,31 @@ contract.skip('errorCodes', (accounts) => {
 
     let errorCode;
 
-    errorCode = await dogeRelay.checkAuxPoWPublic("0x" + block974401Hash, "0x" + rawHeaders[0]);
+    errorCode = await dogeTxForTests.checkAuxPoWPublic("0x" + block974401Hash, "0x" + rawHeaders[0]);
     assert.equal(errorCode.toNumber(), 10060);
 
-    errorCode = await dogeRelay.checkAuxPoWPublic("0x" + block974401Hash, "0x" + rawHeaders[1]);
+    errorCode = await dogeTxForTests.checkAuxPoWPublic("0x" + block974401Hash, "0x" + rawHeaders[1]);
     assert.equal(errorCode.toNumber(), 10080);
 
-    errorCode = await dogeRelay.checkAuxPoWPublic("0x" + block974401Hash, "0x" + rawHeaders[2]);
+    errorCode = await dogeTxForTests.checkAuxPoWPublic("0x" + block974401Hash, "0x" + rawHeaders[2]);
     assert.equal(errorCode.toNumber(), 10090);
 
-    errorCode = await dogeRelay.checkAuxPoWPublic("0x" + block974401Hash, "0x" + rawHeaders[3]);
+    errorCode = await dogeTxForTests.checkAuxPoWPublic("0x" + block974401Hash, "0x" + rawHeaders[3]);
     assert.equal(errorCode.toNumber(), 10100);
 
-    errorCode = await dogeRelay.checkAuxPoWPublic("0x" + block974401Hash, "0x" + rawHeaders[4]);
+    errorCode = await dogeTxForTests.checkAuxPoWPublic("0x" + block974401Hash, "0x" + rawHeaders[4]);
     assert.equal(errorCode.toNumber(), 10110);
 
-    errorCode = await dogeRelay.checkAuxPoWPublic("0x" + block974401Hash, "0x" + rawHeaders[5]);
+    errorCode = await dogeTxForTests.checkAuxPoWPublic("0x" + block974401Hash, "0x" + rawHeaders[5]);
     assert.equal(errorCode.toNumber(), 10120);
 
-    errorCode = await dogeRelay.checkAuxPoWPublic("0x" + block974401Hash, "0x" + rawHeaders[6]);
+    errorCode = await dogeTxForTests.checkAuxPoWPublic("0x" + block974401Hash, "0x" + rawHeaders[6]);
     assert.equal(errorCode.toNumber(), 10120);
 
-    errorCode = await dogeRelay.checkAuxPoWPublic("0x" + block974401Hash, "0x" + rawHeaders[7]);
+    errorCode = await dogeTxForTests.checkAuxPoWPublic("0x" + block974401Hash, "0x" + rawHeaders[7]);
     assert.equal(errorCode.toNumber(), 10070);
 
-    errorCode = await dogeRelay.checkAuxPoWPublic("0x" + block974401Hash, "0x" + rawHeaders[8]);
+    errorCode = await dogeTxForTests.checkAuxPoWPublic("0x" + block974401Hash, "0x" + rawHeaders[8]);
     assert.equal(errorCode.toNumber(), 1);
   });
 });

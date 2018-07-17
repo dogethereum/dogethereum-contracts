@@ -4,6 +4,7 @@ const ECRecovery = artifacts.require('ECRecovery');
 const DogeToken = artifacts.require('./token/DogeToken.sol');
 const DogeTokenForTests = artifacts.require('./token/DogeTokenForTests.sol');
 const DogeTx = artifacts.require('./DogeParser/DogeTx.sol');
+const DogeTxForTests = artifacts.require('./DogeParser/DogeTxForTests.sol');
 const ScryptCheckerDummy = artifacts.require('./ScryptCheckerDummy.sol');
 const DogeSuperblocks = artifacts.require('./DogeSuperblocks.sol');
 const DogeClaimManager = artifacts.require('./DogeClaimManager.sol');
@@ -63,7 +64,7 @@ async function deployDevelopment(deployer, network, accounts, networkId, trusted
   await deployer.deploy(ECRecovery);
 
   await deployer.link(Set, DogeTokenForTests);
-  await deployer.link(DogeTx, [DogeTokenForTests, DogeSuperblocks, DogeClaimManager]);
+  await deployer.link(DogeTx, [DogeTxForTests, DogeTokenForTests, DogeSuperblocks, DogeClaimManager]);
   await deployer.link(ECRecovery, DogeTokenForTests);
   await deployer.link(SafeMath, ClaimManager);
 
@@ -79,6 +80,9 @@ async function deployDevelopment(deployer, network, accounts, networkId, trusted
 
   await deployer.deploy(ScryptVerifier);
   await deployer.deploy(ClaimManager, ScryptVerifier.address);
+
+  await deployer.deploy(DogeTxForTests);
+
   // await deployer.deploy(ScryptRunner);
 
   const superblocks = DogeSuperblocks.at(DogeSuperblocks.address);

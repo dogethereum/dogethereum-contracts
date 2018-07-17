@@ -1,9 +1,8 @@
-//var DogeRelay = artifacts.require("./DogeRelayForTests.sol");
 var DogeToken = artifacts.require("./token/DogeTokenForTests.sol");
 var utils = require('./utils');
 
 
-contract.skip('testDogeTokenDoUnlock2', function(accounts) {
+contract('testDogeTokenDoUnlock2', function(accounts) {
   let dogeToken;
   before(async () => {
       dogeToken = await DogeToken.deployed();
