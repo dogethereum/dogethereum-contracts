@@ -460,7 +460,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager, IScryptChec
         scryptHashVerifications[challengeId] = ScryptHashVerification({
             sessionId: sessionId,
             blockSha256Hash: blockSha256Hash
-        }); sessionId;
+        });
 
         return challengeId;
     }
