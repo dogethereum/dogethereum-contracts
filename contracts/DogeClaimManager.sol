@@ -436,10 +436,16 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager, IScryptChec
         return (claim.claimant != 0x0);
     }
 
+    // @dev - Return superblock submission timestamp
+    function getNewSuperblockEventTimestamp(bytes32 superblockId) public view returns (uint) {
+        return claims[superblockId].createdAt;
+    }
+
     // @dev – Return session by challenger
     function getSession(bytes32 claimId, address challenger) public view returns(bytes32) {
         return claims[claimId].sessions[challenger];
     }
+    
 
     function doVerifyScryptHash(bytes32 sessionId, bytes32 blockSha256Hash, bytes32 blockScryptHash, bytes blockHeader, bool isMergeMined, address submitter) internal returns (bytes32) {
         numScryptHashVerifications += 1;
