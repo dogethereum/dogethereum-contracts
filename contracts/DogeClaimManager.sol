@@ -441,17 +441,22 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager, IScryptChec
         return claims[superblockId].createdAt;
     }
 
+    // @dev - Return whether or not a claim has already been made
+    function getClaimExists(bytes32 superblockId) public view returns (bool) {
+        return claimExists(claims[superblockId]);
+    }
+
     // @dev - Return claim status
-    function claimDecided(bytes32 superblockId) public view returns (bool) {
+    function getClaimDecided(bytes32 superblockId) public view returns (bool) {
         return claims[superblockId].decided;
     }
 
-    function claimInvalid(bytes32 superblockId) public view returns (bool) {
+    function getClaimInvalid(bytes32 superblockId) public view returns (bool) {
         // TODO: see if this is redundant with superblock status
         return claims[superblockId].invalid;
     }
 
-    function claimVerificationOngoing(bytes32 superblockId) public view returns (bool) {
+    function getClaimVerificationOngoing(bytes32 superblockId) public view returns (bool) {
         return claims[superblockId].verificationOngoing;
     }
 
