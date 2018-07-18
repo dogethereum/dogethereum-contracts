@@ -36,21 +36,21 @@ const DOGE_MAINNET = 0;
 const DOGE_TESTNET = 1;
 const DOGE_REGTEST = 2;
 
-const SUPERBLOCK_TIMES_DOGE_MAINNET = {
+const SUPERBLOCK_TIMES_PRODUCTION = {
   DURATION: 3600,   // 60 minutes
   DELAY: 3 * 3600,  // 3 hours
   TIMEOUT: 300,     // 5 minutes
   CONFIMATIONS: 3,  // Superblocks required to confirm semi approved superblock
 };
 
-const SUPERBLOCK_TIMES_DOGE_TESTNET = {
+const SUPERBLOCK_TIMES_INTEGRATION = {
   DURATION: 180,    // 3 minutes
   DELAY: 180,       // 3 minutes
   TIMEOUT: 60,      // 1 minutes
   CONFIMATIONS: 1,  // Superblocks required to confirm semi approved superblock
 };
 
-const SUPERBLOCK_TIMES_DOGE_REGTEST = {
+const SUPERBLOCK_TIMES_LOCAL = {
   DURATION: 60,     // 1 minute
   DELAY: 60,        // 1 minute
   TIMEOUT: 10,      // 10 seconds
@@ -132,13 +132,13 @@ module.exports = function(deployer, network, accounts) {
     }
 
     if (network === 'development') {
-      await deployDevelopment(deployer, network, accounts, DOGE_MAINNET, trustedDogeEthPriceOracle, null, SUPERBLOCK_TIMES_DOGE_REGTEST);
+      await deployDevelopment(deployer, network, accounts, DOGE_MAINNET, trustedDogeEthPriceOracle, null, SUPERBLOCK_TIMES_LOCAL);
     } else if (network === 'ropsten') {
-      await deployIntegration(deployer, network, accounts, DOGE_MAINNET, trustedDogeEthPriceOracle, null, SUPERBLOCK_TIMES_DOGE_TESTNET);
+      await deployIntegration(deployer, network, accounts, DOGE_MAINNET, trustedDogeEthPriceOracle, null, SUPERBLOCK_TIMES_INTEGRATION);
     } else if (network === 'integrationDogeMain') {
-      await deployIntegration(deployer, network, accounts, DOGE_MAINNET, trustedDogeEthPriceOracle, null, SUPERBLOCK_TIMES_DOGE_MAINNET);
+      await deployIntegration(deployer, network, accounts, DOGE_MAINNET, trustedDogeEthPriceOracle, null, SUPERBLOCK_TIMES_INTEGRATION);
     } else if (network === 'integrationDogeRegtest') {
-      await deployIntegration(deployer, network, accounts, DOGE_REGTEST, trustedDogeEthPriceOracle, null, SUPERBLOCK_TIMES_DOGE_REGTEST);
+      await deployIntegration(deployer, network, accounts, DOGE_REGTEST, trustedDogeEthPriceOracle, null, SUPERBLOCK_TIMES_LOCAL);
     }
   });
 };
