@@ -411,24 +411,22 @@ contract DogeSuperblocks is DogeErrorCodes {
         return keccak256(abi.encodePacked(_blocksMerkleRoot, _accumulatedWork, _timestamp, _prevTimestamp, _lastHash, _lastBits, _parentId));
     }
 
-    // @dev - Returns the superblock with the most accumulated work
-    //
-    // The confirmed superblock with most accumulated work.
+    // @dev - Returns the confirmed superblock with the most accumulated work
     //
     // @return Superblock id
     function getBestSuperblock() public view returns (bytes32) {
         return bestSuperblock;
     }
 
-    // @dev - Returns the superblock with the most accumulated work
-    //
-    // The confirmed superblock with most accumulated work.
+    // @dev - Returns the superblock data for the supplied superblockId
     //
     // @return {
     //   bytes32 _blocksMerkleRoot,
     //   uint _accumulatedWork,
     //   uint _timestamp,
+    //   uint _prevTimestamp,
     //   bytes32 _lastHash,
+    //   uint32 _lastBits,
     //   bytes32 _parentId,
     //   address _submitter,
     //   Status _status
