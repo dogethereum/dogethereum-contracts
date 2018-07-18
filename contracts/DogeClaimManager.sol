@@ -451,17 +451,26 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager, IScryptChec
         return claims[superblockId].decided;
     }
 
+    // @dev - Check if a claim is invalid
     function getClaimInvalid(bytes32 superblockId) public view returns (bool) {
         // TODO: see if this is redundant with superblock status
         return claims[superblockId].invalid;
     }
 
+    // @dev - Check if a claim has a verification game in progress
     function getClaimVerificationOngoing(bytes32 superblockId) public view returns (bool) {
         return claims[superblockId].verificationOngoing;
     }
 
+    // @dev - Returns timestamp of challenge timeout
     function getClaimChallengeTimeout(bytes32 superblockId) public view returns (uint) {
         return claims[superblockId].challengeTimeout;
+    }
+
+    // @dev - Return the number of challengers whose battles haven't been decided yet
+    function getClaimRemainingChallengers(bytes32 superblockId) public view returns (uint) {
+        SuperblockClaim claim = claims[superblockId];
+        return claim.challengers.length - claim.currentChallenger;
     }
 
     // @dev – Return session by challenger
