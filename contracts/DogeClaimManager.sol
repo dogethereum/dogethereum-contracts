@@ -289,6 +289,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager, IScryptChec
         // If the claim is invalid superblock data didn't match provided input
         if (claim.invalid) {
             superblocks.invalidate(claim.superblockId, msg.sender);
+            //TODO: reward chalengers
             emit SuperblockClaimFailed(claimId, claim.claimant, claim.superblockId);
         } else {
             bool confirmImmediately = false;
@@ -351,6 +352,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager, IScryptChec
         status = superblocks.getSuperblockStatus(parentId);
         if (status == DogeSuperblocks.Status.Approved) {
             superblocks.confirm(claimId, msg.sender);
+            // TODO: reward submitter
             unbondDeposit(claimId, claim.claimant);
             emit SuperblockClaimSuccessful(claimId, claim.claimant, claim.superblockId);
             return true;
