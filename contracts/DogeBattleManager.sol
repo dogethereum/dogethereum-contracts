@@ -84,7 +84,7 @@ contract DogeBattleManager is DogeErrorCodes {
     event ChallengerConvicted(bytes32 sessionId, address challenger);
     event SubmitterConvicted(bytes32 sessionId, address submitter);
 
-    event QueryMerkleRootHashes(bytes32 sessionId, address submitter);
+    event QueryMerkleRootHashes(bytes32 superblockId, bytes32 sessionId, address submitter);
     event RespondMerkleRootHashes(bytes32 sessionId, address challenger, bytes32[] blockHashes);
     event QueryBlockHeader(bytes32 sessionId, address submitter, bytes32 blockHash);
     event RespondBlockHeader(bytes32 sessionId, address challenger, bytes32 blockScryptHash, bytes blockHeader);
@@ -144,7 +144,7 @@ contract DogeBattleManager is DogeErrorCodes {
     }
 
     // @dev - Challenger makes a query for superblock hashes
-    function queryMerkleRootHashes(bytes32 sessionId) onlyChallenger(sessionId) public {
+    function queryMerkleRootHashes(bytes32 superblockId, bytes32 sessionId) onlyChallenger(sessionId) public {
         BattleSession storage session = sessions[sessionId];
         bool succeeded = false;
         succeeded = doQueryMerkleRootHashes(sessionId);
@@ -152,7 +152,7 @@ contract DogeBattleManager is DogeErrorCodes {
             session.actionsCounter += 1;
             session.lastActionTimestamp = block.timestamp;
             session.lastActionChallenger = session.actionsCounter;
-            emit QueryMerkleRootHashes(sessionId, session.submitter);
+            emit QueryMerkleRootHashes(superblockId, sessionId, session.submitter);
         }
     }
 

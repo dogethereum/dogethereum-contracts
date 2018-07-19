@@ -171,7 +171,7 @@ contract('DogeClaimManager', (accounts) => {
       assert.equal(result.logs[0].event, 'NewBattle', 'New battle session');
       session1 = result.logs[0].args.sessionId;
       assert.equal(result.logs[1].event, 'VerificationGameStarted', 'Battle started');
-      result = await claimManager.queryMerkleRootHashes(session1, { from: challenger });
+      result = await claimManager.queryMerkleRootHashes(superblock1, session1, { from: challenger });
       assert.equal(result.logs[0].event, 'QueryMerkleRootHashes', 'Query merkle root hashes');
       result = await claimManager.respondMerkleRootHashes(session1, [hashes[0], hashes[1]], { from: submitter });
       assert.equal(result.logs[0].event, 'RespondMerkleRootHashes', 'Respond merkle root hashes');
@@ -243,7 +243,7 @@ contract('DogeClaimManager', (accounts) => {
       assert.equal(result.logs[1].event, 'VerificationGameStarted', 'Battle started');
       const session = await claimManager.getSession(claim1, challenger);
       assert.equal(session, session1, 'Sessions should match');
-      result = await claimManager.queryMerkleRootHashes(session1, { from: challenger });
+      result = await claimManager.queryMerkleRootHashes(superblock1, session1, { from: challenger });
       assert.equal(result.logs[0].event, 'QueryMerkleRootHashes', 'Query merkle root hashes');
     });
     it('Verify hashes', async () => {
@@ -316,7 +316,7 @@ contract('DogeClaimManager', (accounts) => {
     });
     it('Timeout reply hashes', async () => {
       let result;
-      result = await claimManager.queryMerkleRootHashes(session1, { from: challenger });
+      result = await claimManager.queryMerkleRootHashes(superblock1, session1, { from: challenger });
       assert.equal(result.logs[0].event, 'QueryMerkleRootHashes', 'Query merkle root hashes');
       result = await claimManager.timeout(session1, { from: challenger });
       assert.equal(result.logs[0].event, 'ErrorBattle', 'Timeout too early');
@@ -327,7 +327,7 @@ contract('DogeClaimManager', (accounts) => {
     });
     it('Timeout query block headers', async () => {
       let result;
-      result = await claimManager.queryMerkleRootHashes(session1, { from: challenger });
+      result = await claimManager.queryMerkleRootHashes(superblock1, session1, { from: challenger });
       assert.equal(result.logs[0].event, 'QueryMerkleRootHashes', 'Query merkle root hashes');
       result = await claimManager.respondMerkleRootHashes(session1, [hashes[0], hashes[1]], { from: submitter });
       assert.equal(result.logs[0].event, 'RespondMerkleRootHashes', 'Respond merkle root hashes');
@@ -340,7 +340,7 @@ contract('DogeClaimManager', (accounts) => {
     });
     it('Timeout reply block headers', async () => {
       let result;
-      result = await claimManager.queryMerkleRootHashes(session1, { from: challenger });
+      result = await claimManager.queryMerkleRootHashes(superblock1, session1, { from: challenger });
       assert.equal(result.logs[0].event, 'QueryMerkleRootHashes', 'Query merkle root hashes');
       result = await claimManager.respondMerkleRootHashes(session1, [hashes[0], hashes[1]], { from: submitter });
       assert.equal(result.logs[0].event, 'RespondMerkleRootHashes', 'Respond merkle root hashes');
@@ -356,7 +356,7 @@ contract('DogeClaimManager', (accounts) => {
     it('Timeout verify superblock', async () => {
       let result;
       let data;
-      result = await claimManager.queryMerkleRootHashes(session1, { from: challenger });
+      result = await claimManager.queryMerkleRootHashes(superblock1, session1, { from: challenger });
       assert.equal(result.logs[0].event, 'QueryMerkleRootHashes', 'Query merkle root hashes');
       result = await claimManager.respondMerkleRootHashes(session1, [hashes[0], hashes[1]], { from: submitter });
       assert.equal(result.logs[0].event, 'RespondMerkleRootHashes', 'Respond merkle root hashes');
@@ -376,7 +376,7 @@ contract('DogeClaimManager', (accounts) => {
       let result;
       let data;
       let scryptHash;
-      result = await claimManager.queryMerkleRootHashes(session1, { from: challenger });
+      result = await claimManager.queryMerkleRootHashes(superblock1, session1, { from: challenger });
       assert.equal(result.logs[0].event, 'QueryMerkleRootHashes', 'Query merkle root hashes');
       result = await claimManager.respondMerkleRootHashes(session1, [hashes[0], hashes[1]], { from: submitter });
       assert.equal(result.logs[0].event, 'RespondMerkleRootHashes', 'Respond merkle root hashes');
