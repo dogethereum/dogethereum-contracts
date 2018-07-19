@@ -120,11 +120,10 @@ contract('verifyScryptHash', (accounts) => {
       result = await claimManager.challengeSuperblock(superblock1, { from: challenger });
       assert.equal(result.logs[1].event, 'SuperblockClaimChallenged', 'Superblock challenged');
       assert.equal(claim1, result.logs[1].args.claimId);
+      assert.equal(result.logs[2].event, 'NewBattle', 'New battle session');
+      session1 = result.logs[2].args.sessionId;
+      assert.equal(result.logs[3].event, 'VerificationGameStarted', 'Battle started');
 
-      result = await claimManager.runNextBattleSession(claim1, { from: challenger });
-      assert.equal(result.logs[0].event, 'NewBattle', 'New battle session');
-      session1 = result.logs[0].args.sessionId;
-      assert.equal(result.logs[1].event, 'VerificationGameStarted', 'Battle started');
       result = await claimManager.queryMerkleRootHashes(superblock1, session1, { from: challenger });
       assert.equal(result.logs[0].event, 'QueryMerkleRootHashes', 'Query merkle root hashes');
       result = await claimManager.respondMerkleRootHashes(session1, hashes, { from: submitter });

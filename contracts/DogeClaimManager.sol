@@ -216,12 +216,16 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager, IScryptChec
         claim.challengers.push(msg.sender);
         emit SuperblockClaimChallenged(claimId, msg.sender);
 
+        if (!claim.verificationOngoing) {
+            runNextBattleSession(claimId);
+        }
+
         return (ERR_SUPERBLOCK_OK, claimId);
     }
 
     // @dev – runs the battle session to verify a superblock for the next challenger
     // @param claimId – the claim id.
-    function runNextBattleSession(bytes32 claimId) public returns (bool) {
+    function runNextBattleSession(bytes32 claimId) internal returns (bool) {
         SuperblockClaim storage claim = claims[claimId];
 
         if (!claimExists(claim)) {

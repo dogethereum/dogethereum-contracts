@@ -164,13 +164,12 @@ contract('DogeClaimManager', (accounts) => {
       const result = await claimManager.challengeSuperblock(superblock1, { from: challenger });
       assert.equal(result.logs[1].event, 'SuperblockClaimChallenged', 'Superblock challenged');
       assert.equal(claim1, result.logs[1].args.claimId);
+      assert.equal(result.logs[2].event, 'NewBattle', 'New battle session');
+      session1 = result.logs[2].args.sessionId;
+      assert.equal(result.logs[3].event, 'VerificationGameStarted', 'Battle started');
     });
     it('Query and verify hashes', async () => {
       let result;
-      result = await claimManager.runNextBattleSession(claim1, { from: challenger });
-      assert.equal(result.logs[0].event, 'NewBattle', 'New battle session');
-      session1 = result.logs[0].args.sessionId;
-      assert.equal(result.logs[1].event, 'VerificationGameStarted', 'Battle started');
       result = await claimManager.queryMerkleRootHashes(superblock1, session1, { from: challenger });
       assert.equal(result.logs[0].event, 'QueryMerkleRootHashes', 'Query merkle root hashes');
       result = await claimManager.respondMerkleRootHashes(session1, [hashes[0], hashes[1]], { from: submitter });
@@ -234,13 +233,12 @@ contract('DogeClaimManager', (accounts) => {
       const result = await claimManager.challengeSuperblock(superblock1, { from: challenger });
       assert.equal(result.logs[1].event, 'SuperblockClaimChallenged', 'Superblock challenged');
       assert.equal(claim1, result.logs[1].args.claimId);
+      assert.equal(result.logs[2].event, 'NewBattle', 'New battle session');
+      session1 = result.logs[2].args.sessionId;
+      assert.equal(result.logs[3].event, 'VerificationGameStarted', 'Battle started');
     });
     it('Query hashes', async () => {
       let result;
-      result = await claimManager.runNextBattleSession(claim1, { from: challenger });
-      assert.equal(result.logs[0].event, 'NewBattle', 'New battle session');
-      session1 = result.logs[0].args.sessionId;
-      assert.equal(result.logs[1].event, 'VerificationGameStarted', 'Battle started');
       const session = await claimManager.getSession(claim1, challenger);
       assert.equal(session, session1, 'Sessions should match');
       result = await claimManager.queryMerkleRootHashes(superblock1, session1, { from: challenger });
@@ -299,8 +297,7 @@ contract('DogeClaimManager', (accounts) => {
 
       // Challenge
       result = await claimManager.challengeSuperblock(claim1, { from: challenger });
-      result = await claimManager.runNextBattleSession(claim1, { from: challenger });
-      session1 = result.logs[0].args.sessionId;
+      session1 = result.logs[2].args.sessionId;
     };
     beforeEach(async () => {
       await beginNewChallenge();
