@@ -35,7 +35,7 @@ rm -rf $dogethereumContractsCodeDir/build/contracts/
 # Compile and deploy contracts
 truffle deploy --network integrationDogeRegtest | grep Error
 # Init contracts: initial doge header and operator
-truffle exec  --network integrationDogeRegtest scripts/init_dogerelay_regtest.js 
+truffle exec  --network integrationDogeRegtest scripts/init_contracts_local.js 
 # Print debug.js status
 truffle exec  --network integrationDogeRegtest scripts/debug.js 
 echo "Please, start the agent..."
