@@ -22,7 +22,7 @@ contract DummyTransactionProcessor is TransactionProcessor {
     // value as ERR_RELAY_VERIFY (in constants.se) to avoid confusing callers
     //
     // this exact function signature is required as it has to match
-    // the signature specified in DogeRelay (otherwise DogeRelay will not call it)
+    // the signature specified in DogeSuperblocks (otherwise DogeSuperblocks will not call it)
     function processTransaction(bytes dogeTx, uint256 txHash, bytes20 operatorPublicKeyHash) public returns (uint) {
         log0("processTransaction called");
 
