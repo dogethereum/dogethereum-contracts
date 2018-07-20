@@ -3,7 +3,7 @@ const utils = require('./utils');
 
 contract('DogeToken - Operators', (accounts) => {
   const trustedDogeEthPriceOracle = accounts[0]; // Tell DogeToken to trust accounts[0] as a price oracle
-  const trustedDogeRelay = accounts[0]; // Tell DogeToken to trust accounts[0] as it would be DogeRelay
+  const trustedRelayerContract = accounts[0]; // Tell DogeToken to trust accounts[0] as it would be the relayer contract
   const collateralRatio = 2;
 
   const operatorPublicKeyHash = '0x03cd041b0139d3240607b9fd1b2d1b691e22b5d6';
@@ -25,7 +25,7 @@ contract('DogeToken - Operators', (accounts) => {
 
   describe('addOperator', () => {
     it('addOperator success', async () => {
-      const dogeToken = await DogeToken.new(trustedDogeRelay, trustedDogeEthPriceOracle, collateralRatio);
+      const dogeToken = await DogeToken.new(trustedRelayerContract, trustedDogeEthPriceOracle, collateralRatio);
       var addOperatorTxReceipt = await sendAddOperator(dogeToken);
       var operator = await dogeToken.operators(operatorPublicKeyHash);
       assert.equal(operator[0], operatorEthAddress, 'Operator not created');
@@ -36,13 +36,13 @@ contract('DogeToken - Operators', (accounts) => {
       assert.equal(operatorsLength, 1, 'operatorsLength not what expected');
     });
     it('addOperator fail - try adding the same operator twice', async () => {
-      const dogeToken = await DogeToken.new(trustedDogeRelay, trustedDogeEthPriceOracle, collateralRatio);
+      const dogeToken = await DogeToken.new(trustedRelayerContract, trustedDogeEthPriceOracle, collateralRatio);
       var addOperatorTxReceipt = await sendAddOperator(dogeToken);
       addOperatorTxReceipt = await sendAddOperator(dogeToken);
       assert.equal(60015, addOperatorTxReceipt.logs[0].args.err, "Expected ERR_OPERATOR_ALREADY_CREATED error");
     });
     it('addOperator fail - wrong signature', async () => {
-      const dogeToken = await DogeToken.new(trustedDogeRelay, trustedDogeEthPriceOracle, collateralRatio);
+      const dogeToken = await DogeToken.new(trustedRelayerContract, trustedDogeEthPriceOracle, collateralRatio);
       var addOperatorTxReceipt = await sendAddOperator(dogeToken, true);
       assert.equal(60010, addOperatorTxReceipt.logs[0].args.err, "Expected ERR_OPERATOR_SIGNATURE error");
       var operator = await dogeToken.operators(operatorPublicKeyHash);
@@ -52,21 +52,21 @@ contract('DogeToken - Operators', (accounts) => {
 
   describe('addOperatorDeposit', () => {
     it('addOperatorDeposit success', async () => {
-      const dogeToken = await DogeToken.new(trustedDogeRelay, trustedDogeEthPriceOracle, collateralRatio);
+      const dogeToken = await DogeToken.new(trustedRelayerContract, trustedDogeEthPriceOracle, collateralRatio);
       await sendAddOperator(dogeToken);
       await dogeToken.addOperatorDeposit(operatorPublicKeyHash, {value: 1000000000000000000, from : operatorEthAddress});
       var operator = await dogeToken.operators(operatorPublicKeyHash);
       assert.equal(operator[4], 1000000000000000000, 'Deposit not credited');
     });
     it('addOperatorDeposit fail - operator not created', async () => {
-      const dogeToken = await DogeToken.new(trustedDogeRelay, trustedDogeEthPriceOracle, collateralRatio);
+      const dogeToken = await DogeToken.new(trustedRelayerContract, trustedDogeEthPriceOracle, collateralRatio);
       var addOperatorDepositTxReceipt = await dogeToken.addOperatorDeposit(operatorPublicKeyHash, {value: 1000000000000000000, from : operatorEthAddress});
       assert.equal(60020, addOperatorDepositTxReceipt.logs[0].args.err, "Expected ERR_OPERATOR_NOT_CREATED_OR_WRONG_SENDER error");
       var operator = await dogeToken.operators(operatorPublicKeyHash);
       assert.equal(operator[4], 0, 'Deposit credited');
     });
     it('addOperatorDeposit fail - wrong sender', async () => {
-      const dogeToken = await DogeToken.new(trustedDogeRelay, trustedDogeEthPriceOracle, collateralRatio);
+      const dogeToken = await DogeToken.new(trustedRelayerContract, trustedDogeEthPriceOracle, collateralRatio);
       await sendAddOperator(dogeToken);
       var addOperatorDepositTxReceipt = await dogeToken.addOperatorDeposit(operatorPublicKeyHash, {value: 1000000000000000000, from : accounts[0]});
       assert.equal(60020, addOperatorDepositTxReceipt.logs[0].args.err, "Expected ERR_OPERATOR_NOT_CREATED_OR_WRONG_SENDER error");
@@ -77,7 +77,7 @@ contract('DogeToken - Operators', (accounts) => {
 
   describe('deleteOperator', () => {
     it('deleteOperator success', async () => {
-      const dogeToken = await DogeToken.new(trustedDogeRelay, trustedDogeEthPriceOracle, collateralRatio);
+      const dogeToken = await DogeToken.new(trustedRelayerContract, trustedDogeEthPriceOracle, collateralRatio);
       await sendAddOperator(dogeToken);
       await dogeToken.deleteOperator(operatorPublicKeyHash, {from : operatorEthAddress});
       var operator = await dogeToken.operators(operatorPublicKeyHash);
@@ -89,7 +89,7 @@ contract('DogeToken - Operators', (accounts) => {
       assert.equal(operatorsLength, 1, 'operatorsLength not what expected');
     });
     it('deleteOperator fail - operator has eth balance', async () => {
-      const dogeToken = await DogeToken.new(trustedDogeRelay, trustedDogeEthPriceOracle, collateralRatio);
+      const dogeToken = await DogeToken.new(trustedRelayerContract, trustedDogeEthPriceOracle, collateralRatio);
       await sendAddOperator(dogeToken);
       await dogeToken.addOperatorDeposit(operatorPublicKeyHash, {value: 1000000000000000000, from : operatorEthAddress});
       var deleteOperatorTxReceipt = await dogeToken.deleteOperator(operatorPublicKeyHash, {from : operatorEthAddress});
@@ -102,7 +102,7 @@ contract('DogeToken - Operators', (accounts) => {
 
   describe('withdrawOperatorDeposit', () => {
     it('withdrawOperatorDeposit success - no utxo', async () => {
-      const dogeToken = await DogeToken.new(trustedDogeRelay, trustedDogeEthPriceOracle, collateralRatio);
+      const dogeToken = await DogeToken.new(trustedRelayerContract, trustedDogeEthPriceOracle, collateralRatio);
       await sendAddOperator(dogeToken);
       await dogeToken.addOperatorDeposit(operatorPublicKeyHash, {value: 1000000000000000000, from : operatorEthAddress});
       var operatorEthAddressBalanceBeforeWithdraw = web3.eth.getBalance(operatorEthAddress);
@@ -116,7 +116,7 @@ contract('DogeToken - Operators', (accounts) => {
       assert.equal(operatorEthAddressBalanceAfterWithdraw.sub(operatorEthAddressBalanceBeforeWithdraw).add(txCost).equals(web3.toBigNumber(400000000000000000)), true, 'balance not what expected');
     });
     it('withdrawOperatorDeposit success - with utxos', async () => {
-      const dogeToken = await DogeToken.new(trustedDogeRelay, trustedDogeEthPriceOracle, collateralRatio);
+      const dogeToken = await DogeToken.new(trustedRelayerContract, trustedDogeEthPriceOracle, collateralRatio);
       await sendAddOperator(dogeToken);
       await dogeToken.addOperatorDeposit(operatorPublicKeyHash, {value: 5000, from : operatorEthAddress});
       var operatorEthAddressBalanceBeforeWithdraw = web3.eth.getBalance(operatorEthAddress);
@@ -131,7 +131,7 @@ contract('DogeToken - Operators', (accounts) => {
       assert.equal(operatorEthAddressBalanceAfterWithdraw.sub(operatorEthAddressBalanceBeforeWithdraw).add(txCost).equals(web3.toBigNumber(100)), true, 'balance not what expected');
     });
     it('withdrawOperatorDeposit fail - not enough balance', async () => {
-      const dogeToken = await DogeToken.new(trustedDogeRelay, trustedDogeEthPriceOracle, collateralRatio);
+      const dogeToken = await DogeToken.new(trustedRelayerContract, trustedDogeEthPriceOracle, collateralRatio);
       await sendAddOperator(dogeToken);
       await dogeToken.addOperatorDeposit(operatorPublicKeyHash, {value: 1000000000000000000, from : operatorEthAddress});
       await dogeToken.setDogeEthPrice(1, {from : accounts[0]});
@@ -141,7 +141,7 @@ contract('DogeToken - Operators', (accounts) => {
       assert.equal(operator[4], 1000000000000000000, 'Operator eth balance was modified');
     });
     it('withdrawOperatorDeposit faril - deposit would be too low', async () => {
-      const dogeToken = await DogeToken.new(trustedDogeRelay, trustedDogeEthPriceOracle, collateralRatio);
+      const dogeToken = await DogeToken.new(trustedRelayerContract, trustedDogeEthPriceOracle, collateralRatio);
       await sendAddOperator(dogeToken);
       await dogeToken.addOperatorDeposit(operatorPublicKeyHash, {value: 5000, from : operatorEthAddress});
       await dogeToken.setDogeEthPrice(3, {from : accounts[0]});

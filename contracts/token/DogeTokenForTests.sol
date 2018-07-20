@@ -4,7 +4,7 @@ import "./DogeToken.sol";
 
 contract DogeTokenForTests is DogeToken {
 
-    constructor (address _trustedDogeRelay, address _trustedDogeEthPriceOracle, uint8 _collateralRatio) public DogeToken(_trustedDogeRelay, _trustedDogeEthPriceOracle, _collateralRatio) {
+    constructor (address _trustedRelayerContract, address _trustedDogeEthPriceOracle, uint8 _collateralRatio) public DogeToken(_trustedRelayerContract, _trustedDogeEthPriceOracle, _collateralRatio) {
 
     }
 

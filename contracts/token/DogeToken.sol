@@ -35,8 +35,9 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
 
 
     // Variables sets by constructor
-    // DogeRelay contract to trust. Only doge txs relayed from DogeRelay will be accepted.
-    address public trustedDogeRelay;
+    // Contract to trust for tx inclueded in a doge block verification.
+    // Only doge txs relayed from trustedRelayerContract will be accepted.
+    address public trustedRelayerContract;
     // Doge-Eth price oracle to trust.
     address public trustedDogeEthPriceOracle;
     // Number of times the operator eth collateral should cover her doge holdings 
@@ -93,8 +94,8 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         bool deleted;
     }
 
-    constructor (address _trustedDogeRelay, address _trustedDogeEthPriceOracle, uint8 _collateralRatio) public {
-        trustedDogeRelay = _trustedDogeRelay;
+    constructor (address _trustedRelayerContract, address _trustedDogeEthPriceOracle, uint8 _collateralRatio) public {
+        trustedRelayerContract = _trustedRelayerContract;
         trustedDogeEthPriceOracle = _trustedDogeEthPriceOracle;
         collateralRatio = _collateralRatio;
     }
@@ -196,7 +197,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
 
 
     function processTransaction(bytes dogeTx, uint txHash, bytes20 operatorPublicKeyHash) public returns (uint) {
-        require(msg.sender == trustedDogeRelay);
+        require(msg.sender == trustedRelayerContract);
 
         Operator storage operator = operators[operatorPublicKeyHash];
         // Check operator exists 

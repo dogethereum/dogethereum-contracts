@@ -5,7 +5,7 @@ var utils = require('./utils');
 
 contract('testDogeTokenProcessTransaction', function(accounts) {
   const trustedDogeEthPriceOracle = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
-  const trustedDogeRelay = accounts[0]; // Tell DogeToken to trust accounts[0] as it would be DogeRelay
+  const trustedRelayerContract = accounts[0]; // Tell DogeToken to trust accounts[0] as it would be the relayer contract
   const collateralRatio = 2;
 
   const operatorPublicKeyHash = `0x4d905b4b815d483cdfabcd292c6f86509d0fad82`;
@@ -15,7 +15,7 @@ contract('testDogeTokenProcessTransaction', function(accounts) {
   const value = 905853205327;
 
   it("processTransaction success", async () => {
-    let dogeToken = await DogeToken.new(trustedDogeRelay, trustedDogeEthPriceOracle, collateralRatio);
+    let dogeToken = await DogeToken.new(trustedRelayerContract, trustedDogeEthPriceOracle, collateralRatio);
     await dogeToken.addOperatorSimple(operatorPublicKeyHash);
 
     await dogeToken.processTransaction(txData, txHash, operatorPublicKeyHash);
@@ -33,14 +33,14 @@ contract('testDogeTokenProcessTransaction', function(accounts) {
   });
 
   it("processTransaction fail - operator not created", async () => {
-    let dogeToken = await DogeToken.new(trustedDogeRelay, trustedDogeEthPriceOracle, collateralRatio);
+    let dogeToken = await DogeToken.new(trustedRelayerContract, trustedDogeEthPriceOracle, collateralRatio);
 
     var processTransactionTxReceipt = await dogeToken.processTransaction(txData, txHash, operatorPublicKeyHash);
     assert.equal(60060, processTransactionTxReceipt.logs[0].args.err, "Expected ERR_PROCESS_OPERATOR_NOT_CREATED error");
   });
 
   it("processTransaction fail - tx already processed", async () => {
-    let dogeToken = await DogeToken.new(trustedDogeRelay, trustedDogeEthPriceOracle, collateralRatio);
+    let dogeToken = await DogeToken.new(trustedRelayerContract, trustedDogeEthPriceOracle, collateralRatio);
     await dogeToken.addOperatorSimple(operatorPublicKeyHash);
     await dogeToken.processTransaction(txData, txHash, operatorPublicKeyHash);
 

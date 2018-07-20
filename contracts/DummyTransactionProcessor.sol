@@ -12,10 +12,10 @@ contract DummyTransactionProcessor is TransactionProcessor {
     uint256 public lastTxHash;
     uint256 public ethBlock;
 
-    address private _trustedDogeRelay;
+    address private _trustedRelayerContract;
 
-    constructor(address trustedDogeRelay) public {
-        _trustedDogeRelay = trustedDogeRelay;
+    constructor(address trustedRelayerContract) public {
+        _trustedRelayerContract = trustedRelayerContract;
     }
 
     // processTransaction should avoid returning the same
@@ -26,8 +26,8 @@ contract DummyTransactionProcessor is TransactionProcessor {
     function processTransaction(bytes dogeTx, uint256 txHash, bytes20 operatorPublicKeyHash) public returns (uint) {
         log0("processTransaction called");
 
-        // only allow trustedDogeRelay, otherwise anyone can provide a fake dogeTx
-        if (msg.sender == _trustedDogeRelay) {
+        // only allow trustedRelayerContract, otherwise anyone can provide a fake dogeTx
+        if (msg.sender == _trustedRelayerContract) {
             log1("processTransaction txHash, ", bytes32(txHash));
             ethBlock = block.number;
             lastTxHash = txHash;
