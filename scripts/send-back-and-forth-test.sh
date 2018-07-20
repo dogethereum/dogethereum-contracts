@@ -7,7 +7,7 @@ dogecoinQtDatadir=/Users/youruser/Library/Application\ Support/Dogecoin
 dogecoinQtExecutable=/Applications/Dogecoin-Qt.app/Contents/MacOS/Dogecoin-Qt
 dogecoinQtRpcuser=aaa
 dogecoinQtRpcpassword=bbb
-agentCodeDir=/path/dogesubmitter
+agentCodeDir=/path/agentCodeDir
 agentDataDir=/path/agentDataDir
 dogethereumContractsCodeDir=/path/dogethereumContractsCodeDir
 
