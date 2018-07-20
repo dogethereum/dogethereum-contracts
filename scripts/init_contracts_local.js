@@ -3,7 +3,7 @@ var Superblocks = artifacts.require("./DogeSuperblocks.sol");
 const utils = require('./../test/utils');
 
 module.exports = async function(callback) {
-  console.log("init_dogerelay_regtest begin");
+  console.log("init_contracts_local begin");
   
   // Calculate operator public key
   const operatorPublicKeyHash = '0x03cd041b0139d3240607b9fd1b2d1b691e22b5d6';
@@ -28,6 +28,6 @@ module.exports = async function(callback) {
   var parentId = "0x0";
   await sb.initialize(blocksMerkleRoot, accumulatedWork, timestamp, prevTimestamp, lastHash, lastBits, parentId);
 
-  console.log("init_dogerelay_regtest end");
+  console.log("init_contracts_local end");
 
 }
