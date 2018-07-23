@@ -21,8 +21,13 @@ Related projects:
 
 ## Design
 
+### Doge to Eth
+
 ![Design](./design.png)
 
+### Eth to Doge
+
+![Design](./design-eth2doge.png)
 
 ## Incentives
 
