@@ -1,6 +1,6 @@
 pragma solidity ^0.4.19;
 
-// @dev - DogeRelay error codes
+// @dev - DogeSuperblocks error codes
 contract DogeErrorCodes {
     // Error codes
     uint constant ERR_SUPERBLOCK_OK = 0;

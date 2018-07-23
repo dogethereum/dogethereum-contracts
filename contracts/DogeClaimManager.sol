@@ -75,7 +75,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager, IScryptChec
     // Once scryptChecker has been set, it cannot be changed.
     // An address of 0x0 means scryptChecker hasn't been set yet.
     //
-    // @param _scryptChecker - address of the ScryptChecker contract to be associated with DogeRelay
+    // @param _scryptChecker - address of the ScryptChecker contract to be associated with DogeClaimManager
     function setScryptChecker(address _scryptChecker) public {
         require(address(scryptChecker) == 0x0 && _scryptChecker != 0x0);
         scryptChecker = IScryptChecker(_scryptChecker);
@@ -258,8 +258,9 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager, IScryptChec
     }
 
     // @dev – check whether a claim has successfully withstood all challenges.
-    // if successful, it will trigger a callback to the DogeRelay contract,
-    // notifying it that the Scrypt blockhash was correctly calculated.
+    // if successful without challenges it will mark the superblock as confirmed.
+    // if successful with more that one challenge it will mark the superblock as semi-approved.
+    // if verification failed it will mark the superblock as invalid.
     //
     // @param claimId – the claim ID.
     function checkClaimFinished(bytes32 claimId) public returns (bool) {
@@ -416,10 +417,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager, IScryptChec
 
         if (claim.claimant == loser) {
             // the claim is over.
-            // note: no callback needed to the DogeRelay contract,
-            // because it by default does not save blocks.
-
-            //Trigger end of verification game
+            // Trigger end of verification game
             claim.invalid = true;
 
             // It should not fail when called from sessionDecided

@@ -108,7 +108,7 @@ contract ClaimManager is DepositsManager, IScryptChecker {
   }
 
   // @dev – check whether a DogeCoin blockHash was calculated correctly from the plaintext block header.
-  // only callable by the DogeRelay contract.
+  // only callable by the DogeClaimManager contract.
   // @param _plaintext – the plaintext blockHeader.
   // @param _blockHash – the blockHash.
   // @param claimant – the address of the Dogecoin block submitter.
@@ -118,7 +118,7 @@ contract ClaimManager is DepositsManager, IScryptChecker {
       mstore(add(_blockHash, 0x20), _hash)
     }
 
-    // dogeRelay can directly make a deposit on behalf of the claimant.
+    // DogeClaimManager can directly make a deposit on behalf of the claimant.
     /* if (msg.value != 0) {
       // only call if eth is included (to save gas)
       increaseDeposit(_submitter, msg.value);
@@ -219,10 +219,7 @@ contract ClaimManager is DepositsManager, IScryptChecker {
 
     if (claim.claimant == loser) {
       // the claim is over.
-      // note: no callback needed to the DogeRelay contract,
-      // because it by default does not save blocks.
-
-      //Trigger end of verification game
+      // Trigger end of verification game
       claim.numChallengers = 0;
       claim.failed = true;
       runNextVerificationGame(claimID);
@@ -237,7 +234,7 @@ contract ClaimManager is DepositsManager, IScryptChecker {
   }
 
   // @dev – check whether a claim has successfully withstood all challenges.
-  // if successful, it will trigger a callback to the DogeRelay contract,
+  // if successful, it will trigger a callback to the DogeClaimManager contract,
   // notifying it that the Scrypt blockhash was correctly calculated.
   //
   // @param claimID – the claim ID.

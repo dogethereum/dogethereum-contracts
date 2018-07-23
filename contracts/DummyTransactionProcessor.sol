@@ -1,6 +1,6 @@
 /*
 Example contract that can process Doge transactions relayed to it via
-DogeRelay.  This stores the Doge transaction hash and the Ethereum block
+DogeSuperblocks. This stores the Doge transaction hash and the Ethereum block
 number (so people running the same example with the same Doge transaction
 can get an indication that the storage was indeed updated).
 */
