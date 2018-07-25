@@ -1,9 +1,11 @@
 var DogeSuperblocks = artifacts.require("./DogeSuperblocks.sol");
+var DogeClaimManager = artifacts.require("./DogeClaimManager.sol");
 var DogeToken = artifacts.require("./token/DogeToken.sol");
 var utils = require('../test/utils');
 
 module.exports = async function(callback) {
   var ds  = await DogeSuperblocks.deployed();
+  var dcm  = await DogeClaimManager.deployed();
   console.log("Superblocks");
   console.log("---------");
   var bestSuperblockHash = await ds.getBestSuperblock.call(); 
@@ -14,6 +16,9 @@ module.exports = async function(callback) {
   console.log("lastHash : " + lastHash);
   var indexNextSuperblock = await ds.getIndexNextSuperblock.call();
   console.log("indexNextSuperblock : " + indexNextSuperblock);
+  var newSuperblockEventTimestamp = await dcm.getNewSuperblockEventTimestamp.call(bestSuperblockHash);
+  console.log("newSuperblockEventTimestamp : " + newSuperblockEventTimestamp);
+  console.log("");
 
 
   console.log("DogeToken");
