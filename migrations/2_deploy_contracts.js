@@ -43,10 +43,17 @@ const SUPERBLOCK_TIMES_PRODUCTION = {
   CONFIMATIONS: 3,  // Superblocks required to confirm semi approved superblock
 };
 
-const SUPERBLOCK_TIMES_INTEGRATION = {
+const SUPERBLOCK_TIMES_INTEGRATION_SLOW_SYNC = {
   DURATION: 180,    // 3 minutes
   DELAY: 180,       // 3 minutes
   TIMEOUT: 60,      // 1 minutes
+  CONFIMATIONS: 1,  // Superblocks required to confirm semi approved superblock
+};
+
+const SUPERBLOCK_TIMES_INTEGRATION_FAST_SYNC = {
+  DURATION: 180,    // 3 minutes
+  DELAY: 180,       // 3 minutes
+  TIMEOUT: 10,      // 10 seconds
   CONFIMATIONS: 1,  // Superblocks required to confirm semi approved superblock
 };
 
@@ -134,9 +141,9 @@ module.exports = function(deployer, network, accounts) {
     if (network === 'development') {
       await deployDevelopment(deployer, network, accounts, DOGE_MAINNET, trustedDogeEthPriceOracle, null, SUPERBLOCK_TIMES_LOCAL);
     } else if (network === 'ropsten') {
-      await deployIntegration(deployer, network, accounts, DOGE_MAINNET, trustedDogeEthPriceOracle, null, SUPERBLOCK_TIMES_INTEGRATION);
+      await deployIntegration(deployer, network, accounts, DOGE_MAINNET, trustedDogeEthPriceOracle, null, SUPERBLOCK_TIMES_INTEGRATION_FAST_SYNC);
     } else if (network === 'integrationDogeMain') {
-      await deployIntegration(deployer, network, accounts, DOGE_MAINNET, trustedDogeEthPriceOracle, null, SUPERBLOCK_TIMES_INTEGRATION);
+      await deployIntegration(deployer, network, accounts, DOGE_MAINNET, trustedDogeEthPriceOracle, null, SUPERBLOCK_TIMES_INTEGRATION_FAST_SYNC);
     } else if (network === 'integrationDogeRegtest') {
       await deployIntegration(deployer, network, accounts, DOGE_REGTEST, trustedDogeEthPriceOracle, null, SUPERBLOCK_TIMES_LOCAL);
     }
