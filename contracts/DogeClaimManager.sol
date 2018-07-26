@@ -86,16 +86,22 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager, IScryptChec
     // @param account – the user's address.
     // @param amount – the amount of deposit to lock up.
     // @return – the user's deposit bonded for the claim.
-    function bondDeposit(bytes32 claimId, address account, uint amount) private returns (uint) {
+    function bondDeposit(bytes32 claimId, address account, uint amount) internal returns (uint, uint) {
         SuperblockClaim storage claim = claims[claimId];
 
-        require(claimExists(claim));
-        require(deposits[account] >= amount);
-        deposits[account] -= amount;
+        if (!claimExists(claim)) {
+            return (ERR_SUPERBLOCK_BAD_CLAIM, 0);
+        }
 
+        if (deposits[account] < amount) {
+            return (ERR_SUPERBLOCK_MIN_DEPOSIT, deposits[account]);
+        }
+
+        deposits[account] -= amount;
         claim.bondedDeposits[account] += amount;
         emit DepositBonded(claimId, account, amount);
-        return claim.bondedDeposits[account];
+
+        return (ERR_SUPERBLOCK_OK, claim.bondedDeposits[account]);
     }
 
     // @dev – accessor for a claims bonded deposits.
@@ -112,10 +118,14 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager, IScryptChec
     // @param claimId – the claim id.
     // @param account – the user's address.
     // @return – the user's deposit which was unbonded from the claim.
-    function unbondDeposit(bytes32 claimId, address account) public returns (uint) {
+    function unbondDeposit(bytes32 claimId, address account) internal returns (uint, uint) {
         SuperblockClaim storage claim = claims[claimId];
-        require(claimExists(claim));
-        require(claim.decided == true);
+        if (!claimExists(claim)) {
+            return (ERR_SUPERBLOCK_BAD_CLAIM, 0);
+        }
+        if (!claim.decided) {
+            return (ERR_SUPERBLOCK_BAD_STATUS, 0);
+        }
 
         uint bondedDeposit = claim.bondedDeposits[account];
 
@@ -124,7 +134,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager, IScryptChec
 
         emit DepositUnbonded(claimId, account, bondedDeposit);
 
-        return bondedDeposit;
+        return (ERR_SUPERBLOCK_OK, bondedDeposit);
     }
 
     // @dev – Propose a new superblock.
@@ -165,6 +175,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager, IScryptChec
             return (ERR_SUPERBLOCK_BAD_CLAIM, claimId);
         }
 
+        claim.superblockId = superblockId;
         claim.claimant = msg.sender;
         claim.currentChallenger = 0;
         claim.decided = false;
@@ -172,9 +183,9 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager, IScryptChec
         claim.verificationOngoing = false;
         claim.createdAt = block.timestamp;
         claim.challengeTimeout = block.timestamp + superblockTimeout;
-        claim.superblockId = superblockId;
 
-        bondDeposit(claimId, msg.sender, minDeposit);
+        (err, ) = bondDeposit(claimId, msg.sender, minDeposit);
+        assert(err == ERR_SUPERBLOCK_OK);
 
         emit SuperblockClaimCreated(claimId, msg.sender, superblockId);
 
@@ -210,7 +221,8 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager, IScryptChec
             return (err, 0);
         }
 
-        bondDeposit(claimId, msg.sender, minDeposit);
+        (err, ) = bondDeposit(claimId, msg.sender, minDeposit);
+        assert(err == ERR_SUPERBLOCK_OK);
 
         claim.challengeTimeout = block.timestamp + superblockTimeout;
         claim.challengers.push(msg.sender);
