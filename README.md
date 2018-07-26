@@ -114,8 +114,8 @@ To deploy the contracts
 
 ## License
 
-MIT License
-Copyright (c) 2018 Coinfabrik & Oscar Guindzberg
+MIT License<br/>
+Copyright (c) 2018 Coinfabrik & Oscar Guindzberg<br/>
 [License](LICENSE)
 
 ## Doge-Eth bounty
