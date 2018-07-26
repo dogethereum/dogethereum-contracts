@@ -436,7 +436,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager, IScryptChec
     }
 
     // @dev - Check if a superblock can be semi approved by calling checkClaimFinished
-    function inBattleAndSemiApprovable(bytes32 superblockId) public view returns (bool) {
+    function getInBattleAndSemiApprovable(bytes32 superblockId) public view returns (bool) {
         SuperblockClaim claim = claims[superblockId];
         return (superblocks.getSuperblockStatus(superblockId) == DogeSuperblocks.Status.InBattle &&
             !claim.invalid && !claim.verificationOngoing && block.timestamp > claim.challengeTimeout
