@@ -114,7 +114,9 @@ To deploy the contracts
 
 ## License
 
-Copyright (c) 2018 Coinfabrik and Oscar Guindzberg. You will need to get a written authorization from them to use this code.
+MIT License
+Copyright (c) 2018 Coinfabrik & Oscar Guindzberg
+[License](LICENSE)
 
 ## Doge-Eth bounty
 This is our eth address: 0x1ed3e252dcb6d540947d2d63a911f56733d55681
