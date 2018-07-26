@@ -80,9 +80,9 @@ contract DogeBattleManager is DogeErrorCodes {
     // network that the stored blocks belong to
     Network private net;
 
-    event NewBattle(bytes32 sessionId, address submitter, address challenger);
-    event ChallengerConvicted(bytes32 sessionId, address challenger);
-    event SubmitterConvicted(bytes32 sessionId, address submitter);
+    event NewBattle(bytes32 superblockId, bytes32 sessionId, address submitter, address challenger);
+    event ChallengerConvicted(bytes32 superblockId, bytes32 sessionId, address challenger);
+    event SubmitterConvicted(bytes32 superblockId, bytes32 sessionId, address submitter);
 
     event QueryMerkleRootHashes(bytes32 superblockId, bytes32 sessionId, address submitter);
     event RespondMerkleRootHashes(bytes32 sessionId, address challenger, bytes32[] blockHashes);
@@ -129,7 +129,7 @@ contract DogeBattleManager is DogeErrorCodes {
 
         sessionsCount += 1;
 
-        emit NewBattle(sessionId, submitter, challenger);
+        emit NewBattle(superblockId, sessionId, submitter, challenger);
         return sessionId;
     }
 
@@ -418,7 +418,7 @@ contract DogeBattleManager is DogeErrorCodes {
         BattleSession storage session = sessions[sessionId];
         sessionDecided(sessionId, superblockId, session.submitter, session.challenger);
         disable(sessionId);
-        emit ChallengerConvicted(sessionId, challenger);
+        emit ChallengerConvicted(superblockId, sessionId, challenger);
     }
 
     // @dev - To be called when a submitter is convicted
@@ -426,7 +426,7 @@ contract DogeBattleManager is DogeErrorCodes {
         BattleSession storage session = sessions[sessionId];
         sessionDecided(sessionId, superblockId, session.challenger, session.submitter);
         disable(sessionId);
-        emit SubmitterConvicted(sessionId, submitter);
+        emit SubmitterConvicted(superblockId, sessionId, submitter);
     }
 
     // @dev - Disable session
