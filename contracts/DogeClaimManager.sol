@@ -500,6 +500,11 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager, IScryptChec
         return claims[claimId].sessions[challenger];
     }
 
+    function getClaimChallengers(bytes32 superblockId) public view returns (address[]) {
+        SuperblockClaim storage claim = claims[superblockId];
+        return claim.challengers;
+    }
+
     function doVerifyScryptHash(bytes32 sessionId, bytes32 blockSha256Hash, bytes32 blockScryptHash, bytes blockHeader, bool isMergeMined, address submitter) internal returns (bytes32) {
         numScryptHashVerifications += 1;
         bytes32 challengeId = keccak256(abi.encodePacked(blockScryptHash, submitter, numScryptHashVerifications));
