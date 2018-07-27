@@ -492,6 +492,11 @@ contract DogeBattleManager is DogeErrorCodes {
         block.timestamp > session.lastActionTimestamp + superblockTimeout);
     }
 
+    // @dev - Return Doge block hashes associated with a certain battle session
+    function getDogeBlockHashes(bytes32 sessionId) public view returns (bytes32[]) {
+        return sessions[sessionId].blockHashes;
+    }
+
     // @dev - To be called when a battle sessions  was decided
     function sessionDecided(bytes32 sessionId, bytes32 superblockId, address winner, address loser) internal;
 
