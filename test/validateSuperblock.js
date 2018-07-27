@@ -182,7 +182,7 @@ contract('validateSuperblocks', (accounts) => {
       // Confirm superblock
       await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
       result = await claimManager.checkClaimFinished(superblock1, { from: submitter });
-      assert.equal(result.logs[0].event, 'SuperblockClaimPending', 'Superblock challenged');
+      assert.equal(result.logs[0].event, 'SuperblockClaimPending', 'Superblock semi approved');
     });
     it('Reject invalid block bits', async () => {
       const proposedSuperblock = utils.makeSuperblock(headers,
@@ -232,7 +232,7 @@ contract('validateSuperblocks', (accounts) => {
       // Confirm superblock
       await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
       result = await claimManager.checkClaimFinished(superblock1, { from: challenger });
-      assert.equal(result.logs[0].event, 'SuperblockClaimFailed', 'Superblock challenged');
+      assert.equal(result.logs[0].event, 'SuperblockClaimFailed', 'Superblock rejected');
     });
     it('Reject invalid prev timestamp', async () => {
       const proposedSuperblock = utils.makeSuperblock(headers,
@@ -282,7 +282,7 @@ contract('validateSuperblocks', (accounts) => {
       // Confirm superblock
       await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
       result = await claimManager.checkClaimFinished(superblock1, { from: challenger });
-      assert.equal(result.logs[0].event, 'SuperblockClaimFailed', 'Superblock challenged');
+      assert.equal(result.logs[0].event, 'SuperblockClaimFailed', 'Superblock rejected');
     });
     it('Reject invalid timestamp', async () => {
       const proposedSuperblock = utils.makeSuperblock(headers,
@@ -332,7 +332,7 @@ contract('validateSuperblocks', (accounts) => {
       // Confirm superblock
       await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
       result = await claimManager.checkClaimFinished(superblock1, { from: challenger });
-      assert.equal(result.logs[0].event, 'SuperblockClaimFailed', 'Superblock challenged');
+      assert.equal(result.logs[0].event, 'SuperblockClaimFailed', 'Superblock rejected');
     });
     it('Reject invalid last hash', async () => {
       const proposedSuperblock = utils.makeSuperblock(headers,
