@@ -243,7 +243,8 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager, IScryptChec
             return false;
         }
 
-        if (claim.decided) {
+        // superblock marked as invalid do not have to run remaining challengers
+        if (claim.decided || claim.invalid) {
             emit ErrorClaim(claimId, ERR_SUPERBLOCK_CLAIM_DECIDED);
             return false;
         }
@@ -287,7 +288,18 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager, IScryptChec
             return false;
         }
 
-        //check that the claim has exceeded the claim's specific challenge timeout.
+        // an invalid superblock can be rejected immediately
+        if (claim.invalid) {
+            // The superblock is invalid, submitter abandoned
+            // or superblock data is inconsistent
+            claim.decided = true;
+            superblocks.invalidate(claim.superblockId, msg.sender);
+            emit SuperblockClaimFailed(claimId, claim.claimant, claim.superblockId);
+            doPayChallengers(claimId, claim);
+            return false;
+        }
+
+        // check that the claim has exceeded the claim's specific challenge timeout.
         if (block.timestamp <= claim.challengeTimeout) {
             emit ErrorClaim(claimId, ERR_SUPERBLOCK_NO_TIMEOUT);
             return false;
@@ -301,30 +313,23 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager, IScryptChec
 
         claim.decided = true;
 
-        // If the claim is invalid superblock data didn't match provided input
-        if (claim.invalid) {
-            superblocks.invalidate(claim.superblockId, msg.sender);
-            //TODO: reward chalengers
-            emit SuperblockClaimFailed(claimId, claim.claimant, claim.superblockId);
-        } else {
-            bool confirmImmediately = false;
-            // No challengers and parent approved confirm immediately
-            if (claim.challengers.length == 0) {
-                bytes32 parentId = superblocks.getSuperblockParentId(claim.superblockId);
-                DogeSuperblocks.Status status = superblocks.getSuperblockStatus(parentId);
-                if (status == DogeSuperblocks.Status.Approved) {
-                    confirmImmediately = true;
-                }
+        bool confirmImmediately = false;
+        // No challengers and parent approved confirm immediately
+        if (claim.challengers.length == 0) {
+            bytes32 parentId = superblocks.getSuperblockParentId(claim.superblockId);
+            DogeSuperblocks.Status status = superblocks.getSuperblockStatus(parentId);
+            if (status == DogeSuperblocks.Status.Approved) {
+                confirmImmediately = true;
             }
+        }
 
-            if (confirmImmediately) {
-                superblocks.confirm(claim.superblockId, msg.sender);
-                unbondDeposit(claimId, claim.claimant);
-                emit SuperblockClaimSuccessful(claimId, claim.claimant, claim.superblockId);
-            } else {
-                superblocks.semiApprove(claim.superblockId, msg.sender);
-                emit SuperblockClaimPending(claimId, claim.claimant, claim.superblockId);
-            }
+        if (confirmImmediately) {
+            superblocks.confirm(claim.superblockId, msg.sender);
+            unbondDeposit(claimId, claim.claimant);
+            emit SuperblockClaimSuccessful(claimId, claim.claimant, claim.superblockId);
+        } else {
+            superblocks.semiApprove(claim.superblockId, msg.sender);
+            emit SuperblockClaimPending(claimId, claim.claimant, claim.superblockId);
         }
         return true;
     }
@@ -367,9 +372,9 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager, IScryptChec
         status = superblocks.getSuperblockStatus(parentId);
         if (status == DogeSuperblocks.Status.Approved) {
             superblocks.confirm(claimId, msg.sender);
-            // TODO: reward submitter
-            unbondDeposit(claimId, claim.claimant);
             emit SuperblockClaimSuccessful(claimId, claim.claimant, claim.superblockId);
+            doPaySubmitter(claimId, claim);
+            unbondDeposit(claimId, claim.claimant);
             return true;
         }
 
@@ -398,9 +403,8 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager, IScryptChec
         }
 
         if (id != claimId) {
-            //FIXME: Send deposit to challengers
-            unbondDeposit(claimId, claim.claimant);
             emit SuperblockClaimFailed(claimId, claim.claimant, claim.superblockId);
+            doPayChallengers(claimId, claim);
         }
 
         return false;
@@ -419,21 +423,10 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager, IScryptChec
 
         claim.verificationOngoing = false;
 
-        //TODO Fix reward splitting
-        // reward the winner, with the loser's bonded deposit.
-        //uint depositToTransfer = claim.bondedDeposits[loser];
-        //claim.bondedDeposits[winner] += depositToTransfer;
-        //delete claim.bondedDeposits[loser];
-
         if (claim.claimant == loser) {
             // the claim is over.
             // Trigger end of verification game
             claim.invalid = true;
-
-            // It should not fail when called from sessionDecided
-            // the data should be verified and a out of gas will cause
-            // the whole transaction to revert
-            runNextBattleSession(claimId);
         } else if (claim.claimant == winner) {
             // the claim continues.
             // It should not fail when called from sessionDecided
@@ -443,6 +436,46 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager, IScryptChec
         }
 
         emit SuperblockBattleDecided(sessionId, winner, loser);
+    }
+
+    // @dev - Pay challengers than run their challenge with submitter deposits
+    // Challengers that do not run will be returned their deposits
+    function doPayChallengers(bytes32 claimId, SuperblockClaim storage claim) internal {
+        uint rewards = claim.bondedDeposits[claim.claimant];
+        claim.bondedDeposits[claim.claimant] = 0;
+        uint totalDeposits = 0;
+        uint idx = 0;
+        for (idx=0; idx<claim.currentChallenger; ++idx) {
+            totalDeposits += claim.bondedDeposits[claim.challengers[idx]];
+        }
+        address challenger;
+        uint reward;
+        for (idx=0; idx<claim.currentChallenger; ++idx) {
+            challenger = claim.challengers[idx];
+            reward = rewards * claim.bondedDeposits[challenger] / totalDeposits;
+            claim.bondedDeposits[challenger] += reward;
+        }
+        uint bondedDeposit;
+        for (idx=0; idx<claim.challengers.length; ++idx) {
+            challenger = claim.challengers[idx];
+            bondedDeposit = claim.bondedDeposits[challenger];
+            deposits[challenger] += bondedDeposit;
+            claim.bondedDeposits[challenger] = 0;
+            emit DepositUnbonded(claimId, challenger, bondedDeposit);
+        }
+    }
+
+    // @dev - Pay submitter with challenger deposits
+    function doPaySubmitter(bytes32 claimId, SuperblockClaim storage claim) internal {
+        address challenger;
+        uint bondedDeposit;
+        for (uint idx=0; idx<claim.challengers.length; ++idx) {
+            challenger = claim.challengers[idx];
+            bondedDeposit = claim.bondedDeposits[challenger];
+            claim.bondedDeposits[challenger] = 0;
+            claim.bondedDeposits[claim.claimant] += bondedDeposit;
+        }
+        unbondDeposit(claimId, claim.claimant);
     }
 
     // @dev - Check if a superblock can be semi approved by calling checkClaimFinished
