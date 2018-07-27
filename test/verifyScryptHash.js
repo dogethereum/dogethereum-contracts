@@ -125,22 +125,22 @@ contract('verifyScryptHash', (accounts) => {
       assert.equal(result.logs[3].event, 'VerificationGameStarted', 'Battle started');
 
       result = await claimManager.queryMerkleRootHashes(superblock1, session1, { from: challenger });
-      assert.equal(result.logs[0].event, 'QueryMerkleRootHashes', 'Query merkle root hashes');
+      assert.equal(result.logs[1].event, 'QueryMerkleRootHashes', 'Query merkle root hashes');
       result = await claimManager.respondMerkleRootHashes(superblock1, session1, hashes, { from: submitter });
-      assert.equal(result.logs[0].event, 'RespondMerkleRootHashes', 'Respond merkle root hashes');
+      assert.equal(result.logs[1].event, 'RespondMerkleRootHashes', 'Respond merkle root hashes');
 
       result = await claimManager.queryBlockHeader(superblock1, session1, hashes[1], { from: challenger });
-      assert.equal(result.logs[0].event, 'QueryBlockHeader', 'Query block header');
+      assert.equal(result.logs[1].event, 'QueryBlockHeader', 'Query block header');
       scryptHash = `0x${utils.calcHeaderPoW(headers[1])}`;
       result = await claimManager.respondBlockHeader(superblock1, session1, scryptHash, `0x${headers[1]}`, { from: submitter });
-      assert.equal(result.logs[0].event, 'RespondBlockHeader', 'Respond block header');
+      assert.equal(result.logs[1].event, 'RespondBlockHeader', 'Respond block header');
 
       result = await claimManager.queryBlockHeader(superblock1, session1, hashes[0], { from: challenger });
-      assert.equal(result.logs[0].event, 'QueryBlockHeader', 'Query block header');
+      assert.equal(result.logs[1].event, 'QueryBlockHeader', 'Query block header');
       scryptHash = `0x${utils.calcHeaderPoW(headers[0])}`;
       result = await claimManager.respondBlockHeader(superblock1, session1, scryptHash, `0x${headers[0]}`, { from: submitter });
-      assert.equal(result.logs[0].event, 'RespondBlockHeader', 'Respond block header');
-      const claimCreated = ClaimManagerEvents.formatter(result.receipt.logs[0]);
+      assert.equal(result.logs[1].event, 'RespondBlockHeader', 'Respond block header');
+      const claimCreated = ClaimManagerEvents.formatter(result.receipt.logs[1]);
       claimID = claimCreated.args.claimID;
       plaintext = claimCreated.args.plaintext;
     }

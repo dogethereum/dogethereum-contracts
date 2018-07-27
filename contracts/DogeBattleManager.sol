@@ -64,6 +64,8 @@ contract DogeBattleManager is DogeErrorCodes {
         bytes32 blockSha256Hash;
     }
 
+    uint public minDeposit = 1;
+
     mapping(bytes32 => BattleSession) public sessions;
 
     uint public sessionsCount = 0;
@@ -134,21 +136,27 @@ contract DogeBattleManager is DogeErrorCodes {
     }
 
     // @dev - Challenger makes a query for superblock hashes
-    function doQueryMerkleRootHashes(bytes32 sessionId) internal returns (bool) {
+    function doQueryMerkleRootHashes(bytes32 sessionId) internal returns (uint) {
         BattleSession storage session = sessions[sessionId];
         if (session.challengeState == ChallengeState.Challenged) {
             session.challengeState = ChallengeState.QueryMerkleRootHashes;
-            return true;
+            assert(msg.sender == session.challenger);
+            (uint err, ) = bondDeposit(session.superblockId, msg.sender, minDeposit);
+            if (err != ERR_SUPERBLOCK_OK) {
+                return err;
+            }
+            return ERR_SUPERBLOCK_OK;
         }
-        return false;
+        return ERR_SUPERBLOCK_BAD_STATUS;
     }
 
     // @dev - Challenger makes a query for superblock hashes
     function queryMerkleRootHashes(bytes32 superblockId, bytes32 sessionId) onlyChallenger(sessionId) public {
         BattleSession storage session = sessions[sessionId];
-        bool succeeded = false;
-        succeeded = doQueryMerkleRootHashes(sessionId);
-        if (succeeded) {
+        uint err = doQueryMerkleRootHashes(sessionId);
+        if (err != ERR_SUPERBLOCK_OK) {
+            emit ErrorBattle(sessionId, err);
+        } else {
             session.actionsCounter += 1;
             session.lastActionTimestamp = block.timestamp;
             session.lastActionChallenger = session.actionsCounter;
@@ -161,14 +169,16 @@ contract DogeBattleManager is DogeErrorCodes {
         BattleSession storage session = sessions[sessionId];
         require(session.blockHashes.length == 0);
         if (session.challengeState == ChallengeState.QueryMerkleRootHashes) {
-            bytes32 merkleRoot;
-            bytes32 lastHash;
-            (merkleRoot, , , , lastHash, , , , ) = getSuperblockInfo(session.superblockId);
+            (bytes32 merkleRoot, , , , bytes32 lastHash, , , , ) = getSuperblockInfo(session.superblockId);
             if (lastHash != blockHashes[blockHashes.length - 1]){
                 return ERR_SUPERBLOCK_BAD_LASTBLOCK;
             }
             if (merkleRoot != DogeTx.makeMerkle(blockHashes)) {
                 return ERR_SUPERBLOCK_INVALID_MERKLE;
+            }
+            (uint err, ) = bondDeposit(session.superblockId, msg.sender, minDeposit);
+            if (err != ERR_SUPERBLOCK_OK) {
+                return err;
             }
             session.blockHashes = blockHashes;
             session.challengeState = ChallengeState.RespondMerkleRootHashes;
@@ -202,7 +212,7 @@ contract DogeBattleManager is DogeErrorCodes {
     }
 
     // @dev - Challenger makes a query for block header data for a hash
-    function doQueryBlockHeader(bytes32 sessionId, bytes32 blockHash) internal returns (bool) {
+    function doQueryBlockHeader(bytes32 sessionId, bytes32 blockHash) internal returns (uint) {
         BattleSession storage session = sessions[sessionId];
         if (session.challengeState == ChallengeState.VerifyScryptHash) {
             confirmScryptHashVerification(session);
@@ -211,20 +221,25 @@ contract DogeBattleManager is DogeErrorCodes {
             (session.countBlockHeaderQueries > 0 && session.challengeState == ChallengeState.RespondBlockHeader)) {
             require(session.countBlockHeaderQueries < session.blockHashes.length);
             require(session.blockInfos[blockHash].status == BlockInfoStatus.Uninitialized);
+            (uint err, ) = bondDeposit(session.superblockId, msg.sender, minDeposit);
+            if (err != ERR_SUPERBLOCK_OK) {
+                return err;
+            }
             session.countBlockHeaderQueries += 1;
             session.blockInfos[blockHash].status = BlockInfoStatus.Requested;
             session.challengeState = ChallengeState.QueryBlockHeader;
-            return true;
+            return ERR_SUPERBLOCK_OK;
         }
-        return false;
+        return ERR_SUPERBLOCK_BAD_STATUS;
     }
 
     // @dev - For the challenger to start a query
     function queryBlockHeader(bytes32 superblockId, bytes32 sessionId, bytes32 blockHash) onlyChallenger(sessionId) public {
         BattleSession storage session = sessions[sessionId];
-        bool succeeded = false;
-        succeeded = doQueryBlockHeader(sessionId, blockHash);
-        if (succeeded) {
+        uint err = doQueryBlockHeader(sessionId, blockHash);
+        if (err != ERR_SUPERBLOCK_OK) {
+            emit ErrorBattle(sessionId, err);
+        } else {
             session.actionsCounter += 1;
             session.lastActionTimestamp = block.timestamp;
             session.lastActionChallenger = session.actionsCounter;
@@ -260,6 +275,10 @@ contract DogeBattleManager is DogeErrorCodes {
             bool mergeMined;
             (err, blockHash, scryptHash, mergeMined) = DogeTx.verifyBlockHeader(blockHeader, 0, blockHeader.length, uint(blockScryptHash));
             if (err != 0) {
+                return err;
+            }
+            (err, ) = bondDeposit(session.superblockId, msg.sender, minDeposit);
+            if (err != ERR_SUPERBLOCK_OK) {
                 return err;
             }
 
@@ -491,4 +510,8 @@ contract DogeBattleManager is DogeErrorCodes {
         address _submitter,
         DogeSuperblocks.Status _status
     );
+
+    function bondDeposit(bytes32 claimId, address account, uint amount) internal returns (uint, uint);
+
+    function unbondDeposit(bytes32 claimId, address account) internal returns (uint, uint);
 }

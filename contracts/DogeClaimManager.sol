@@ -32,8 +32,6 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager, IScryptChec
         bool invalid;                               // If superblock is invalid
     }
 
-    uint public minDeposit = 1;
-
     // Active Superblock claims
     mapping (bytes32 => SuperblockClaim) public claims;
 
