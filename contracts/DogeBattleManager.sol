@@ -85,9 +85,9 @@ contract DogeBattleManager is DogeErrorCodes {
     event SubmitterConvicted(bytes32 superblockId, bytes32 sessionId, address submitter);
 
     event QueryMerkleRootHashes(bytes32 superblockId, bytes32 sessionId, address submitter);
-    event RespondMerkleRootHashes(bytes32 sessionId, address challenger, bytes32[] blockHashes);
-    event QueryBlockHeader(bytes32 sessionId, address submitter, bytes32 blockHash);
-    event RespondBlockHeader(bytes32 sessionId, address challenger, bytes32 blockScryptHash, bytes blockHeader);
+    event RespondMerkleRootHashes(bytes32 superblockId, bytes32 sessionId, address challenger, bytes32[] blockHashes);
+    event QueryBlockHeader(bytes32 superblockId, bytes32 sessionId, address submitter, bytes32 blockHash);
+    event RespondBlockHeader(bytes32 superblockId, bytes32 sessionId, address challenger, bytes32 blockScryptHash, bytes blockHeader);
 
     event ErrorBattle(bytes32 sessionId, uint err);
 
@@ -178,7 +178,7 @@ contract DogeBattleManager is DogeErrorCodes {
     }
 
     // @dev - For the submitter to respond to challenger queries
-    function respondMerkleRootHashes(bytes32 sessionId, bytes32[] blockHashes) onlyClaimant(sessionId) public {
+    function respondMerkleRootHashes(bytes32 superblockId, bytes32 sessionId, bytes32[] blockHashes) onlyClaimant(sessionId) public {
         BattleSession storage session = sessions[sessionId];
         uint err = doVerifyMerkleRootHashes(sessionId, blockHashes);
         if (err != 0) {
@@ -187,7 +187,7 @@ contract DogeBattleManager is DogeErrorCodes {
             session.actionsCounter += 1;
             session.lastActionTimestamp = block.timestamp;
             session.lastActionClaimant = session.actionsCounter;
-            emit RespondMerkleRootHashes(sessionId, session.challenger, blockHashes);
+            emit RespondMerkleRootHashes(superblockId, sessionId, session.challenger, blockHashes);
         }
     }
 
@@ -220,7 +220,7 @@ contract DogeBattleManager is DogeErrorCodes {
     }
 
     // @dev - For the challenger to start a query
-    function queryBlockHeader(bytes32 sessionId, bytes32 blockHash) onlyChallenger(sessionId) public {
+    function queryBlockHeader(bytes32 superblockId, bytes32 sessionId, bytes32 blockHash) onlyChallenger(sessionId) public {
         BattleSession storage session = sessions[sessionId];
         bool succeeded = false;
         succeeded = doQueryBlockHeader(sessionId, blockHash);
@@ -228,7 +228,7 @@ contract DogeBattleManager is DogeErrorCodes {
             session.actionsCounter += 1;
             session.lastActionTimestamp = block.timestamp;
             session.lastActionChallenger = session.actionsCounter;
-            emit QueryBlockHeader(sessionId, session.submitter, blockHash);
+            emit QueryBlockHeader(superblockId, sessionId, session.submitter, blockHash);
         }
     }
 
@@ -279,7 +279,7 @@ contract DogeBattleManager is DogeErrorCodes {
     }
 
     // @dev - For the submitter to respond to challenger queries
-    function respondBlockHeader(bytes32 sessionId, bytes32 blockScryptHash, bytes blockHeader) onlyClaimant(sessionId) public {
+    function respondBlockHeader(bytes32 superblockId, bytes32 sessionId, bytes32 blockScryptHash, bytes blockHeader) onlyClaimant(sessionId) public {
         BattleSession storage session = sessions[sessionId];
         uint err = doVerifyBlockHeader(sessionId, blockScryptHash, blockHeader);
         if (err != 0) {
@@ -288,7 +288,7 @@ contract DogeBattleManager is DogeErrorCodes {
             session.actionsCounter += 1;
             session.lastActionTimestamp = block.timestamp;
             session.lastActionClaimant = session.actionsCounter;
-            emit RespondBlockHeader(sessionId, session.challenger, blockScryptHash, blockHeader);
+            emit RespondBlockHeader(superblockId, sessionId, session.challenger, blockScryptHash, blockHeader);
         }
     }
 
