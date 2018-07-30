@@ -80,12 +80,7 @@ This is the list of external actors to the system and what they can do.
   * Superblock Challengers will challenge the superblock if they find it invalid. They will request the list of block hashes, the block headers, etc. Superblock Submitters should send that information which is validated onchain by the contact.
   * A Superblock Challenger might challenge one of the block's scrypt hashes. In that case [DogeClaimManager](contracts/DogeClaimManager.sol) uses Truebit's [Scrypt hash verification](https://github.com/dogethereum/scrypt-interactive) to check its correctness.
   * If any information provided by the Superblock Submitter is proven wrong or if it fails to answer, the Supperblock is discarded.
-  * If no challenge to the Superblock was done after a contest period (or if the challenges failed) the superblock is considered to be "approved". [DogeClaimManager](contracts/DogeClaimManager.sol) contract notifies [
-  
-  
-  
-  
-  blocks contract](contracts/DogeSuperblocks.sol) which adds the Superblock to its Superblock chain.
+  * If no challenge to the Superblock was done after a contest period (or if the challenges failed) the superblock is considered to be "approved". [DogeClaimManager](contracts/DogeClaimManager.sol) contract notifies [DogeSuperblocks contract](contracts/DogeSuperblocks.sol) which adds the Superblock to its Superblock chain.
  
 
 * Sending dogecoins to ethereum
