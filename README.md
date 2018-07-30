@@ -2,21 +2,30 @@
 
 [![Build Status](https://travis-ci.org/dogethereum/dogethereum-contracts.svg?branch=master)](https://travis-ci.org/dogethereum/dogethereum-contracts)
 
-Dogethereum Contracts is a set of contracts that enable sending coins from the Dogecoin blockchain to ethereum blockchain.
+Ethereum contracts for the Dogecoin <-> Ethereum bridge.
 
 Core components:
-* [DogeRelay contract](contracts/DogeRelay.sol)
-  * Keeps a copy of the Dogecoin blockchain (just the headers)
-  * Informs [DogeToken contract](contracts/token/DogeToken.sol) when a Dogecoin transaction locked funds.
-  * Inspired on [BtcRelay](https://github.com/ethereum/btcrelay).
+* [DogeSuperblocks contract](contracts/DogeSuperblocks.sol)
+  * Keeps a copy of the Dogecoin Superblockchain
+  * Informs [DogeToken contract](contracts/token/DogeToken.sol) when a Dogecoin transaction locked or unlocked funds.
+  * It's kind of a Doge version of [BtcRelay](https://github.com/ethereum/btcrelay) but using Superblocks instead of blocks.
 * [DogeToken contract](contracts/token/DogeToken.sol)
   * An ERC20 contract where 1 token is worth 1 Dogecoin.
   * Tokens are minted when coins are locked on the Dogecoin blockchain.
+  * Tokens are destroyed when coins should go back to the Dogecoin blockchain.
+* [DogeClaimManager contract](contracts/DogeClaimManager.sol)
+  * Manages the interactive (challenge/response) validation of Superblocks.
+  * Inspired on Truebit's Scrypt interactive [ClaimManager] (https://github.com/TrueBitFoundation/scrypt-interactive/blob/master/contracts/ClaimManager.sol)
+* [Doge message library](contracts/DogeParser/DogeTx.sol)
+  - Library for parsing/working with Dogecoin blocks, txs and merkle trees 
+
 
 Related projects:
 
-* [Scrypt hash verification](https://github.com/TrueBitFoundation/scrypt-interactive): Interactive (i.e. challenge/response) validation of Scrypt hashes.
-* DogeSubmitter agent: Monitors the dogecoin blockchain and sends relevant blocks and txs to DogeRelay contract.
+* [Dogethereum agents](https://github.com/dogethereum/dogethereum-agents): External agents for the Dogecoin <-> Ethereum bridge.
+* [Dogethereum tools](https://github.com/dogethereum/dogethereum-tools): External agents for the Dogecoin <-> Ethereum bridge.
+* [Scrypt hash verification](https://github.com/dogethereum/scrypt-interactive): Interactive (i.e. challenge/response) validation of Scrypt hashes.
+
 
 
 ## Design
@@ -33,35 +42,74 @@ Related projects:
 
 Some operations require gas to be spent. Here are the incentives for doing that.
 
-* Sending dogecoin blocks to DogeRelay: Block relayers will get a fee when the block they sent is used to relay a tx.
-* Sending dogecoin txs to DogeRelay: Each user will send their own dogecoin lock tx to get dogetokens.
-* Scrypt hash challengers: If they find an invalid hash, they will get some eth after the challenge/response game finishes.
+* Sending dogecoin superblocks to Superblock: Superblock relayers will get a fee when the superblock they sent is used to relay a tx.
+* Sending dogecoin txs to DogeToken: Each user will send their own dogecoin lock tx to get dogetokens.
+* Superblock challenge: Challengers who find invalid superblocks will get some eth after the challenge/response game finishes.
+* Scrypt hash challenge: Challengers who find invalid block scrypt hashes, will get some eth after the challenge/response game finishes.
 
+## Actors
+
+This is the list of external actors to the system and what they can do.
+
+* User
+  * Lock (Doge -> Eth).
+  * Transfer tokens (Eth -> Eth).
+  * Unlock (Eth -> Doge).
+* Operator
+  * Register themselves as operators.
+  * Add/Remove Eth collateral deposit.
+  * Store locked doges.
+  * Create, sign & broadcast doge unlock tx.
+* Superblock Submitter
+  * Propose superblocks.
+  * Defend superblocks.
+* Superblock Challenger
+  * Challenge superblocks.
+* Doge/Eth Price Oracle
+  * Inform Doge/Eth price rate.
 
 
 ## Notes
 
-* DogeRelay uses a checkpoint instead of starting from dogecoin blockchain genesis.
+* DogeSuperblock uses a checkpoint instead of starting from dogecoin blockchain genesis.
 * Dogecoin lock txs don't have to specify a destination eth address. Dogetokens will be assigned to the address controlled by the private key that signed the dogecoin lock tx.
 
-## Workflow
-* New Dogecoin block
-  * There is a new block on the doge blockchain.
-  * DogeSubmitter agent finds out the new block and sends the block header and its scrypt hash to DogeRelay contract.
-  * DogeRelay sends the block header and its scrypt hash to Scrypt [Claim Manager contract](https://github.com/TrueBitFoundation/scrypt-interactive/blob/master/contracts/claimManager.sol).
-  * There is a contest period for challengers…
-  * If no challenge to the scrypt hash was done (or if challenge failed) Claim Manager contract notifies DogeRelay the hash is ok.
-  * DogeRelay checks everything is ok with the block (PoW, the block connects to the blockchain, etc) and adds it to its doge blockchain.
+## Workflows
+* New Superblock
+  * There is a new block on the doge blockchain, then another one, then another one...
+  * Once per hour Superblock Submitters create a new Superblock containing the newly created blocks and send a Superblock summary to [DogeClaimManager](contracts/DogeClaimManager.sol)
+  * Superblock Challengers will challenge the superblock if they find it invalid. They will request the list of block hashes, the block headers, etc. Superblock Submitters should send that information which is validated onchain by the contact.
+  * A Superblock Challenger might challenge one of the block's scrypt hashes. In that case [DogeClaimManager](contracts/DogeClaimManager.sol) uses Truebit's [Scrypt hash verification](https://github.com/dogethereum/scrypt-interactive) to check its correctness.
+  * If any information provided by the Superblock Submitter is proven wrong or if it fails to answer, the Supperblock is discarded.
+  * If no challenge to the Superblock was done after a contest period (or if the challenges failed) the superblock is considered to be "approved". [DogeClaimManager](contracts/DogeClaimManager.sol) contract notifies [DogeSuperblocks contract](contracts/DogeSuperblocks.sol) which adds the Superblock to its Superblock chain.
+ 
 
 * Sending dogecoins to ethereum
-  * A user opens her Dogecoin-qt and sends a doge tx with N dogecoins to the “lock” doge address.
-  * The doge tx is included in a doge block and 100 doge blocks are mined on top of it.
-  * DogeSubmitter Agent notices a doge “lock” tx that has 100 confirmations.
-  * DogeSubmitter Agent sends an eth tx to DogeRelay containing the doge “lock” tx with a partial merkle tree showing it was included in a doge block.
-  * DogeRelay checks the SPV proof (valid doge tx, tx included in the partial merkle tree, partial merkle tree root included in a block, the tx has at least 100 confirmations).
-  * DogeRelay relays the doge tx to DogeToken contract.
-  * DogeToken checks the doge tx sends funds to the “lock” doge address.
-  * DogeToken mints N tokens and assigns them to the doge tx sender (sender eth account address controlled by the same private key that signed the doge tx).
+  * User selects operator (any operator who has the desired ammount of eth collateral).
+  * User sends lock tx of N doges to the doge network using [Dogethereum tools](https://github.com/dogethereum/dogethereum-tools) lock tool.
+  * The doge tx is included in a doge block and several doge blocks are mined on top of it.
+  * Once the doge block is included in an approved superblock, the lock tx is ready to be relayed to the eth network.
+  * A doge altruistic doge lock tx submitter using [Dogethereum agents](https://github.com/dogethereum/dogethereum-agents) finds the doge lock tx (In the future there will be a tool for users to relay their own txs).
+  * The doge altruistic doge lock tx submitter sends an eth tx to [DogeSuperblocks contract](contracts/DogeSuperblocks.sol) containing: the doge “lock” tx, a partial merkle tree proving the tx was included in a doge block, the doge block header that contains the tx, another partial merkle tree proving the block was included in a superblock and the superblock id that contains the block.
+  * [DogeSuperblocks contract](contracts/DogeSuperblocks.sol) checks the consistency of the supplied information and the supplied superblock id is part of the superblock main chain.
+  * [DogeSuperblocks contract](contracts/DogeSuperblocks.sol) transfers some eth from the user to the Superblock Submitter that sent the used superblock. 
+  * [DogeSuperblocks contract](contracts/DogeSuperblocks.sol) relays the doge tx to DogeToken contract.
+  * [DogeToken contract](contracts/token/DogeToken.sol) checks the doge lock tx sends funds to the doge address of an operator.
+  * [DogeToken contract](contracts/token/DogeToken.sol) mints N tokens and assigns them to the User (actually a small number of tokens are deducted from the user and assigned to the operator as a fee). [DogeToken contract](contracts/token/DogeToken.sol) calculates the User eth account address in a way that is controlled by the private key that signed the doge lock tx.
+
+
+* Sending dogecoins to ethereum
+  * User selects operator (any operator who has the desired ammount of locked doges).
+  * User sends an eth tx to the [DogeToken contract](contracts/token/DogeToken.sol) invoking the `doUnlock` function. Destination doge address, amount and operator id are supplied as parameters.
+  * [DogeToken contract](contracts/token/DogeToken.sol) select which UTXOs to spend, defines the doge tx fee, change and operator fee.
+  * The operator agent that is part of [Dogethereum agents](https://github.com/dogethereum/dogethereum-agents) notices the unlock request. It creates, signs & broadcasts a doge unlock tx. 
+  * The user receives the unlocked doges.
+  * The operator waits the doge tx to be confirmed and included in a superblock and then relays the doge unlock tx to the eth network, so change can be used by [DogeToken contract](contracts/token/DogeToken.sol) for future unlocks.
+
+
+## Assumptions
+* Incentives will guarantee that there is always at least one honest Superblock Submitter and one honest Superblock Challenger online.
+* There are no huge regorgs (i.e. 100+ block) in Doge nor in Eth blockchains
 
 
 ## Running the Tests
