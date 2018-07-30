@@ -15,8 +15,8 @@ Core components:
   * Tokens are destroyed when coins should go back to the Dogecoin blockchain.
 * [DogeClaimManager contract](contracts/DogeClaimManager.sol)
   * Manages the interactive (challenge/response) validation of Superblocks.
-  * Inspired on Truebit's Scrypt interactive [ClaimManager] (https://github.com/TrueBitFoundation/scrypt-interactive/blob/master/contracts/ClaimManager.sol)
-* [Doge message library](contracts/DogeParser/DogeTx.sol)
+  * Inspired on Truebit's Scrypt interactive [ClaimManager](https://github.com/TrueBitFoundation/scrypt-interactive/blob/master/contracts/ClaimManager.sol)
+* [DogeTx library](contracts/DogeParser/DogeTx.sol)
   - Library for parsing/working with Dogecoin blocks, txs and merkle trees 
 
 
@@ -42,10 +42,9 @@ Related projects:
 
 Some operations require gas to be spent. Here are the incentives for doing that.
 
-* Sending dogecoin superblocks to Superblock: Superblock relayers will get a fee when the superblock they sent is used to relay a tx.
-* Sending dogecoin txs to DogeToken: Each user will send their own dogecoin lock tx to get dogetokens.
+* Submitting a Superblock: Superblock submitters will get a fee when the superblock they sent is used to relay a tx.
+* Sending dogecoin txs to DogeToken: Each user will send their own dogecoin lock tx to get doge tokens.
 * Superblock challenge: Challengers who find invalid superblocks will get some eth after the challenge/response game finishes.
-* Scrypt hash challenge: Challengers who find invalid block scrypt hashes, will get some eth after the challenge/response game finishes.
 
 ## Actors
 
@@ -53,10 +52,10 @@ This is the list of external actors to the system and what they can do.
 
 * User
   * Lock (Doge -> Eth).
-  * Transfer tokens (Eth -> Eth).
+  * Transfer doge tokens (Eth -> Eth).
   * Unlock (Eth -> Doge).
 * Operator
-  * Register themselves as operators.
+  * Register themselve as operator.
   * Add/Remove Eth collateral deposit.
   * Store locked doges.
   * Create, sign & broadcast doge unlock tx.
@@ -71,8 +70,8 @@ This is the list of external actors to the system and what they can do.
 
 ## Notes
 
-* DogeSuperblock uses a checkpoint instead of starting from dogecoin blockchain genesis.
-* Dogecoin lock txs don't have to specify a destination eth address. Dogetokens will be assigned to the address controlled by the private key that signed the dogecoin lock tx.
+* [DogeSuperblocks contract](contracts/DogeSuperblocks.sol) uses a checkpoint instead of starting from dogecoin blockchain genesis.
+* Dogecoin lock txs don't have to specify a destination eth address. Dogetokens will be assigned to the eth address controlled by the private key that signed the dogecoin lock tx.
 
 ## Workflows
 * New Superblock
@@ -81,7 +80,12 @@ This is the list of external actors to the system and what they can do.
   * Superblock Challengers will challenge the superblock if they find it invalid. They will request the list of block hashes, the block headers, etc. Superblock Submitters should send that information which is validated onchain by the contact.
   * A Superblock Challenger might challenge one of the block's scrypt hashes. In that case [DogeClaimManager](contracts/DogeClaimManager.sol) uses Truebit's [Scrypt hash verification](https://github.com/dogethereum/scrypt-interactive) to check its correctness.
   * If any information provided by the Superblock Submitter is proven wrong or if it fails to answer, the Supperblock is discarded.
-  * If no challenge to the Superblock was done after a contest period (or if the challenges failed) the superblock is considered to be "approved". [DogeClaimManager](contracts/DogeClaimManager.sol) contract notifies [DogeSuperblocks contract](contracts/DogeSuperblocks.sol) which adds the Superblock to its Superblock chain.
+  * If no challenge to the Superblock was done after a contest period (or if the challenges failed) the superblock is considered to be "approved". [DogeClaimManager](contracts/DogeClaimManager.sol) contract notifies [
+  
+  
+  
+  
+  blocks contract](contracts/DogeSuperblocks.sol) which adds the Superblock to its Superblock chain.
  
 
 * Sending dogecoins to ethereum
