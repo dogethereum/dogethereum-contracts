@@ -81,7 +81,7 @@ This is the list of external actors to the system and what they can do.
  
 
 * Sending dogecoins to ethereum
-  * User selects operator (any operator who has the desired ammount of eth collateral).
+  * User selects operator (any operator who has the desired amount of eth collateral).
   * User sends a lock doge tx of N doges to the doge network using [Dogethereum tools](https://github.com/dogethereum/dogethereum-tools) `lock` tool.
   * The doge tx is included in a doge block and several doge blocks are mined on top of it.
   * Once the doge block is included in an approved superblock, the lock tx is ready to be relayed to the eth network.
@@ -92,8 +92,8 @@ This is the list of external actors to the system and what they can do.
   * [DogeToken contract](contracts/token/DogeToken.sol) mints N tokens and assigns them to the User. Dogecoin lock txs don't specify a destination eth address. Dogetokens will be assigned to the eth address controlled by the private key that signed the dogecoin lock tx.
 
 
-* Sending dogecoins to ethereum
-  * User selects operator (any operator who has the desired ammount of locked doges).
+* Sending doge tokens back to dogecoin
+  * User selects operator (any operator who has the desired amount of locked doges).
   * User sends an eth tx to the [DogeToken contract](contracts/token/DogeToken.sol) invoking the `doUnlock` function. Destination doge address, amount and operator id are supplied as parameters.
   * [DogeToken contract](contracts/token/DogeToken.sol) select which UTXOs to spend, defines the doge tx fee, change and operator fee.
   * The operator agent that is part of [Dogethereum agents](https://github.com/dogethereum/dogethereum-agents) notices the unlock request. It creates, signs & broadcasts a doge unlock tx. 
