@@ -81,22 +81,22 @@ This is the list of external actors to the system and what they can do.
  
 
 * Sending dogecoins to ethereum
-  * User selects operator (any operator who has the desired amount of eth collateral).
+  * User selects an operator (any operator who has the desired amount of eth collateral).
   * User sends a lock doge tx of N doges to the doge network using [Dogethereum tools](https://github.com/dogethereum/dogethereum-tools) `lock` tool.
   * The doge tx is included in a doge block and several doge blocks are mined on top of it.
   * Once the doge block is included in an approved superblock, the lock tx is ready to be relayed to the eth network.
-  * A doge altruistic doge lock tx submitter using [Dogethereum agents](https://github.com/dogethereum/dogethereum-agents) finds the doge lock tx (In the future there will be a tool for users to relay their own txs).
-  * The doge altruistic doge lock tx submitter sends an eth tx to [DogeSuperblocks contract](contracts/DogeSuperblocks.sol) containing: the doge lock tx, a partial merkle tree proving the doge lock tx was included in a doge block, the doge block header that contains the doge lock tx, another partial merkle tree proving the block was included in a superblock and the superblock id that contains the block.
+  * A [doge altruistic doge lock tx submitter](https://github.com/dogethereum/dogethereum-agents)  finds the doge lock tx (In the future there will be a tool for users to relay their own txs).
+  * The [doge altruistic doge lock tx submitter](https://github.com/dogethereum/dogethereum-agents) sends an eth tx to [DogeSuperblocks contract](contracts/DogeSuperblocks.sol) containing: the doge lock tx, a partial merkle tree proving the doge lock tx was included in a doge block, the doge block header that contains the doge lock tx, another partial merkle tree proving the block was included in a superblock and the superblock id that contains the block.
   * [DogeSuperblocks contract](contracts/DogeSuperblocks.sol) checks the consistency of the supplied information and relays the doge lock tx to [DogeToken contract](contracts/token/DogeToken.sol).
   * [DogeToken contract](contracts/token/DogeToken.sol) checks the doge lock tx actually sends funds to the doge address of a registered operator.
   * [DogeToken contract](contracts/token/DogeToken.sol) mints N tokens and assigns them to the User. Dogecoin lock txs don't specify a destination eth address. Dogetokens will be assigned to the eth address controlled by the private key that signed the dogecoin lock tx.
 
 
 * Sending doge tokens back to dogecoin
-  * User selects operator (any operator who has the desired amount of locked doges).
+  * User selects an operator (any operator who has the desired amount of locked doges).
   * User sends an eth tx to the [DogeToken contract](contracts/token/DogeToken.sol) invoking the `doUnlock` function. Destination doge address, amount and operator id are supplied as parameters.
-  * [DogeToken contract](contracts/token/DogeToken.sol) select which UTXOs to spend, defines the doge tx fee, change and operator fee.
-  * The operator agent that is part of [Dogethereum agents](https://github.com/dogethereum/dogethereum-agents) notices the unlock request. It creates, signs & broadcasts a doge unlock tx. 
+  * [DogeToken contract](contracts/token/DogeToken.sol) selects the UTXOs to spend, defines the doge tx fee, change and operator fee.
+  * The [operator agent](https://github.com/dogethereum/dogethereum-agents) notices the unlock request. It creates, signs & broadcasts a doge unlock tx. 
   * The user receives the unlocked doges.
   * The operator waits the doge tx to be confirmed and included in a superblock and then relays the doge unlock tx to the eth network, so change can be used by [DogeToken contract](contracts/token/DogeToken.sol) for future unlocks.
 
