@@ -484,6 +484,10 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
     // @dev - Able to trigger conviction if time of response is too high
     function timeout(bytes32 sessionId) public returns (uint) {
         BattleSession storage session = sessions[sessionId];
+        if (session.challengeState == ChallengeState.PendingScryptVerification) {
+            emit ErrorBattle(sessionId, ERR_SUPERBLOCK_NO_TIMEOUT);
+            return ERR_SUPERBLOCK_NO_TIMEOUT;
+        }
         if (session.lastActionChallenger > session.lastActionClaimant &&
             block.timestamp > session.lastActionTimestamp + superblockTimeout) {
             convictSubmitter(sessionId, session.submitter, session.superblockId);
@@ -588,6 +592,9 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
         require(blockInfo.scryptHash == _scryptHash);
         require(compareBlockHeader(blockInfo.powBlockHeader, _data) == 0);
         session.challengeState = ChallengeState.PendingScryptVerification;
+        session.actionsCounter += 1;
+        session.lastActionTimestamp = block.timestamp;
+        session.lastActionClaimant = session.actionsCounter;
     }
 
     function doNotifyScryptVerificationResult(bytes32 scryptChallengeId, bool succeeded) internal {
@@ -598,6 +605,8 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
         BlockInfo storage blockInfo = session.blocksInfo[verification.blockSha256Hash];
         require(blockInfo.status == BlockInfoStatus.ScryptHashPending);
         notifyScryptHashResult(session, verification.blockSha256Hash, succeeded);
+        // Restart challenger timeout
+        session.lastActionTimestamp = block.timestamp;
     }
 
     // @dev Scrypt verification succeeded
