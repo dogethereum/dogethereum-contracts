@@ -2,9 +2,7 @@ const DogeClaimManager = artifacts.require('DogeClaimManager');
 const DogeSuperblocks = artifacts.require('DogeSuperblocks');
 const ScryptCheckerDummy = artifacts.require('ScryptCheckerDummy');
 const ScryptVerifier = artifacts.require('ScryptVerifier');
-const ScryptRunner = artifacts.require('ScryptRunner');
 const ClaimManager = artifacts.require('ClaimManager');
-const Web3 = require('web3');
 const utils = require('./utils');
 
 const toSession = (data) => ({
@@ -44,19 +42,12 @@ contract('verifyScryptHash', (accounts) => {
   const initAccumulatedWork = 0;
   const initParentHash = '0x0000000000000000000000000000000000000000000000000000000000000000';
 
-  let ClaimManagerEvents;
-
   async function initSuperblocks(dummyChecker, genesisSuperblock) {
     superblocks = await DogeSuperblocks.new();
     claimManager = await DogeClaimManager.new(DOGE_MAINNET, superblocks.address, SUPERBLOCK_TIMES_DOGE_REGTEST.DURATION, SUPERBLOCK_TIMES_DOGE_REGTEST.DELAY, SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT, SUPERBLOCK_TIMES_DOGE_REGTEST.CONFIMATIONS);
+    // scryptChecker = await ScryptCheckerDummy.new(false);
     scryptVerifier = await ScryptVerifier.new();
-    if (dummyChecker) {
-      scryptChecker = await ScryptCheckerDummy.new(false);
-    } else {
-      scryptChecker = await ClaimManager.new(scryptVerifier.address);
-    }
-
-    scryptRunner = await ScryptRunner.new();
+    scryptChecker = await ClaimManager.new(scryptVerifier.address);
 
     await superblocks.setClaimManager(claimManager.address);
     await claimManager.setScryptChecker(scryptChecker.address);
@@ -73,7 +64,9 @@ contract('verifyScryptHash', (accounts) => {
     //FIXME: ganache-cli creates the same transaction hash if two account send the same amount
     await claimManager.makeDeposit({ value: 10, from: submitter });
     await claimManager.makeDeposit({ value: 11, from: challenger });
-    ClaimManagerEvents = scryptChecker.allEvents();
+
+    await scryptChecker.makeDeposit({ value: 10, from: submitter });
+    await scryptChecker.makeDeposit({ value: 11, from: challenger });
   }
   describe('Confirm superblock after verification', () => {
     let superblock0;
@@ -83,6 +76,8 @@ contract('verifyScryptHash', (accounts) => {
     let sessionId;
     let claimID;
     let plaintext;
+    let scryptHash;
+    let proposalId;
     const genesisHeaders = [
       `03016200ed1775274b69640ff5c197de7fb46222c516c913c0d4229c8b9ee75f48d44176f42a0cdc4b298be486f280afd46ee81af0656eaf604c84cda65be522c7b2d47a9eb958568a93051b0000000001000000010000000000000000000000000000000000000000000000000000000000000000ffffffff4c034fa30d04a0b95856080360f87cfedf0300fabe6d6d4136bc0f5506042fd2bd9e7a6064438ae5a6c41070c91ab88f51f77f1393133f40000000000000000d2f6e6f64655374726174756d2f000000000100f90295000000001976a9145da2560b857f5ba7874de4a1173e67b4d509c46688ac0000000037af78fe582d969a976955e8ebdf132c137fd1e4fa4e1eb5bd65b8a28b4d9bae0000000000060000000000000000000000000000000000000000000000000000000000000000e2f61c3f71d1defd3fa999dfa36953755c690689799962b48bebd836974e8cf97d24db2bfa41474bfb2f877d688fac5faa5e10a2808cf9de307370b93352e54894857d3e08918f70395d9206410fbfa942f1a889aa5ab8188ec33c2f6e207dc7103fce20ded169912287c22ecbe0763e2dc5384c5f0df35badf49ea183b60b3649d27f8a11b46c6ba31c62ba3263888e8755c130367592e3a6d69d92b150073238000000030000001b78253b80f240a768a9d74b17bb9e98abd82df96dc42370d14a28a7e1c1bfe24a0e980080e4680e62deffe1bab1db7969d8b49fabcaddba795a1b704af2b25e14b9585651a3011be6741c81`,
       `03016200519b073f01b8e21f9c85f641208532c4b0ea4b6fe1c073d785e98f36368db00230d12c3b1705c2d537dfb7e1bc7752552d90ed58a4de0472811abc7be48c18e5aeb95856bf7b051b0000000001000000010000000000000000000000000000000000000000000000000000000000000000ffffffff48034fa30dfabe6d6dceb3043181029fec3c58d430ccea0653138c0617ab51842024b7dc25877f63f1080000000000000004bab9585608081afdb79a2b0000092f7374726174756d2f000000000100f90295000000001976a91431bde7e496852dac06ff518e111a3adac6c6fba988ac00000000b114dabae52185d04b0b5bda1c12c9c8bd520cc7bad6d97b90a20b9eba9ab7d90000000000030000000000000000000000000000000000000000000000000000000000000000e2f61c3f71d1defd3fa999dfa36953755c690689799962b48bebd836974e8cf91521a64399d2cd5db1152d46dabe4781eadbb2ca7bfa59485b79d070a1c9181f00000000030000001b78253b80f240a768a9d74b17bb9e98abd82df96dc42370d14a28a7e1c1bfe2da78d7e7cad0b68c52a05291e777c2b7af5b092ccfde1ab34f21c1971924fc0220b9585651a3011bb52b416a`,
@@ -140,9 +135,6 @@ contract('verifyScryptHash', (accounts) => {
       scryptHash = `0x${utils.calcHeaderPoW(headers[0])}`;
       result = await claimManager.respondBlockHeader(superblock1, session1, scryptHash, `0x${headers[0]}`, { from: submitter });
       assert.equal(result.logs[1].event, 'RespondBlockHeader', 'Respond block header');
-      const claimCreated = ClaimManagerEvents.formatter(result.receipt.logs[1]);
-      claimID = claimCreated.args.claimID;
-      plaintext = claimCreated.args.plaintext;
     }
     beforeEach(async () => {
       await beginSuperblockChallenge();
@@ -152,9 +144,20 @@ contract('verifyScryptHash', (accounts) => {
       let session;
       let step;
       let computeStep;
+
+      // Request scrypt hash validation
+      result = await claimManager.requestScryptHashValidation(superblock1, session1, hashes[0], { from: challenger });
+      assert.equal(result.logs[1].event, 'RequestScryptHashValidation', 'Request scrypt hash validation');
+      plaintext = result.logs[1].args.blockHeader;
+      scryptHash = result.logs[1].args.blockScryptHash;
+      proposalId = result.logs[1].args.proposalId;
+      result = await scryptChecker.checkScrypt(plaintext, scryptHash, proposalId, claimManager.address, { from: submitter });
+      assert.equal(result.logs[1].event, 'ClaimCreated', 'Create scrypt hash claim');
+      claimID = result.logs[1].args.claimID;
+
       // Make a challenge
       result = await scryptChecker.challengeClaim(claimID, { from: challenger });
-      assert.equal(result.logs[0].event, 'ClaimChallenged', 'Make challenge to scrypt hash');
+      assert.equal(result.logs[1].event, 'ClaimChallenged', 'Make challenge to scrypt hash');
       result = await scryptChecker.runNextVerificationGame(claimID, { from: challenger });
       assert.equal(result.logs[0].event, 'VerificationGameStarted', 'Start challenge scrypt hash game');
 
@@ -240,7 +243,7 @@ contract('verifyScryptHash', (accounts) => {
       assert.equal(result.logs[0].event, 'ChallengerConvicted', 'Challenger convicted');
 
       result = await scryptChecker.checkClaimSuccessful(claimID, { from: submitter });
-      assert.equal(result.logs[0].event, 'ClaimSuccessful', 'Scrypt hash verified');
+      assert.equal(result.logs[1].event, 'ClaimSuccessful', 'Scrypt hash verified');
 
       // Verify superblock
       result = await claimManager.verifySuperblock(session1, { from: submitter });
@@ -257,9 +260,20 @@ contract('verifyScryptHash', (accounts) => {
       let session;
       let step;
       let computeStep;
+
+      // Request scrypt hash validation
+      result = await claimManager.requestScryptHashValidation(superblock1, session1, hashes[0], { from: challenger });
+      assert.equal(result.logs[1].event, 'RequestScryptHashValidation', 'Request scrypt hash validation');
+      plaintext = result.logs[1].args.blockHeader;
+      scryptHash = result.logs[1].args.blockScryptHash;
+      proposalId = result.logs[1].args.proposalId;
+      result = await scryptChecker.checkScrypt(plaintext, scryptHash, proposalId, claimManager.address, { from: submitter });
+      assert.equal(result.logs[1].event, 'ClaimCreated', 'Create scrypt hash claim');
+      claimID = result.logs[1].args.claimID;
+
       // Make a challenge
       result = await scryptChecker.challengeClaim(claimID, { from: challenger });
-      assert.equal(result.logs[0].event, 'ClaimChallenged', 'Make challenge to scrypt hash');
+      assert.equal(result.logs[1].event, 'ClaimChallenged', 'Make challenge to scrypt hash');
       result = await scryptChecker.runNextVerificationGame(claimID, { from: challenger });
       assert.equal(result.logs[0].event, 'VerificationGameStarted', 'Start challenge scrypt hash game');
 

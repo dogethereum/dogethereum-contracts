@@ -225,11 +225,7 @@ contract ScryptFramework {
             state.vars = Salsa8.round(state.vars);
         } else {
             uint readIndex = (state.vars[2] / 0x100000000000000000000000000000000000000000000000000000000) % 1024;
-            uint va;
-            uint vb;
-            uint vc;
-            uint vd;
-            (va, vb, vc, vd) = readMemory(state, readIndex, proofs);
+            (uint va, uint vb, uint vc, uint vd) = readMemory(state, readIndex, proofs);
             state.vars = Salsa8.round([
                 state.vars[0] ^ va,
                 state.vars[1] ^ vb,

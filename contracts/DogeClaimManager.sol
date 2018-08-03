@@ -5,13 +5,11 @@ import {DogeSuperblocks} from './DogeSuperblocks.sol';
 import {DogeBattleManager} from './DogeBattleManager.sol';
 import {DogeTx} from './DogeParser/DogeTx.sol';
 import {DogeErrorCodes} from "./DogeErrorCodes.sol";
-import {IScryptChecker} from "./IScryptChecker.sol";
-import {IScryptCheckerListener} from "./IScryptCheckerListener.sol";
 
 // @dev - Manager of superblock claims
 //
 // Manages superblocks proposal and challenges
-contract DogeClaimManager is DogeDepositsManager, DogeBattleManager, IScryptCheckerListener {
+contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
 
     struct SuperblockClaim {
         bytes32 superblockId;                       // Superblock Id
@@ -37,9 +35,6 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager, IScryptChec
 
     // Superblocks contract
     DogeSuperblocks public superblocks;
-
-    // ScryptHash checker
-    IScryptChecker public scryptChecker;
 
     // Confirmations required to confirm semi approved superblocks
     uint public superblockConfirmations;
@@ -67,16 +62,6 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager, IScryptChec
         DogeBattleManager(_network, _superblockDuration, _superblockDelay, _superblockTimeout) public {
         superblocks = _superblocks;
         superblockConfirmations = _superblockConfirmations;
-    }
-
-    // @dev - sets ScryptChecker instance associated with this DogeClaimManager contract.
-    // Once scryptChecker has been set, it cannot be changed.
-    // An address of 0x0 means scryptChecker hasn't been set yet.
-    //
-    // @param _scryptChecker - address of the ScryptChecker contract to be associated with DogeClaimManager
-    function setScryptChecker(address _scryptChecker) public {
-        require(address(scryptChecker) == 0x0 && _scryptChecker != 0x0);
-        scryptChecker = IScryptChecker(_scryptChecker);
     }
 
     // @dev – locks up part of the a user's deposit into a claim.
@@ -536,42 +521,6 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager, IScryptChec
     function getClaimChallengers(bytes32 superblockId) public view returns (address[]) {
         SuperblockClaim storage claim = claims[superblockId];
         return claim.challengers;
-    }
-
-    function doVerifyScryptHash(bytes32 sessionId, bytes32 blockSha256Hash, bytes32 blockScryptHash, bytes blockHeader, bool isMergeMined, address submitter) internal returns (bytes32) {
-        numScryptHashVerifications += 1;
-        bytes32 challengeId = keccak256(abi.encodePacked(blockScryptHash, submitter, numScryptHashVerifications));
-        if (isMergeMined) {
-            // Merge mined block
-            scryptChecker.checkScrypt(DogeTx.sliceArray(blockHeader, blockHeader.length - 80, blockHeader.length), blockScryptHash, challengeId, submitter, IScryptCheckerListener(this));
-        } else {
-            // Non merge mined block
-            scryptChecker.checkScrypt(DogeTx.sliceArray(blockHeader, 0, 80), blockScryptHash, challengeId, submitter, IScryptCheckerListener(this));
-        }
-        scryptHashVerifications[challengeId] = ScryptHashVerification({
-            sessionId: sessionId,
-            blockSha256Hash: blockSha256Hash
-        });
-
-        return challengeId;
-    }
-
-    // @dev Scrypt verification succeeded
-    function scryptVerified(bytes32 scryptChallengeId) external onlyFrom(scryptChecker) returns (uint) {
-        ScryptHashVerification storage verification = scryptHashVerifications[scryptChallengeId];
-        require(verification.sessionId != 0x0);
-        notifyScryptHashSucceeded(verification.sessionId, verification.blockSha256Hash);
-        delete scryptHashVerifications[scryptChallengeId];
-        return 0;
-    }
-
-    // @dev Scrypt verification failed
-    function scryptFailed(bytes32 scryptChallengeId) external onlyFrom(scryptChecker) returns (uint) {
-        ScryptHashVerification storage verification = scryptHashVerifications[scryptChallengeId];
-        require(verification.sessionId != 0x0);
-        notifyScryptHashFailed(verification.sessionId, verification.blockSha256Hash);
-        delete scryptHashVerifications[scryptChallengeId];
-        return 0;
     }
 
     function getSuperblockInfo(bytes32 superblockId) internal view returns (

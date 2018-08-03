@@ -1,10 +1,6 @@
 const DogeClaimManager = artifacts.require('DogeClaimManager');
 const DogeSuperblocks = artifacts.require('DogeSuperblocks');
 const ScryptCheckerDummy = artifacts.require('ScryptCheckerDummy');
-const ScryptVerifier = artifacts.require('ScryptVerifier');
-const ScryptRunner = artifacts.require('ScryptRunner');
-const ClaimManager = artifacts.require('ClaimManager');
-const Web3 = require('web3');
 const utils = require('./utils');
 
 const SUPERBLOCK_TIMES_DOGE_REGTEST = {
@@ -35,14 +31,7 @@ contract('validateSuperblocks', (accounts) => {
   async function initSuperblocks(dummyChecker, genesisSuperblock) {
     superblocks = await DogeSuperblocks.new();
     claimManager = await DogeClaimManager.new(DOGE_MAINNET, superblocks.address, SUPERBLOCK_TIMES_DOGE_REGTEST.DURATION, SUPERBLOCK_TIMES_DOGE_REGTEST.DELAY, SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT, SUPERBLOCK_TIMES_DOGE_REGTEST.CONFIMATIONS);
-    scryptVerifier = await ScryptVerifier.new();
-    if (dummyChecker) {
-      scryptChecker = await ScryptCheckerDummy.new(false);
-    } else {
-      scryptChecker = await ClaimManager.new(scryptVerifier.address);
-    }
-
-    scryptRunner = await ScryptRunner.new();
+    scryptChecker = await ScryptCheckerDummy.new(false);
 
     await superblocks.setClaimManager(claimManager.address);
     await claimManager.setScryptChecker(scryptChecker.address);

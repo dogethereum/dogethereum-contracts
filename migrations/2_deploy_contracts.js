@@ -11,10 +11,6 @@ const DogeClaimManager = artifacts.require('./DogeClaimManager.sol');
 
 const SafeMath = artifacts.require('openzeppelin-solidity/contracts/math/SafeMath.sol');
 
-const ClaimManager = artifacts.require('./scriypt-interactive/ClaimManager.sol');
-const ScryptVerifier = artifacts.require('./scriypt-interactive/ScryptVerifier.sol');
-const ScryptRunner = artifacts.require('./scriypt-interactive/ScryptRunner.sol');
-
 const scryptCheckerAddress = '0xfeedbeeffeedbeeffeedbeeffeedbeeffeedbeef';
 //const dogethereumRecipientUnitTest = '0x4d905b4b815d483cdfabcd292c6f86509d0fad82';
 //const dogethereumRecipientIntegrationDogeMain = '0x0000000000000000000000000000000000000003';
@@ -73,7 +69,6 @@ async function deployDevelopment(deployer, network, accounts, networkId, trusted
   await deployer.link(Set, DogeTokenForTests);
   await deployer.link(DogeTx, [DogeTxForTests, DogeTokenForTests, DogeSuperblocks, DogeClaimManager]);
   await deployer.link(ECRecovery, DogeTokenForTests);
-  await deployer.link(SafeMath, ClaimManager);
 
   await deployer.deploy(DogeSuperblocks);
 
@@ -84,9 +79,6 @@ async function deployDevelopment(deployer, network, accounts, networkId, trusted
   await deployer.deploy(DogeClaimManager, networkId, DogeSuperblocks.address, superblockTimes.DURATION, superblockTimes.DELAY, superblockTimes.TIMEOUT, superblockTimes.CONFIMATIONS);
 
   await deployer.deploy(ScryptCheckerDummy, true)
-
-  await deployer.deploy(ScryptVerifier);
-  await deployer.deploy(ClaimManager, ScryptVerifier.address);
 
   await deployer.deploy(DogeTxForTests);
 
@@ -108,7 +100,6 @@ async function deployIntegration(deployer, network, accounts, networkId, trusted
   await deployer.link(Set, DogeToken);
   await deployer.link(DogeTx, [DogeToken, DogeSuperblocks, DogeClaimManager]);
   await deployer.link(ECRecovery, DogeToken);
-  await deployer.link(SafeMath, ClaimManager);
 
   await deployer.deploy(ScryptCheckerDummy, true, {gas: 1500000})
   await deployer.deploy(DogeSuperblocks, {gas: 2700000});
@@ -117,15 +108,11 @@ async function deployIntegration(deployer, network, accounts, networkId, trusted
 
   await deployer.deploy(DogeClaimManager, networkId, DogeSuperblocks.address, superblockTimes.DURATION, superblockTimes.DELAY, superblockTimes.TIMEOUT, superblockTimes.CONFIMATIONS, {gas: 7500000});
 
-  await deployer.deploy(ScryptVerifier, {gas: 4200000});
-  await deployer.deploy(ClaimManager, ScryptVerifier.address, {gas: 5000000});
-  // await deployer.deploy(ScryptRunner, {gas: 3000000});
-
   const superblocks = DogeSuperblocks.at(DogeSuperblocks.address);
   await superblocks.setClaimManager(DogeClaimManager.address, {gas: 60000});
 
   const dogeClaimManager = DogeClaimManager.at(DogeClaimManager.address);
-  await dogeClaimManager.setScryptChecker(ScryptVerifier.address, {gas: 60000});
+  await dogeClaimManager.setScryptChecker(ScryptCheckerDummy.address, {gas: 60000});
 }
 
 module.exports = function(deployer, network, accounts) {

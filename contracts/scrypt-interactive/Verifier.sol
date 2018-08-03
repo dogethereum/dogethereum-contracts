@@ -1,4 +1,4 @@
-pragma solidity ^0.4.19;
+pragma solidity ^0.4.0;
 import {ClaimManager} from "./ClaimManager.sol";
 // Simple generic challenge-response computation verifier.
 //
@@ -54,7 +54,7 @@ contract Verifier {
 
         //ClaimManager constraints don't allow for sessionId 0
         // check if there can be a replay attack with sessionId
-        uint sessionId = uint(keccak256(abi.encodePacked(claimId, sessionsCount)));
+        uint sessionId = sessionsCount+1;
         VerificationSession storage s = sessions[sessionId];
         s.id = sessionId;
         sessionsClaimId[sessionId] = claimId;
@@ -177,7 +177,7 @@ contract Verifier {
         VerificationSession storage s = sessions[sessionId];
         require(s.lowStep + 1 == s.highStep);
         // ^ must be at the end of the binary search according to the smart contract
-
+        
         require(claimID == sessionsClaimId[sessionId]);
 
         //prove game ended
