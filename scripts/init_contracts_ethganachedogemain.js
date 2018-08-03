@@ -26,14 +26,24 @@ module.exports = async function(callback) {
   //var prevTimestamp = 1531295930;
   //var lastHash = "0xc577a73270eb1fccd4a702402089f653c771749763e0d7ebb877f47e81eb4395";
   //var lastBits = 436591711;
+
   // blocks from dogemain-2309215-to-2309216
-  var blocksMerkleRoot = "0x1eb62592c39990b4d33b55eac0989ec9ad69099aced17b8adc56ed561b28b473";
-  var accumulatedWork = web3.toBigNumber("3434911961284113526919");
-  var timestamp = 1531922574;
-  var prevTimestamp = 1531922557;
-  var lastHash = "0x046722472396fe2883a725f97f0e63036d2064ceb271bccc175578b724833b3f";
-  var lastBits = 436643408;
+  // var blocksMerkleRoot = "0x1eb62592c39990b4d33b55eac0989ec9ad69099aced17b8adc56ed561b28b473";
+  // var accumulatedWork = web3.toBigNumber("3434911961284113526919");
+  // var timestamp = 1531922574;
+  // var prevTimestamp = 1531922557;
+  // var lastHash = "0x046722472396fe2883a725f97f0e63036d2064ceb271bccc175578b724833b3f";
+  // var lastBits = 436643408;
+
+  // blocks from dogemain-2331583-to-2331588
+  var blocksMerkleRoot = "0xb56e1308bc44483551a5d3ba426d83c2b7634b6c985a3128e48544e8d0fe4ec2";
+  var accumulatedWork = web3.toBigNumber("3752336556886305017875");
+  var timestamp = 1533320063;
+  var prevTimestamp = 1533320029;
+  var lastHash = "0xb0dbc74bc6e258e882a527206d67579cc231be743b23500a28015c96d66ed05a";
+  var lastBits = 436473103;
   var parentId = "0x0";
+
   await sb.initialize(blocksMerkleRoot, accumulatedWork, timestamp, prevTimestamp, lastHash, lastBits, parentId);
 
   console.log("init_contracts_ethganachedogemain end");
