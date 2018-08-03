@@ -16,7 +16,9 @@
     "truffle-hdwallet-provider": "^0.0.3",
     "web3": "^0.20.0"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "sinon": "^6.1.4"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

@@ -1,6 +1,8 @@
+const sinon = require('sinon');
 const DogeClaimManager = artifacts.require('DogeClaimManager');
 const DogeSuperblocks = artifacts.require('DogeSuperblocks');
 const ScryptCheckerDummy = artifacts.require('ScryptCheckerDummy');
+//const ScryptVerifierDummy = artifacts.require('ScryptVerifierDummy');
 const ScryptVerifier = artifacts.require('ScryptVerifier');
 const ClaimManager = artifacts.require('ClaimManager');
 const utils = require('./utils');
@@ -45,9 +47,13 @@ contract('verifyScryptHash', (accounts) => {
   async function initSuperblocks(dummyChecker, genesisSuperblock) {
     superblocks = await DogeSuperblocks.new();
     claimManager = await DogeClaimManager.new(DOGE_MAINNET, superblocks.address, SUPERBLOCK_TIMES_DOGE_REGTEST.DURATION, SUPERBLOCK_TIMES_DOGE_REGTEST.DELAY, SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT, SUPERBLOCK_TIMES_DOGE_REGTEST.CONFIMATIONS);
-    // scryptChecker = await ScryptCheckerDummy.new(false);
-    scryptVerifier = await ScryptVerifier.new();
-    scryptChecker = await ClaimManager.new(scryptVerifier.address);
+    if (dummyChecker) {
+      scryptChecker = await ScryptCheckerDummy.new(false);
+      // scryptVerifier = await ScryptVerifierDummy.new();
+    } else {
+      scryptVerifier = await ScryptVerifier.new();
+      scryptChecker = await ClaimManager.new(scryptVerifier.address);
+    }
 
     await superblocks.setClaimManager(claimManager.address);
     await claimManager.setScryptChecker(scryptChecker.address);
@@ -91,7 +97,7 @@ contract('verifyScryptHash', (accounts) => {
       let result;
       let scryptHash;
       const genesisSuperblock = utils.makeSuperblock(genesisHeaders, initParentHash, initAccumulatedWork);
-      await initSuperblocks(false, genesisSuperblock);
+      await initSuperblocks(true, genesisSuperblock);
       superblock0 = genesisSuperblock.superblockId;
       const best = await superblocks.getBestSuperblock();
       assert.equal(superblock0, best, 'Best superblock should match');
@@ -161,9 +167,11 @@ contract('verifyScryptHash', (accounts) => {
       result = await scryptChecker.runNextVerificationGame(claimID, { from: challenger });
       assert.equal(result.logs[0].event, 'VerificationGameStarted', 'Start challenge scrypt hash game');
 
+      console.log('1-------------------', claimID, challenger);
       sessionId = await scryptChecker.getSession.call(claimID, challenger);
 
       // Start session
+      console.log('2-------------------');
       session = toSession(await scryptVerifier.getSession.call(sessionId));
       assert.equal(session.lowStep.toNumber(), 0);
       assert.equal(session.medStep.toNumber(), 0);
@@ -171,6 +179,7 @@ contract('verifyScryptHash', (accounts) => {
       assert.equal(session.medHash, '0x0000000000000000000000000000000000000000000000000000000000000000');
 
       // Steps are hardcoded because ganache is too slow to calculate them
+      console.log('3-------------------');
       step = 1030;
       result = await scryptVerifier.query(sessionId, step, { from: challenger });
 
