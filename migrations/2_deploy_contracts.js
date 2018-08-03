@@ -47,8 +47,8 @@ const SUPERBLOCK_TIMES_INTEGRATION_SLOW_SYNC = {
 };
 
 const SUPERBLOCK_TIMES_INTEGRATION_FAST_SYNC = {
-  DURATION: 180,    // 3 minutes
-  DELAY: 180,       // 3 minutes
+  DURATION: 300,    // 5 minutes
+  DELAY: 60,       // 1 minute
   TIMEOUT: 10,      // 10 seconds
   CONFIMATIONS: 1,  // Superblocks required to confirm semi approved superblock
 };
