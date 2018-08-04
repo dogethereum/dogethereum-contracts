@@ -2,7 +2,6 @@ var Superblocks = artifacts.require("./DogeSuperblocks.sol");
 module.exports = async function(callback) {
   console.log("init_contracts_integration begin");
   
-  var dt = await DogeToken.deployed();
   var sb = await Superblocks.deployed();
   // blocks from dogemain-2331583-to-2331588
   var blocksMerkleRoot = "0xb56e1308bc44483551a5d3ba426d83c2b7634b6c985a3128e48544e8d0fe4ec2";
