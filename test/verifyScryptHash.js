@@ -412,7 +412,7 @@ contract('verifyScryptHash', (accounts) => {
       });
       it('Timeout without sumitting to scrypt checker', async () => {
         result = await claimManager.timeout(session1, { from: challenger });
-        assert.equal(result.logs[0].event, 'ErrorBattle', 'Timemout did not elapse');
+        assert.equal(result.logs[0].event, 'ErrorBattle', 'Timeout did not elapse');
         await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
         result = await claimManager.timeout(session1, { from: challenger });
         assert.equal(result.logs[1].event, 'SubmitterConvicted', 'Scrypt hash failed');
@@ -421,6 +421,45 @@ contract('verifyScryptHash', (accounts) => {
         await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
         result = await claimManager.checkClaimFinished(superblock1, { from: challenger });
         assert.equal(result.logs[0].event, 'SuperblockClaimFailed', 'Superblock failed');
+      });
+    });
+    describe('Timeout after scrypt validation', () => {
+      before(async () => {
+        await beginSuperblockChallenge();
+      });
+      it('Request scrypt hash validation', async () => {
+        let result;
+        let session;
+        let step;
+        let computeStep;
+
+        // Request scrypt hash validation
+        result = await claimManager.requestScryptHashValidation(superblock1, session1, hashes[0], { from: challenger });
+        assert.equal(result.logs[1].event, 'RequestScryptHashValidation', 'Request scrypt hash validation');
+        plaintext = result.logs[1].args.blockHeader;
+        scryptHash = result.logs[1].args.blockScryptHash;
+        proposalId = result.logs[1].args.proposalId;
+        // Start scrypt hash validation
+        result = await scryptChecker.checkScrypt(plaintext, scryptHash, proposalId, claimManager.address, { from: submitter });
+        assert.equal(result.logs[1].event, 'ClaimCreated', 'Create scrypt hash claim');
+        claimID = result.logs[1].args.claimID;
+      });
+      it('Validate scrypt hash no challengers', async () => {
+        await utils.mineBlocks(web3, 5);
+        result = await scryptChecker.checkClaimSuccessful(claimID, { from: submitter });
+        assert.equal(result.logs[1].event, 'ClaimSuccessful', 'Scrypt hash unchallenged');
+      });
+      it('Timeout after challenger abandoned', async () => {
+        result = await claimManager.timeout(session1, { from: submitter });
+        assert.equal(result.logs[0].event, 'ErrorBattle', 'Timeout did not elapse');
+        await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+        result = await claimManager.timeout(session1, { from: submitter });
+        assert.equal(result.logs[1].event, 'ChallengerConvicted', 'Challenger abandoned');
+      });
+      it('Confirm superblock', async () => {
+        await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+        result = await claimManager.checkClaimFinished(superblock1, { from: challenger });
+        assert.equal(result.logs[0].event, 'SuperblockClaimPending', 'Superblock semi confirmed');
       });
     });
   });
