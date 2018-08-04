@@ -16,6 +16,7 @@ const scryptCheckerAddress = '0xfeedbeeffeedbeeffeedbeeffeedbeeffeedbeef';
 //const dogethereumRecipientIntegrationDogeMain = '0x0000000000000000000000000000000000000003';
 //const dogethereumRecipientIntegrationDogeRegtest = '0x03cd041b0139d3240607b9fd1b2d1b691e22b5d6';
 const trustedDogeEthPriceOracleRopsten = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+const trustedDogeEthPriceOracleRinkeby = '0x265e014341d5c4cac5e176100e0f629400142da7';
 const collateralRatio = 2;
 
 /* ---- CONSTANTS FOR GENESIS SUPERBLOCK ---- */
@@ -121,13 +122,17 @@ module.exports = function(deployer, network, accounts) {
     var trustedDogeEthPriceOracle;
     if (network === 'development' || network === 'integrationDogeRegtest' || network === 'integrationDogeMain') {
       trustedDogeEthPriceOracle = accounts[2]
-    } else {
+    } else if (network === 'ropsten') {
       trustedDogeEthPriceOracle = trustedDogeEthPriceOracleRopsten;
+    } else if (network === 'rinkeby') {
+      trustedDogeEthPriceOracle = trustedDogeEthPriceOracleRinkeby;
     }
 
     if (network === 'development') {
       await deployDevelopment(deployer, network, accounts, DOGE_MAINNET, trustedDogeEthPriceOracle, null, SUPERBLOCK_TIMES_LOCAL);
     } else if (network === 'ropsten') {
+      await deployIntegration(deployer, network, accounts, DOGE_MAINNET, trustedDogeEthPriceOracle, null, SUPERBLOCK_TIMES_INTEGRATION_FAST_SYNC);
+    } else if (network === 'rinkeby') {
       await deployIntegration(deployer, network, accounts, DOGE_MAINNET, trustedDogeEthPriceOracle, null, SUPERBLOCK_TIMES_INTEGRATION_FAST_SYNC);
     } else if (network === 'integrationDogeMain') {
       await deployIntegration(deployer, network, accounts, DOGE_MAINNET, trustedDogeEthPriceOracle, null, SUPERBLOCK_TIMES_INTEGRATION_FAST_SYNC);

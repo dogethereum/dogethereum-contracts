@@ -32,6 +32,12 @@ module.exports = {
       network_id: "3", // Ropsten
       gas: 1000000,
       gasPrice: "20000000000"
+    },
+    rinkeby: {
+      provider: engine,
+      network_id: "4", // Rinkeby
+      gas: 1000000,
+      gasPrice: "2000000000"
     }
   },
   solc: {

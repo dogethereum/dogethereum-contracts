@@ -49,17 +49,17 @@ To deploy the contracts
 
 ### Requirements
 
-* A ropsten client running with rpc enabled
+* A Rinkeby client running with rpc enabled
 
 ### Preparation
 
 * Copy `local_config.json.example` to `local_config.json`
 * Replace _seed_ and _address_ fields in the configuration
-* Verify _rpcpath_ in `config.js` points to a ropsten RPC client
+* Verify _rpcpath_ in `config.js` points to a rinkeby RPC client
 
 ### Deployment
 
-* Run `truffle migrate --network ropsten`
+* Run `truffle migrate --network rinkeby`
 
 **Note**: Do not commit `local_config.json` file!
 
