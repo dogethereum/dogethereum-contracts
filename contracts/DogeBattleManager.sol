@@ -99,7 +99,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
     event QueryBlockHeader(bytes32 superblockId, bytes32 sessionId, address submitter, bytes32 blockHash);
     event RespondBlockHeader(bytes32 superblockId, bytes32 sessionId, address challenger, bytes32 blockScryptHash, bytes blockHeader);
     event RequestScryptHashValidation(bytes32 superblockId, bytes32 sessionId, bytes32 blockScryptHash, bytes blockHeader, bytes32 proposalId, address submitter);
-    event RespondScryptHashValidation(bytes32 superblockId, bytes32 sessionId, bytes32 blockScryptHash, bytes blockHeader, bytes32 proposalId, address challenger);
+    event ResolveScryptHashValidation(bytes32 superblockId, bytes32 sessionId, bytes32 blockScryptHash, bytes32 proposalId, address challenger, bool valid);
 
     event ErrorBattle(bytes32 sessionId, uint err);
 
@@ -607,6 +607,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
         notifyScryptHashResult(session, verification.blockSha256Hash, succeeded);
         // Restart challenger timeout
         session.lastActionTimestamp = block.timestamp;
+        emit ResolveScryptHashValidation(session.superblockId, verification.sessionId, blockInfo.scryptHash, scryptChallengeId, session.challenger, succeeded);
     }
 
     // @dev Scrypt verification succeeded
