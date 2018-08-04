@@ -28,13 +28,15 @@ module.exports = {
       gasPrice: 1
     },
     ropsten: {
-      provider: engine,
+      host: "localhost",
+      port: 8545,
       network_id: "3", // Ropsten
       gas: 1000000,
       gasPrice: "20000000000"
     },
     rinkeby: {
-      provider: engine,
+      host: "localhost",
+      port: 8545,
       network_id: "4", // Rinkeby
       gas: 1000000,
       gasPrice: "2000000000"
