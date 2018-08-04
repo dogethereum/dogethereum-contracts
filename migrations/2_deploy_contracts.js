@@ -105,9 +105,9 @@ async function deployIntegration(deployer, network, accounts, networkId, trusted
   await deployer.deploy(ScryptCheckerDummy, true, {gas: 1500000})
   await deployer.deploy(DogeSuperblocks, {gas: 2700000});
 
-  await deployer.deploy(DogeToken, DogeSuperblocks.address, trustedDogeEthPriceOracle, collateralRatio, {gas: 5300000});
+  await deployer.deploy(DogeToken, DogeSuperblocks.address, trustedDogeEthPriceOracle, collateralRatio, {gas: 4000000});
 
-  await deployer.deploy(DogeClaimManager, networkId, DogeSuperblocks.address, superblockTimes.DURATION, superblockTimes.DELAY, superblockTimes.TIMEOUT, superblockTimes.CONFIMATIONS, {gas: 7500000});
+  await deployer.deploy(DogeClaimManager, networkId, DogeSuperblocks.address, superblockTimes.DURATION, superblockTimes.DELAY, superblockTimes.TIMEOUT, superblockTimes.CONFIMATIONS, {gas: 6500000});
 
   const superblocks = DogeSuperblocks.at(DogeSuperblocks.address);
   await superblocks.setClaimManager(DogeClaimManager.address, {gas: 60000});
