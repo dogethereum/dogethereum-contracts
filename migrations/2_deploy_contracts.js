@@ -16,7 +16,7 @@ const scryptCheckerAddress = '0xfeedbeeffeedbeeffeedbeeffeedbeeffeedbeef';
 //const dogethereumRecipientIntegrationDogeMain = '0x0000000000000000000000000000000000000003';
 //const dogethereumRecipientIntegrationDogeRegtest = '0x03cd041b0139d3240607b9fd1b2d1b691e22b5d6';
 const trustedDogeEthPriceOracleRopsten = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
-const trustedDogeEthPriceOracleRinkeby = '0x265e014341d5c4cac5e176100e0f629400142da7';
+const trustedDogeEthPriceOracleRinkeby = '0xf001a51533bcd531d7a2f40a4579afcc19038c14';
 const collateralRatio = 2;
 
 /* ---- CONSTANTS FOR GENESIS SUPERBLOCK ---- */
