@@ -639,14 +639,16 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
     // @dev - Check if a session's challenger did not respond before timeout
     function getChallengerHitTimeout(bytes32 sessionId) public view returns (bool) {
         BattleSession storage session = sessions[sessionId];
-        return (session.lastActionClaimant > session.lastActionChallenger &&
+        return (session.challengeState != ChallengeState.PendingScryptVerification &&
+        session.lastActionClaimant > session.lastActionChallenger &&
         block.timestamp > session.lastActionTimestamp + superblockTimeout);
     }
 
     // @dev - Check if a session's submitter did not respond before timeout
     function getSubmitterHitTimeout(bytes32 sessionId) public view returns (bool) {
         BattleSession storage session = sessions[sessionId];
-        return (session.lastActionChallenger > session.lastActionClaimant &&
+        return (session.challengeState != ChallengeState.PendingScryptVerification &&
+        session.lastActionChallenger > session.lastActionClaimant &&
         block.timestamp > session.lastActionTimestamp + superblockTimeout);
     }
 
