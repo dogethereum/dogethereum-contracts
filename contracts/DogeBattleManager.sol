@@ -157,6 +157,9 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
 
     // @dev - Challenger makes a query for superblock hashes
     function doQueryMerkleRootHashes(BattleSession storage session) internal returns (uint) {
+        if (getDepositInternal(msg.sender) < minDeposit) {
+            return ERR_SUPERBLOCK_MIN_DEPOSIT;
+        }
         if (session.challengeState == ChallengeState.Challenged) {
             session.challengeState = ChallengeState.QueryMerkleRootHashes;
             assert(msg.sender == session.challenger);
@@ -185,6 +188,9 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
 
     // @dev - Submitter send hashes to verify superblock merkle root
     function doVerifyMerkleRootHashes(BattleSession storage session, bytes32[] blockHashes) internal returns (uint) {
+        if (getDepositInternal(msg.sender) < minDeposit) {
+            return ERR_SUPERBLOCK_MIN_DEPOSIT;
+        }
         require(session.blockHashes.length == 0);
         if (session.challengeState == ChallengeState.QueryMerkleRootHashes) {
             (bytes32 merkleRoot, , , , bytes32 lastHash, , , , ) = getSuperblockInfo(session.superblockId);
@@ -221,6 +227,9 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
 
     // @dev - Challenger makes a query for block header data for a hash
     function doQueryBlockHeader(BattleSession storage session, bytes32 blockHash) internal returns (uint) {
+        if (getDepositInternal(msg.sender) < minDeposit) {
+            return ERR_SUPERBLOCK_MIN_DEPOSIT;
+        }
         if (session.challengeState == ChallengeState.VerifyScryptHash) {
             skipScryptHashVerification(session);
         }
@@ -294,6 +303,9 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
 
     // @dev - Verify block header send by challenger
     function doVerifyBlockHeader(BattleSession storage session, bytes32 sessionId, bytes32 proposedBlockScryptHash, bytes blockHeader) internal returns (uint) {
+        if (getDepositInternal(msg.sender) < minDeposit) {
+            return ERR_SUPERBLOCK_MIN_DEPOSIT;
+        }
         if (session.challengeState == ChallengeState.QueryBlockHeader) {
             bytes32 blockSha256Hash = bytes32(DogeTx.dblShaFlipMem(blockHeader, 0, 80));
             BlockInfo storage blockInfo = session.blocksInfo[blockSha256Hash];
@@ -654,6 +666,10 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
         address _submitter,
         DogeSuperblocks.Status _status
     );
+
+    // FIXME: Using directly getDeposit forces DogeBattleManager
+    // to inherit from DogeDepositsManager.
+    function getDepositInternal(address who) internal view returns (uint);
 
     function bondDeposit(bytes32 claimId, address account, uint amount) internal returns (uint, uint);
 

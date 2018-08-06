@@ -87,6 +87,10 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
         return (ERR_SUPERBLOCK_OK, claim.bondedDeposits[account]);
     }
 
+    function getDepositInternal(address account) internal view returns (uint) {
+        return getDeposit(account);
+    }
+
     // @dev – accessor for a claims bonded deposits.
     // @param claimId – the claim id.
     // @param account – the user's address.
