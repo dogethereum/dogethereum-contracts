@@ -11,7 +11,7 @@ const bitcoreMessage = require('bitcore-message');
 const SUPERBLOCK_TIMES_DOGE_REGTEST = {
   DURATION: 600,    // 10 minute
   DELAY: 60,        // 1 minute
-  TIMEOUT: 5,       // 5 seconds
+  TIMEOUT: 15,      // 15 seconds
   CONFIMATIONS: 1,  // Superblocks required to confirm semi approved superblock
 };
 
