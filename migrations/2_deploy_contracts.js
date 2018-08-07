@@ -57,7 +57,7 @@ const SUPERBLOCK_TIMES_INTEGRATION_FAST_SYNC = {
 const SUPERBLOCK_TIMES_LOCAL = {
   DURATION: 60,     // 1 minute
   DELAY: 60,        // 1 minute
-  TIMEOUT: 10,      // 10 seconds
+  TIMEOUT: 30,      // 30 seconds
   CONFIMATIONS: 1,  // Superblocks required to confirm semi approved superblock
 };
 
