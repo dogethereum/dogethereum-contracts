@@ -379,9 +379,9 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
         return ERR_SUPERBLOCK_BAD_STATUS;
     }
 
-    function requestScryptHashValidation(bytes32 superblockId, bytes32 sessionId, bytes32 blockHash) public onlyChallenger(sessionId) {
+    function requestScryptHashValidation(bytes32 superblockId, bytes32 sessionId, bytes32 blockSha256Hash) public onlyChallenger(sessionId) {
         BattleSession storage session = sessions[sessionId];
-        uint err = doRequestScryptHashValidation(session, superblockId, sessionId, blockHash);
+        uint err = doRequestScryptHashValidation(session, superblockId, sessionId, blockSha256Hash);
         if (err != 0) {
             emit ErrorBattle(sessionId, err);
         } else {
