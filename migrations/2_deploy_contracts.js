@@ -41,15 +41,15 @@ const SUPERBLOCK_TIMES_PRODUCTION = {
 };
 
 const SUPERBLOCK_TIMES_INTEGRATION_SLOW_SYNC = {
-  DURATION: 180,    // 3 minutes
-  DELAY: 180,       // 3 minutes
+  DURATION: 600,    // 10 minutes
+  DELAY: 300,       // 5 minutes
   TIMEOUT: 60,      // 1 minutes
   CONFIMATIONS: 1,  // Superblocks required to confirm semi approved superblock
 };
 
 const SUPERBLOCK_TIMES_INTEGRATION_FAST_SYNC = {
   DURATION: 600,    // 10 minutes
-  DELAY: 60,       // 1 minute
+  DELAY: 300,       // 5 minutes
   TIMEOUT: 10,      // 10 seconds
   CONFIMATIONS: 1,  // Superblocks required to confirm semi approved superblock
 };
