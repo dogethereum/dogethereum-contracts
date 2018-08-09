@@ -37,6 +37,7 @@ contract ScryptCheckerDummy is IScryptChecker {
     // @param _requestId – request identifier of the call.
     function checkScrypt(bytes _data, bytes32 _hash, bytes32 _proposalId, IScryptCheckerListener _scryptDependent) external payable {
         if (acceptAll || hashStorage[keccak256(_data)] == _hash) {
+            _scryptDependent.scryptSubmitted(_proposalId, _hash, _data, msg.sender);
             _scryptDependent.scryptVerified(_proposalId);
         } else {
             pendingRequests[_hash] = ScryptHashRequest({
@@ -45,6 +46,7 @@ contract ScryptCheckerDummy is IScryptChecker {
                 submitter: msg.sender,
                 id: _proposalId
             });
+            _scryptDependent.scryptSubmitted(_proposalId, _hash, _data, msg.sender);
         }
     }
 
