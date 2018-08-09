@@ -441,12 +441,14 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
             if (session.blocksInfo[blockSha256Hash].prevBlock != prevBlock) {
                 return ERR_SUPERBLOCK_BAD_PARENT;
             }
-            uint32 newBits = DogeTx.calculateDigishieldDifficulty(int64(parentTimestamp) - int64(gpTimestamp), prevBits);
-            if (net == Network.TESTNET && session.blocksInfo[blockSha256Hash].timestamp - parentTimestamp > 120) {
-                newBits = 0x1e0fffff;
-            }
-            if (bits != newBits) {
-                return ERR_SUPERBLOCK_BAD_BITS;
+            if (net != Network.REGTEST) {
+                uint32 newBits = DogeTx.calculateDigishieldDifficulty(int64(parentTimestamp) - int64(gpTimestamp), prevBits);
+                if (net == Network.TESTNET && session.blocksInfo[blockSha256Hash].timestamp - parentTimestamp > 120) {
+                    newBits = 0x1e0fffff;
+                }
+                if (bits != newBits) {
+                    return ERR_SUPERBLOCK_BAD_BITS;
+                }
             }
             work += DogeTx.diffFromBits(session.blocksInfo[blockSha256Hash].bits);
             prevBlock = blockSha256Hash;
