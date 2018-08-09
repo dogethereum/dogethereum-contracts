@@ -457,7 +457,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
             parentTimestamp = session.blocksInfo[blockSha256Hash].timestamp;
             idx += 1;
         }
-        if (parentWork + work != accWork) {
+        if (net != Network.REGTEST && parentWork + work != accWork) {
             return ERR_SUPERBLOCK_BAD_ACCUMULATED_WORK;
         }
         return ERR_SUPERBLOCK_OK;
