@@ -29,7 +29,8 @@ contract('testDogeTokenDoUnlockRequires', function(accounts) {
     assert.equal(60100, doUnlockTxReceipt.logs[0].args.err, "Expected ERR_UNLOCK_OPERATOR_NOT_CREATED error");
 
     // unlock where operator available balance is bellow requested value
-    await dogeToken.addOperatorSimple(operatorPublicKeyHash);
+    const operatorEthAddress = accounts[3];
+    await dogeToken.addOperatorSimple(operatorPublicKeyHash, operatorEthAddress);
     doUnlockTxReceipt = await dogeToken.doUnlock(dogeAddress, 1000000000, operatorPublicKeyHash);
     assert.equal(60110, doUnlockTxReceipt.logs[0].args.err, "Expected ERR_UNLOCK_OPERATOR_BALANCE error");
 

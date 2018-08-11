@@ -8,12 +8,17 @@ import "./../ECRecovery.sol";
 
 contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), TransactionProcessor {
 
-    // Constants
+    // Lock constants
     uint public constant MIN_LOCK_VALUE = 150000000; // 1.5 doges
+    uint public constant OPERATOR_LOCK_FEE = 10; // 1 = 0.1%
+    uint public constant OPERATOR_MIN_LOCK_FEE = 100000000; // 1 doge
+
+    // Unlock constants
     uint public constant MIN_UNLOCK_VALUE = 300000000; // 3 doges
-    uint constant MIN_FEE = 100000000; // 1 doge
-    uint constant BASE_FEE = 50000000; // 0.5 doge
-    uint constant FEE_PER_INPUT = 100000000; // 1 doge
+    uint public constant OPERATOR_UNLOCK_FEE = 10; // 1 = 0.1%
+    uint public constant OPERATOR_MIN_UNLOCK_FEE = 100000000; // 1 doge
+    uint constant DOGE_TX_BASE_FEE = 50000000; // 0.5 doge
+    uint constant DOGE_TX_FEE_PER_INPUT = 100000000; // 1 doge
 
     // Error codes
     uint constant ERR_OPERATOR_SIGNATURE = 60010;
@@ -31,8 +36,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
     uint constant ERR_UNLOCK_NO_AVAILABLE_UTXOS = 60120;
     uint constant ERR_UNLOCK_UTXOS_VALUE_LESS_THAN_VALUE_TO_SEND = 60130;
     uint constant ERR_UNLOCK_VALUE_TO_SEND_LESS_THAN_FEE = 60140;
-
-
+    uint constant ERR_LOCK_MIN_LOCK_VALUE = 60150;
 
     // Variables sets by constructor
     // Contract to trust for tx inclueded in a doge block verification.
@@ -66,10 +70,11 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
           address from;
           string dogeAddress;
           uint value;
+          uint operatorFee;
           uint timestamp;
           // Values are indexes in storage array "utxos"
           uint32[] selectedUtxos;
-          uint fee;
+          uint dogeTxFee;
           bytes20 operatorPublicKeyHash;
     }
 
@@ -230,13 +235,29 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         bytes20 firstInputPublicKeyHash = DogeTx.pub2PubKeyHash(firstInputPublicKeyX, firstInputPublicKeyOdd);
         if (operatorPublicKeyHash != firstInputPublicKeyHash) {
             // this is a lock tx
+
+            if (value < MIN_LOCK_VALUE) {
+                emit ErrorDogeToken(ERR_LOCK_MIN_LOCK_VALUE);
+                return;
+            }
+
             // Calculate ethereum address from dogecoin public key
             address destinationAddress = DogeTx.pub2address(uint(firstInputPublicKeyX), firstInputPublicKeyOdd);
 
-            balances[destinationAddress] += value;
-            emit NewToken(destinationAddress, value);
+            uint operatorFee = value * OPERATOR_LOCK_FEE / 1000;
+            if (operatorFee < OPERATOR_MIN_LOCK_FEE) {
+                operatorFee = OPERATOR_MIN_LOCK_FEE;
+            }
+            balances[operator.ethAddress] += operatorFee;
+            emit NewToken(operator.ethAddress, operatorFee);
             // Hack to make etherscan show the event
-            emit Transfer(0, destinationAddress, value);
+            emit Transfer(0, operator.ethAddress, operatorFee);
+
+            uint userValue = value - operatorFee;
+            balances[destinationAddress] += userValue;
+            emit NewToken(destinationAddress, userValue);
+            // Hack to make etherscan show the event
+            emit Transfer(0, destinationAddress, userValue);
 
             return value;
         } else {
@@ -277,53 +298,64 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
             return;
         }
 
+        uint operatorFee = value * OPERATOR_UNLOCK_FEE / 1000;
+        if (operatorFee < OPERATOR_MIN_UNLOCK_FEE) {
+            operatorFee = OPERATOR_MIN_UNLOCK_FEE;
+        }
+        uint unlockValue = value - operatorFee;
+
         uint32[] memory selectedUtxos;
-        uint fee;
+        uint dogeTxFee;
         uint changeValue;
         uint errorCode;
-        (errorCode, selectedUtxos, fee, changeValue) = selectUtxosAndFee(value, operator);
+        (errorCode, selectedUtxos, dogeTxFee, changeValue) = selectUtxosAndFee(unlockValue, operator);
         if (errorCode != 0) {
             emit ErrorDogeToken(errorCode);
             return;
         }
 
+        balances[operator.ethAddress] += operatorFee;
+        // Hack to make etherscan show the event
+        emit Transfer(msg.sender, operator.ethAddress, operatorFee);
         balances[msg.sender] -= value;
         // Hack to make etherscan show the event
-        emit Transfer(msg.sender, 0, value);
+        emit Transfer(msg.sender, 0, unlockValue);
+
         emit UnlockRequest(unlockIdx, operatorPublicKeyHash);
-        //log1(bytes32(selectedUtxos.length), bytes32(selectedUtxos[0]));
         unlocksPendingInvestorProof[unlockIdx] = Unlock(msg.sender, dogeAddress, value, 
-                                                        block.timestamp, selectedUtxos, fee, operatorPublicKeyHash);
+                                                        operatorFee,
+                                                        block.timestamp, selectedUtxos, dogeTxFee,
+                                                        operatorPublicKeyHash);
         // Update operator's doge balance
-        operator.dogeAvailableBalance -= (value + changeValue);
+        operator.dogeAvailableBalance -= (unlockValue + changeValue);
         operator.dogePendingBalance += changeValue;
         operator.nextUnspentUtxoIndex += uint32(selectedUtxos.length);
         unlockIdx++;
         return true;
     }
 
-    function selectUtxosAndFee(uint valueToSend, Operator operator) private pure returns (uint errorCode, uint32[] memory selectedUtxos, uint fee, uint changeValue) {
+    function selectUtxosAndFee(uint valueToSend, Operator operator) private pure returns (uint errorCode, uint32[] memory selectedUtxos, uint dogeTxFee, uint changeValue) {
         // There should be at least 1 utxo available
         if (operator.nextUnspentUtxoIndex >= operator.utxos.length) {
             errorCode = ERR_UNLOCK_NO_AVAILABLE_UTXOS;
-            return (errorCode, selectedUtxos, fee, changeValue);
+            return (errorCode, selectedUtxos, dogeTxFee, changeValue);
         }
-        fee = BASE_FEE;
+        dogeTxFee = DOGE_TX_BASE_FEE;
         uint selectedUtxosValue;
         uint32 firstSelectedUtxo = operator.nextUnspentUtxoIndex;
         uint32 lastSelectedUtxo = firstSelectedUtxo;
         while (selectedUtxosValue < valueToSend && (lastSelectedUtxo < operator.utxos.length)) {
             selectedUtxosValue += operator.utxos[lastSelectedUtxo].value;
-            fee += FEE_PER_INPUT;
+            dogeTxFee += DOGE_TX_FEE_PER_INPUT;
             lastSelectedUtxo++;
         }
         if (selectedUtxosValue < valueToSend) {
             errorCode = ERR_UNLOCK_UTXOS_VALUE_LESS_THAN_VALUE_TO_SEND;
-            return (errorCode, selectedUtxos, fee, changeValue);
+            return (errorCode, selectedUtxos, dogeTxFee, changeValue);
         }
-        if (valueToSend <= fee) {
+        if (valueToSend <= dogeTxFee) {
             errorCode = ERR_UNLOCK_VALUE_TO_SEND_LESS_THAN_FEE;
-            return (errorCode, selectedUtxos, fee, changeValue);
+            return (errorCode, selectedUtxos, dogeTxFee, changeValue);
         }
         uint32 numberOfSelectedUtxos = lastSelectedUtxo - firstSelectedUtxo;
         selectedUtxos = new uint32[](numberOfSelectedUtxos);
@@ -332,7 +364,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         }
         changeValue = selectedUtxosValue - valueToSend;
         errorCode = 0;
-        return (errorCode, selectedUtxos, fee, changeValue);
+        return (errorCode, selectedUtxos, dogeTxFee, changeValue);
     }
 
     function setDogeEthPrice(uint _dogeEthPrice) public {
@@ -340,14 +372,15 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         dogeEthPrice = _dogeEthPrice;
     }
 
-    function getUnlockPendingInvestorProof(uint32 index) public view returns (address from, string dogeAddress, uint value, uint timestamp, uint32[] selectedUtxos, uint fee, bytes20 operatorPublicKeyHash) {
+    function getUnlockPendingInvestorProof(uint32 index) public view returns (address from, string dogeAddress, uint value, uint operatorFee, uint timestamp, uint32[] selectedUtxos, uint dogeTxFee, bytes20 operatorPublicKeyHash) {
         Unlock storage unlock = unlocksPendingInvestorProof[index];
         from = unlock.from;
         dogeAddress = unlock.dogeAddress;
         value = unlock.value;
+        operatorFee = unlock.operatorFee;
         timestamp = unlock.timestamp;
         selectedUtxos = unlock.selectedUtxos;
-        fee = unlock.fee;
+        dogeTxFee = unlock.dogeTxFee;
         operatorPublicKeyHash = unlock.operatorPublicKeyHash;
     }
 

@@ -15,12 +15,18 @@ contract('testDogeTokenProcessTransaction', function(accounts) {
 
   it("processTransaction success", async () => {
     let dogeToken = await DogeToken.new(trustedRelayerContract, trustedDogeEthPriceOracle, collateralRatio);
-    await dogeToken.addOperatorSimple(operatorPublicKeyHash);
+    const operatorEthAddress = accounts[3];
+    await dogeToken.addOperatorSimple(operatorPublicKeyHash, operatorEthAddress);
 
     await dogeToken.processTransaction(txData, txHash, operatorPublicKeyHash);
 
+    const operatorFee = 9058532053;
+    const userValue = value - operatorFee;
+
     const balance = await dogeToken.balanceOf(address);
-    assert.equal(balance.toString(10), value, `DogeToken's ${address} balance is not the expected one`);
+    assert.equal(balance.toString(10), userValue, `DogeToken's ${address} balance is not the expected one`);
+    var operatorEthBalance = await dogeToken.balanceOf(operatorEthAddress);
+    assert.equal(operatorEthBalance.toNumber(), operatorFee, `DogeToken's operator balance is not the expected one`);
 
     const utxo = await dogeToken.getUtxo(operatorPublicKeyHash, 0);
     assert.equal(utxo[0], value, `Utxo's value is not the expected one`);
@@ -40,7 +46,8 @@ contract('testDogeTokenProcessTransaction', function(accounts) {
 
   it("processTransaction fail - tx already processed", async () => {
     let dogeToken = await DogeToken.new(trustedRelayerContract, trustedDogeEthPriceOracle, collateralRatio);
-    await dogeToken.addOperatorSimple(operatorPublicKeyHash);
+    const operatorEthAddress = accounts[3];
+    await dogeToken.addOperatorSimple(operatorPublicKeyHash, operatorEthAddress);
     await dogeToken.processTransaction(txData, txHash, operatorPublicKeyHash);
 
     var processTransactionTxReceipt = await dogeToken.processTransaction(txData, txHash, operatorPublicKeyHash);

@@ -15,7 +15,8 @@ contract('testRelayToDogeToken', function(accounts) {
   });
   it('Relay tx to token', async () => {
     const operatorPublicKeyHash = `0x4d905b4b815d483cdfabcd292c6f86509d0fad82`;
-    await dogeToken.addOperatorSimple(operatorPublicKeyHash);
+    const operatorEthAddress = accounts[3];
+    await dogeToken.addOperatorSimple(operatorPublicKeyHash, operatorEthAddress);
 
     const headerAndHashes = await utils.storeSuperblockFrom974401(superblocks, claimManager, accounts[0]);
     const txIndex = 2; // Third tx in the block
@@ -47,7 +48,12 @@ contract('testRelayToDogeToken', function(accounts) {
     const address = '0x30d90d1dbf03aa127d58e6af83ca1da9e748c98d';
     const value = '905853205327';
     const balance = await dogeToken.balanceOf(address);
-    assert.equal(balance.toString(10), value, `DogeToken's ${address} balance is not the expected one`);
+    const operatorFee = 9058532053;
+    const userValue = value - operatorFee;
+    assert.equal(balance.toString(10), userValue, `DogeToken's ${address} balance is not the expected one`);
+    var operatorTokenBalance = await dogeToken.balanceOf(operatorEthAddress);
+    assert.equal(operatorTokenBalance.toNumber(), operatorFee, `DogeToken's operator balance is not the expected one`);
+    
     var operator = await dogeToken.operators(operatorPublicKeyHash);
     assert.equal(operator[1].toString(10), value, 'operator dogeAvailableBalance is not the expected one');
   });
