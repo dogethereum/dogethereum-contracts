@@ -12,6 +12,8 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
     uint public constant MIN_LOCK_VALUE = 150000000; // 1.5 doges
     uint public constant OPERATOR_LOCK_FEE = 10; // 1 = 0.1%
     uint public constant OPERATOR_MIN_LOCK_FEE = 100000000; // 1 doge
+    uint public constant SUPERBLOCK_SUBMITTER_LOCK_FEE = 10; // 1 = 0.1%
+    uint public constant SUPERBLOCK_SUBMITTER_MIN_LOCK_FEE = 100000000; // 1 doge
 
     // Unlock constants
     uint public constant MIN_UNLOCK_VALUE = 300000000; // 3 doges
@@ -201,7 +203,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
     }
 
 
-    function processTransaction(bytes dogeTx, uint txHash, bytes20 operatorPublicKeyHash) public returns (uint) {
+    function processTransaction(bytes dogeTx, uint txHash, bytes20 operatorPublicKeyHash, address superblockSubmitterAddress) public returns (uint) {
         require(msg.sender == trustedRelayerContract);
 
         Operator storage operator = operators[operatorPublicKeyHash];
@@ -241,24 +243,8 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
                 return;
             }
 
-            // Calculate ethereum address from dogecoin public key
-            address destinationAddress = DogeTx.pub2address(uint(firstInputPublicKeyX), firstInputPublicKeyOdd);
-
-            uint operatorFee = value * OPERATOR_LOCK_FEE / 1000;
-            if (operatorFee < OPERATOR_MIN_LOCK_FEE) {
-                operatorFee = OPERATOR_MIN_LOCK_FEE;
-            }
-            balances[operator.ethAddress] += operatorFee;
-            emit NewToken(operator.ethAddress, operatorFee);
-            // Hack to make etherscan show the event
-            emit Transfer(0, operator.ethAddress, operatorFee);
-
-            uint userValue = value - operatorFee;
-            balances[destinationAddress] += userValue;
-            emit NewToken(destinationAddress, userValue);
-            // Hack to make etherscan show the event
-            emit Transfer(0, destinationAddress, userValue);
-
+            processLockTransaction(firstInputPublicKeyX, firstInputPublicKeyOdd, value, 
+                                   operator.ethAddress, superblockSubmitterAddress);
             return value;
         } else {
             // this is an unlock tx
@@ -270,6 +256,37 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
 
     function wasDogeTxProcessed(uint txHash) public view returns (bool) {
         return Set.contains(dogeTxHashesAlreadyProcessed, txHash);
+    }
+
+    function processLockTransaction(bytes32 firstInputPublicKeyX, bool firstInputPublicKeyOdd,
+                                    uint value, address operatorEthAddress, 
+                                    address superblockSubmitterAddress) private {
+        // Calculate ethereum address from dogecoin public key
+        address destinationAddress = DogeTx.pub2address(uint(firstInputPublicKeyX), firstInputPublicKeyOdd);
+
+        uint operatorFee = value * OPERATOR_LOCK_FEE / 1000;
+        if (operatorFee < OPERATOR_MIN_LOCK_FEE) {
+            operatorFee = OPERATOR_MIN_LOCK_FEE;
+        }
+        balances[operatorEthAddress] += operatorFee;
+        emit NewToken(operatorEthAddress, operatorFee);
+        // Hack to make etherscan show the event
+        emit Transfer(0, operatorEthAddress, operatorFee);
+
+        uint superblockSubmitterFee = value * SUPERBLOCK_SUBMITTER_LOCK_FEE / 1000;
+        if (superblockSubmitterFee < SUPERBLOCK_SUBMITTER_MIN_LOCK_FEE) {
+            superblockSubmitterFee = SUPERBLOCK_SUBMITTER_MIN_LOCK_FEE;
+        }
+        balances[superblockSubmitterAddress] += superblockSubmitterFee;
+        emit NewToken(superblockSubmitterAddress, superblockSubmitterFee);
+        // Hack to make etherscan show the event
+        emit Transfer(0, superblockSubmitterAddress, superblockSubmitterFee);
+
+        uint userValue = value - operatorFee - superblockSubmitterFee;
+        balances[destinationAddress] += userValue;
+        emit NewToken(destinationAddress, userValue);
+        // Hack to make etherscan show the event
+        emit Transfer(0, destinationAddress, userValue);    
     }
 
     // Unlock section begin

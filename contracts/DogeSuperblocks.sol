@@ -310,7 +310,7 @@ contract DogeSuperblocks is DogeErrorCodes {
 
         uint txHash = verifyTx(_txBytes, _txIndex, _txSiblings, _dogeBlockHeader, _superblockId);
         if (txHash != 0) {
-            uint returnCode = _targetContract.processTransaction(_txBytes, txHash, _operatorPublicKeyHash);
+            uint returnCode = _targetContract.processTransaction(_txBytes, txHash, _operatorPublicKeyHash, superblocks[_superblockId].submitter);
             emit RelayTransaction(bytes32(txHash), returnCode);
             return (returnCode);
         }

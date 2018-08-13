@@ -18,15 +18,19 @@ contract('testDogeTokenProcessTransaction', function(accounts) {
     const operatorEthAddress = accounts[3];
     await dogeToken.addOperatorSimple(operatorPublicKeyHash, operatorEthAddress);
 
-    await dogeToken.processTransaction(txData, txHash, operatorPublicKeyHash);
+    const superblockSubmitterAddress = accounts[4];
+    await dogeToken.processTransaction(txData, txHash, operatorPublicKeyHash, superblockSubmitterAddress);
 
     const operatorFee = 9058532053;
-    const userValue = value - operatorFee;
+    const superblockSubmitterFee = 9058532053; 
+    const userValue = value - operatorFee - superblockSubmitterFee;
 
     const balance = await dogeToken.balanceOf(address);
     assert.equal(balance.toString(10), userValue, `DogeToken's ${address} balance is not the expected one`);
-    var operatorEthBalance = await dogeToken.balanceOf(operatorEthAddress);
-    assert.equal(operatorEthBalance.toNumber(), operatorFee, `DogeToken's operator balance is not the expected one`);
+    var operatorTokenBalance = await dogeToken.balanceOf(operatorEthAddress);
+    assert.equal(operatorTokenBalance.toNumber(), operatorFee, `DogeToken's operator balance is not the expected one`);
+    var superblockSubmitterTokenBalance = await dogeToken.balanceOf(superblockSubmitterAddress);
+    assert.equal(superblockSubmitterTokenBalance.toNumber(), superblockSubmitterFee, `DogeToken's superblock submitter balance is not the expected one`);
 
     const utxo = await dogeToken.getUtxo(operatorPublicKeyHash, 0);
     assert.equal(utxo[0], value, `Utxo's value is not the expected one`);
@@ -39,8 +43,8 @@ contract('testDogeTokenProcessTransaction', function(accounts) {
 
   it("processTransaction fail - operator not created", async () => {
     let dogeToken = await DogeToken.new(trustedRelayerContract, trustedDogeEthPriceOracle, collateralRatio);
-
-    var processTransactionTxReceipt = await dogeToken.processTransaction(txData, txHash, operatorPublicKeyHash);
+    const superblockSubmitterAddress = accounts[4];
+    var processTransactionTxReceipt = await dogeToken.processTransaction(txData, txHash, operatorPublicKeyHash, superblockSubmitterAddress);
     assert.equal(60060, processTransactionTxReceipt.logs[0].args.err, "Expected ERR_PROCESS_OPERATOR_NOT_CREATED error");
   });
 
@@ -48,9 +52,10 @@ contract('testDogeTokenProcessTransaction', function(accounts) {
     let dogeToken = await DogeToken.new(trustedRelayerContract, trustedDogeEthPriceOracle, collateralRatio);
     const operatorEthAddress = accounts[3];
     await dogeToken.addOperatorSimple(operatorPublicKeyHash, operatorEthAddress);
-    await dogeToken.processTransaction(txData, txHash, operatorPublicKeyHash);
+    const superblockSubmitterAddress = accounts[4];
+    await dogeToken.processTransaction(txData, txHash, operatorPublicKeyHash, superblockSubmitterAddress);
 
-    var processTransactionTxReceipt = await dogeToken.processTransaction(txData, txHash, operatorPublicKeyHash);
+    var processTransactionTxReceipt = await dogeToken.processTransaction(txData, txHash, operatorPublicKeyHash, superblockSubmitterAddress);
     assert.equal(60070, processTransactionTxReceipt.logs[0].args.err, "Expected ERR_PROCESS_TX_ALREADY_PROCESSED error");
   });
 
