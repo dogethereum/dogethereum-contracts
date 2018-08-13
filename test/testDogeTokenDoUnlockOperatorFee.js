@@ -27,7 +27,7 @@ contract('testDogeTokenDoUnlockOperatorFee', function(accounts) {
 
     const unlockPendingInvestorProof = await dogeToken.getUnlockPendingInvestorProof(0);
     assert.equal(unlockPendingInvestorProof[3].toNumber(), 150000000, `Unlock operator fee is not the expected one`);
-    var operatorEthBalance = await dogeToken.balanceOf(operatorEthAddress);
-    assert.equal(operatorEthBalance.toNumber(), 150000000, `DogeToken's operator balance after unlock is not the expected one`);
+    var operatorTokenBalance = await dogeToken.balanceOf(operatorEthAddress);
+    assert.equal(operatorTokenBalance.toNumber(), 150000000, `DogeToken's operator balance after unlock is not the expected one`);
   });
 });
