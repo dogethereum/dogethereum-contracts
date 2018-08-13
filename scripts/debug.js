@@ -74,13 +74,14 @@ module.exports = async function(callback) {
         console.log("  from : " + unlock[0]);
         console.log("  dogeAddress : " + unlock[1]);
         console.log("  value : " + unlock[2].toNumber());
-        console.log("  timestamp : " + unlock[3].toNumber());
+        console.log("  operator fee : " + unlock[3].toNumber());
+        console.log("  timestamp : " + unlock[4].toNumber());
         console.log("  selectedUtxos : ");
-        for (var j = 0; j <  unlock[4].length; j++) {
-          console.log("    " + unlock[4][j]);          
+        for (var j = 0; j <  unlock[5].length; j++) {
+          console.log("    " + unlock[5][j]);          
         }
-        console.log("  fee : " + unlock[5].toNumber());
-        console.log("  operatorPublicKeyHash : " + unlock[6]);
+        console.log("  doge tx fee : " + unlock[6].toNumber());
+        console.log("  operatorPublicKeyHash : " + unlock[7]);
      }
   });
 }
