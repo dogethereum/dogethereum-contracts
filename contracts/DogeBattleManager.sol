@@ -506,8 +506,9 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
             emit ErrorBattle(sessionId, ERR_SUPERBLOCK_NO_TIMEOUT);
             return ERR_SUPERBLOCK_NO_TIMEOUT;
         }
-        if (session.lastActionChallenger > session.lastActionClaimant &&
-            block.timestamp > session.lastActionTimestamp + superblockTimeout) {
+        if (session.challengeState == ChallengeState.SuperblockFailed ||
+            (session.lastActionChallenger > session.lastActionClaimant &&
+            block.timestamp > session.lastActionTimestamp + superblockTimeout)) {
             convictSubmitter(sessionId, session.submitter, session.superblockId);
             return ERR_SUPERBLOCK_OK;
         } else if (session.lastActionClaimant > session.lastActionChallenger &&
