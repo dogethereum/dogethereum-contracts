@@ -392,6 +392,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
         }
 
         if (id != claimId) {
+            superblocks.invalidate(claimId, msg.sender);
             emit SuperblockClaimFailed(claimId, claim.claimant, claim.superblockId);
             doPayChallengers(claimId, claim);
         }
