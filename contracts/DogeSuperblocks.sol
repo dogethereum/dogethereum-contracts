@@ -520,6 +520,10 @@ contract DogeSuperblocks is DogeErrorCodes {
         return (getSuperblockStatus(_superblockId) == Status.Approved);
     }
 
+    function getChainHeight() public view returns (uint) {
+        return superblocks[bestSuperblock].height;
+    }
+
     // @dev - write `_fourBytes` into `_word` starting from `_position`
     // This is useful for writing 32bit ints inside one 32 byte word
     //
