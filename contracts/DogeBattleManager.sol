@@ -311,7 +311,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
             bytes32 blockSha256Hash = bytes32(DogeTx.dblShaFlipMem(blockHeader, 0, 80));
             BlockInfo storage blockInfo = session.blocksInfo[blockSha256Hash];
             if (blockInfo.status != BlockInfoStatus.Requested) {
-                return (ERR_SUPERBLOCK_BAD_STATUS, new bytes(0));
+                return (ERR_SUPERBLOCK_BAD_DOGE_STATUS, new bytes(0));
             }
 
             if (!verifyTimestamp(session.superblockId, blockHeader)) {

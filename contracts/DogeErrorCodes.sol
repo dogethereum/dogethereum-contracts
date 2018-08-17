@@ -6,6 +6,7 @@ contract DogeErrorCodes {
     uint constant ERR_SUPERBLOCK_OK = 0;
     uint constant ERR_SUPERBLOCK_EXIST = 50010;
     uint constant ERR_SUPERBLOCK_BAD_STATUS = 50020;
+    uint constant ERR_SUPERBLOCK_BAD_DOGE_STATUS = 50025;
     uint constant ERR_SUPERBLOCK_NO_TIMEOUT = 50030;
     uint constant ERR_SUPERBLOCK_BAD_TIMESTAMP = 50035;
     uint constant ERR_SUPERBLOCK_INVALID_MERKLE = 50040;
