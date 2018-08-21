@@ -215,6 +215,14 @@ function makeSuperblock(headers, parentId, parentAccumulatedWork, parentTimestam
   };
 }
 
+function forgeDogeBlockHeader(prevHash, time) {
+    const version = "03006200";
+    const merkleRoot = "0".repeat(28) + "deadbeef";
+    const bits = "ffff7f20";
+    const nonce = "feedbeef";
+    return version + prevHash + merkleRoot + time + bits + nonce;
+}
+
 function formatHexUint(str, length) {
   while (str.length < length) {
     str = "0" + str;
