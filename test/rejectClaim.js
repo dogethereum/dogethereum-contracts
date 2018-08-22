@@ -93,12 +93,14 @@ contract('rejectClaim', (accounts) => {
         await claimManager.makeDeposit({ value: 11, from: challenger });
     }
 
-    describe('Reject fork', () => {
+    describe.only('Reject fork', () => {
         let superblock0Id;
         let superblock1Id;
         let superblock2Id;
         let superblock3Id;
         let superblockRId;
+
+        let session1;
 
         before(async () => {
             await initSuperblocks(true, superblock0);
@@ -158,12 +160,6 @@ contract('rejectClaim', (accounts) => {
         it('Missing confirmations after one superblock', async () => {
             const result = await claimManager.rejectClaim(superblockRId, { from: submitter });
             assert.equal(result.logs[0].event, 'ErrorClaim', 'Error claim not raised despite missing confirmations');
-            // const bestSuperblock = await superblocks.getBestSuperblock();
-            // const height = await superblocks.getSuperblockHeight(bestSuperblock);
-            // const superblockRHeight = await superblocks.getSuperblockHeight(superblockRId);
-            // console.log("Confirmations: ", superblocks.superblockConfirmations);
-            // console.log("Height: ", superblockRHeight.toNumber());
-            // console.log("Best height: ", height.toNumber());
         });
 
         // Propose two more superblocks
@@ -219,10 +215,28 @@ contract('rejectClaim', (accounts) => {
         });
 
         // This should raise an error because the superblock is neither InBattle nor SemiApproved
-        // it('Try to reject without challenges', async () => {
-        //     const result = await claimManager.rejectClaim(superblockRId);
-        //     console.log(result.logs);
-        //     assert.equal(result.logs[0].event, 'ErrorSuperblock', 'Superblock invalidated');
-        // });
+        it('Try to reject without challenges', async () => {
+            const result = await claimManager.rejectClaim(superblockRId);
+            assert.equal(result.logs[0].event, 'ErrorClaim', 'Error claim not raised despite bad status');
+        });
+
+        // Challenge fork
+        it('Challenge fork', async () => {
+            const result = await claimManager.challengeSuperblock(superblockRId, { from: challenger });
+            assert.equal(result.logs[1].event, 'SuperblockClaimChallenged', 'Superblock challenged');
+            assert.equal(superblockRId, result.logs[1].args.claimId);
+            assert.equal(result.logs[2].event, 'NewBattle', 'New battle session');
+            session1 = result.logs[2].args.sessionId;
+            assert.equal(result.logs[3].event, 'VerificationGameStarted', 'Battle started');
+        });
+
+        // Don't reject claim if it's undecided
+
+        // Invalidate superblock and reject claim
+        it('Reject fork', async () => {
+            const result = await claimManager.rejectClaim(superblockRId, { from: submitter });
+            assert.equal(result.logs[0].event, 'SuperblockClaimFailed', 'SuperblockClaimFailed event not found');
+            assert.equal(result.logs[1].event, 'DepositUnbonded', 'DepositUnbonded event not found');
+        });
     });
 });
