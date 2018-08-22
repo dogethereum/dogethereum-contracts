@@ -216,11 +216,11 @@ function makeSuperblock(headers, parentId, parentAccumulatedWork, parentTimestam
 }
 
 function forgeDogeBlockHeader(prevHash, time) {
-    const version = "03006200";
-    const merkleRoot = "0".repeat(28) + "deadbeef";
-    const bits = "ffff7f20";
-    const nonce = "feedbeef";
-    return version + prevHash + merkleRoot + time + bits + nonce;
+  const version = "03006200";
+  const merkleRoot = "0".repeat(56) + "deadbeef";
+  const bits = "ffff7f20";
+  const nonce = "feedbeef";
+  return version + prevHash + merkleRoot + time + bits + nonce;
 }
 
 function formatHexUint(str, length) {
@@ -425,5 +425,6 @@ module.exports = {
       var ecdsaSig = ecdsa.sig;
       var signature = "0x" + ecdsaSig.toCompact().toString('hex');
       return [operatorPublicKeyCompressedString, signature];
-  }
+  },
+  forgeDogeBlockHeader
 };
