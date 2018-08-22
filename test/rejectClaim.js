@@ -51,8 +51,7 @@ contract('rejectClaim', (accounts) => {
         `03006200d59a7170a948a2e0b58c31b5cccb79b37686ca0b5a460d65e75273f9bc0d90deb0bbce23de660ab3f1e1b21b6e22919d8cf5e2f6b1de28e11611049f824503a1774d7c5bffff7f20010000000101000000010000000000000000000000000000000000000000000000000000000000000000ffffffff03580101ffffffff0100203d88792d00002321032af59b4b1ee8905f7f0a05b21e4b9ee2544426943166fb5b6514eb60c9764d2fac00000000`,
         `03006200c62f797c15dd491c2bef442d0ba509fc98d47e9ab644ed3809fcabec58ba542f09e6142339f1e34aad3c95f593d66c9fc65f19b3319ec3d8363b9f8c695eab8c774d7c5bffff7f20020000000101000000010000000000000000000000000000000000000000000000000000000000000000ffffffff03590101ffffffff0100203d88792d00002321032af59b4b1ee8905f7f0a05b21e4b9ee2544426943166fb5b6514eb60c9764d2fac00000000`
     ];
-    // const fakeDogeBlockHeader = utils.forgeDogeBlockHeader(utils.calcBlockSha256Hash(superblock0Headers[0]), "924a7c5b");
-    const fakeDogeBlockHeader = `deadbeef`;
+    const fakeDogeBlockHeader = utils.forgeDogeBlockHeader(utils.calcBlockSha256Hash(superblock0Headers[0]).slice(2, 66), "924a7c5b");
     const superblockRHeaders = [fakeDogeBlockHeader]; // this superblock should be rejected
 
     const superblock0 = utils.makeSuperblock(superblock0Headers, initParentId, 2);
@@ -61,16 +60,16 @@ contract('rejectClaim', (accounts) => {
     const superblock3 = utils.makeSuperblock(superblock3Headers, superblock2.superblockId, 20);
     const superblockR = utils.makeSuperblock(superblockRHeaders, superblock0.superblockId, 4);
 
-    console.log("Superblock 0: ", superblock0);
-    console.log("Superblock 1: ", superblock1);
-    console.log("Superblock 2: ", superblock2);
-    console.log("Superblock 3: ", superblock3);
-    console.log("Superblock R: ", superblockR);
+    // console.log("Superblock 0: ", superblock0);
+    // console.log("Superblock 1: ", superblock1);
+    // console.log("Superblock 2: ", superblock2);
+    // console.log("Superblock 3: ", superblock3);
+    // console.log("Superblock R: ", superblockR);
     
     // Copied from claimManager.js
     async function initSuperblocks(dummyChecker, genesisSuperblock) {
         superblocks = await DogeSuperblocks.new();
-        claimManager = await DogeClaimManager.new(DOGE_REGTEST, superblocks.address, SUPERBLOCK_TIMES_DOGE_REGTEST.DURATION, SUPERBLOCK_TIMES_DOGE_REGTEST.DELAY, SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT, SUPERBLOCK_TIMES_DOGE_REGTEST.CONFIMATIONS);
+        claimManager = await DogeClaimManager.new(DOGE_REGTEST, superblocks.address, SUPERBLOCK_TIMES_DOGE_REGTEST.DURATION, SUPERBLOCK_TIMES_DOGE_REGTEST.DELAY, SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT, SUPERBLOCK_TIMES_DOGE_REGTEST.CONFIRMATIONS);
         if (dummyChecker) {
             scryptChecker = await ScryptCheckerDummy.new(false);
         } else {
@@ -129,10 +128,42 @@ contract('rejectClaim', (accounts) => {
 
         it('Confirm superblock 1', async () => {
             await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
-            const result = await claimManager.checkClaimFinished(superblock1Id, { from: challenger });
+            const result = await claimManager.checkClaimFinished(superblock1Id, { from: submitter });
             assert.equal(result.logs[1].event, 'SuperblockClaimSuccessful', 'Superblock challenged');
             const best = await superblocks.getBestSuperblock();
             assert.equal(superblock1Id, best, 'Best superblock should match');
+        });
+
+        it('Claim does not exist', async () => {
+            const result = await claimManager.rejectClaim(superblockR.superblockId, { from: submitter });
+            assert.equal(result.logs[0].event, 'ErrorClaim', 'Claim has not been made');
+        });
+
+        // Propose an alternate superblock
+        it('Propose fork', async () => {
+            const result = await claimManager.proposeSuperblock(
+                superblockR.merkleRoot,
+                superblockR.accumulatedWork,
+                superblockR.timestamp,
+                superblockR.prevTimestamp,
+                superblockR.lastHash,
+                superblockR.lastBits,
+                superblockR.parentId,
+                { from: submitter },
+            );
+            assert.equal(result.logs[1].event, 'SuperblockClaimCreated', 'New superblock proposed');
+            superblockRId = result.logs[1].args.superblockId;
+        });
+
+        it('Missing confirmations after one superblock', async () => {
+            const result = await claimManager.rejectClaim(superblockRId, { from: submitter });
+            assert.equal(result.logs[0].event, 'ErrorClaim', 'Error claim not raised despite missing confirmations');
+            // const bestSuperblock = await superblocks.getBestSuperblock();
+            // const height = await superblocks.getSuperblockHeight(bestSuperblock);
+            // const superblockRHeight = await superblocks.getSuperblockHeight(superblockRId);
+            // console.log("Confirmations: ", superblocks.superblockConfirmations);
+            // console.log("Height: ", superblockRHeight.toNumber());
+            // console.log("Best height: ", height.toNumber());
         });
 
         // Propose two more superblocks
@@ -153,10 +184,15 @@ contract('rejectClaim', (accounts) => {
 
         it('Confirm superblock 2', async () => {
             await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
-            const result = await claimManager.checkClaimFinished(superblock2Id, { from: challenger });
+            const result = await claimManager.checkClaimFinished(superblock2Id, { from: submitter });
             assert.equal(result.logs[1].event, 'SuperblockClaimSuccessful', 'Superblock challenged');
             const best = await superblocks.getBestSuperblock();
             assert.equal(superblock2Id, best, 'Best superblock should match');
+        });
+
+        it('Missing confirmations after two superblocks', async () => {
+            const result = await claimManager.rejectClaim(superblockRId, { from: submitter });
+            assert.equal(result.logs[0].event, 'ErrorClaim', 'Error claim not raised despite missing confirmations');
         });
 
         it('Propose superblock 3', async () => {
@@ -176,33 +212,17 @@ contract('rejectClaim', (accounts) => {
 
         it('Confirm superblock 3', async () => {
             await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
-            const result = await claimManager.checkClaimFinished(superblock3Id, { from: challenger });
+            const result = await claimManager.checkClaimFinished(superblock3Id, { from: submitter });
             assert.equal(result.logs[1].event, 'SuperblockClaimSuccessful', 'Superblock challenged');
             const best = await superblocks.getBestSuperblock();
             assert.equal(superblock3Id, best, 'Best superblock should match');
         });
 
-        // // Propose an alternate superblock
-        // it('Propose fork', async () => {
-        //     const result = await claimManager.proposeSuperblock(
-        //         superblockR.merkleRoot,
-        //         superblockR.accumulatedWork,
-        //         superblockR.timestamp,
-        //         superblockR.prevTimestamp,
-        //         superblockR.lastHash,
-        //         superblockR.lastBits,
-        //         superblockR.parentId,
-        //         { from: submitter },
-        //     );
-        //     assert.equal(result.logs[1].event, 'SuperblockClaimCreated', 'New superblock proposed');
-        //     superblockRId = result.logs[1].args.superblockId;
-        // });
-
-        // // Invalidate alternate superblock
-        // it('Reject fork', async () => {
+        // This should raise an error because the superblock is neither InBattle nor SemiApproved
+        // it('Try to reject without challenges', async () => {
         //     const result = await claimManager.rejectClaim(superblockRId);
-        //     assert.equal(result.logs[0].event, 'InvalidSuperblock', 'Superblock invalidated');
-        //     assert.equal(result.logs[1].event, 'SuperblockClaimFailed', 'Superblock claim failed');
+        //     console.log(result.logs);
+        //     assert.equal(result.logs[0].event, 'ErrorSuperblock', 'Superblock invalidated');
         // });
     });
 });
