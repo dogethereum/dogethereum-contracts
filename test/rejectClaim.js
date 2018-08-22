@@ -32,7 +32,7 @@ contract('rejectClaim', (accounts) => {
     let scryptChecker;
     const initParentId = '0x0000000000000000000000000000000000000000000000000000000000000000';
     const initAccumulatedWork = 0;
-    
+
     const superblock0Headers = [
         `010000000000000000000000000000000000000000000000000000000000000000000000696ad20e2dd4365c7459b4a4a5af743d5e92c6da3229e6532cd605f6533f2a5bdae5494dffff7f20020000000101000000010000000000000000000000000000000000000000000000000000000000000000ffffffff1004ffff001d0104084e696e746f6e646fffffffff010058850c020000004341040184710fa689ad5023690c80f3a49c8f13f8d45b8c857fbcbc8bc4a8e4d3eb4b10f4d4604fa08dce601aaf0f470216fe1b51850b4acf21b179c45070ac7b03a9ac00000000`
     ];
@@ -65,7 +65,7 @@ contract('rejectClaim', (accounts) => {
     // console.log("Superblock 2: ", superblock2);
     // console.log("Superblock 3: ", superblock3);
     // console.log("Superblock R: ", superblockR);
-    
+
     // Copied from claimManager.js
     async function initSuperblocks(dummyChecker, genesisSuperblock) {
         superblocks = await DogeSuperblocks.new();
@@ -105,13 +105,13 @@ contract('rejectClaim', (accounts) => {
         before(async () => {
             await initSuperblocks(true, superblock0);
         });
-        
+
         it('Initialized', async () => {
             superblock0Id = superblock0.superblockId;
             const best = await superblocks.getBestSuperblock();
             assert.equal(superblock0Id, best, 'Best superblock should match');
         });
-        
+
         // Propose initial superblock
         it('Propose superblock 1', async () => {
             const result = await claimManager.proposeSuperblock(
@@ -233,10 +233,10 @@ contract('rejectClaim', (accounts) => {
         // Don't reject claim if it's undecided
 
         // Invalidate superblock and reject claim
-        it('Reject fork', async () => {
-            const result = await claimManager.rejectClaim(superblockRId, { from: submitter });
-            assert.equal(result.logs[0].event, 'SuperblockClaimFailed', 'SuperblockClaimFailed event not found');
-            assert.equal(result.logs[1].event, 'DepositUnbonded', 'DepositUnbonded event not found');
-        });
+        // it('Reject fork', async () => {
+        //     const result = await claimManager.rejectClaim(superblockRId, { from: submitter });
+        //     assert.equal(result.logs[0].event, 'SuperblockClaimFailed', 'SuperblockClaimFailed event not found');
+        //     assert.equal(result.logs[1].event, 'DepositUnbonded', 'DepositUnbonded event not found');
+        // });
     });
 });
