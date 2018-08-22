@@ -94,7 +94,7 @@ contract('rejectClaim', (accounts) => {
         await claimManager.makeDeposit({ value: 11, from: challenger });
     }
 
-    describe.only('Reject fork', () => {
+    describe('Reject fork', () => {
         let superblock0Id;
         let superblock1Id;
         let superblock2Id;
@@ -159,6 +159,7 @@ contract('rejectClaim', (accounts) => {
             assert.equal(superblock2Id, best, 'Best superblock should match');
         });
 
+<<<<<<< 5d6548bd8ed26c4f0f3bfbc93acb6fdc26b4db5f
         // it('Propose superblock 3', async () => {
         //     const result = await claimManager.proposeSuperblock(
         //         superblock3.merkleRoot,
@@ -181,6 +182,30 @@ contract('rejectClaim', (accounts) => {
         //     const best = await superblocks.getBestSuperblock();
         //     assert.equal(superblock3Id, best, 'Best superblock should match');
         // });
+=======
+        it('Propose superblock 3', async () => {
+            const result = await claimManager.proposeSuperblock(
+                superblock3.merkleRoot,
+                superblock3.accumulatedWork,
+                superblock3.timestamp,
+                superblock3.prevTimestamp,
+                superblock3.lastHash,
+                superblock3.lastBits,
+                superblock3.parentId,
+                { from: submitter },
+            );
+            assert.equal(result.logs[1].event, 'SuperblockClaimCreated', 'New superblock proposed');
+            superblock3Id = result.logs[1].args.superblockId;
+        });
+
+        it('Confirm superblock 3', async () => {
+            await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+            const result = await claimManager.checkClaimFinished(superblock3Id, { from: challenger });
+            assert.equal(result.logs[1].event, 'SuperblockClaimSuccessful', 'Superblock challenged');
+            const best = await superblocks.getBestSuperblock();
+            assert.equal(superblock3Id, best, 'Best superblock should match');
+        });
+>>>>>>> Don't skip other tests
 
         // // Propose an alternate superblock
         // it('Propose fork', async () => {
