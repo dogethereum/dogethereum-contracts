@@ -376,14 +376,14 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
     function rejectClaim(bytes32 claimId) public returns (bool) {
         SuperblockClaim storage claim = claims[claimId];
         if (!claimExists(claim)) {
-            emit ErrorClaim(id, ERR_SUPERBLOCK_BAD_CLAIM);
+            emit ErrorClaim(claimId, ERR_SUPERBLOCK_BAD_CLAIM);
             return false;
         }
 
         uint height = superblocks.getSuperblockHeight(claimId);
         bytes32 id = superblocks.getBestSuperblock();
         if (superblocks.getSuperblockHeight(id) < height + superblockConfirmations) {
-            emit ErrorClaim(id, ERR_SUPERBLOCK_MISSING_CONFIRMATIONS);
+            emit ErrorClaim(claimId, ERR_SUPERBLOCK_MISSING_CONFIRMATIONS);
             return false;
         }
 
@@ -392,9 +392,16 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
         }
 
         if (id != claimId) {
-            superblocks.invalidate(claimId, msg.sender);
-            emit SuperblockClaimFailed(claimId, claim.claimant, claim.superblockId);
-            doPayChallengers(claimId, claim);
+            DogeSuperblocks.Status status = superblocks.getSuperblockStatus(claimId);
+            if (status == DogeSuperblocks.Status.InBattle || status == DogeSuperblocks.Status.SemiApproved) {
+                superblocks.invalidate(claimId, msg.sender);
+                emit SuperblockClaimFailed(claimId, claim.claimant, claim.superblockId);
+                doPayChallengers(claimId, claim);
+                return true;
+            } else {
+                emit ErrorClaim(claimId, ERR_SUPERBLOCK_BAD_STATUS);
+                return false;
+            }
         }
 
         return false;
