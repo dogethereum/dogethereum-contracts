@@ -93,7 +93,7 @@ contract('rejectClaim', (accounts) => {
         await claimManager.makeDeposit({ value: 11, from: challenger });
     }
 
-    describe.only('Reject fork', () => {
+    describe('Reject fork', () => {
         let superblock0Id;
         let superblock1Id;
         let superblock2Id;

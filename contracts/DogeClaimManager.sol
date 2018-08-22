@@ -393,15 +393,16 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
 
         if (id != claimId) {
             DogeSuperblocks.Status status = superblocks.getSuperblockStatus(claimId);
-            if (status == DogeSuperblocks.Status.InBattle || status == DogeSuperblocks.Status.SemiApproved) {
-                superblocks.invalidate(claimId, msg.sender);
-                emit SuperblockClaimFailed(claimId, claim.claimant, claim.superblockId);
-                doPayChallengers(claimId, claim);
-                return true;
-            } else {
+            
+            if (status != DogeSuperblocks.Status.SemiApproved) {
                 emit ErrorClaim(claimId, ERR_SUPERBLOCK_BAD_STATUS);
                 return false;
             }
+
+            superblocks.invalidate(claimId, msg.sender);
+            emit SuperblockClaimFailed(claimId, claim.claimant, claim.superblockId);
+            doPayChallengers(claimId, claim);
+            return true;
         }
 
         return false;
