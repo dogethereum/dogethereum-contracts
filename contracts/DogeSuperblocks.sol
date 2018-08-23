@@ -228,7 +228,7 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @dev - Semi-approve a challenged superblock
     //
     // A challenged superblock can be marked as semi-approved
-    // if it satisfies all the queries or when all challengers has
+    // if it satisfies all the queries or when all challengers have
     // stopped participating.
     //
     // @param _superblockId Id of the superblock to semi-approve
@@ -239,7 +239,8 @@ contract DogeSuperblocks is DogeErrorCodes {
             return (ERR_SUPERBLOCK_NOT_CLAIMMANAGER, 0);
         }
         SuperblockInfo storage superblock = superblocks[_superblockId];
-        if (superblock.status != Status.InBattle) {
+
+        if (superblock.status != Status.InBattle && superblock.status != Status.New) {
             emit ErrorSuperblock(_superblockId, ERR_SUPERBLOCK_BAD_STATUS);
             return (ERR_SUPERBLOCK_BAD_STATUS, 0);
         }
