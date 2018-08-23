@@ -23,6 +23,9 @@ const DOGE_MAINNET = 0;
 const DOGE_TESTNET = 1;
 const DOGE_REGTEST = 2;
 
+const SEMI_APPROVED = 3;
+const INVALID = 5;
+
 contract('rejectClaim', (accounts) => {
     const owner = accounts[0];
     const submitter = accounts[1];
@@ -51,8 +54,10 @@ contract('rejectClaim', (accounts) => {
         `03006200d59a7170a948a2e0b58c31b5cccb79b37686ca0b5a460d65e75273f9bc0d90deb0bbce23de660ab3f1e1b21b6e22919d8cf5e2f6b1de28e11611049f824503a1774d7c5bffff7f20010000000101000000010000000000000000000000000000000000000000000000000000000000000000ffffffff03580101ffffffff0100203d88792d00002321032af59b4b1ee8905f7f0a05b21e4b9ee2544426943166fb5b6514eb60c9764d2fac00000000`,
         `03006200c62f797c15dd491c2bef442d0ba509fc98d47e9ab644ed3809fcabec58ba542f09e6142339f1e34aad3c95f593d66c9fc65f19b3319ec3d8363b9f8c695eab8c774d7c5bffff7f20020000000101000000010000000000000000000000000000000000000000000000000000000000000000ffffffff03590101ffffffff0100203d88792d00002321032af59b4b1ee8905f7f0a05b21e4b9ee2544426943166fb5b6514eb60c9764d2fac00000000`
     ];
-    const fakeDogeBlockHeader = utils.forgeDogeBlockHeader(utils.calcBlockSha256Hash(superblock0Headers[0]).slice(2, 66), "924a7c5b");
-    const superblockRHeaders = [fakeDogeBlockHeader]; // this superblock should be rejected
+    // const fakeDogeBlockHeader = utils.forgeDogeBlockHeader("a573e91c1772076c0d40f70e4408c83a31705f296ae6e7629d4adcb5a360213d", "924a7c5b");
+    // const superblockRHeaders = [fakeDogeBlockHeader]; // this superblock should be rejected
+    const superblockRHeaders = [ superblock1Headers[0], superblock1Headers[1] ]; // this superblock should be semi-approved and then rejected
+    const superblockRHashes = superblockRHeaders.map(utils.calcBlockSha256Hash);
 
     const superblock0 = utils.makeSuperblock(superblock0Headers, initParentId, 2);
     const superblock1 = utils.makeSuperblock(superblock1Headers, superblock0.superblockId, 8);
@@ -93,7 +98,7 @@ contract('rejectClaim', (accounts) => {
         await claimManager.makeDeposit({ value: 11, from: challenger });
     }
 
-    describe('Reject fork', () => {
+    describe('Propose superblocks and reject fork', () => {
         let superblock0Id;
         let superblock1Id;
         let superblock2Id;
@@ -231,12 +236,56 @@ contract('rejectClaim', (accounts) => {
         });
 
         // Don't reject claim if it's undecided
+        it('Try to reject undecided claim', async () => {
+            const result = await claimManager.rejectClaim(superblockRId, { from: submitter });
+            assert.equal(result.logs[0].event, 'ErrorClaim', 'Error claim not raised despite undecided claim');
+        });
+
+        it('Query and verify hashes', async () => {
+            result = await claimManager.queryMerkleRootHashes(superblockRId, session1, { from: challenger });
+            assert.equal(result.logs[1].event, 'QueryMerkleRootHashes', 'Query merkle root hashes');
+            result = await claimManager.respondMerkleRootHashes(superblockRId, session1, superblockRHashes, { from: submitter });
+            assert.equal(result.logs[1].event, 'RespondMerkleRootHashes', 'Respond merkle root hashes');
+        });
+        
+        it('Query and reply block header', async () => {
+            let scryptHash;
+            result = await claimManager.queryBlockHeader(superblockRId, session1, superblockRHashes[0], { from: challenger });
+            assert.equal(result.logs[1].event, 'QueryBlockHeader', 'Query block header');
+            scryptHash = `0x${utils.calcHeaderPoW(superblockRHeaders[0])}`;
+            result = await claimManager.respondBlockHeader(superblockRId, session1, scryptHash, `0x${superblockRHeaders[0]}`, { from: submitter });
+            assert.equal(result.logs[1].event, 'RespondBlockHeader', 'Respond block header');
+            result = await claimManager.queryBlockHeader(superblockRId, session1, superblockRHashes[1], { from: challenger });
+            assert.equal(result.logs[1].event, 'QueryBlockHeader', 'Query block header');
+            scryptHash = `0x${utils.calcHeaderPoW(superblockRHeaders[1])}`;
+            result = await claimManager.respondBlockHeader(superblockRId, session1, scryptHash, `0x${superblockRHeaders[1]}`, { from: submitter });
+            assert.equal(result.logs[1].event, 'RespondBlockHeader', 'Respond block header');
+        });
+        
+        it('Verify forked superblock', async () => {
+            result = await claimManager.verifySuperblock(session1, { from: challenger });
+            assert.equal(result.logs[0].event, 'SuperblockBattleDecided', 'Superblock verified');
+            assert.equal(result.logs[1].event, 'ChallengerConvicted', 'Challenger not convicted despite fork being initially valid');
+        });
+
+        // Call rejectClaim on superblocks that aren't semi approved
+        // it('Try to reject unconfirmed superblock')
+        
+        it('Confirm forked superblock', async () => {
+            await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+            result = await claimManager.checkClaimFinished(superblockRId, { from: challenger });
+            assert.equal(result.logs[0].event, 'SuperblockClaimPending', 'Superblock challenged');
+            const status = await superblocks.getSuperblockStatus(superblockRId);
+            assert.equal(status.toNumber(), SEMI_APPROVED, 'Superblock was not semi-approved');
+        });
 
         // Invalidate superblock and reject claim
-        // it('Reject fork', async () => {
-        //     const result = await claimManager.rejectClaim(superblockRId, { from: submitter });
-        //     assert.equal(result.logs[0].event, 'SuperblockClaimFailed', 'SuperblockClaimFailed event not found');
-        //     assert.equal(result.logs[1].event, 'DepositUnbonded', 'DepositUnbonded event not found');
-        // });
+        it('Reject fork', async () => {
+            const result = await claimManager.rejectClaim(superblockRId, { from: submitter });
+            assert.equal(result.logs[0].event, 'SuperblockClaimFailed', 'SuperblockClaimFailed event not found');
+            assert.equal(result.logs[1].event, 'DepositUnbonded', 'DepositUnbonded event not found');
+            const status = await superblocks.getSuperblockStatus(superblockRId);
+            assert.equal(status.toNumber(), INVALID, 'Superblock was not invalidated');
+        });
     });
 });
