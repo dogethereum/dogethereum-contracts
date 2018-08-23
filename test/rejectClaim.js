@@ -1,8 +1,3 @@
-// Propose a superblock
-// Propose three descendants and approve them
-// Propose a single-superblock fork and semi-approve it
-// Call rejectClaim on this fork; it should be rejected
-
 // Idea: propose descendants and see if they should get invalidated as well
 
 const utils = require('./utils');
@@ -54,8 +49,7 @@ contract('rejectClaim', (accounts) => {
         `03006200d59a7170a948a2e0b58c31b5cccb79b37686ca0b5a460d65e75273f9bc0d90deb0bbce23de660ab3f1e1b21b6e22919d8cf5e2f6b1de28e11611049f824503a1774d7c5bffff7f20010000000101000000010000000000000000000000000000000000000000000000000000000000000000ffffffff03580101ffffffff0100203d88792d00002321032af59b4b1ee8905f7f0a05b21e4b9ee2544426943166fb5b6514eb60c9764d2fac00000000`,
         `03006200c62f797c15dd491c2bef442d0ba509fc98d47e9ab644ed3809fcabec58ba542f09e6142339f1e34aad3c95f593d66c9fc65f19b3319ec3d8363b9f8c695eab8c774d7c5bffff7f20020000000101000000010000000000000000000000000000000000000000000000000000000000000000ffffffff03590101ffffffff0100203d88792d00002321032af59b4b1ee8905f7f0a05b21e4b9ee2544426943166fb5b6514eb60c9764d2fac00000000`
     ];
-    // const fakeDogeBlockHeader = utils.forgeDogeBlockHeader("a573e91c1772076c0d40f70e4408c83a31705f296ae6e7629d4adcb5a360213d", "924a7c5b");
-    // const superblockRHeaders = [fakeDogeBlockHeader]; // this superblock should be rejected
+    
     const superblockRHeaders = [ superblock1Headers[0], superblock1Headers[1] ]; // this superblock should be semi-approved and then rejected
     const superblockRHashes = superblockRHeaders.map(utils.calcBlockSha256Hash);
 
@@ -64,13 +58,7 @@ contract('rejectClaim', (accounts) => {
     const superblock2 = utils.makeSuperblock(superblock2Headers, superblock1.superblockId, 14);
     const superblock3 = utils.makeSuperblock(superblock3Headers, superblock2.superblockId, 20);
     const superblockR = utils.makeSuperblock(superblockRHeaders, superblock0.superblockId, 4);
-
-    // console.log("Superblock 0: ", superblock0);
-    // console.log("Superblock 1: ", superblock1);
-    // console.log("Superblock 2: ", superblock2);
-    // console.log("Superblock 3: ", superblock3);
-    // console.log("Superblock R: ", superblockR);
-
+    
     // Copied from claimManager.js
     async function initSuperblocks(dummyChecker, genesisSuperblock) {
         superblocks = await DogeSuperblocks.new();
