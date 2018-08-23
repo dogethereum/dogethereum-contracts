@@ -399,6 +399,11 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
                 return false;
             }
 
+            if (!claim.decided) {
+                emit ErrorClaim(claimId, ERR_SUPERBLOCK_CLAIM_DECIDED);
+                return false;
+            }
+
             superblocks.invalidate(claimId, msg.sender);
             emit SuperblockClaimFailed(claimId, claim.claimant, claim.superblockId);
             doPayChallengers(claimId, claim);
