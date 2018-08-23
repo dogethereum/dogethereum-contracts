@@ -269,7 +269,10 @@ contract('rejectClaim', (accounts) => {
         });
 
         // Call rejectClaim on superblocks that aren't semi approved
-        // it('Try to reject unconfirmed superblock')
+        it('Try to reject unconfirmed superblock', async () => {
+            result = await claimManager.rejectClaim(superblockRId, { from: submitter });
+            assert.equal(result.logs[0].event, 'ErrorClaim', 'Error claim not raised despite bad superblock status');
+        })
         
         it('Confirm forked superblock', async () => {
             await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
