@@ -113,7 +113,11 @@ async function deployIntegration(deployer, network, accounts, networkId, trusted
   await superblocks.setClaimManager(DogeClaimManager.address, {gas: 60000});
 
   const dogeClaimManager = DogeClaimManager.at(DogeClaimManager.address);
-  await dogeClaimManager.setScryptChecker(ScryptCheckerDummy.address, {gas: 60000});
+  if (network === 'rinkeby' && typeof process.env.CLAIM_MANAGER_ADDRESS !== 'undefined') {
+    await dogeClaimManager.setScryptChecker(process.env.CLAIM_MANAGER_ADDRESS, {gas: 60000});
+  } else {
+    await dogeClaimManager.setScryptChecker(ScryptCheckerDummy.address, {gas: 60000});
+  }
 }
 
 module.exports = function(deployer, network, accounts) {
