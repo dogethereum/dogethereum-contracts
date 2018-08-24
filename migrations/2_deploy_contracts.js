@@ -37,28 +37,28 @@ const SUPERBLOCK_TIMES_PRODUCTION = {
   DURATION: 3600,   // 60 minutes
   DELAY: 3 * 3600,  // 3 hours
   TIMEOUT: 300,     // 5 minutes
-  CONFIMATIONS: 3,  // Superblocks required to confirm semi approved superblock
+  CONFIRMATIONS: 3,  // Superblocks required to confirm semi approved superblock
 };
 
 const SUPERBLOCK_TIMES_INTEGRATION_SLOW_SYNC = {
   DURATION: 600,    // 10 minutes
   DELAY: 300,       // 5 minutes
   TIMEOUT: 60,      // 1 minutes
-  CONFIMATIONS: 1,  // Superblocks required to confirm semi approved superblock
+  CONFIRMATIONS: 1,  // Superblocks required to confirm semi approved superblock
 };
 
 const SUPERBLOCK_TIMES_INTEGRATION_FAST_SYNC = {
   DURATION: 600,    // 10 minutes
   DELAY: 300,       // 5 minutes
   TIMEOUT: 10,      // 10 seconds
-  CONFIMATIONS: 1,  // Superblocks required to confirm semi approved superblock
+  CONFIRMATIONS: 1,  // Superblocks required to confirm semi approved superblock
 };
 
 const SUPERBLOCK_TIMES_LOCAL = {
   DURATION: 60,     // 1 minute
   DELAY: 60,        // 1 minute
   TIMEOUT: 30,      // 30 seconds
-  CONFIMATIONS: 1,  // Superblocks required to confirm semi approved superblock
+  CONFIRMATIONS: 1,  // Superblocks required to confirm semi approved superblock
 };
 
 async function deployDevelopment(deployer, network, accounts, networkId, trustedDogeEthPriceOracle, dogethereumRecipient, superblockTimes) {
@@ -77,7 +77,7 @@ async function deployDevelopment(deployer, network, accounts, networkId, trusted
 
   await deployer.deploy(DummyTransactionProcessor, DogeSuperblocks.address);
 
-  await deployer.deploy(DogeClaimManager, networkId, DogeSuperblocks.address, superblockTimes.DURATION, superblockTimes.DELAY, superblockTimes.TIMEOUT, superblockTimes.CONFIMATIONS);
+  await deployer.deploy(DogeClaimManager, networkId, DogeSuperblocks.address, superblockTimes.DURATION, superblockTimes.DELAY, superblockTimes.TIMEOUT, superblockTimes.CONFIRMATIONS);
 
   await deployer.deploy(ScryptCheckerDummy, true)
 
@@ -107,7 +107,7 @@ async function deployIntegration(deployer, network, accounts, networkId, trusted
 
   await deployer.deploy(DogeToken, DogeSuperblocks.address, trustedDogeEthPriceOracle, collateralRatio, {gas: 4000000});
 
-  await deployer.deploy(DogeClaimManager, networkId, DogeSuperblocks.address, superblockTimes.DURATION, superblockTimes.DELAY, superblockTimes.TIMEOUT, superblockTimes.CONFIMATIONS, {gas: 6500000});
+  await deployer.deploy(DogeClaimManager, networkId, DogeSuperblocks.address, superblockTimes.DURATION, superblockTimes.DELAY, superblockTimes.TIMEOUT, superblockTimes.CONFIRMATIONS, {gas: 6800000});
 
   const superblocks = DogeSuperblocks.at(DogeSuperblocks.address);
   await superblocks.setClaimManager(DogeClaimManager.address, {gas: 60000});

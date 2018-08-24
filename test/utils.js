@@ -12,7 +12,7 @@ const SUPERBLOCK_TIMES_DOGE_REGTEST = {
   DURATION: 600,    // 10 minute
   DELAY: 60,        // 1 minute
   TIMEOUT: 15,      // 15 seconds
-  CONFIMATIONS: 1,  // Superblocks required to confirm semi approved superblock
+  CONFIRMATIONS: 1,  // Superblocks required to confirm semi approved superblock
 };
 
 const DOGE_MAINNET = 0;

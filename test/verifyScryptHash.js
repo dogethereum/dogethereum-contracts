@@ -23,7 +23,7 @@ const SUPERBLOCK_TIMES_DOGE_REGTEST = {
   DURATION: 600,    // 10 minute
   DELAY: 60,        // 1 minute
   TIMEOUT: 5,       // 5 seconds
-  CONFIMATIONS: 1,  // Superblocks required to confirm semi approved superblock
+  CONFIRMATIONS: 1,  // Superblocks required to confirm semi approved superblock
 };
 
 const DOGE_MAINNET = 0;
@@ -44,7 +44,7 @@ contract('verifyScryptHash', (accounts) => {
 
   async function initSuperblocks(dummyChecker, genesisSuperblock) {
     superblocks = await DogeSuperblocks.new();
-    claimManager = await DogeClaimManager.new(DOGE_MAINNET, superblocks.address, SUPERBLOCK_TIMES_DOGE_REGTEST.DURATION, SUPERBLOCK_TIMES_DOGE_REGTEST.DELAY, SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT, SUPERBLOCK_TIMES_DOGE_REGTEST.CONFIMATIONS);
+    claimManager = await DogeClaimManager.new(DOGE_MAINNET, superblocks.address, SUPERBLOCK_TIMES_DOGE_REGTEST.DURATION, SUPERBLOCK_TIMES_DOGE_REGTEST.DELAY, SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT, SUPERBLOCK_TIMES_DOGE_REGTEST.CONFIRMATIONS);
     // scryptChecker = await ScryptCheckerDummy.new(false);
     scryptVerifier = await ScryptVerifier.new();
     scryptChecker = await ClaimManager.new(scryptVerifier.address);
