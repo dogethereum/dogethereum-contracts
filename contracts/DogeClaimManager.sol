@@ -327,47 +327,73 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
     //
     // @param claimId – the claim ID.
     function confirmClaim(bytes32 claimId, bytes32 descendantId) public returns (bool) {
-        uint i = 0;
+        uint numSuperblocks = 0;
+        bool confirmDescendants = true;
         bytes32 id = descendantId;
-        DogeSuperblocks.Status status;
         SuperblockClaim storage claim = claims[id];
-        while (true) {
+        while (id != claimId) {
             if (!claimExists(claim)) {
-                emit ErrorClaim(id, ERR_SUPERBLOCK_BAD_CLAIM);
+                emit ErrorClaim(claimId, ERR_SUPERBLOCK_BAD_CLAIM);
                 return false;
             }
-
-            status = superblocks.getSuperblockStatus(id);
-            if (status != DogeSuperblocks.Status.SemiApproved) {
-                emit ErrorClaim(id, ERR_SUPERBLOCK_BAD_STATUS);
+            if (superblocks.getSuperblockStatus(id) != DogeSuperblocks.Status.SemiApproved) {
+                emit ErrorClaim(claimId, ERR_SUPERBLOCK_BAD_STATUS);
                 return false;
             }
-
-            if (id == claimId) {
-                break;
+            if (confirmDescendants && claim.challengers.length > 0) {
+                confirmDescendants = false;
             }
-
             id = superblocks.getSuperblockParentId(id);
-            i += 1;
             claim = claims[id];
+            numSuperblocks += 1;
         }
 
-        if (i < superblockConfirmations) {
-            emit ErrorClaim(id, ERR_SUPERBLOCK_MISSING_CONFIRMATIONS);
+        if (numSuperblocks < superblockConfirmations) {
+            emit ErrorClaim(claimId, ERR_SUPERBLOCK_MISSING_CONFIRMATIONS);
+            return false;
+        }
+        if (superblocks.getSuperblockStatus(id) != DogeSuperblocks.Status.SemiApproved) {
+            emit ErrorClaim(claimId, ERR_SUPERBLOCK_BAD_STATUS);
             return false;
         }
 
         bytes32 parentId = superblocks.getSuperblockParentId(claimId);
-        status = superblocks.getSuperblockStatus(parentId);
-        if (status == DogeSuperblocks.Status.Approved) {
-            superblocks.confirm(claimId, msg.sender);
-            emit SuperblockClaimSuccessful(claimId, claim.claimant, claim.superblockId);
-            doPaySubmitter(claimId, claim);
-            unbondDeposit(claimId, claim.claimant);
-            return true;
+        if (superblocks.getSuperblockStatus(parentId) != DogeSuperblocks.Status.Approved) {
+            emit ErrorClaim(claimId, ERR_SUPERBLOCK_BAD_STATUS);
+            return false;
         }
 
-        return false;
+        (uint err, ) = superblocks.confirm(claimId, msg.sender);
+        if (err != ERR_SUPERBLOCK_OK) {
+            emit ErrorClaim(claimId, err);
+            return false;
+        }
+        emit SuperblockClaimSuccessful(claimId, claim.claimant, claim.superblockId);
+        doPaySubmitter(claimId, claim);
+        unbondDeposit(claimId, claim.claimant);
+
+        if (confirmDescendants) {
+            bytes32[] memory descendants = new bytes32[](numSuperblocks);
+            id = descendantId;
+            uint idx=0;
+            while (id != claimId) {
+                descendants[idx] = id;
+                id = superblocks.getSuperblockParentId(id);
+                idx += 1;
+            }
+            while (idx > 0) {
+                idx -= 1;
+                id = descendants[idx];
+                claim = claims[id];
+                (err, ) = superblocks.confirm(id, msg.sender);
+                require(err == ERR_SUPERBLOCK_OK);
+                emit SuperblockClaimSuccessful(id, claim.claimant, claim.superblockId);
+                doPaySubmitter(id, claim);
+                unbondDeposit(id, claim.claimant);
+            }
+        }
+
+        return true;
     }
 
     // @dev – confirm semi approved superblock.
@@ -393,7 +419,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
 
         if (id != claimId) {
             DogeSuperblocks.Status status = superblocks.getSuperblockStatus(claimId);
-            
+
             if (status != DogeSuperblocks.Status.SemiApproved) {
                 emit ErrorClaim(claimId, ERR_SUPERBLOCK_BAD_STATUS);
                 return false;
