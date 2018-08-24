@@ -490,8 +490,13 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
     }
 
     // @dev – Check if a claim exists
-    function claimExists(SuperblockClaim claim) pure private returns(bool) {
+    function claimExists(SuperblockClaim claim) pure private returns (bool) {
         return (claim.claimant != 0x0);
+    }
+
+    // @dev - Return a given superblock's claimant
+    function getClaimSubmitter(bytes32 superblockId) public view returns (address) {
+        return claims[superblockId].claimant;
     }
 
     // @dev - Return superblock submission timestamp
