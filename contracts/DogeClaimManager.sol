@@ -51,15 +51,21 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
 
     event ErrorClaim(bytes32 claimId, uint err);
 
-    // @dev – Configures the contract storing the superblocks
+    // @dev – Configures the contract managing superblocks challenges
     // @param _network Network type to use for block difficulty validation
     // @param _superblocks Contract that manages superblocks
     // @param _superblockDuration Superblock duration (in seconds)
     // @param _superblockDelay Delay to accept a superblock submition (in seconds)
     // @param _superblockTimeout Time to wait for challenges (in seconds)
     // @param _superblockConfirmations Confirmations required to confirm semi approved superblocks
-    constructor(Network _network, DogeSuperblocks _superblocks, uint _superblockDuration, uint _superblockDelay, uint _superblockTimeout, uint _superblockConfirmations)
-        DogeBattleManager(_network, _superblockDuration, _superblockDelay, _superblockTimeout) public {
+    constructor(
+        Network _network,
+        DogeSuperblocks _superblocks,
+        uint _superblockDuration,
+        uint _superblockDelay,
+        uint _superblockTimeout,
+        uint _superblockConfirmations
+    ) DogeBattleManager(_network, _superblockDuration, _superblockDelay, _superblockTimeout) public {
         superblocks = _superblocks;
         superblockConfirmations = _superblockConfirmations;
     }
@@ -132,9 +138,17 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
     // @param _prevTimestamp Timestamp of the block previous to the last
     // @param _lastHash Hash of the last block in the superblock
     // @param _lastBits Difficulty bits of the last block in the superblock
-    // @param _parentId Id of the parent superblock
+    // @param _parentHash Id of the parent superblock
     // @return Error code and superblockId
-    function proposeSuperblock(bytes32 _blocksMerkleRoot, uint _accumulatedWork, uint _timestamp, uint _prevTimestamp, bytes32 _lastHash, uint32 _lastBits, bytes32 _parentHash) public returns (uint, bytes32) {
+    function proposeSuperblock(
+        bytes32 _blocksMerkleRoot,
+        uint _accumulatedWork,
+        uint _timestamp,
+        uint _prevTimestamp,
+        bytes32 _lastHash,
+        uint32 _lastBits,
+        bytes32 _parentHash
+    ) public returns (uint, bytes32) {
         require(address(superblocks) != 0);
 
         if (deposits[msg.sender] < minDeposit) {
@@ -325,7 +339,12 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
 
     // @dev – confirm semi approved superblock.
     //
+    // A semi approved superblock can be confirmed if it has several descendants
+    // superblocks that are also semi-approved.
+    // If none of the descendants were challenged they will also be confirmed.
+    //
     // @param claimId – the claim ID.
+    // @param descendantId - claim ID descendants
     function confirmClaim(bytes32 claimId, bytes32 descendantId) public returns (bool) {
         uint numSuperblocks = 0;
         bool confirmDescendants = true;
@@ -396,7 +415,10 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
         return true;
     }
 
-    // @dev – confirm semi approved superblock.
+    // @dev – Reject a semi approved superblock.
+    //
+    // Superblocks that are not in the main chain can be marked as
+    // not valid.
     //
     // @param claimId – the claim ID.
     function rejectClaim(bytes32 claimId) public returns (bool) {

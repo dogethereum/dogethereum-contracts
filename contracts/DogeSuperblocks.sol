@@ -38,7 +38,6 @@ contract DogeSuperblocks is DogeErrorCodes {
     bytes32 public bestSuperblock;
     uint public bestSuperblockAccumulatedWork;
 
-    //FIXME: Add 'indexed' to parameters
     event NewSuperblock(bytes32 superblockId, address who);
     event ApprovedSuperblock(bytes32 superblockId, address who);
     event ChallengeSuperblock(bytes32 superblockId, address who);
@@ -50,7 +49,7 @@ contract DogeSuperblocks is DogeErrorCodes {
     event VerifyTransaction(bytes32 txHash, uint returnCode);
     event RelayTransaction(bytes32 txHash, uint returnCode);
 
-    // ClaimManager
+    // DogeClaimManager
     address public claimManager;
 
     modifier onlyClaimManager() {
@@ -81,7 +80,15 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @param _lastBits Difficulty bits of the last block in the superblock
     // @param _parentId Id of the parent superblock
     // @return Error code and superblockId
-    function initialize(bytes32 _blocksMerkleRoot, uint _accumulatedWork, uint _timestamp, uint _prevTimestamp, bytes32 _lastHash, uint32 _lastBits, bytes32 _parentId) public returns (uint, bytes32) {
+    function initialize(
+        bytes32 _blocksMerkleRoot,
+        uint _accumulatedWork,
+        uint _timestamp,
+        uint _prevTimestamp,
+        bytes32 _lastHash,
+        uint32 _lastBits,
+        bytes32 _parentId
+    ) public returns (uint, bytes32) {
         require(bestSuperblock == 0);
         require(_parentId == 0);
 
@@ -130,7 +137,16 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @param _lastBits Difficulty bits of the last block in the superblock
     // @param _parentId Id of the parent superblock
     // @return Error code and superblockId
-    function propose(bytes32 _blocksMerkleRoot, uint _accumulatedWork, uint _timestamp, uint _prevTimestamp, bytes32 _lastHash, uint32 _lastBits, bytes32 _parentId, address submitter) public returns (uint, bytes32) {
+    function propose(
+        bytes32 _blocksMerkleRoot,
+        uint _accumulatedWork,
+        uint _timestamp,
+        uint _prevTimestamp,
+        bytes32 _lastHash,
+        uint32 _lastBits,
+        bytes32 _parentId,
+        address submitter
+    ) public returns (uint, bytes32) {
         if (msg.sender != claimManager) {
             emit ErrorSuperblock(0, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
             return (ERR_SUPERBLOCK_NOT_CLAIMMANAGER, 0);
@@ -178,8 +194,9 @@ contract DogeSuperblocks is DogeErrorCodes {
     // in the main chain.
     //
     // @param _superblockId Id of the superblock to confirm
+    // @param _validator Address requesting superblock confirmation
     // @return Error code and superblockId
-    function confirm(bytes32 _superblockId, address validator) public returns (uint, bytes32) {
+    function confirm(bytes32 _superblockId, address _validator) public returns (uint, bytes32) {
         if (msg.sender != claimManager) {
             emit ErrorSuperblock(_superblockId, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
             return (ERR_SUPERBLOCK_NOT_CLAIMMANAGER, 0);
@@ -199,7 +216,7 @@ contract DogeSuperblocks is DogeErrorCodes {
             bestSuperblock = _superblockId;
             bestSuperblockAccumulatedWork = superblock.accumulatedWork;
         }
-        emit ApprovedSuperblock(_superblockId, validator);
+        emit ApprovedSuperblock(_superblockId, _validator);
         return (ERR_SUPERBLOCK_OK, _superblockId);
     }
 
@@ -209,8 +226,9 @@ contract DogeSuperblocks is DogeErrorCodes {
     // to verify the correctness of the data submitted.
     //
     // @param _superblockId Id of the superblock to challenge
+    // @param _challenger Address requesting a challenge
     // @return Error code and superblockId
-    function challenge(bytes32 _superblockId, address challenger) public returns (uint, bytes32) {
+    function challenge(bytes32 _superblockId, address _challenger) public returns (uint, bytes32) {
         if (msg.sender != claimManager) {
             emit ErrorSuperblock(_superblockId, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
             return (ERR_SUPERBLOCK_NOT_CLAIMMANAGER, 0);
@@ -221,7 +239,7 @@ contract DogeSuperblocks is DogeErrorCodes {
             return (ERR_SUPERBLOCK_BAD_STATUS, 0);
         }
         superblock.status = Status.InBattle;
-        emit ChallengeSuperblock(_superblockId, challenger);
+        emit ChallengeSuperblock(_superblockId, _challenger);
         return (ERR_SUPERBLOCK_OK, _superblockId);
     }
 
@@ -232,8 +250,9 @@ contract DogeSuperblocks is DogeErrorCodes {
     // stopped participating.
     //
     // @param _superblockId Id of the superblock to semi-approve
+    // @param _validator Address requesting semi approval
     // @return Error code and superblockId
-    function semiApprove(bytes32 _superblockId, address validator) public returns (uint, bytes32) {
+    function semiApprove(bytes32 _superblockId, address _validator) public returns (uint, bytes32) {
         if (msg.sender != claimManager) {
             emit ErrorSuperblock(_superblockId, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
             return (ERR_SUPERBLOCK_NOT_CLAIMMANAGER, 0);
@@ -245,7 +264,7 @@ contract DogeSuperblocks is DogeErrorCodes {
             return (ERR_SUPERBLOCK_BAD_STATUS, 0);
         }
         superblock.status = Status.SemiApproved;
-        emit SemiApprovedSuperblock(_superblockId, validator);
+        emit SemiApprovedSuperblock(_superblockId, _validator);
         return (ERR_SUPERBLOCK_OK, _superblockId);
     }
 
@@ -256,8 +275,9 @@ contract DogeSuperblocks is DogeErrorCodes {
     // if not enough superblocks follows them.
     //
     // @param _superblockId Id of the superblock to invalidate
+    // @param _validator Address requesting superblock invalidation
     // @return Error code and superblockId
-    function invalidate(bytes32 _superblockId, address validator) public returns (uint, bytes32) {
+    function invalidate(bytes32 _superblockId, address _validator) public returns (uint, bytes32) {
         if (msg.sender != claimManager) {
             emit ErrorSuperblock(_superblockId, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
             return (ERR_SUPERBLOCK_NOT_CLAIMMANAGER, 0);
@@ -408,8 +428,24 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @param _lastBits Difficulty bits of the last block in the superblock
     // @param _parentId Id of the parent superblock
     // @return Superblock id
-    function calcSuperblockId(bytes32 _blocksMerkleRoot, uint _accumulatedWork, uint _timestamp, uint _prevTimestamp, bytes32 _lastHash, uint32 _lastBits, bytes32 _parentId) public pure returns (bytes32) {
-        return keccak256(abi.encodePacked(_blocksMerkleRoot, _accumulatedWork, _timestamp, _prevTimestamp, _lastHash, _lastBits, _parentId));
+    function calcSuperblockId(
+        bytes32 _blocksMerkleRoot,
+        uint _accumulatedWork,
+        uint _timestamp,
+        uint _prevTimestamp,
+        bytes32 _lastHash,
+        uint32 _lastBits,
+        bytes32 _parentId
+    ) public pure returns (bytes32) {
+        return keccak256(abi.encodePacked(
+            _blocksMerkleRoot,
+            _accumulatedWork,
+            _timestamp,
+            _prevTimestamp,
+            _lastHash,
+            _lastBits,
+            _parentId
+        ));
     }
 
     // @dev - Returns the confirmed superblock with the most accumulated work
