@@ -45,7 +45,7 @@ contract('DogeSuperblocks2', function(accounts) {
     assert.equal(locator[8], genesisSuperblock.superblockId, 'Superblock locator 8');
 
     const height = await superblocks.getSuperblockHeight(best);
-    assert.equal(height, 0, 'Superblock height');
+    assert.equal(height.toNumber(), 1, 'Superblock height');
 
     const superblock = await superblocks.getSuperblock(best);
     assert.equal(superblock.length, 9, 'Have enough data');

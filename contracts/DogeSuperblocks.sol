@@ -107,7 +107,7 @@ contract DogeSuperblocks is DogeErrorCodes {
         superblock.parentId = _parentId;
         superblock.submitter = msg.sender;
         superblock.index = indexNextSuperblock;
-        superblock.height = 0;
+        superblock.height = 1;
         superblock.lastBits = _lastBits;
         superblock.status = Status.Approved;
         superblock.ancestors = 0x0;
@@ -178,7 +178,7 @@ contract DogeSuperblocks is DogeErrorCodes {
         superblock.height = parent.height + 1;
         superblock.lastBits = _lastBits;
         superblock.status = Status.New;
-        superblock.ancestors = updateAncestors(parent.ancestors, parent.index, parent.height + 1);
+        superblock.ancestors = updateAncestors(parent.ancestors, parent.index, parent.height);
 
         indexNextSuperblock++;
 
@@ -400,7 +400,7 @@ contract DogeSuperblocks is DogeErrorCodes {
         // }
 
         //TODO: Verify superblock is in superblock's main chain
-        if (!isApproved(_txSuperblockId)) {
+        if (!isApproved(_txSuperblockId) || !inMainChain(_txSuperblockId)) {
             emit VerifyTransaction(bytes32(_txHash), ERR_CHAIN);
             return (ERR_CHAIN);
         }
@@ -617,5 +617,53 @@ contract DogeSuperblocks is DogeErrorCodes {
             --i;
         }
         return locator;
+    }
+
+    // @dev - Return ancestor at given index
+    function getSuperblockAncestor(bytes32 superblockHash, uint index) internal view returns (bytes32) {
+        bytes32 ancestors = superblocks[superblockHash].ancestors;
+        uint32 ancestorsIndex =
+            uint32(ancestors[4*index + 0]) * 0x1000000 +
+            uint32(ancestors[4*index + 1]) * 0x10000 +
+            uint32(ancestors[4*index + 2]) * 0x100 +
+            uint32(ancestors[4*index + 3]) * 0x1;
+        return indexSuperblock[ancestorsIndex];
+    }
+
+    // dev - returns depth associated with an ancestor index; applies to any block
+    //
+    // @param _index - index of ancestor to be looked up; an integer between 0 and 7
+    // @return - depth corresponding to said index, i.e. 5**index
+    function getAncDepth(uint _index) private pure returns (uint) {
+        return ANCESTOR_STEP**(uint(_index));
+    }
+
+    // @dev - return superblock at height in superblock main chain
+    //
+    // @param _height - superblock height
+    // @return - hash corresponding to block of height _blockHeight
+    function getSuperblockAt(uint _height) public view returns (bytes32) {
+        bytes32 superblockHash = bestSuperblock;
+        uint index = NUM_ANCESTOR_DEPTHS - 1;
+
+        while (getSuperblockHeight(superblockHash) > _height) {
+            while (getSuperblockHeight(superblockHash) - _height < getAncDepth(index) && index > 0) {
+                index -= 1;
+            }
+            superblockHash = getSuperblockAncestor(superblockHash, index);
+        }
+
+        return superblockHash;
+    }
+
+    // @dev - Checks if a superblock is in superblock main chain
+    //
+    // @param _blockHash - hash of the block being searched for in the main chain
+    // @return - true if the block identified by _blockHash is in the main chain,
+    // false otherwise
+    function inMainChain(bytes32 _superblockHash) internal view returns (bool) {
+        uint height = getSuperblockHeight(_superblockHash);
+        if (height == 0) return false;
+        return (getSuperblockAt(height) == _superblockHash);
     }
 }

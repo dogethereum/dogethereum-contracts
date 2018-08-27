@@ -435,9 +435,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
             return false;
         }
 
-        while (superblocks.getSuperblockHeight(id) > height) {
-            id = superblocks.getSuperblockParentId(id);
-        }
+        id = superblocks.getSuperblockAt(height);
 
         if (id != claimId) {
             DogeSuperblocks.Status status = superblocks.getSuperblockStatus(claimId);
