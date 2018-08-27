@@ -7,3 +7,4 @@ contracts/Timestamp*
 test/testTimestamp.js*
 test/parseAuxPoW.js*
 test/testRelayIntegration.js
+superblocknotes
