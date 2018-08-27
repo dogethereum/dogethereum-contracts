@@ -1,8 +1,8 @@
 pragma solidity ^0.4.4;
 import './ClaimManager.sol';
-import './IScryptDependent.sol';
+import '../IScryptCheckerListener.sol';
 
-contract DogeRelayDummy is IScryptDependent {
+contract DogeRelayDummy is IScryptCheckerListener {
 
 	ClaimManager claimManager;
 

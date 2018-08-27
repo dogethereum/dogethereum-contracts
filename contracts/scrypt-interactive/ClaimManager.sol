@@ -2,8 +2,8 @@ pragma solidity ^0.4.0;
 
 import {DepositsManager} from './DepositsManager.sol';
 import {ScryptVerifier} from "./ScryptVerifier.sol";
-import {IScryptDependent} from "./IScryptDependent.sol";
-import {IScryptChecker} from "./IScryptChecker.sol";
+import {IScryptCheckerListener} from "../IScryptCheckerListener.sol";
+import {IScryptChecker} from "../IScryptChecker.sol";
 
 
 // ClaimManager: queues a sequence of challengers to play with a claimant.
@@ -42,7 +42,7 @@ contract ClaimManager is DepositsManager, IScryptChecker {
     bool invalid;
     uint challengeTimeoutBlockNumber;
     bytes32 proposalId;
-    IScryptDependent scryptDependent;
+    IScryptCheckerListener scryptDependent;
   }
 
 //  mapping(address => uint) public claimantClaims;
@@ -110,7 +110,7 @@ contract ClaimManager is DepositsManager, IScryptChecker {
   // @param _plaintext – the plaintext blockHeader.
   // @param _blockHash – the blockHash.
   // @param claimant – the address of the Dogecoin block submitter.
-  function checkScrypt(bytes _data, bytes32 _hash, bytes32 _proposalId, IScryptDependent _scryptDependent) external payable {
+  function checkScrypt(bytes _data, bytes32 _hash, bytes32 _proposalId, IScryptCheckerListener _scryptDependent) external payable {
     // dogeRelay can directly make a deposit on behalf of the claimant.
 
     bytes memory _blockHash = new bytes(32);
