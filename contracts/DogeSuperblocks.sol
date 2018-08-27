@@ -288,7 +288,7 @@ contract DogeSuperblocks is DogeErrorCodes {
             return (ERR_SUPERBLOCK_BAD_STATUS, 0);
         }
         superblock.status = Status.Invalid;
-        emit InvalidSuperblock(_superblockId, validator);
+        emit InvalidSuperblock(_superblockId, _validator);
         return (ERR_SUPERBLOCK_OK, _superblockId);
     }
 
