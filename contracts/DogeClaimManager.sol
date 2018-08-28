@@ -339,7 +339,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
 
     // @dev – confirm semi approved superblock.
     //
-    // A semi approved superblock can be confirmed if it has several descendants
+    // A semi approved superblock can be confirmed if it has several descendant
     // superblocks that are also semi-approved.
     // If none of the descendants were challenged they will also be confirmed.
     //
