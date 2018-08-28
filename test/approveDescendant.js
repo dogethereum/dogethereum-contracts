@@ -17,6 +17,7 @@ const DOGE_TESTNET = 1;
 const DOGE_REGTEST = 2;
 
 const SEMI_APPROVED = 3;
+const APPROVED = 4;
 
 contract('approveDescendant', (accounts) => {
     const owner = accounts[0];
@@ -87,7 +88,7 @@ contract('approveDescendant', (accounts) => {
         await claimManager.makeDeposit({ value: 11, from: challenger });
     }
 
-    describe.only('Approve one descendent', () => {
+    describe('Approve two descendants', () => {
         let superblock0Id;
         let superblock1Id;
         let superblock2Id;
@@ -192,6 +193,51 @@ contract('approveDescendant', (accounts) => {
             assert.equal(result.logs[0].event, 'SuperblockClaimPending', 'Superblock challenged');
             const status = await superblocks.getSuperblockStatus(superblock2Id);
             assert.equal(status.toNumber(), SEMI_APPROVED, 'Superblock was not semi-approved');
+        });
+
+        it('Missing confirmations', async () => {
+            result = await claimManager.confirmClaim(superblock1Id, superblock2Id, { from: submitter });
+            assert.equal(result.logs[0].event, 'ErrorClaim', 'No ErrorClaim event found');
+        });
+
+        it('Propose superblock 3', async () => {
+            const result = await claimManager.proposeSuperblock(
+                superblock3.merkleRoot,
+                superblock3.accumulatedWork,
+                superblock3.timestamp,
+                superblock3.prevTimestamp,
+                superblock3.lastHash,
+                superblock3.lastBits,
+                superblock3.parentId,
+                { from: submitter },
+            );
+            assert.equal(result.logs[1].event, 'SuperblockClaimCreated', 'New superblock proposed');
+            superblock3Id = result.logs[1].args.superblockId;
+        });
+
+        it('Semi-approve superblock 3', async () => {
+            await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+            result = await claimManager.checkClaimFinished(superblock3Id, { from: challenger });
+            assert.equal(result.logs[0].event, 'SuperblockClaimPending', 'Superblock challenged');
+            const status = await superblocks.getSuperblockStatus(superblock3Id);
+            assert.equal(status.toNumber(), SEMI_APPROVED, 'Superblock was not semi-approved');
+        });
+
+        it('Approve both superblocks', async () => {
+            result = await claimManager.confirmClaim(superblock1Id, superblock3Id, { from: submitter });
+            assert.equal(result.logs[0].event, 'SuperblockClaimSuccessful', 'SuperblockClaimSuccessful event missing');
+            assert.equal(result.logs[3].event, 'SuperblockClaimSuccessful', 'SuperblockClaimSuccessful event missing');
+            assert.equal(result.logs[6].event, 'SuperblockClaimSuccessful', 'SuperblockClaimSuccessful event missing');            
+            
+            const status1 = await superblocks.getSuperblockStatus(superblock1Id);
+            const status2 = await superblocks.getSuperblockStatus(superblock2Id);
+            const status3 = await superblocks.getSuperblockStatus(superblock3Id);
+            assert.equal(status1.toNumber(), APPROVED, 'Superblock 1 was not approved');
+            assert.equal(status2.toNumber(), APPROVED, 'Superblock 2 was not approved');
+            assert.equal(status3.toNumber(), APPROVED, 'Superblock 3 was not approved');
+            
+            const bestSuperblock = await superblocks.getBestSuperblock();
+            assert.equal(bestSuperblock, superblock3Id, 'Bad best superblock');
         });
     });
 });
