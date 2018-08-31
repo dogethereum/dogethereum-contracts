@@ -20,12 +20,12 @@ module.exports = async function(callback) {
 
   var sb = await Superblocks.deployed();
 
-  var blocksMerkleRoot = "0x045162592c1002fa0f6cf39085881da54b86dea2634e6b5f55d8258ad2b7ee0c";
-  var accumulatedWork = web3.toBigNumber("4018376769700331340387");
-  var timestamp = 1534537759;
-  var prevTimestamp = 1534537657;
-  var lastHash = "0x2f3053d4292e163931b61b39b6063494ad1ec0b5820b03ef787dbec30126ab2d";
-  var lastBits = 436464932;
+  var blocksMerkleRoot = "0x629417921bc4ab79db4a4a02b4d7946a4d0dbc6a3c5bca898dd12eacaeb8b353";
+  var accumulatedWork = web3.toBigNumber("4266257060811936889868");
+  var timestamp = 1535743139;
+  var prevTimestamp = 1535743100;
+  var lastHash = "0xe2a056368784e63b9b5f9c17b613718ef7388a799e8535ab59be397019eff798";
+  var lastBits = 436759445;
   var parentId = "0x0";
 
   await sb.initialize(blocksMerkleRoot, accumulatedWork, timestamp, prevTimestamp, lastHash, lastBits, parentId);
