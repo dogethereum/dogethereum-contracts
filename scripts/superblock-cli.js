@@ -128,10 +128,100 @@ async function challengeCommand(params) {
   console.log("challenge the next superblock complete");
 }
 
+function statusToText(status) {
+  const statuses = {
+    0: 'Unitialized',
+    1: 'New',
+    2: 'InBattle',
+    3: 'SemiApproved',
+    4: 'Approved',
+    5: 'Invalid',
+  }
+  if (typeof statuses[status] !== 'undefined') {
+    return statuses[status];
+  }
+  return '--Status error--';
+}
+
+async function displaySuperblocksStatus(fromBlock, toBlock) {
+  try {
+    const sb = await DogeSuperblocks.deployed();
+    const cm = await DogeClaimManager.deployed();
+    const getBattleStatus = async (superblockId, challenger) => {
+      const sessionId = await cm.getSession(superblockId, challenger);
+      const battle = await cm.sessions(sessionId);
+      return {
+        sessionId,
+        battle,
+      }
+    };
+    const getBattles = async (superblockId, challengers) => {
+      return Promise.all(challengers.map((challenger) => {
+        return getBattleStatus(superblockId, challenger);
+      }));
+    };
+    const newSuperblockEvents = sb.NewSuperblock({}, { fromBlock, toBlock });
+    await new Promise((resolve, reject) => {
+      newSuperblockEvents.get(async (err, newSuperblocks) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        await newSuperblocks.reduce(async (result, newSuperblock) => {
+          const idx = await result;
+          const { superblockId, who: submitter } = newSuperblock.args;
+          const { blockNumber, blockHash, } = newSuperblock;
+          const [
+            blocksMerkleRoot,
+            accumulatedWork,
+            timestamp,
+            prevTimestamp,
+            lastHash,
+            lastBits,
+            parentId,
+            ,
+            status,
+          ] = await sb.getSuperblock(superblockId);
+          const challengers = await cm.getClaimChallengers(superblockId);
+          const battles = await getBattles(superblockId, challengers);
+          if (idx > 0) { console.log('-------'); }
+          console.log(`Superblock: ${superblockId}`);
+          console.log(`Submitter: ${submitter}`);
+          console.log(`Block: ${blockNumber}, hash ${blockHash}`);
+          console.log(`Timestamp: ${new Date(timestamp * 1000)}`);
+          console.log(`Status: ${statusToText(status)}`);
+          if (challengers.length > 0) {
+            console.log(`    Challengers: ${challengers.length}`);
+            challengers.forEach((challenger, idx) => {
+              console.log(`    Challenger: ${challenger}`);
+              console.log(`    Session: ${battles[idx].sessionId}`);
+              // console.log(`    Session: ${battles[idx].battle}`);
+            });
+          }
+          return idx + 1;
+        }, Promise.resolve(0));
+        resolve();
+      });
+    });
+  } catch (err) {
+    console.log(err);
+  }
+}
+
+async function statusCommand(params) {
+  console.log("status superblocks");
+  const fromBlock = findParam(params, '--fromBlock');
+  const toBlock  = findParam(params, '--toBlock');
+  await displaySuperblocksStatus(fromBlock || 0, toBlock || 'latest');
+  console.log("status superblocks complete");
+}
+
 module.exports = async function(callback) {
   const { command, params } = findCommand(process.argv);
   if (command === 'challenge') {
     await challengeCommand(params);
+  } else if (command === 'status') {
+    await statusCommand(params);
   }
   callback();
 }
