@@ -143,66 +143,191 @@ function statusToText(status) {
   return '--Status error--';
 }
 
-async function displaySuperblocksStatus(fromBlock, toBlock) {
+function challengeStateToText(state) {
+  const challengeStates = {
+    0: 'Unchallenged',
+    1: 'Challenged',
+    2: 'Merkle root hashes queried',
+    3: 'Merkle root hashes replied',
+    4: 'Block header queried',
+    5: 'Block header replied',
+    6: 'Waiting scrypt hash request',
+    7: 'Scrypt hash verification requested',
+    8: 'Scrypt hash Verification pending',
+    9: 'Superblock verification pending',
+    10: 'Superblock verified',
+    11: 'Superblock failed',
+  };
+  if (typeof challengeStates[state] !== 'undefined') {
+    return challengeStates[state];
+  }
+  return '--Invalid state--';
+}
+
+async function displaySuperblocksStatus({ superblockId, fromBlock, toBlock }) {
   try {
     const sb = await DogeSuperblocks.deployed();
     const cm = await DogeClaimManager.deployed();
+
     const getBattleStatus = async (superblockId, challenger) => {
       const sessionId = await cm.getSession(superblockId, challenger);
-      const battle = await cm.sessions(sessionId);
+      const [
+        id,
+        superblockId2,
+        submitter,
+        challenger2,
+        lastActionTimestamp,
+        lastActionClaimant,
+        lastActionChallenger,
+        actionsCounter,
+        countBlockHeaderQueries,
+        countBlockHeaderResponses,
+        pendingScryptHashId,
+        challengeState,
+      ] = await cm.sessions(sessionId);
       return {
         sessionId,
-        battle,
+        battle: {
+          id,
+          superblockId: superblockId2,
+          submitter,
+          challenger: challenger2,
+          lastActionTimestamp,
+          lastActionClaimant,
+          lastActionChallenger,
+          actionsCounter,
+          countBlockHeaderQueries,
+          countBlockHeaderResponses,
+          pendingScryptHashId,
+          challengeState,
+        },
       }
     };
+
     const getBattles = async (superblockId, challengers) => {
       return Promise.all(challengers.map((challenger) => {
         return getBattleStatus(superblockId, challenger);
       }));
     };
-    const newSuperblockEvents = sb.NewSuperblock({}, { fromBlock, toBlock });
-    await new Promise((resolve, reject) => {
-      newSuperblockEvents.get(async (err, newSuperblocks) => {
-        if (err) {
-          reject(err);
-          return;
+
+    const getClaimInfo = async (superblockId) => {
+      const [
+        superblockId2,
+        claimant,
+        createdAt,
+        currentChallenger,
+        challengeTimeout,
+        verificationOngoing,
+        decided,
+        invalid,
+      ] = await cm.claims(superblockId);
+      return {
+        superblockId: superblockId2,
+        claimant,
+        createdAt,
+        currentChallenger,
+        challengeTimeout,
+        verificationOngoing,
+        decided,
+        invalid,
+      };
+    };
+
+    const displayBattle = (claim, claimant, challenger, sessionId, idx, battle) => {
+      if (!claim.decided) {
+        if (claim.verificationOngoing) {
+          console.log(`        Last action timestamp: ${new Date(battle.lastActionTimestamp * 1000)}`);
+          console.log(`        Last action: ${parseInt(battle.lastActionClaimant) > parseInt(battle.lastActionChallenger) ? 'claimant' : 'challenger'}`);
+          console.log(`        State: ${challengeStateToText(battle.challengeState)}`);
+        } else {
+          console.log('        State: paused/stopped');
         }
-        await newSuperblocks.reduce(async (result, newSuperblock) => {
-          const idx = await result;
-          const { superblockId, who: submitter } = newSuperblock.args;
-          const { blockNumber, blockHash, } = newSuperblock;
-          const [
-            blocksMerkleRoot,
-            accumulatedWork,
-            timestamp,
-            prevTimestamp,
-            lastHash,
-            lastBits,
-            parentId,
-            ,
-            status,
-          ] = await sb.getSuperblock(superblockId);
-          const challengers = await cm.getClaimChallengers(superblockId);
-          const battles = await getBattles(superblockId, challengers);
-          if (idx > 0) { console.log('-------'); }
-          console.log(`Superblock: ${superblockId}`);
-          console.log(`Submitter: ${submitter}`);
-          console.log(`Block: ${blockNumber}, hash ${blockHash}`);
-          console.log(`Timestamp: ${new Date(timestamp * 1000)}`);
-          console.log(`Status: ${statusToText(status)}`);
-          if (challengers.length > 0) {
-            console.log(`    Challengers: ${challengers.length}`);
-            challengers.forEach((challenger, idx) => {
-              console.log(`    Challenger: ${challenger}`);
-              console.log(`    Session: ${battles[idx].sessionId}`);
-              // console.log(`    Session: ${battles[idx].battle}`);
-            });
+      } else {
+        console.log(JSON.stringify(battle, null, '  '));
+        if (battle.id !== sessionId) {
+
+        }
+        /* if(claim.decided) {
+          console.log(`        Last action timestamp: ${new Date(battle.lastActionTimestamp * 1000)}`);
+        } else {
+
+        } */
+      }
+    };
+
+    const displaySuperblock = async (superblockId) => {
+      const [
+        blocksMerkleRoot,
+        accumulatedWork,
+        timestamp,
+        prevTimestamp,
+        lastHash,
+        lastBits,
+        parentId,
+        submitter,
+        status,
+      ] = await sb.getSuperblock(superblockId);
+      const challengers = await cm.getClaimChallengers(superblockId);
+      const claim = await getClaimInfo(superblockId);
+      const battles = await getBattles(superblockId, challengers);
+      console.log(`Superblock: ${superblockId}`);
+      console.log(`Submitter: ${submitter}`);
+      // console.log(`Block: ${blockNumber}, hash ${blockHash}`);
+      console.log(`Last block Timestamp: ${new Date(timestamp * 1000)}`);
+      console.log(`Status: ${statusToText(status)}`);
+      console.log(`Superblock submitted: ${new Date(claim.createdAt * 1000)}`);
+      console.log(`Challengers: ${challengers.length}`);
+      console.log(`Challengers Timeout: ${new Date(claim.challengeTimeout * 1000)}`);
+      if (claim.decided) {
+        console.log(`Claim decided: ${claim.invalid ? 'invalid' : 'valid'}`);
+      } else {
+        console.log(`Verification: ${claim.verificationOngoing ? 'ongoing' : 'paused/stopped'}`);
+      }
+      if (challengers.length > 0) {
+        console.log(`Current challenger: ${claim.currentChallenger}`);
+        console.log(`Challengers: ${challengers.length}`);
+        challengers.forEach((challenger, idx) => {
+          console.log('    ----------');
+          console.log(`    Challenger: ${challenger}`);
+          console.log(`    Battle session: ${battles[idx].sessionId}`);
+          if (idx + 1 == claim.currentChallenger) {
+            if (claim.decided) {
+              console.log(`    Challenge state: ${claim.invalid ? 'succeeded' : 'failed'}`);
+            } else if (claim.verificationOngoing) {
+              console.log(`    Challenge state: ${challengeStateToText(battle.challengeState)}`);
+            } else {
+              console.log('    Challenge state: paused/stopped');
+            }
+          } else if (idx + 1 < claim.currentChallenger) {
+            console.log('    Challenge state: failed');
+          } else {
+            console.log('    Challenge state: pending');
           }
-          return idx + 1;
-        }, Promise.resolve(0));
-        resolve();
+        });
+      }
+    }
+
+    if (typeof superblockId === 'string') {
+      await displaySuperblock(superblockId);
+    } else {
+      const newSuperblockEvents = sb.NewSuperblock({}, { fromBlock, toBlock });
+      await new Promise((resolve, reject) => {
+        newSuperblockEvents.get(async (err, newSuperblocks) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+          await newSuperblocks.reduce(async (result, newSuperblock) => {
+            const idx = await result;
+            const { superblockId } = newSuperblock.args;
+            if (idx > 0) { console.log('----------'); }
+            await displaySuperblock(superblockId);
+            return idx + 1;
+          }, Promise.resolve(0));
+          resolve();
+        });
       });
-    });
+    }
   } catch (err) {
     console.log(err);
   }
@@ -210,9 +335,16 @@ async function displaySuperblocksStatus(fromBlock, toBlock) {
 
 async function statusCommand(params) {
   console.log("status superblocks");
+  console.log('----------');
   const fromBlock = findParam(params, '--fromBlock');
   const toBlock  = findParam(params, '--toBlock');
-  await displaySuperblocksStatus(fromBlock || 0, toBlock || 'latest');
+  const superblockId  = findParam(params, '--superblock');
+  if (typeof superblockId === 'string') {
+    await displaySuperblocksStatus({ superblockId })
+  } else {
+    await displaySuperblocksStatus({ fromBlock: fromBlock || 0, toBlock: toBlock || 'latest' });
+  }
+  console.log('----------');
   console.log("status superblocks complete");
 }
 
