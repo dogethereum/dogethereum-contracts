@@ -68,3 +68,7 @@ To deploy the contracts
 MIT License<br/>
 Copyright (c) 2018 Coinfabrik & Oscar Guindzberg<br/>
 [License](LICENSE)
+
+## Bounty payment address
+
+[0xbc2eadd8dbc9f08e924550c8138e5f4e6c64489e](https://etherscan.io/address/0xbc2eadd8dbc9f08e924550c8138e5f4e6c64489e#code)
