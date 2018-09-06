@@ -1,5 +1,6 @@
 pragma solidity ^0.4.19;
 
+import {DogeClaimManager} from './DogeClaimManager.sol';
 import {DogeErrorCodes} from "./DogeErrorCodes.sol";
 import {DogeSuperblocks} from './DogeSuperblocks.sol';
 import {DogeTx} from './DogeParser/DogeTx.sol';
@@ -8,8 +9,6 @@ import {IScryptCheckerListener} from "./IScryptCheckerListener.sol";
 
 // @dev - Manages a battle session between superblock submitter and challenger
 contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
-
-    enum Network { MAINNET, TESTNET, REGTEST }
 
     enum ChallengeState {
         Unchallenged,             // Unchallenged submission
@@ -77,7 +76,6 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
     uint public sessionsCount = 0;
 
     uint public superblockDuration;         // Superblock duration (in seconds)
-    uint public superblockDelay;            // Delay required to submit superblocks (in seconds)
     uint public superblockTimeout;          // Timeout action (in seconds)
 
     // Pending Scrypt Hash verifications
@@ -86,10 +84,16 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
     mapping (bytes32 => ScryptHashVerification) public scryptHashVerifications;
 
     // network that the stored blocks belong to
-    Network private net;
+    DogeTx.Network private net;
 
     // ScryptHash checker
     IScryptChecker public scryptChecker;
+
+    // Doge claim manager
+    DogeClaimManager dogeClaimManager;
+
+    // Superblocks contract
+    DogeSuperblocks superblocks;
 
     event NewBattle(bytes32 superblockId, bytes32 sessionId, address submitter, address challenger);
     event ChallengerConvicted(bytes32 superblockId, bytes32 sessionId, address challenger);
@@ -121,18 +125,18 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
 
     // @dev – Configures the contract managing superblocks battles
     // @param _network Network type to use for block difficulty validation
+    // @param _superblocks Contract that manages superblocks
     // @param _superblockDuration Superblock duration (in seconds)
-    // @param _superblockDelay Delay to accept a superblock submition (in seconds)
     // @param _superblockTimeout Time to wait for challenges (in seconds)
     constructor(
-        Network _network,
+        DogeTx.Network _network,
+        DogeSuperblocks _superblocks,
         uint _superblockDuration,
-        uint _superblockDelay,
         uint _superblockTimeout
     ) public {
         net = _network;
+        superblocks = _superblocks;
         superblockDuration = _superblockDuration;
-        superblockDelay = _superblockDelay;
         superblockTimeout = _superblockTimeout;
     }
 
@@ -146,8 +150,13 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
         scryptChecker = _scryptChecker;
     }
 
+    function setDogeClaimManager(DogeClaimManager _dogeClaimManager) public {
+        require(address(dogeClaimManager) == 0x0 && address(_dogeClaimManager) != 0x0);
+        dogeClaimManager = _dogeClaimManager;
+    }
+
     // @dev - Start a battle session
-    function beginBattleSession(bytes32 superblockId, address submitter, address challenger) internal returns (bytes32) {
+    function beginBattleSession(bytes32 superblockId, address submitter, address challenger) onlyFrom(dogeClaimManager) public returns (bytes32) {
         bytes32 sessionId = keccak256(abi.encode(superblockId, msg.sender, sessionsCount));
         BattleSession storage session = sessions[sessionId];
         session.id = sessionId;
@@ -168,7 +177,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
 
     // @dev - Challenger makes a query for superblock hashes
     function doQueryMerkleRootHashes(BattleSession storage session) internal returns (uint) {
-        if (getDepositInternal(msg.sender) < minDeposit) {
+        if (!hasDeposit(msg.sender, minDeposit)) {
             return ERR_SUPERBLOCK_MIN_DEPOSIT;
         }
         if (session.challengeState == ChallengeState.Challenged) {
@@ -199,7 +208,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
 
     // @dev - Submitter send hashes to verify superblock merkle root
     function doVerifyMerkleRootHashes(BattleSession storage session, bytes32[] blockHashes) internal returns (uint) {
-        if (getDepositInternal(msg.sender) < minDeposit) {
+        if (!hasDeposit(msg.sender, minDeposit)) {
             return ERR_SUPERBLOCK_MIN_DEPOSIT;
         }
         require(session.blockHashes.length == 0);
@@ -238,7 +247,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
 
     // @dev - Challenger makes a query for block header data for a hash
     function doQueryBlockHeader(BattleSession storage session, bytes32 blockHash) internal returns (uint) {
-        if (getDepositInternal(msg.sender) < minDeposit) {
+        if (!hasDeposit(msg.sender, minDeposit)) {
             return ERR_SUPERBLOCK_MIN_DEPOSIT;
         }
         if (session.challengeState == ChallengeState.VerifyScryptHash) {
@@ -338,7 +347,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
         bytes32 proposedBlockScryptHash,
         bytes blockHeader
     ) internal returns (uint, bytes) {
-        if (getDepositInternal(msg.sender) < minDeposit) {
+        if (!hasDeposit(msg.sender, minDeposit)) {
             return (ERR_SUPERBLOCK_MIN_DEPOSIT, new bytes(0));
         }
         if (session.challengeState == ChallengeState.QueryBlockHeader) {
@@ -407,7 +416,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
         bytes32 sessionId,
         bytes32 blockSha256Hash
     ) internal returns (uint) {
-        if (getDepositInternal(msg.sender) < minDeposit) {
+        if (!hasDeposit(msg.sender, minDeposit)) {
             return ERR_SUPERBLOCK_MIN_DEPOSIT;
         }
         if (session.challengeState == ChallengeState.VerifyScryptHash) {
@@ -492,9 +501,9 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
             if (session.blocksInfo[blockSha256Hash].prevBlock != prevBlock) {
                 return ERR_SUPERBLOCK_BAD_PARENT;
             }
-            if (net != Network.REGTEST) {
+            if (net != DogeTx.Network.REGTEST) {
                 uint32 newBits = DogeTx.calculateDigishieldDifficulty(int64(parentTimestamp) - int64(gpTimestamp), prevBits);
-                if (net == Network.TESTNET && session.blocksInfo[blockSha256Hash].timestamp - parentTimestamp > 120) {
+                if (net == DogeTx.Network.TESTNET && session.blocksInfo[blockSha256Hash].timestamp - parentTimestamp > 120) {
                     newBits = 0x1e0fffff;
                 }
                 if (bits != newBits) {
@@ -508,7 +517,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
             parentTimestamp = session.blocksInfo[blockSha256Hash].timestamp;
             idx += 1;
         }
-        if (net != Network.REGTEST && parentWork + work != accWork) {
+        if (net != DogeTx.Network.REGTEST && parentWork + work != accWork) {
             return ERR_SUPERBLOCK_BAD_ACCUMULATED_WORK;
         }
         return ERR_SUPERBLOCK_OK;
@@ -715,16 +724,16 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
     function getChallengerHitTimeout(bytes32 sessionId) public view returns (bool) {
         BattleSession storage session = sessions[sessionId];
         return (session.challengeState != ChallengeState.PendingScryptVerification &&
-        session.lastActionClaimant > session.lastActionChallenger &&
-        block.timestamp > session.lastActionTimestamp + superblockTimeout);
+            session.lastActionClaimant > session.lastActionChallenger &&
+            block.timestamp > session.lastActionTimestamp + superblockTimeout);
     }
 
     // @dev - Check if a session's submitter did not respond before timeout
     function getSubmitterHitTimeout(bytes32 sessionId) public view returns (bool) {
         BattleSession storage session = sessions[sessionId];
         return (session.challengeState != ChallengeState.PendingScryptVerification &&
-        session.lastActionChallenger > session.lastActionClaimant &&
-        block.timestamp > session.lastActionTimestamp + superblockTimeout);
+            session.lastActionChallenger > session.lastActionClaimant &&
+            block.timestamp > session.lastActionTimestamp + superblockTimeout);
     }
 
     // @dev - Return Doge block hashes associated with a certain battle session
@@ -733,7 +742,9 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
     }
 
     // @dev - To be called when a battle sessions  was decided
-    function sessionDecided(bytes32 sessionId, bytes32 superblockId, address winner, address loser) internal;
+    function sessionDecided(bytes32 sessionId, bytes32 superblockId, address winner, address loser) internal {
+        dogeClaimManager.sessionDecided(sessionId, superblockId, winner, loser);
+    }
 
     // @dev - Retrieve superblock information
     function getSuperblockInfo(bytes32 superblockId) internal view returns (
@@ -746,15 +757,17 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
         bytes32 _parentId,
         address _submitter,
         DogeSuperblocks.Status _status
-    );
+    ) {
+        return superblocks.getSuperblock(superblockId);
+    }
 
-    // FIXME: Using directly getDeposit forces DogeBattleManager
-    // to inherit from DogeDepositsManager.
-    function getDepositInternal(address who) internal view returns (uint);
+    // @dev - Verify it has enough deposit
+    function hasDeposit(address who, uint amount) internal view returns (bool) {
+        return dogeClaimManager.getDeposit(who) >= amount;
+    }
 
     // @dev – locks up part of the a user's deposit into a claim.
-    function bondDeposit(bytes32 claimId, address account, uint amount) internal returns (uint, uint);
-
-    // @dev – unlocks a user's bonded deposits from a claim.
-    function unbondDeposit(bytes32 claimId, address account) internal returns (uint, uint);
+    function bondDeposit(bytes32 claimId, address account, uint amount) internal returns (uint, uint) {
+        return dogeClaimManager.bondDeposit(claimId, account, amount);
+    }
 }

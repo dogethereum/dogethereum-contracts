@@ -117,6 +117,8 @@ library DogeTx {
     uint constant ERR_PARENT_MERKLE = 10120;
     uint constant ERR_PROOF_OF_WORK = 10130;
 
+    enum Network { MAINNET, TESTNET, REGTEST }
+
     // AuxPoW block fields
     struct AuxPoW {
         // uint firstBytes;
@@ -1055,7 +1057,7 @@ library DogeTx {
     // @param _pos starting position of the block header
     // @param _len length of the block header
     // @param _proposedBlockScryptash proposed block scrypt hash
-    // @return - [ErrorCode, BlockSha256Hash, BlockScryptHash, IsMergeMined] 
+    // @return - [ErrorCode, BlockSha256Hash, BlockScryptHash, IsMergeMined]
     function verifyBlockHeader(bytes _blockHeaderBytes, uint _pos, uint _len, uint _proposedBlockScryptash) external view returns (uint, uint, uint, bool) {
         BlockHeader memory blockHeader = parseHeaderBytes(_blockHeaderBytes, _pos);
         uint blockSha256Hash = blockHeader.blockHash;

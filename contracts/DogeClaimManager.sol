@@ -9,7 +9,7 @@ import {DogeErrorCodes} from "./DogeErrorCodes.sol";
 // @dev - Manager of superblock claims
 //
 // Manages superblocks proposal and challenges
-contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
+contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
 
     struct SuperblockClaim {
         bytes32 superblockId;                       // Superblock Id
@@ -36,8 +36,17 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
     // Superblocks contract
     DogeSuperblocks public superblocks;
 
+    // Superblocks contract
+    DogeBattleManager public dogeBattleManager;
+
     // Confirmations required to confirm semi approved superblocks
     uint public superblockConfirmations;
+
+    // Minimum deposit required to start/continue challenge
+    uint public minDeposit = 1;
+
+    uint public superblockDelay;            // Delay required to submit superblocks (in seconds)
+    uint public superblockTimeout;          // Timeout action (in seconds)
 
     event DepositBonded(bytes32 claimId, address account, uint amount);
     event DepositUnbonded(bytes32 claimId, address account, uint amount);
@@ -51,22 +60,33 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
 
     event ErrorClaim(bytes32 claimId, uint err);
 
+    modifier onlyBattleManager() {
+        require(msg.sender == address(dogeBattleManager));
+        _;
+    }
+
+    modifier onlyMeOrBattleManager() {
+        require(msg.sender == address(dogeBattleManager) || msg.sender == address(this));
+        _;
+    }
+
     // @dev – Configures the contract managing superblocks challenges
-    // @param _network Network type to use for block difficulty validation
     // @param _superblocks Contract that manages superblocks
-    // @param _superblockDuration Superblock duration (in seconds)
+    // @param _battleManager Contract that manages battles
     // @param _superblockDelay Delay to accept a superblock submition (in seconds)
     // @param _superblockTimeout Time to wait for challenges (in seconds)
     // @param _superblockConfirmations Confirmations required to confirm semi approved superblocks
     constructor(
-        Network _network,
         DogeSuperblocks _superblocks,
-        uint _superblockDuration,
+        DogeBattleManager _dogeBattleManager,
         uint _superblockDelay,
         uint _superblockTimeout,
         uint _superblockConfirmations
-    ) DogeBattleManager(_network, _superblockDuration, _superblockDelay, _superblockTimeout) public {
+    ) public {
         superblocks = _superblocks;
+        dogeBattleManager = _dogeBattleManager;
+        superblockDelay = _superblockDelay;
+        superblockTimeout = _superblockTimeout;
         superblockConfirmations = _superblockConfirmations;
     }
 
@@ -75,7 +95,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
     // @param account – the user's address.
     // @param amount – the amount of deposit to lock up.
     // @return – the user's deposit bonded for the claim.
-    function bondDeposit(bytes32 claimId, address account, uint amount) internal returns (uint, uint) {
+    function bondDeposit(bytes32 claimId, address account, uint amount) onlyMeOrBattleManager public returns (uint, uint) {
         SuperblockClaim storage claim = claims[claimId];
 
         if (!claimExists(claim)) {
@@ -91,10 +111,6 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
         emit DepositBonded(claimId, account, amount);
 
         return (ERR_SUPERBLOCK_OK, claim.bondedDeposits[account]);
-    }
-
-    function getDepositInternal(address account) internal view returns (uint) {
-        return getDeposit(account);
     }
 
     // @dev – accessor for a claims bonded deposits.
@@ -259,7 +275,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
 
         if (claim.currentChallenger < claim.challengers.length) {
 
-            bytes32 sessionId = beginBattleSession(claimId, claim.claimant, claim.challengers[claim.currentChallenger]);
+            bytes32 sessionId = dogeBattleManager.beginBattleSession(claimId, claim.claimant, claim.challengers[claim.currentChallenger]);
 
             claim.sessions[claim.challengers[claim.currentChallenger]] = sessionId;
             emit VerificationGameStarted(claimId, claim.claimant, claim.challengers[claim.currentChallenger], sessionId);
@@ -465,7 +481,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeBattleManager {
     // @param claimId - Id of the superblock claim
     // @param winner – winner of the verification game.
     // @param loser – loser of the verification game.
-    function sessionDecided(bytes32 sessionId, bytes32 claimId, address winner, address loser) internal {
+    function sessionDecided(bytes32 sessionId, bytes32 claimId, address winner, address loser) onlyBattleManager public {
         SuperblockClaim storage claim = claims[claimId];
 
         require(claimExists(claim));

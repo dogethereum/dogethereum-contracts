@@ -8,6 +8,7 @@ const DogeTxForTests = artifacts.require('./DogeParser/DogeTxForTests.sol');
 const ScryptCheckerDummy = artifacts.require('./ScryptCheckerDummy.sol');
 const DogeSuperblocks = artifacts.require('./DogeSuperblocks.sol');
 const DogeClaimManager = artifacts.require('./DogeClaimManager.sol');
+const DogeBattleManager = artifacts.require('./DogeBattleManager.sol');
 
 const SafeMath = artifacts.require('openzeppelin-solidity/contracts/math/SafeMath.sol');
 
@@ -68,7 +69,7 @@ async function deployDevelopment(deployer, network, accounts, networkId, trusted
   await deployer.deploy(ECRecovery);
 
   await deployer.link(Set, DogeTokenForTests);
-  await deployer.link(DogeTx, [DogeTxForTests, DogeTokenForTests, DogeSuperblocks, DogeClaimManager]);
+  await deployer.link(DogeTx, [DogeTxForTests, DogeTokenForTests, DogeSuperblocks, DogeBattleManager, DogeClaimManager]);
   await deployer.link(ECRecovery, DogeTokenForTests);
 
   await deployer.deploy(DogeSuperblocks);
@@ -77,7 +78,9 @@ async function deployDevelopment(deployer, network, accounts, networkId, trusted
 
   await deployer.deploy(DummyTransactionProcessor, DogeSuperblocks.address);
 
-  await deployer.deploy(DogeClaimManager, networkId, DogeSuperblocks.address, superblockTimes.DURATION, superblockTimes.DELAY, superblockTimes.TIMEOUT, superblockTimes.CONFIRMATIONS);
+  await deployer.deploy(DogeBattleManager, networkId, DogeSuperblocks.address, superblockTimes.DURATION, superblockTimes.TIMEOUT);
+
+  await deployer.deploy(DogeClaimManager, DogeSuperblocks.address, DogeBattleManager.address, superblockTimes.DELAY, superblockTimes.TIMEOUT, superblockTimes.CONFIRMATIONS);
 
   await deployer.deploy(ScryptCheckerDummy, true)
 
@@ -88,8 +91,9 @@ async function deployDevelopment(deployer, network, accounts, networkId, trusted
   const superblocks = DogeSuperblocks.at(DogeSuperblocks.address);
   await superblocks.setClaimManager(DogeClaimManager.address);
 
-  const dogeClaimManager = DogeClaimManager.at(DogeClaimManager.address);
-  await dogeClaimManager.setScryptChecker(ScryptCheckerDummy.address);
+  const dogeBattleManager = DogeBattleManager.at(DogeBattleManager.address);
+  await dogeBattleManager.setDogeClaimManager(DogeClaimManager.address);
+  await dogeBattleManager.setScryptChecker(ScryptCheckerDummy.address);
 }
 
 async function deployIntegration(deployer, network, accounts, networkId, trustedDogeEthPriceOracle, dogethereumRecipient, superblockTimes) {
