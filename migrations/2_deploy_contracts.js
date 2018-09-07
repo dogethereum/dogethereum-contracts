@@ -74,13 +74,28 @@ async function deployDevelopment(deployer, network, accounts, networkId, trusted
 
   await deployer.deploy(DogeSuperblocks);
 
-  await deployer.deploy(DogeTokenForTests, DogeSuperblocks.address, trustedDogeEthPriceOracle, collateralRatio);
+  await deployer.deploy(DogeTokenForTests,
+    DogeSuperblocks.address,
+    trustedDogeEthPriceOracle,
+    collateralRatio
+  );
 
   await deployer.deploy(DummyTransactionProcessor, DogeSuperblocks.address);
 
-  await deployer.deploy(DogeBattleManager, networkId, DogeSuperblocks.address, superblockTimes.DURATION, superblockTimes.TIMEOUT);
+  await deployer.deploy(DogeBattleManager,
+    networkId,
+    DogeSuperblocks.address,
+    superblockTimes.DURATION,
+    superblockTimes.TIMEOUT
+  );
 
-  await deployer.deploy(DogeClaimManager, DogeSuperblocks.address, DogeBattleManager.address, superblockTimes.DELAY, superblockTimes.TIMEOUT, superblockTimes.CONFIRMATIONS);
+  await deployer.deploy(DogeClaimManager,
+    DogeSuperblocks.address,
+    DogeBattleManager.address,
+    superblockTimes.DELAY,
+    superblockTimes.TIMEOUT,
+    superblockTimes.CONFIRMATIONS
+  );
 
   await deployer.deploy(ScryptCheckerDummy, true)
 
@@ -109,9 +124,22 @@ async function deployIntegration(deployer, network, accounts, networkId, trusted
   await deployer.deploy(ScryptCheckerDummy, true, {gas: 1500000})
   await deployer.deploy(DogeSuperblocks, {gas: 2700000});
 
-  await deployer.deploy(DogeToken, DogeSuperblocks.address, trustedDogeEthPriceOracle, collateralRatio, {gas: 4000000});
+  await deployer.deploy(DogeToken,
+    DogeSuperblocks.address,
+    trustedDogeEthPriceOracle,
+    collateralRatio,
+    {gas: 4000000 }
+  );
 
-  await deployer.deploy(DogeClaimManager, networkId, DogeSuperblocks.address, superblockTimes.DURATION, superblockTimes.DELAY, superblockTimes.TIMEOUT, superblockTimes.CONFIRMATIONS, {gas: 6800000});
+  await deployer.deploy(DogeClaimManager,
+    networkId,
+    DogeSuperblocks.address,
+    superblockTimes.DURATION,
+    superblockTimes.DELAY,
+    superblockTimes.TIMEOUT,
+    superblockTimes.CONFIRMATIONS,
+    { gas: 6800000 }
+  );
 
   const superblocks = DogeSuperblocks.at(DogeSuperblocks.address);
   await superblocks.setClaimManager(DogeClaimManager.address, {gas: 60000});

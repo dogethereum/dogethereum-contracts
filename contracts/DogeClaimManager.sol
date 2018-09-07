@@ -95,7 +95,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
     // @param account – the user's address.
     // @param amount – the amount of deposit to lock up.
     // @return – the user's deposit bonded for the claim.
-    function bondDeposit(bytes32 claimId, address account, uint amount) onlyMeOrBattleManager public returns (uint, uint) {
+    function bondDeposit(bytes32 claimId, address account, uint amount) onlyMeOrBattleManager external returns (uint, uint) {
         SuperblockClaim storage claim = claims[claimId];
 
         if (!claimExists(claim)) {
@@ -201,7 +201,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
         claim.createdAt = block.timestamp;
         claim.challengeTimeout = block.timestamp + superblockTimeout;
 
-        (err, ) = bondDeposit(claimId, msg.sender, minDeposit);
+        (err, ) = this.bondDeposit(claimId, msg.sender, minDeposit);
         assert(err == ERR_SUPERBLOCK_OK);
 
         emit SuperblockClaimCreated(claimId, msg.sender, superblockId);
@@ -238,7 +238,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
             return (err, 0);
         }
 
-        (err, ) = bondDeposit(claimId, msg.sender, minDeposit);
+        (err, ) = this.bondDeposit(claimId, msg.sender, minDeposit);
         assert(err == ERR_SUPERBLOCK_OK);
 
         claim.challengeTimeout = block.timestamp + superblockTimeout;
