@@ -2,6 +2,7 @@
 
 const utils = require('./utils');
 const DogeClaimManager = artifacts.require('DogeClaimManager');
+const DogeBattleManager = artifacts.require('DogeBattleManager');
 const DogeSuperblocks = artifacts.require('DogeSuperblocks');
 const ScryptCheckerDummy = artifacts.require('ScryptCheckerDummy');
 const ScryptVerifier = artifacts.require('ScryptVerifier');
@@ -26,6 +27,7 @@ contract('rejectClaim', (accounts) => {
     const submitter = accounts[1];
     const challenger = accounts[2];
     let claimManager;
+    let battleManager;
     let superblocks;
     let scryptChecker;
     const initParentId = '0x0000000000000000000000000000000000000000000000000000000000000000';
@@ -54,10 +56,10 @@ contract('rejectClaim', (accounts) => {
         `0300620062e0af0dfea7f405baf7b93caffe7a2dcf0a1168e5756695cbf8c40771d1621a4f016681e909ef55460b29dd99d153216fbddd56c02398720034e51c5ba452e347e37e5bffff7f20020000000101000000010000000000000000000000000000000000000000000000000000000000000000ffffffff035b0101ffffffff0100203d88792d00002321032af59b4b1ee8905f7f0a05b21e4b9ee2544426943166fb5b6514eb60c9764d2fac00000000`,
         `030062002b026da0023e871a35b4a45eefcd24c17994a1ecea1117e24eb405da31c07ab6c338737444918707357e77c3eab47858a8359c7e037c98caa8a37591d546cdde47e37e5bffff7f20000000000101000000010000000000000000000000000000000000000000000000000000000000000000ffffffff035c0101ffffffff0100203d88792d00002321032af59b4b1ee8905f7f0a05b21e4b9ee2544426943166fb5b6514eb60c9764d2fac00000000`
     ]
-    
+
     const superblockR0Headers = [ superblock1Headers[0], superblock1Headers[1] ]; // this superblock should be semi-approved and then rejected
     const superblockR1Headers = [ superblock1Headers[2] ]; // this superblock should also be semi-approved and then rejected
-    
+
     const superblockR0Hashes = superblockR0Headers.map(utils.calcBlockSha256Hash);
     const superblockR1Hashes = superblockR1Headers.map(utils.calcBlockSha256Hash);
 
@@ -69,11 +71,23 @@ contract('rejectClaim', (accounts) => {
 
     const superblockR0 = utils.makeSuperblock(superblockR0Headers, superblock0.superblockId, 4);
     const superblockR1 = utils.makeSuperblock(superblockR1Headers, superblockR0.superblockId, 6);
-    
+
     // Copied from claimManager.js
     async function initSuperblocks(dummyChecker, genesisSuperblock) {
         superblocks = await DogeSuperblocks.new();
-        claimManager = await DogeClaimManager.new(DOGE_REGTEST, superblocks.address, SUPERBLOCK_TIMES_DOGE_REGTEST.DURATION, SUPERBLOCK_TIMES_DOGE_REGTEST.DELAY, SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT, SUPERBLOCK_TIMES_DOGE_REGTEST.CONFIRMATIONS);
+        battleManager = await DogeBattleManager.new(
+          DOGE_REGTEST,
+          superblocks.address,
+          SUPERBLOCK_TIMES_DOGE_REGTEST.DURATION,
+          SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT,
+        );
+        claimManager = await DogeClaimManager.new(
+          superblocks.address,
+          battleManager.address,
+          SUPERBLOCK_TIMES_DOGE_REGTEST.DELAY,
+          SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT,
+          SUPERBLOCK_TIMES_DOGE_REGTEST.CONFIRMATIONS,
+        );
         if (dummyChecker) {
             scryptChecker = await ScryptCheckerDummy.new(false);
         } else {
@@ -81,7 +95,8 @@ contract('rejectClaim', (accounts) => {
             scryptChecker = await ClaimManager.new(scryptVerifier.address);
         }
         await superblocks.setClaimManager(claimManager.address);
-        await claimManager.setScryptChecker(scryptChecker.address);
+        await battleManager.setDogeClaimManager(claimManager.address);
+        await battleManager.setScryptChecker(scryptChecker.address);
         await superblocks.initialize(
             genesisSuperblock.merkleRoot,
             genesisSuperblock.accumulatedWork,
@@ -252,9 +267,8 @@ contract('rejectClaim', (accounts) => {
             const result = await claimManager.challengeSuperblock(superblockR0Id, { from: challenger });
             assert.equal(result.logs[1].event, 'SuperblockClaimChallenged', 'Superblock challenged');
             assert.equal(superblockR0Id, result.logs[1].args.claimId);
-            assert.equal(result.logs[2].event, 'NewBattle', 'New battle session');
+            assert.equal(result.logs[2].event, 'VerificationGameStarted', 'Battle started');
             session1 = result.logs[2].args.sessionId;
-            assert.equal(result.logs[3].event, 'VerificationGameStarted', 'Battle started');
         });
 
         // Don't reject claim if it's undecided
@@ -264,30 +278,29 @@ contract('rejectClaim', (accounts) => {
         });
 
         it('Query and verify hashes', async () => {
-            result = await claimManager.queryMerkleRootHashes(superblockR0Id, session1, { from: challenger });
-            assert.equal(result.logs[1].event, 'QueryMerkleRootHashes', 'Query merkle root hashes');
-            result = await claimManager.respondMerkleRootHashes(superblockR0Id, session1, superblockR0Hashes, { from: submitter });
-            assert.equal(result.logs[1].event, 'RespondMerkleRootHashes', 'Respond merkle root hashes');
+            result = await battleManager.queryMerkleRootHashes(superblockR0Id, session1, { from: challenger });
+            assert.equal(result.logs[0].event, 'QueryMerkleRootHashes', 'Query merkle root hashes');
+            result = await battleManager.respondMerkleRootHashes(superblockR0Id, session1, superblockR0Hashes, { from: submitter });
+            assert.equal(result.logs[0].event, 'RespondMerkleRootHashes', 'Respond merkle root hashes');
         });
-        
+
         it('Query and reply block header', async () => {
             let scryptHash;
-            result = await claimManager.queryBlockHeader(superblockR0Id, session1, superblockR0Hashes[0], { from: challenger });
-            assert.equal(result.logs[1].event, 'QueryBlockHeader', 'Query block header');
+            result = await battleManager.queryBlockHeader(superblockR0Id, session1, superblockR0Hashes[0], { from: challenger });
+            assert.equal(result.logs[0].event, 'QueryBlockHeader', 'Query block header');
             scryptHash = `0x${utils.calcHeaderPoW(superblockR0Headers[0])}`;
-            result = await claimManager.respondBlockHeader(superblockR0Id, session1, scryptHash, `0x${superblockR0Headers[0]}`, { from: submitter });
-            assert.equal(result.logs[1].event, 'RespondBlockHeader', 'Respond block header');
-            result = await claimManager.queryBlockHeader(superblockR0Id, session1, superblockR0Hashes[1], { from: challenger });
-            assert.equal(result.logs[1].event, 'QueryBlockHeader', 'Query block header');
+            result = await battleManager.respondBlockHeader(superblockR0Id, session1, scryptHash, `0x${superblockR0Headers[0]}`, { from: submitter });
+            assert.equal(result.logs[0].event, 'RespondBlockHeader', 'Respond block header');
+            result = await battleManager.queryBlockHeader(superblockR0Id, session1, superblockR0Hashes[1], { from: challenger });
+            assert.equal(result.logs[0].event, 'QueryBlockHeader', 'Query block header');
             scryptHash = `0x${utils.calcHeaderPoW(superblockR0Headers[1])}`;
-            result = await claimManager.respondBlockHeader(superblockR0Id, session1, scryptHash, `0x${superblockR0Headers[1]}`, { from: submitter });
-            assert.equal(result.logs[1].event, 'RespondBlockHeader', 'Respond block header');
+            result = await battleManager.respondBlockHeader(superblockR0Id, session1, scryptHash, `0x${superblockR0Headers[1]}`, { from: submitter });
+            assert.equal(result.logs[0].event, 'RespondBlockHeader', 'Respond block header');
         });
-        
+
         it('Verify forked superblock', async () => {
-            result = await claimManager.verifySuperblock(session1, { from: challenger });
-            assert.equal(result.logs[0].event, 'SuperblockBattleDecided', 'Superblock verified');
-            assert.equal(result.logs[1].event, 'ChallengerConvicted', 'Challenger not convicted despite fork being initially valid');
+            result = await battleManager.verifySuperblock(session1, { from: challenger });
+            assert.equal(result.logs[0].event, 'ChallengerConvicted', 'Challenger not convicted despite fork being initially valid');
         });
 
         // Call rejectClaim on superblocks that aren't semi approved
@@ -295,7 +308,7 @@ contract('rejectClaim', (accounts) => {
             result = await claimManager.rejectClaim(superblockR0Id, { from: submitter });
             assert.equal(result.logs[0].event, 'ErrorClaim', 'Error claim not raised despite bad superblock status');
         });
-        
+
         it('Confirm forked superblock', async () => {
             await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
             result = await claimManager.checkClaimFinished(superblockR0Id, { from: challenger });

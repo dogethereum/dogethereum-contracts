@@ -1,4 +1,5 @@
 const DogeClaimManager = artifacts.require('DogeClaimManager');
+const DogeBattleManager = artifacts.require('DogeBattleManager');
 const DogeSuperblocks = artifacts.require('DogeSuperblocks');
 const ScryptCheckerDummy = artifacts.require('ScryptCheckerDummy');
 const ScryptVerifier = artifacts.require('ScryptVerifier');
@@ -44,13 +45,25 @@ contract('verifyScryptHash', (accounts) => {
 
   async function initSuperblocks(dummyChecker, genesisSuperblock) {
     superblocks = await DogeSuperblocks.new();
-    claimManager = await DogeClaimManager.new(DOGE_MAINNET, superblocks.address, SUPERBLOCK_TIMES_DOGE_REGTEST.DURATION, SUPERBLOCK_TIMES_DOGE_REGTEST.DELAY, SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT, SUPERBLOCK_TIMES_DOGE_REGTEST.CONFIRMATIONS);
-    // scryptChecker = await ScryptCheckerDummy.new(false);
+    battleManager = await DogeBattleManager.new(
+      DOGE_MAINNET,
+      superblocks.address,
+      SUPERBLOCK_TIMES_DOGE_REGTEST.DURATION,
+      SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT,
+    );
+    claimManager = await DogeClaimManager.new(
+      superblocks.address,
+      battleManager.address,
+      SUPERBLOCK_TIMES_DOGE_REGTEST.DELAY,
+      SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT,
+      SUPERBLOCK_TIMES_DOGE_REGTEST.CONFIRMATIONS,
+    );
     scryptVerifier = await ScryptVerifier.new();
     scryptChecker = await ClaimManager.new(scryptVerifier.address);
 
     await superblocks.setClaimManager(claimManager.address);
-    await claimManager.setScryptChecker(scryptChecker.address);
+    await battleManager.setDogeClaimManager(claimManager.address);
+    await battleManager.setScryptChecker(scryptChecker.address);
     await superblocks.initialize(
       genesisSuperblock.merkleRoot,
       genesisSuperblock.accumulatedWork,
@@ -115,26 +128,25 @@ contract('verifyScryptHash', (accounts) => {
       result = await claimManager.challengeSuperblock(superblock1, { from: challenger });
       assert.equal(result.logs[1].event, 'SuperblockClaimChallenged', 'Superblock challenged');
       assert.equal(claim1, result.logs[1].args.claimId);
-      assert.equal(result.logs[2].event, 'NewBattle', 'New battle session');
+      assert.equal(result.logs[2].event, 'VerificationGameStarted', 'Battle started');
       session1 = result.logs[2].args.sessionId;
-      assert.equal(result.logs[3].event, 'VerificationGameStarted', 'Battle started');
 
-      result = await claimManager.queryMerkleRootHashes(superblock1, session1, { from: challenger });
-      assert.equal(result.logs[1].event, 'QueryMerkleRootHashes', 'Query merkle root hashes');
-      result = await claimManager.respondMerkleRootHashes(superblock1, session1, hashes, { from: submitter });
-      assert.equal(result.logs[1].event, 'RespondMerkleRootHashes', 'Respond merkle root hashes');
+      result = await battleManager.queryMerkleRootHashes(superblock1, session1, { from: challenger });
+      assert.equal(result.logs[0].event, 'QueryMerkleRootHashes', 'Query merkle root hashes');
+      result = await battleManager.respondMerkleRootHashes(superblock1, session1, hashes, { from: submitter });
+      assert.equal(result.logs[0].event, 'RespondMerkleRootHashes', 'Respond merkle root hashes');
 
-      result = await claimManager.queryBlockHeader(superblock1, session1, hashes[1], { from: challenger });
-      assert.equal(result.logs[1].event, 'QueryBlockHeader', 'Query block header');
+      result = await battleManager.queryBlockHeader(superblock1, session1, hashes[1], { from: challenger });
+      assert.equal(result.logs[0].event, 'QueryBlockHeader', 'Query block header');
       scryptHash = `0x${utils.calcHeaderPoW(headers[1])}`;
-      result = await claimManager.respondBlockHeader(superblock1, session1, scryptHash, `0x${headers[1]}`, { from: submitter });
-      assert.equal(result.logs[1].event, 'RespondBlockHeader', 'Respond block header');
+      result = await battleManager.respondBlockHeader(superblock1, session1, scryptHash, `0x${headers[1]}`, { from: submitter });
+      assert.equal(result.logs[0].event, 'RespondBlockHeader', 'Respond block header');
 
-      result = await claimManager.queryBlockHeader(superblock1, session1, hashes[0], { from: challenger });
-      assert.equal(result.logs[1].event, 'QueryBlockHeader', 'Query block header');
+      result = await battleManager.queryBlockHeader(superblock1, session1, hashes[0], { from: challenger });
+      assert.equal(result.logs[0].event, 'QueryBlockHeader', 'Query block header');
       scryptHash = `0x${utils.calcHeaderPoW(headers[0])}`;
-      result = await claimManager.respondBlockHeader(superblock1, session1, scryptHash, `0x${headers[0]}`, { from: submitter });
-      assert.equal(result.logs[1].event, 'RespondBlockHeader', 'Respond block header');
+      result = await battleManager.respondBlockHeader(superblock1, session1, scryptHash, `0x${headers[0]}`, { from: submitter });
+      assert.equal(result.logs[0].event, 'RespondBlockHeader', 'Respond block header');
     }
     describe('Confirm valid block scrypt hash', () => {
       let result;
@@ -150,14 +162,14 @@ contract('verifyScryptHash', (accounts) => {
       });
       it('Request scrypt hash validation', async () => {
         // Request scrypt hash validation
-        result = await claimManager.requestScryptHashValidation(superblock1, session1, hashes[0], { from: challenger });
-        assert.equal(result.logs[1].event, 'RequestScryptHashValidation', 'Request scrypt hash validation');
-        plaintext = result.logs[1].args.blockHeader;
-        scryptHash = result.logs[1].args.blockScryptHash;
-        proposalId = result.logs[1].args.proposalId;
+        result = await battleManager.requestScryptHashValidation(superblock1, session1, hashes[0], { from: challenger });
+        assert.equal(result.logs[0].event, 'RequestScryptHashValidation', 'Request scrypt hash validation');
+        plaintext = result.logs[0].args.blockHeader;
+        scryptHash = result.logs[0].args.blockScryptHash;
+        proposalId = result.logs[0].args.proposalId;
       });
       it('Start scrypt hash validation', async () => {
-        result = await scryptChecker.checkScrypt(plaintext, scryptHash, proposalId, claimManager.address, { from: submitter });
+        result = await scryptChecker.checkScrypt(plaintext, scryptHash, proposalId, battleManager.address, { from: submitter });
         assert.equal(result.logs[1].event, 'ClaimCreated', 'Create scrypt hash claim');
         claimID = result.logs[1].args.claimID;
         // Make a challenge
@@ -258,9 +270,8 @@ contract('verifyScryptHash', (accounts) => {
       });
       it('Verify superblock', async () => {
         // Verify superblock
-        result = await claimManager.verifySuperblock(session1, { from: submitter });
-        assert.equal(result.logs[0].event, 'SuperblockBattleDecided', 'Superblock verified');
-        assert.equal(result.logs[1].event, 'ChallengerConvicted', 'Challenger failed');
+        result = await battleManager.verifySuperblock(session1, { from: submitter });
+        assert.equal(result.logs[0].event, 'ChallengerConvicted', 'Challenger failed');
 
         // Confirm superblock
         await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
@@ -279,14 +290,14 @@ contract('verifyScryptHash', (accounts) => {
         let computeStep;
 
         // Request scrypt hash validation
-        result = await claimManager.requestScryptHashValidation(superblock1, session1, hashes[0], { from: challenger });
-        assert.equal(result.logs[1].event, 'RequestScryptHashValidation', 'Request scrypt hash validation');
-        plaintext = result.logs[1].args.blockHeader;
-        scryptHash = result.logs[1].args.blockScryptHash;
-        proposalId = result.logs[1].args.proposalId;
+        result = await battleManager.requestScryptHashValidation(superblock1, session1, hashes[0], { from: challenger });
+        assert.equal(result.logs[0].event, 'RequestScryptHashValidation', 'Request scrypt hash validation');
+        plaintext = result.logs[0].args.blockHeader;
+        scryptHash = result.logs[0].args.blockScryptHash;
+        proposalId = result.logs[0].args.proposalId;
       });
       it('Start scrypt hash validation', async () => {
-        result = await scryptChecker.checkScrypt(plaintext, scryptHash, proposalId, claimManager.address, { from: submitter });
+        result = await scryptChecker.checkScrypt(plaintext, scryptHash, proposalId, battleManager.address, { from: submitter });
         assert.equal(result.logs[1].event, 'ClaimCreated', 'Create scrypt hash claim');
         claimID = result.logs[1].args.claimID;
         // Make a challenge
@@ -384,9 +395,8 @@ contract('verifyScryptHash', (accounts) => {
       });
       it('Verify superblock', async () => {
         // Verify superblock
-        result = await claimManager.verifySuperblock(session1, { from: challenger });
-        assert.equal(result.logs[0].event, 'SuperblockBattleDecided', 'Superblock failed');
-        assert.equal(result.logs[1].event, 'SubmitterConvicted', 'Superblock failed');
+        result = await battleManager.verifySuperblock(session1, { from: challenger });
+        assert.equal(result.logs[0].event, 'SubmitterConvicted', 'Superblock failed');
         // Confirm superblock
         await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
         result = await claimManager.checkClaimFinished(superblock1, { from: challenger });
@@ -404,18 +414,18 @@ contract('verifyScryptHash', (accounts) => {
         let computeStep;
 
         // Request scrypt hash validation
-        result = await claimManager.requestScryptHashValidation(superblock1, session1, hashes[0], { from: challenger });
-        assert.equal(result.logs[1].event, 'RequestScryptHashValidation', 'Request scrypt hash validation');
-        plaintext = result.logs[1].args.blockHeader;
-        scryptHash = result.logs[1].args.blockScryptHash;
-        proposalId = result.logs[1].args.proposalId;
+        result = await battleManager.requestScryptHashValidation(superblock1, session1, hashes[0], { from: challenger });
+        assert.equal(result.logs[0].event, 'RequestScryptHashValidation', 'Request scrypt hash validation');
+        plaintext = result.logs[0].args.blockHeader;
+        scryptHash = result.logs[0].args.blockScryptHash;
+        proposalId = result.logs[0].args.proposalId;
       });
       it('Timeout without sumitting to scrypt checker', async () => {
-        result = await claimManager.timeout(session1, { from: challenger });
+        result = await battleManager.timeout(session1, { from: challenger });
         assert.equal(result.logs[0].event, 'ErrorBattle', 'Timeout did not elapse');
         await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
-        result = await claimManager.timeout(session1, { from: challenger });
-        assert.equal(result.logs[1].event, 'SubmitterConvicted', 'Scrypt hash failed');
+        result = await battleManager.timeout(session1, { from: challenger });
+        assert.equal(result.logs[0].event, 'SubmitterConvicted', 'Scrypt hash failed');
       });
       it('Confirm superblock', async () => {
         await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
@@ -434,13 +444,13 @@ contract('verifyScryptHash', (accounts) => {
         let computeStep;
 
         // Request scrypt hash validation
-        result = await claimManager.requestScryptHashValidation(superblock1, session1, hashes[0], { from: challenger });
-        assert.equal(result.logs[1].event, 'RequestScryptHashValidation', 'Request scrypt hash validation');
-        plaintext = result.logs[1].args.blockHeader;
-        scryptHash = result.logs[1].args.blockScryptHash;
-        proposalId = result.logs[1].args.proposalId;
+        result = await battleManager.requestScryptHashValidation(superblock1, session1, hashes[0], { from: challenger });
+        assert.equal(result.logs[0].event, 'RequestScryptHashValidation', 'Request scrypt hash validation');
+        plaintext = result.logs[0].args.blockHeader;
+        scryptHash = result.logs[0].args.blockScryptHash;
+        proposalId = result.logs[0].args.proposalId;
         // Start scrypt hash validation
-        result = await scryptChecker.checkScrypt(plaintext, scryptHash, proposalId, claimManager.address, { from: submitter });
+        result = await scryptChecker.checkScrypt(plaintext, scryptHash, proposalId, battleManager.address, { from: submitter });
         assert.equal(result.logs[1].event, 'ClaimCreated', 'Create scrypt hash claim');
         claimID = result.logs[1].args.claimID;
       });
@@ -450,11 +460,11 @@ contract('verifyScryptHash', (accounts) => {
         assert.equal(result.logs[1].event, 'ClaimSuccessful', 'Scrypt hash unchallenged');
       });
       it('Timeout after challenger abandoned', async () => {
-        result = await claimManager.timeout(session1, { from: submitter });
+        result = await battleManager.timeout(session1, { from: submitter });
         assert.equal(result.logs[0].event, 'ErrorBattle', 'Timeout did not elapse');
         await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
-        result = await claimManager.timeout(session1, { from: submitter });
-        assert.equal(result.logs[1].event, 'ChallengerConvicted', 'Challenger abandoned');
+        result = await battleManager.timeout(session1, { from: submitter });
+        assert.equal(result.logs[0].event, 'ChallengerConvicted', 'Challenger abandoned');
       });
       it('Confirm superblock', async () => {
         await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
