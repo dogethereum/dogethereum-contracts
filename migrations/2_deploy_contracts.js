@@ -86,7 +86,7 @@ async function deployDevelopment(deployer, network, accounts, networkId, trusted
     networkId,
     DogeSuperblocks.address,
     superblockTimes.DURATION,
-    superblockTimes.TIMEOUT
+    superblockTimes.TIMEOUT,
   );
 
   await deployer.deploy(DogeClaimManager,
@@ -94,7 +94,7 @@ async function deployDevelopment(deployer, network, accounts, networkId, trusted
     DogeBattleManager.address,
     superblockTimes.DELAY,
     superblockTimes.TIMEOUT,
-    superblockTimes.CONFIRMATIONS
+    superblockTimes.CONFIRMATIONS,
   );
 
   await deployer.deploy(ScryptCheckerDummy, true)
@@ -118,7 +118,7 @@ async function deployIntegration(deployer, network, accounts, networkId, trusted
   await deployer.deploy(ECRecovery, {gas: 100000});
 
   await deployer.link(Set, DogeToken);
-  await deployer.link(DogeTx, [DogeToken, DogeSuperblocks, DogeClaimManager]);
+  await deployer.link(DogeTx, [DogeToken, DogeSuperblocks, DogeBattleManager, DogeClaimManager]);
   await deployer.link(ECRecovery, DogeToken);
 
   await deployer.deploy(ScryptCheckerDummy, true, {gas: 1500000})
@@ -131,24 +131,32 @@ async function deployIntegration(deployer, network, accounts, networkId, trusted
     {gas: 4000000 }
   );
 
-  await deployer.deploy(DogeClaimManager,
+  await deployer.deploy(DogeBattleManager,
     networkId,
     DogeSuperblocks.address,
     superblockTimes.DURATION,
+    superblockTimes.TIMEOUT,
+    {gas: 4000000},
+  );
+
+  await deployer.deploy(DogeClaimManager,
+    DogeSuperblocks.address,
+    DogeBattleManager.address,
     superblockTimes.DELAY,
     superblockTimes.TIMEOUT,
     superblockTimes.CONFIRMATIONS,
-    { gas: 6800000 }
+    {gas: 4000000},
   );
 
   const superblocks = DogeSuperblocks.at(DogeSuperblocks.address);
   await superblocks.setClaimManager(DogeClaimManager.address, {gas: 60000});
 
-  const dogeClaimManager = DogeClaimManager.at(DogeClaimManager.address);
+  const dogeBattleManager = DogeBattleManager.at(DogeBattleManager.address);
+  await dogeBattleManager.setDogeClaimManager(DogeClaimManager.address);
   if (network === 'rinkeby' && typeof process.env.CLAIM_MANAGER_ADDRESS !== 'undefined') {
-    await dogeClaimManager.setScryptChecker(process.env.CLAIM_MANAGER_ADDRESS, {gas: 60000});
+    await dogeBattleManager.setScryptChecker(process.env.CLAIM_MANAGER_ADDRESS, {gas: 60000});
   } else {
-    await dogeClaimManager.setScryptChecker(ScryptCheckerDummy.address, {gas: 60000});
+    await dogeBattleManager.setScryptChecker(ScryptCheckerDummy.address, {gas: 60000});
   }
 }
 
