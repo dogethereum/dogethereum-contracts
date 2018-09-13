@@ -69,21 +69,21 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
 
     // Represents an unlock request
     struct Unlock {
-          address from;
-          string dogeAddress;
-          uint value;
-          uint operatorFee;
-          uint timestamp;
-          // Values are indexes in storage array "utxos"
-          uint32[] selectedUtxos;
-          uint dogeTxFee;
-          bytes20 operatorPublicKeyHash;
+        address from;
+        string dogeAddress;
+        uint value;
+        uint operatorFee;
+        uint timestamp;
+        // Values are indexes in storage array "utxos"
+        uint32[] selectedUtxos;
+        uint dogeTxFee;
+        bytes20 operatorPublicKeyHash;
     }
 
     struct Utxo {
-          uint value;
-          uint txHash;
-          uint16 index;
+        uint value;
+        uint txHash;
+        uint16 index;
     }
 
     struct Operator {
