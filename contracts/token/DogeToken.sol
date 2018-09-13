@@ -40,8 +40,9 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
     uint constant ERR_UNLOCK_VALUE_TO_SEND_LESS_THAN_FEE = 60140;
     uint constant ERR_LOCK_MIN_LOCK_VALUE = 60150;
 
-    // Variables sets by constructor
-    // Contract to trust for tx inclueded in a doge block verification.
+    // Variables set by constructor
+
+    // Contract to trust for tx included in a doge block verification.
     // Only doge txs relayed from trustedRelayerContract will be accepted.
     address public trustedRelayerContract;
     // Doge-Eth price oracle to trust.
@@ -52,7 +53,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
 
     // counter for next unlock
     uint32 public unlockIdx;
-    // Unlocks the investor has not sent a proof of unlock yet.
+    // Unlocks for which the investor has not sent a proof of unlock yet.
     mapping (uint32 => Unlock) public unlocksPendingInvestorProof;
     // Doge-Eth currencies current market price.
     uint public dogeEthPrice;
@@ -142,12 +143,12 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         bytes20 operatorPublicKeyHash = DogeTx.pub2PubKeyHash(operatorPublicKeyX, operatorPublicKeyOdd);
         //log0(operatorPublicKeyHash);
         Operator storage operator = operators[operatorPublicKeyHash];
-        // Check operator does not exists yet
+        // Check that operator does not exist yet
         //log1(bytes20(operator.ethAddress), bytes32((operator.ethAddress == 0) ? 0 : 1));
         if (operator.ethAddress != 0) {
             emit ErrorDogeToken(ERR_OPERATOR_ALREADY_CREATED);
             return;
-        }        
+        }
         operator.ethAddress = msg.sender;
         operator.operatorKeyIndex = uint24(operatorKeys.length);
         operatorKeys.push(OperatorKey(operatorPublicKeyHash, false));
@@ -159,11 +160,11 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         if (operator.ethAddress != msg.sender) {
             emit ErrorDogeToken(ERR_OPERATOR_NOT_CREATED_OR_WRONG_SENDER);
             return;
-        }        
+        }
         if (operator.dogeAvailableBalance != 0 || operator.dogePendingBalance != 0 || operator.ethBalance != 0) {
             emit ErrorDogeToken(ERR_OPERATOR_HAS_BALANCE);
             return;
-        }        
+        }
 
         OperatorKey storage operatorKey = operatorKeys[operator.operatorKeyIndex]; 
         operatorKey.deleted = true;
@@ -180,7 +181,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         if (operator.ethAddress != msg.sender) {
             emit ErrorDogeToken(ERR_OPERATOR_NOT_CREATED_OR_WRONG_SENDER);
             return;
-        }        
+        }
         operator.ethBalance += msg.value;
     }
 
@@ -193,7 +194,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         if (operator.ethBalance < value) {
             emit ErrorDogeToken(ERR_OPERATOR_WITHDRAWAL_NOT_ENOUGH_BALANCE);
             return;
-        }        
+        }
         if ((operator.ethBalance - value) / dogeEthPrice < (operator.dogeAvailableBalance + operator.dogePendingBalance) * collateralRatio) {
             emit ErrorDogeToken(ERR_OPERATOR_WITHDRAWAL_COLLATERAL_WOULD_BE_TOO_LOW);
             return;        
@@ -211,7 +212,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         if (operator.ethAddress == 0) {
             emit ErrorDogeToken(ERR_PROCESS_OPERATOR_NOT_CREATED);
             return;
-        }        
+        }
 
         uint value;
         bytes32 firstInputPublicKeyX;
@@ -304,12 +305,12 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         }
 
         Operator storage operator = operators[operatorPublicKeyHash];
-        // Check operator exists 
+        // Check that operator exists 
         if (operator.ethAddress == 0) {
             emit ErrorDogeToken(ERR_UNLOCK_OPERATOR_NOT_CREATED);
             return;
         }
-        // Check operator available balance is enough
+        // Check that operator available balance is enough
         if (operator.dogeAvailableBalance < value) {
             emit ErrorDogeToken(ERR_UNLOCK_OPERATOR_BALANCE);
             return;
