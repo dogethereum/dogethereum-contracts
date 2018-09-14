@@ -11,14 +11,11 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
     // Lock constants
     uint public constant MIN_LOCK_VALUE = 300000000; // 3 doges
     uint public constant OPERATOR_LOCK_FEE = 10; // 1 = 0.1%
-    uint public constant OPERATOR_MIN_LOCK_FEE = 100000000; // 1 doge
     uint public constant SUPERBLOCK_SUBMITTER_LOCK_FEE = 10; // 1 = 0.1%
-    uint public constant SUPERBLOCK_SUBMITTER_MIN_LOCK_FEE = 100000000; // 1 doge
 
     // Unlock constants
     uint public constant MIN_UNLOCK_VALUE = 300000000; // 3 doges
     uint public constant OPERATOR_UNLOCK_FEE = 10; // 1 = 0.1%
-    uint public constant OPERATOR_MIN_UNLOCK_FEE = 100000000; // 1 doge
     uint constant DOGE_TX_BASE_FEE = 50000000; // 0.5 doge
     uint constant DOGE_TX_FEE_PER_INPUT = 100000000; // 1 doge
 
@@ -269,18 +266,12 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         address destinationAddress = DogeTx.pub2address(uint(firstInputPublicKeyX), firstInputPublicKeyOdd);
 
         uint operatorFee = value * OPERATOR_LOCK_FEE / 1000;
-        if (operatorFee < OPERATOR_MIN_LOCK_FEE) {
-            operatorFee = OPERATOR_MIN_LOCK_FEE;
-        }
         balances[operatorEthAddress] += operatorFee;
         emit NewToken(operatorEthAddress, operatorFee);
         // Hack to make etherscan show the event
         emit Transfer(0, operatorEthAddress, operatorFee);
 
         uint superblockSubmitterFee = value * SUPERBLOCK_SUBMITTER_LOCK_FEE / 1000;
-        if (superblockSubmitterFee < SUPERBLOCK_SUBMITTER_MIN_LOCK_FEE) {
-            superblockSubmitterFee = SUPERBLOCK_SUBMITTER_MIN_LOCK_FEE;
-        }
         balances[superblockSubmitterAddress] += superblockSubmitterFee;
         emit NewToken(superblockSubmitterAddress, superblockSubmitterFee);
         // Hack to make etherscan show the event
@@ -332,9 +323,6 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         }
 
         uint operatorFee = value * OPERATOR_UNLOCK_FEE / 1000;
-        if (operatorFee < OPERATOR_MIN_UNLOCK_FEE) {
-            operatorFee = OPERATOR_MIN_UNLOCK_FEE;
-        }
         uint unlockValue = value - operatorFee;
 
         uint32[] memory selectedUtxos;
