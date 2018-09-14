@@ -1,6 +1,6 @@
 const DogeSuperblocks = artifacts.require("DogeSuperblocks");
 const DogeClaimManager = artifacts.require("DogeClaimManager");
-
+const DogeBattleManager = artifacts.require("DogeBattleManager");
 
 async function challengeNextSuperblock(from, toChallenge, deposit) {
   try {
@@ -161,13 +161,14 @@ function challengeStateToText(state) {
   if (typeof challengeStates[state] !== 'undefined') {
     return challengeStates[state];
   }
-  return '--Invalid state--';
+  return `--Invalid state (${state})--`;
 }
 
 async function displaySuperblocksStatus({ superblockId, fromBlock, toBlock }) {
   try {
     const sb = await DogeSuperblocks.deployed();
     const cm = await DogeClaimManager.deployed();
+    const bm = await DogeBattleManager.deployed();
 
     const getBattleStatus = async (superblockId, challenger) => {
       const sessionId = await cm.getSession(superblockId, challenger);
@@ -184,7 +185,7 @@ async function displaySuperblocksStatus({ superblockId, fromBlock, toBlock }) {
         countBlockHeaderResponses,
         pendingScryptHashId,
         challengeState,
-      ] = await cm.sessions(sessionId);
+      ] = await bm.sessions(sessionId);
       return {
         sessionId,
         battle: {
@@ -233,26 +234,10 @@ async function displaySuperblocksStatus({ superblockId, fromBlock, toBlock }) {
       };
     };
 
-    const displayBattle = (claim, claimant, challenger, sessionId, idx, battle) => {
-      if (!claim.decided) {
-        if (claim.verificationOngoing) {
-          console.log(`        Last action timestamp: ${new Date(battle.lastActionTimestamp * 1000)}`);
-          console.log(`        Last action: ${parseInt(battle.lastActionClaimant) > parseInt(battle.lastActionChallenger) ? 'claimant' : 'challenger'}`);
-          console.log(`        State: ${challengeStateToText(battle.challengeState)}`);
-        } else {
-          console.log('        State: paused/stopped');
-        }
-      } else {
-        console.log(JSON.stringify(battle, null, '  '));
-        if (battle.id !== sessionId) {
-
-        }
-        /* if(claim.decided) {
-          console.log(`        Last action timestamp: ${new Date(battle.lastActionTimestamp * 1000)}`);
-        } else {
-
-        } */
-      }
+    const displayBattle = (battle) => {
+      console.log(`        Last action timestamp: ${new Date(battle.lastActionTimestamp * 1000)}`);
+      console.log(`        Last action: ${parseInt(battle.lastActionClaimant) > parseInt(battle.lastActionChallenger) ? 'claimant' : 'challenger'}`);
+      console.log(`        State: ${challengeStateToText(battle.challengeState)}`);
     };
 
     const displaySuperblock = async (superblockId) => {
@@ -294,9 +279,10 @@ async function displaySuperblocksStatus({ superblockId, fromBlock, toBlock }) {
             if (claim.decided) {
               console.log(`    Challenge state: ${claim.invalid ? 'succeeded' : 'failed'}`);
             } else if (claim.verificationOngoing) {
-              console.log(`    Challenge state: ${challengeStateToText(battle.challengeState)}`);
+              displayBattle(battles[idx].battle);
+              console.log(`    Challenge state: ${challengeStateToText(battles[idx].battle.challengeState)}`);
             } else {
-              console.log('    Challenge state: paused/stopped');
+              console.log('    Challenge state: waiting');
             }
           } else if (idx + 1 < claim.currentChallenger) {
             console.log('    Challenge state: failed');
