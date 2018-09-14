@@ -30,7 +30,7 @@ contract('testDogeTokenDoUnlock', function(accounts) {
     assert.equal(unlockPendingInvestorProof[0], accounts[0], `Unlock from is not the expected one`);
     assert.equal(unlockPendingInvestorProof[1], dogeAddress, `Unlock doge address is not the expected one`);
     assert.equal(unlockPendingInvestorProof[2].toNumber(), 1000000000, `Unlock value is not the expected one`);
-    assert.equal(unlockPendingInvestorProof[3].toNumber(), 100000000, `Unlock operator fee is not the expected one`);
+    assert.equal(unlockPendingInvestorProof[3].toNumber(), 10000000, `Unlock operator fee is not the expected one`);
     assert.equal(unlockPendingInvestorProof[5][0].toNumber(), 0, `Unlock selectedUtxos is not the expected one`);
     assert.equal(unlockPendingInvestorProof[6].toNumber(), 150000000, `Unlock fee is not the expected one`);
     assert.equal(unlockPendingInvestorProof[7], operatorPublicKeyHash, `Unlock operatorPublicKeyHash is not the expected one`);
@@ -39,14 +39,14 @@ contract('testDogeTokenDoUnlock', function(accounts) {
     assert.equal(balance.toNumber(), 1000000000, `DogeToken's user balance after unlock is not the expected one`);
 
     var operatorTokenBalance = await dogeToken.balanceOf(operatorEthAddress);
-    assert.equal(operatorTokenBalance.toNumber(), 100000000, `DogeToken's operator balance after unlock is not the expected one`);
+    assert.equal(operatorTokenBalance.toNumber(), 10000000, `DogeToken's operator balance after unlock is not the expected one`);
 
     var unlockIdx = await dogeToken.unlockIdx();
     assert.equal(unlockIdx, 1, 'unlockIdx is not the expected one');
 
     var operator = await dogeToken.operators(operatorPublicKeyHash);
     assert.equal(operator[1].toString(10), 0, 'operator dogeAvailableBalance is not the expected one');
-    assert.equal(operator[2].toString(10), 1100000000, 'operator dogePendingBalance is not the expected one');
+    assert.equal(operator[2].toString(10), 1010000000, 'operator dogePendingBalance is not the expected one');
     assert.equal(operator[3], 1, 'operator nextUnspentUtxoIndex is not the expected one');
 
   });
