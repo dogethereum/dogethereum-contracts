@@ -38,7 +38,10 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
     uint constant ERR_UNLOCK_NO_AVAILABLE_UTXOS = 60120;
     uint constant ERR_UNLOCK_UTXOS_VALUE_LESS_THAN_VALUE_TO_SEND = 60130;
     uint constant ERR_UNLOCK_VALUE_TO_SEND_LESS_THAN_FEE = 60140;
-    uint constant ERR_LOCK_MIN_LOCK_VALUE = 60150;
+    uint constant ERR_UNLOCK_BAD_ADDR_LENGTH = 60150;
+    uint constant ERR_UNLOCK_BAD_ADDR_PREFIX = 60160;
+    uint constant ERR_UNLOCK_BAD_ADDR_CHAR = 60170;
+    uint constant ERR_LOCK_MIN_LOCK_VALUE = 60180;
 
     // Variables set by constructor
 
@@ -304,6 +307,18 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
             return;
         }
 
+        bytes memory dogeAddressBytes = bytes(dogeAddress);
+        uint dogeAddressErrorCode = checkDogeAddressValidity(dogeAddressBytes);
+        if (dogeAddressErrorCode != 0) {
+            emit ErrorDogeToken(dogeAddressErrorCode);
+            return;
+        }
+        // bytes32 iHateSolidity;
+        // assembly {
+        //     iHateSolidity := mload(add(dogeAddressBytes, 32))
+        // }
+        // log3(bytes32(0xdeadbeef), iHateSolidity, bytes32(dogeAddressBytes[0]), bytes32(dogeAddressBytes.length));
+
         Operator storage operator = operators[operatorPublicKeyHash];
         // Check that operator exists 
         if (operator.ethAddress == 0) {
@@ -350,6 +365,39 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         operator.nextUnspentUtxoIndex += uint32(selectedUtxos.length);
         unlockIdx++;
         return true;
+    }
+
+    function checkDogeAddressValidity(bytes _dogeAddressBytes) private returns (uint) {
+        if (_dogeAddressBytes.length != 34) {
+            return ERR_UNLOCK_BAD_ADDR_LENGTH;
+        }
+
+        bytes1 secondChar = _dogeAddressBytes[1];
+        
+        // First character should be 'D' and second character should be either a number or an uppercase letter,
+        // except for O, I or 0
+        if (_dogeAddressBytes[0] != 0x44 ||
+            !((secondChar >= 0x41 && secondChar <= 0x5a) || (secondChar >= 0x31 && secondChar <= 0x39)) ||
+            secondChar == 0x4f) {
+            return ERR_UNLOCK_BAD_ADDR_PREFIX;
+        }
+
+        bytes1 currentChar;
+
+        for (uint i = 2; i < 34; i++) {
+            currentChar = _dogeAddressBytes[i];
+            
+            // Character must be alphanumeric and not in {I, l, O, 0}
+            if (!((currentChar >= 0x41 && currentChar <= 0x5a) || (currentChar >= 0x31 && currentChar <= 0x39) ||
+                (currentChar >= 0x61 && currentChar <= 0x7a)) ||
+                currentChar == 0x49 || currentChar == 0x6c || currentChar == 0x4f) {
+                return ERR_UNLOCK_BAD_ADDR_CHAR;
+            }
+        }
+
+        // TODO: verify checksum
+
+        return 0;
     }
 
     function selectUtxosAndFee(uint valueToSend, Operator operator) private pure returns (uint errorCode, uint32[] memory selectedUtxos, uint dogeTxFee, uint changeValue) {
