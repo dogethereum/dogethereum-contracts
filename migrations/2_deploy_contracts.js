@@ -128,7 +128,7 @@ async function deployIntegration(deployer, network, accounts, networkId, trusted
     DogeSuperblocks.address,
     trustedDogeEthPriceOracle,
     collateralRatio,
-    {gas: 4000000 }
+    {gas: 5000000 }
   );
 
   await deployer.deploy(DogeBattleManager,
