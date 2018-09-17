@@ -298,17 +298,17 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
             return;
         }
 
-        bytes memory dogeAddressBytes = bytes(dogeAddress);
-        uint dogeAddressErrorCode = checkDogeAddressValidity(dogeAddressBytes);
+        bytes memory base58DogeAddress = bytes(dogeAddress);
+        uint dogeAddressErrorCode = checkDogeAddressValidity(base58DogeAddress);
         if (dogeAddressErrorCode != 0) {
             emit ErrorDogeToken(dogeAddressErrorCode);
             return;
         }
         // bytes32 iHateSolidity;
         // assembly {
-        //     iHateSolidity := mload(add(dogeAddressBytes, 32))
+        //     iHateSolidity := mload(add(base58DogeAddress, 32))
         // }
-        // log3(bytes32(0xdeadbeef), iHateSolidity, bytes32(dogeAddressBytes[0]), bytes32(dogeAddressBytes.length));
+        // log3(bytes32(0xdeadbeef), iHateSolidity, bytes32(base58DogeAddress[0]), bytes32(base58DogeAddress.length));
 
         Operator storage operator = operators[operatorPublicKeyHash];
         // Check that operator exists 
@@ -355,16 +355,17 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         return true;
     }
 
-    function checkDogeAddressValidity(bytes _dogeAddressBytes) private returns (uint) {
-        if (_dogeAddressBytes.length != 34) {
+    function checkDogeAddressValidity(bytes _base58DogeAddress) private returns (uint) {
+        if (_base58DogeAddress.length != 34) {
             return ERR_UNLOCK_BAD_ADDR_LENGTH;
         }
 
-        bytes1 secondChar = _dogeAddressBytes[1];
+        bytes1 secondChar = _base58DogeAddress[1];
         
         // First character should be 'D' and second character should be either a number or an uppercase letter,
         // except for O, I or 0
-        if (_dogeAddressBytes[0] != 0x44 ||
+        // TODO: add checks for testnet and regtest. As of now, this might fail on either of them
+        if (_base58DogeAddress[0] != 0x44 ||
             !((secondChar >= 0x41 && secondChar <= 0x5a) || (secondChar >= 0x31 && secondChar <= 0x39)) ||
             secondChar == 0x4f) {
             return ERR_UNLOCK_BAD_ADDR_PREFIX;
@@ -373,7 +374,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         bytes1 currentChar;
 
         for (uint i = 2; i < 34; i++) {
-            currentChar = _dogeAddressBytes[i];
+            currentChar = _base58DogeAddress[i];
             
             // Character must be alphanumeric and not in {I, l, O, 0}
             if (!((currentChar >= 0x41 && currentChar <= 0x5a) || (currentChar >= 0x31 && currentChar <= 0x39) ||
