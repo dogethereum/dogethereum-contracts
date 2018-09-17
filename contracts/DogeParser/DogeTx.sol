@@ -274,9 +274,6 @@ library DogeTx {
              returns (bytes32, bool)
     {
         uint pos;
-        uint[] memory input_script_lens;
-        // The line above fires a warning because the variable hasn't been used.
-        // It's probably NOT a good idea to comment it until the function is more or less finished because the warning could be useful for debugging.
 
         pos = 4;  // skip version
 
