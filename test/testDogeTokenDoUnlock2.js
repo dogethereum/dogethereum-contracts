@@ -24,7 +24,7 @@ contract('testDogeTokenDoUnlock2', function(accounts) {
     await dogeToken.addUtxo(operatorPublicKeyHash, 900000000, 4, 1);
     await dogeToken.addUtxo(operatorPublicKeyHash, 900000000, 4, 1);
 
-    const dogeAddress = "DHx8ZyJJuiFM5xAHFypfz1k6bd2X85xNMy";
+    const dogeAddress = utils.base58ToBytes20("DHx8ZyJJuiFM5xAHFypfz1k6bd2X85xNMy");
 
     // Unlock Request 1
     await dogeToken.doUnlock(dogeAddress, 1000000000, operatorPublicKeyHash).then(function(result) {

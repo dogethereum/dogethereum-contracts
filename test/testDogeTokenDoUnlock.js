@@ -20,7 +20,7 @@ contract('testDogeTokenDoUnlock', function(accounts) {
     const utxo = await dogeToken.getUtxo(operatorPublicKeyHash, 0);
     assert.equal(utxo[0].toNumber(), 2000000000, `Utxo value is not the expected one`);
 
-    const dogeAddress = "DHx8ZyJJuiFM5xAHFypfz1k6bd2X85xNMy";
+    const dogeAddress = utils.base58ToBytes20("DHx8ZyJJuiFM5xAHFypfz1k6bd2X85xNMy");
     await dogeToken.doUnlock(dogeAddress, 1000000000, operatorPublicKeyHash).then(function(result) {
       //console.log(result.receipt.logs);
     });
@@ -48,6 +48,5 @@ contract('testDogeTokenDoUnlock', function(accounts) {
     assert.equal(operator[1].toString(10), 0, 'operator dogeAvailableBalance is not the expected one');
     assert.equal(operator[2].toString(10), 1010000000, 'operator dogePendingBalance is not the expected one');
     assert.equal(operator[3], 1, 'operator nextUnspentUtxoIndex is not the expected one');
-
   });
 });

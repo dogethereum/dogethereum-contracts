@@ -230,6 +230,11 @@ function formatHexUint(str, length) {
   return str;
 }
 
+function base58ToBytes20(str) {
+    let decoded = bitcoreLib.encoding.Base58Check.decode(str);
+    return "0x" + decoded.toString('hex').slice(2, 42);
+}
+
 module.exports = {
   SUPERBLOCK_TIMES_DOGE_REGTEST,
   DOGE_MAINNET,
@@ -426,5 +431,6 @@ module.exports = {
       var signature = "0x" + ecdsaSig.toCompact().toString('hex');
       return [operatorPublicKeyCompressedString, signature];
   },
-  forgeDogeBlockHeader
+  forgeDogeBlockHeader,
+  base58ToBytes20
 };

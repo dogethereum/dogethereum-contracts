@@ -11,7 +11,7 @@ contract('testDogeTokenDoUnlockRequires', function(accounts) {
     const operatorPublicKeyHash = `0x4d905b4b815d483cdfabcd292c6f86509d0fad82`;
 
     await dogeToken.assign(accounts[0], 3000000000);
-    const dogeAddress = "DHx8ZyJJuiFM5xAHFypfz1k6bd2X85xNMy";
+    const dogeAddress = utils.base58ToBytes20("DHx8ZyJJuiFM5xAHFypfz1k6bd2X85xNMy");
 
 
     // unlock an amount below min value.
