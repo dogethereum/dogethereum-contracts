@@ -13,7 +13,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
 
     struct SuperblockClaim {
         bytes32 superblockId;                       // Superblock Id
-        address claimant;                           // Superblock submitter
+        address submitter;                           // Superblock submitter
         uint createdAt;                             // Superblock creation time
 
         address[] challengers;                      // List of challengers
@@ -50,13 +50,13 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
 
     event DepositBonded(bytes32 claimId, address account, uint amount);
     event DepositUnbonded(bytes32 claimId, address account, uint amount);
-    event SuperblockClaimCreated(bytes32 claimId, address claimant, bytes32 superblockId);
+    event SuperblockClaimCreated(bytes32 claimId, address submitter, bytes32 superblockId);
     event SuperblockClaimChallenged(bytes32 claimId, address challenger);
     event SuperblockBattleDecided(bytes32 sessionId, address winner, address loser);
-    event SuperblockClaimSuccessful(bytes32 claimId, address claimant, bytes32 superblockId);
-    event SuperblockClaimPending(bytes32 claimId, address claimant, bytes32 superblockId);
-    event SuperblockClaimFailed(bytes32 claimId, address claimant, bytes32 superblockId);
-    event VerificationGameStarted(bytes32 claimId, address claimant, address challenger, bytes32 sessionId);
+    event SuperblockClaimSuccessful(bytes32 claimId, address submitter, bytes32 superblockId);
+    event SuperblockClaimPending(bytes32 claimId, address submitter, bytes32 superblockId);
+    event SuperblockClaimFailed(bytes32 claimId, address submitter, bytes32 superblockId);
+    event VerificationGameStarted(bytes32 claimId, address submitter, address challenger, bytes32 sessionId);
 
     event ErrorClaim(bytes32 claimId, uint err);
 
@@ -193,7 +193,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
         }
 
         claim.superblockId = superblockId;
-        claim.claimant = msg.sender;
+        claim.submitter = msg.sender;
         claim.currentChallenger = 0;
         claim.decided = false;
         claim.invalid = false;
@@ -275,10 +275,10 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
 
         if (claim.currentChallenger < claim.challengers.length) {
 
-            bytes32 sessionId = dogeBattleManager.beginBattleSession(claimId, claim.claimant, claim.challengers[claim.currentChallenger]);
+            bytes32 sessionId = dogeBattleManager.beginBattleSession(claimId, claim.submitter, claim.challengers[claim.currentChallenger]);
 
             claim.sessions[claim.challengers[claim.currentChallenger]] = sessionId;
-            emit VerificationGameStarted(claimId, claim.claimant, claim.challengers[claim.currentChallenger], sessionId);
+            emit VerificationGameStarted(claimId, claim.submitter, claim.challengers[claim.currentChallenger], sessionId);
 
             claim.verificationOngoing = true;
             claim.currentChallenger += 1;
@@ -313,7 +313,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
             // or superblock data is inconsistent
             claim.decided = true;
             superblocks.invalidate(claim.superblockId, msg.sender);
-            emit SuperblockClaimFailed(claimId, claim.claimant, claim.superblockId);
+            emit SuperblockClaimFailed(claimId, claim.submitter, claim.superblockId);
             doPayChallengers(claimId, claim);
             return false;
         }
@@ -344,11 +344,11 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
 
         if (confirmImmediately) {
             superblocks.confirm(claim.superblockId, msg.sender);
-            unbondDeposit(claimId, claim.claimant);
-            emit SuperblockClaimSuccessful(claimId, claim.claimant, claim.superblockId);
+            unbondDeposit(claimId, claim.submitter);
+            emit SuperblockClaimSuccessful(claimId, claim.submitter, claim.superblockId);
         } else {
             superblocks.semiApprove(claim.superblockId, msg.sender);
-            emit SuperblockClaimPending(claimId, claim.claimant, claim.superblockId);
+            emit SuperblockClaimPending(claimId, claim.submitter, claim.superblockId);
         }
         return true;
     }
@@ -403,9 +403,9 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
             emit ErrorClaim(claimId, err);
             return false;
         }
-        emit SuperblockClaimSuccessful(claimId, claim.claimant, claim.superblockId);
+        emit SuperblockClaimSuccessful(claimId, claim.submitter, claim.superblockId);
         doPaySubmitter(claimId, claim);
-        unbondDeposit(claimId, claim.claimant);
+        unbondDeposit(claimId, claim.submitter);
 
         if (confirmDescendants) {
             bytes32[] memory descendants = new bytes32[](numSuperblocks);
@@ -422,9 +422,9 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
                 claim = claims[id];
                 (err, ) = superblocks.confirm(id, msg.sender);
                 require(err == ERR_SUPERBLOCK_OK);
-                emit SuperblockClaimSuccessful(id, claim.claimant, claim.superblockId);
+                emit SuperblockClaimSuccessful(id, claim.submitter, claim.superblockId);
                 doPaySubmitter(id, claim);
-                unbondDeposit(id, claim.claimant);
+                unbondDeposit(id, claim.submitter);
             }
         }
 
@@ -467,7 +467,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
             }
 
             superblocks.invalidate(claimId, msg.sender);
-            emit SuperblockClaimFailed(claimId, claim.claimant, claim.superblockId);
+            emit SuperblockClaimFailed(claimId, claim.submitter, claim.superblockId);
             doPayChallengers(claimId, claim);
             return true;
         }
@@ -488,11 +488,11 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
 
         claim.verificationOngoing = false;
 
-        if (claim.claimant == loser) {
+        if (claim.submitter == loser) {
             // the claim is over.
             // Trigger end of verification game
             claim.invalid = true;
-        } else if (claim.claimant == winner) {
+        } else if (claim.submitter == winner) {
             // the claim continues.
             // It should not fail when called from sessionDecided
             runNextBattleSession(claimId);
@@ -506,8 +506,8 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
     // @dev - Pay challengers than run their challenge with submitter deposits
     // Challengers that do not run will be returned their deposits
     function doPayChallengers(bytes32 claimId, SuperblockClaim storage claim) internal {
-        uint rewards = claim.bondedDeposits[claim.claimant];
-        claim.bondedDeposits[claim.claimant] = 0;
+        uint rewards = claim.bondedDeposits[claim.submitter];
+        claim.bondedDeposits[claim.submitter] = 0;
         uint totalDeposits = 0;
         uint idx = 0;
         for (idx=0; idx<claim.currentChallenger; ++idx) {
@@ -538,9 +538,9 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
             challenger = claim.challengers[idx];
             bondedDeposit = claim.bondedDeposits[challenger];
             claim.bondedDeposits[challenger] = 0;
-            claim.bondedDeposits[claim.claimant] += bondedDeposit;
+            claim.bondedDeposits[claim.submitter] += bondedDeposit;
         }
-        unbondDeposit(claimId, claim.claimant);
+        unbondDeposit(claimId, claim.submitter);
     }
 
     // @dev - Check if a superblock can be semi approved by calling checkClaimFinished
@@ -553,12 +553,12 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
 
     // @dev – Check if a claim exists
     function claimExists(SuperblockClaim claim) pure private returns (bool) {
-        return (claim.claimant != 0x0);
+        return (claim.submitter != 0x0);
     }
 
-    // @dev - Return a given superblock's claimant
+    // @dev - Return a given superblock's submitter
     function getClaimSubmitter(bytes32 superblockId) public view returns (address) {
-        return claims[superblockId].claimant;
+        return claims[superblockId].submitter;
     }
 
     // @dev - Return superblock submission timestamp
