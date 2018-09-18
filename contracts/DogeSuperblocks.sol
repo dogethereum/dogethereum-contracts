@@ -38,13 +38,13 @@ contract DogeSuperblocks is DogeErrorCodes {
     bytes32 public bestSuperblock;
     uint public bestSuperblockAccumulatedWork;
 
-    event NewSuperblock(bytes32 superblockId, address who);
-    event ApprovedSuperblock(bytes32 superblockId, address who);
-    event ChallengeSuperblock(bytes32 superblockId, address who);
-    event SemiApprovedSuperblock(bytes32 superblockId, address who);
-    event InvalidSuperblock(bytes32 superblockId, address who);
+    event NewSuperblock(bytes32 superblockHash, address who);
+    event ApprovedSuperblock(bytes32 superblockHash, address who);
+    event ChallengeSuperblock(bytes32 superblockHash, address who);
+    event SemiApprovedSuperblock(bytes32 superblockHash, address who);
+    event InvalidSuperblock(bytes32 superblockHash, address who);
 
-    event ErrorSuperblock(bytes32 superblockId, uint err);
+    event ErrorSuperblock(bytes32 superblockHash, uint err);
 
     event VerifyTransaction(bytes32 txHash, uint returnCode);
     event RelayTransaction(bytes32 txHash, uint returnCode);
@@ -79,7 +79,7 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @param _lastHash Hash of the last block in the superblock
     // @param _lastBits Difficulty bits of the last block in the superblock
     // @param _parentId Id of the parent superblock
-    // @return Error code and superblockId
+    // @return Error code and superblockHash
     function initialize(
         bytes32 _blocksMerkleRoot,
         uint _accumulatedWork,
@@ -92,12 +92,12 @@ contract DogeSuperblocks is DogeErrorCodes {
         require(bestSuperblock == 0);
         require(_parentId == 0);
 
-        bytes32 superblockId = calcSuperblockId(_blocksMerkleRoot, _accumulatedWork, _timestamp, _prevTimestamp, _lastHash, _lastBits, _parentId);
-        SuperblockInfo storage superblock = superblocks[superblockId];
+        bytes32 superblockHash = calcSuperblockHash(_blocksMerkleRoot, _accumulatedWork, _timestamp, _prevTimestamp, _lastHash, _lastBits, _parentId);
+        SuperblockInfo storage superblock = superblocks[superblockHash];
 
         require(superblock.status == Status.Unitialized);
 
-        indexSuperblock[indexNextSuperblock] = superblockId;
+        indexSuperblock[indexNextSuperblock] = superblockHash;
 
         superblock.blocksMerkleRoot = _blocksMerkleRoot;
         superblock.accumulatedWork = _accumulatedWork;
@@ -114,14 +114,14 @@ contract DogeSuperblocks is DogeErrorCodes {
 
         indexNextSuperblock++;
 
-        emit NewSuperblock(superblockId, msg.sender);
+        emit NewSuperblock(superblockHash, msg.sender);
 
-        bestSuperblock = superblockId;
+        bestSuperblock = superblockHash;
         bestSuperblockAccumulatedWork = _accumulatedWork;
 
-        emit ApprovedSuperblock(superblockId, msg.sender);
+        emit ApprovedSuperblock(superblockHash, msg.sender);
 
-        return (ERR_SUPERBLOCK_OK, superblockId);
+        return (ERR_SUPERBLOCK_OK, superblockHash);
     }
 
     // @dev - Proposes a new superblock
@@ -136,7 +136,7 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @param _lastHash Hash of the last block in the superblock
     // @param _lastBits Difficulty bits of the last block in the superblock
     // @param _parentId Id of the parent superblock
-    // @return Error code and superblockId
+    // @return Error code and superblockHash
     function propose(
         bytes32 _blocksMerkleRoot,
         uint _accumulatedWork,
@@ -154,18 +154,18 @@ contract DogeSuperblocks is DogeErrorCodes {
 
         SuperblockInfo storage parent = superblocks[_parentId];
         if (parent.status != Status.SemiApproved && parent.status != Status.Approved) {
-            emit ErrorSuperblock(superblockId, ERR_SUPERBLOCK_BAD_PARENT);
+            emit ErrorSuperblock(superblockHash, ERR_SUPERBLOCK_BAD_PARENT);
             return (ERR_SUPERBLOCK_BAD_PARENT, 0);
         }
 
-        bytes32 superblockId = calcSuperblockId(_blocksMerkleRoot, _accumulatedWork, _timestamp, _prevTimestamp, _lastHash, _lastBits, _parentId);
-        SuperblockInfo storage superblock = superblocks[superblockId];
+        bytes32 superblockHash = calcSuperblockHash(_blocksMerkleRoot, _accumulatedWork, _timestamp, _prevTimestamp, _lastHash, _lastBits, _parentId);
+        SuperblockInfo storage superblock = superblocks[superblockHash];
         if (superblock.status != Status.Unitialized) {
-            emit ErrorSuperblock(superblockId, ERR_SUPERBLOCK_EXIST);
+            emit ErrorSuperblock(superblockHash, ERR_SUPERBLOCK_EXIST);
             return (ERR_SUPERBLOCK_EXIST, 0);
         }
 
-        indexSuperblock[indexNextSuperblock] = superblockId;
+        indexSuperblock[indexNextSuperblock] = superblockHash;
 
         superblock.blocksMerkleRoot = _blocksMerkleRoot;
         superblock.accumulatedWork = _accumulatedWork;
@@ -182,9 +182,9 @@ contract DogeSuperblocks is DogeErrorCodes {
 
         indexNextSuperblock++;
 
-        emit NewSuperblock(superblockId, submitter);
+        emit NewSuperblock(superblockHash, submitter);
 
-        return (ERR_SUPERBLOCK_OK, superblockId);
+        return (ERR_SUPERBLOCK_OK, superblockHash);
     }
 
     // @dev - Confirm a proposed superblock
@@ -193,31 +193,31 @@ contract DogeSuperblocks is DogeErrorCodes {
     // A challenged superblock is confirmed if it has enough superblocks
     // in the main chain.
     //
-    // @param _superblockId Id of the superblock to confirm
+    // @param _superblockHash Id of the superblock to confirm
     // @param _validator Address requesting superblock confirmation
-    // @return Error code and superblockId
-    function confirm(bytes32 _superblockId, address _validator) public returns (uint, bytes32) {
+    // @return Error code and superblockHash
+    function confirm(bytes32 _superblockHash, address _validator) public returns (uint, bytes32) {
         if (msg.sender != claimManager) {
-            emit ErrorSuperblock(_superblockId, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
+            emit ErrorSuperblock(_superblockHash, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
             return (ERR_SUPERBLOCK_NOT_CLAIMMANAGER, 0);
         }
-        SuperblockInfo storage superblock = superblocks[_superblockId];
+        SuperblockInfo storage superblock = superblocks[_superblockHash];
         if (superblock.status != Status.New && superblock.status != Status.SemiApproved) {
-            emit ErrorSuperblock(_superblockId, ERR_SUPERBLOCK_BAD_STATUS);
+            emit ErrorSuperblock(_superblockHash, ERR_SUPERBLOCK_BAD_STATUS);
             return (ERR_SUPERBLOCK_BAD_STATUS, 0);
         }
         SuperblockInfo storage parent = superblocks[superblock.parentId];
         if (parent.status != Status.Approved) {
-            emit ErrorSuperblock(_superblockId, ERR_SUPERBLOCK_BAD_PARENT);
+            emit ErrorSuperblock(_superblockHash, ERR_SUPERBLOCK_BAD_PARENT);
             return (ERR_SUPERBLOCK_BAD_PARENT, 0);
         }
         superblock.status = Status.Approved;
         if (superblock.accumulatedWork > bestSuperblockAccumulatedWork) {
-            bestSuperblock = _superblockId;
+            bestSuperblock = _superblockHash;
             bestSuperblockAccumulatedWork = superblock.accumulatedWork;
         }
-        emit ApprovedSuperblock(_superblockId, _validator);
-        return (ERR_SUPERBLOCK_OK, _superblockId);
+        emit ApprovedSuperblock(_superblockHash, _validator);
+        return (ERR_SUPERBLOCK_OK, _superblockHash);
     }
 
     // @dev - Challenge a proposed superblock
@@ -225,22 +225,22 @@ contract DogeSuperblocks is DogeErrorCodes {
     // A new superblock can be challenged to start a battle
     // to verify the correctness of the data submitted.
     //
-    // @param _superblockId Id of the superblock to challenge
+    // @param _superblockHash Id of the superblock to challenge
     // @param _challenger Address requesting a challenge
-    // @return Error code and superblockId
-    function challenge(bytes32 _superblockId, address _challenger) public returns (uint, bytes32) {
+    // @return Error code and superblockHash
+    function challenge(bytes32 _superblockHash, address _challenger) public returns (uint, bytes32) {
         if (msg.sender != claimManager) {
-            emit ErrorSuperblock(_superblockId, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
+            emit ErrorSuperblock(_superblockHash, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
             return (ERR_SUPERBLOCK_NOT_CLAIMMANAGER, 0);
         }
-        SuperblockInfo storage superblock = superblocks[_superblockId];
+        SuperblockInfo storage superblock = superblocks[_superblockHash];
         if (superblock.status != Status.New && superblock.status != Status.InBattle) {
-            emit ErrorSuperblock(_superblockId, ERR_SUPERBLOCK_BAD_STATUS);
+            emit ErrorSuperblock(_superblockHash, ERR_SUPERBLOCK_BAD_STATUS);
             return (ERR_SUPERBLOCK_BAD_STATUS, 0);
         }
         superblock.status = Status.InBattle;
-        emit ChallengeSuperblock(_superblockId, _challenger);
-        return (ERR_SUPERBLOCK_OK, _superblockId);
+        emit ChallengeSuperblock(_superblockHash, _challenger);
+        return (ERR_SUPERBLOCK_OK, _superblockHash);
     }
 
     // @dev - Semi-approve a challenged superblock
@@ -249,23 +249,23 @@ contract DogeSuperblocks is DogeErrorCodes {
     // if it satisfies all the queries or when all challengers have
     // stopped participating.
     //
-    // @param _superblockId Id of the superblock to semi-approve
+    // @param _superblockHash Id of the superblock to semi-approve
     // @param _validator Address requesting semi approval
-    // @return Error code and superblockId
-    function semiApprove(bytes32 _superblockId, address _validator) public returns (uint, bytes32) {
+    // @return Error code and superblockHash
+    function semiApprove(bytes32 _superblockHash, address _validator) public returns (uint, bytes32) {
         if (msg.sender != claimManager) {
-            emit ErrorSuperblock(_superblockId, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
+            emit ErrorSuperblock(_superblockHash, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
             return (ERR_SUPERBLOCK_NOT_CLAIMMANAGER, 0);
         }
-        SuperblockInfo storage superblock = superblocks[_superblockId];
+        SuperblockInfo storage superblock = superblocks[_superblockHash];
 
         if (superblock.status != Status.InBattle && superblock.status != Status.New) {
-            emit ErrorSuperblock(_superblockId, ERR_SUPERBLOCK_BAD_STATUS);
+            emit ErrorSuperblock(_superblockHash, ERR_SUPERBLOCK_BAD_STATUS);
             return (ERR_SUPERBLOCK_BAD_STATUS, 0);
         }
         superblock.status = Status.SemiApproved;
-        emit SemiApprovedSuperblock(_superblockId, _validator);
-        return (ERR_SUPERBLOCK_OK, _superblockId);
+        emit SemiApprovedSuperblock(_superblockHash, _validator);
+        return (ERR_SUPERBLOCK_OK, _superblockHash);
     }
 
     // @dev - Invalidates a superblock
@@ -274,22 +274,22 @@ contract DogeSuperblocks is DogeErrorCodes {
     // Superblocks that are not in the main chain can be invalidates
     // if not enough superblocks follows them.
     //
-    // @param _superblockId Id of the superblock to invalidate
+    // @param _superblockHash Id of the superblock to invalidate
     // @param _validator Address requesting superblock invalidation
-    // @return Error code and superblockId
-    function invalidate(bytes32 _superblockId, address _validator) public returns (uint, bytes32) {
+    // @return Error code and superblockHash
+    function invalidate(bytes32 _superblockHash, address _validator) public returns (uint, bytes32) {
         if (msg.sender != claimManager) {
-            emit ErrorSuperblock(_superblockId, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
+            emit ErrorSuperblock(_superblockHash, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
             return (ERR_SUPERBLOCK_NOT_CLAIMMANAGER, 0);
         }
-        SuperblockInfo storage superblock = superblocks[_superblockId];
+        SuperblockInfo storage superblock = superblocks[_superblockHash];
         if (superblock.status != Status.InBattle && superblock.status != Status.SemiApproved) {
-            emit ErrorSuperblock(_superblockId, ERR_SUPERBLOCK_BAD_STATUS);
+            emit ErrorSuperblock(_superblockHash, ERR_SUPERBLOCK_BAD_STATUS);
             return (ERR_SUPERBLOCK_BAD_STATUS, 0);
         }
         superblock.status = Status.Invalid;
-        emit InvalidSuperblock(_superblockId, _validator);
-        return (ERR_SUPERBLOCK_OK, _superblockId);
+        emit InvalidSuperblock(_superblockHash, _validator);
+        return (ERR_SUPERBLOCK_OK, _superblockHash);
     }
 
     // @dev - relays transaction `_txBytes` to `_targetContract`'s processTransaction() method.
@@ -306,7 +306,7 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @param _dogeBlockHeader - block header containing transaction
     // @param _dogeBlockIndex - block's index withing superblock
     // @param _dogeBlockSiblings - block's merkle siblings
-    // @param _superblockId - superblock containing block header
+    // @param _superblockHash - superblock containing block header
     // @param _targetContract -
     function relayTx(
         bytes _txBytes,
@@ -316,22 +316,22 @@ contract DogeSuperblocks is DogeErrorCodes {
         bytes _dogeBlockHeader,
         uint _dogeBlockIndex,
         uint[] _dogeBlockSiblings,
-        bytes32 _superblockId,
+        bytes32 _superblockHash,
         TransactionProcessor _targetContract
     ) public returns (uint) {
         uint dogeBlockHash = DogeTx.dblShaFlip(_dogeBlockHeader);
 
         // Check if Doge block belongs to given superblock
         if (bytes32(DogeTx.computeMerkle(dogeBlockHash, _dogeBlockIndex, _dogeBlockSiblings))
-            != getSuperblockMerkleRoot(_superblockId)) {
+            != getSuperblockMerkleRoot(_superblockHash)) {
             // Doge block is not in superblock
             emit VerifyTransaction(bytes32(DogeTx.dblShaFlip(_txBytes)), ERR_SUPERBLOCK);
             return ERR_SUPERBLOCK;
         }
 
-        uint txHash = verifyTx(_txBytes, _txIndex, _txSiblings, _dogeBlockHeader, _superblockId);
+        uint txHash = verifyTx(_txBytes, _txIndex, _txSiblings, _dogeBlockHeader, _superblockHash);
         if (txHash != 0) {
-            uint returnCode = _targetContract.processTransaction(_txBytes, txHash, _operatorPublicKeyHash, superblocks[_superblockId].submitter);
+            uint returnCode = _targetContract.processTransaction(_txBytes, txHash, _operatorPublicKeyHash, superblocks[_superblockHash].submitter);
             emit RelayTransaction(bytes32(txHash), returnCode);
             return (returnCode);
         }
@@ -348,14 +348,14 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @param _txIndex - transaction's index within the block
     // @param _siblings - transaction's Merkle siblings
     // @param _txBlockHeaderBytes - block header containing transaction
-    // @param _txSuperblockId - superblock containing block header
+    // @param _txsuperblockHash - superblock containing block header
     // @return - SHA-256 hash of _txBytes if the transaction is in the block, 0 otherwise
     function verifyTx(
         bytes _txBytes,
         uint _txIndex,
         uint[] _siblings,
         bytes _txBlockHeaderBytes,
-        bytes32 _txSuperblockId
+        bytes32 _txsuperblockHash
     ) public returns (uint) {
         uint txHash = DogeTx.dblShaFlip(_txBytes);
 
@@ -364,7 +364,7 @@ contract DogeSuperblocks is DogeErrorCodes {
             return 0;
         }
 
-        if (helperVerifyHash(txHash, _txIndex, _siblings, _txBlockHeaderBytes, _txSuperblockId) == 1) {
+        if (helperVerifyHash(txHash, _txIndex, _siblings, _txBlockHeaderBytes, _txsuperblockHash) == 1) {
             return txHash;
         } else {
             // log is done via helperVerifyHash
@@ -382,7 +382,7 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @param _txIndex - transaction's index within the block
     // @param _siblings - transaction's Merkle siblings
     // @param _blockHeaderBytes - block header containing transaction
-    // @param _txSuperblockId - superblock containing block header
+    // @param _txsuperblockHash - superblock containing block header
     // @return - 1 if the transaction is in the block and the block is in the main chain,
     // 20020 (ERR_CONFIRMATIONS) if the block is not in the main chain,
     // 20050 (ERR_MERKLE_ROOT) if the block is in the main chain but the Merkle proof fails.
@@ -391,7 +391,7 @@ contract DogeSuperblocks is DogeErrorCodes {
         uint _txIndex,
         uint[] _siblings,
         bytes _blockHeaderBytes,
-        bytes32 _txSuperblockId
+        bytes32 _txsuperblockHash
     ) private returns (uint) {
         // TODO: implement when dealing with incentives
         // if (!feePaid(_txBlockHash, getFeeAmount(_txBlockHash))) {  // in incentive.se
@@ -400,7 +400,7 @@ contract DogeSuperblocks is DogeErrorCodes {
         // }
 
         //TODO: Verify superblock is in superblock's main chain
-        if (!isApproved(_txSuperblockId) || !inMainChain(_txSuperblockId)) {
+        if (!isApproved(_txsuperblockHash) || !inMainChain(_txsuperblockHash)) {
             emit VerifyTransaction(bytes32(_txHash), ERR_CHAIN);
             return (ERR_CHAIN);
         }
@@ -416,9 +416,9 @@ contract DogeSuperblocks is DogeErrorCodes {
         return (1);
     }
 
-    // @dev - Evaluate the SuperblockId
+    // @dev - Evaluate the superblockHash
     //
-    // Evaluate the SuperblockId given the superblock data.
+    // Evaluate the superblockHash given the superblock data.
     //
     // @param _blocksMerkleRoot Root of the merkle tree of blocks contained in a superblock
     // @param _accumulatedWork Accumulated proof of work of the last block in the superblock
@@ -428,7 +428,7 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @param _lastBits Difficulty bits of the last block in the superblock
     // @param _parentId Id of the parent superblock
     // @return Superblock id
-    function calcSuperblockId(
+    function calcSuperblockHash(
         bytes32 _blocksMerkleRoot,
         uint _accumulatedWork,
         uint _timestamp,
@@ -455,7 +455,7 @@ contract DogeSuperblocks is DogeErrorCodes {
         return bestSuperblock;
     }
 
-    // @dev - Returns the superblock data for the supplied superblockId
+    // @dev - Returns the superblock data for the supplied superblockHash
     //
     // @return {
     //   bytes32 _blocksMerkleRoot,
@@ -468,7 +468,7 @@ contract DogeSuperblocks is DogeErrorCodes {
     //   address _submitter,
     //   Status _status
     // }  Superblock data
-    function getSuperblock(bytes32 superblockId) public view returns (
+    function getSuperblock(bytes32 superblockHash) public view returns (
         bytes32 _blocksMerkleRoot,
         uint _accumulatedWork,
         uint _timestamp,
@@ -479,7 +479,7 @@ contract DogeSuperblocks is DogeErrorCodes {
         address _submitter,
         Status _status
     ) {
-        SuperblockInfo storage superblock = superblocks[superblockId];
+        SuperblockInfo storage superblock = superblocks[superblockHash];
         return (
             superblock.blocksMerkleRoot,
             superblock.accumulatedWork,
@@ -494,53 +494,53 @@ contract DogeSuperblocks is DogeErrorCodes {
     }
 
     // Returns superblock height
-    function getSuperblockHeight(bytes32 superblockId) public view returns (uint32) {
-        return superblocks[superblockId].height;
+    function getSuperblockHeight(bytes32 superblockHash) public view returns (uint32) {
+        return superblocks[superblockHash].height;
     }
 
     // @dev - Returns superblock internal index
-    function getSuperblockIndex(bytes32 superblockId) public view returns (uint32) {
-        return superblocks[superblockId].index;
+    function getSuperblockIndex(bytes32 superblockHash) public view returns (uint32) {
+        return superblocks[superblockHash].index;
     }
 
     // @dev - Return superblock ancestors indexes
-    function getSuperblockAncestors(bytes32 superblockId) public view returns (bytes32) {
-        return superblocks[superblockId].ancestors;
+    function getSuperblockAncestors(bytes32 superblockHash) public view returns (bytes32) {
+        return superblocks[superblockHash].ancestors;
     }
 
     // @dev - Return superblock blocks' merkle root
-    function getSuperblockMerkleRoot(bytes32 _superblockId) public view returns (bytes32) {
-        return superblocks[_superblockId].blocksMerkleRoot;
+    function getSuperblockMerkleRoot(bytes32 _superblockHash) public view returns (bytes32) {
+        return superblocks[_superblockHash].blocksMerkleRoot;
     }
 
     // @dev - Return superblock timestamp
-    function getSuperblockTimestamp(bytes32 _superblockId) public view returns (uint) {
-        return superblocks[_superblockId].timestamp;
+    function getSuperblockTimestamp(bytes32 _superblockHash) public view returns (uint) {
+        return superblocks[_superblockHash].timestamp;
     }
 
     // @dev - Return superblock prevTimestamp
-    function getSuperblockPrevTimestamp(bytes32 _superblockId) public view returns (uint) {
-        return superblocks[_superblockId].prevTimestamp;
+    function getSuperblockPrevTimestamp(bytes32 _superblockHash) public view returns (uint) {
+        return superblocks[_superblockHash].prevTimestamp;
     }
 
     // @dev - Return superblock last block hash
-    function getSuperblockLastHash(bytes32 _superblockId) public view returns (bytes32) {
-        return superblocks[_superblockId].lastHash;
+    function getSuperblockLastHash(bytes32 _superblockHash) public view returns (bytes32) {
+        return superblocks[_superblockHash].lastHash;
     }
 
     // @dev - Return superblock parent
-    function getSuperblockParentId(bytes32 _superblockId) public view returns (bytes32) {
-        return superblocks[_superblockId].parentId;
+    function getSuperblockParentId(bytes32 _superblockHash) public view returns (bytes32) {
+        return superblocks[_superblockHash].parentId;
     }
 
     // @dev - Return superblock accumulated work
-    function getSuperblockAccumulatedWork(bytes32 _superblockId) public view returns (uint) {
-        return superblocks[_superblockId].accumulatedWork;
+    function getSuperblockAccumulatedWork(bytes32 _superblockHash) public view returns (uint) {
+        return superblocks[_superblockHash].accumulatedWork;
     }
 
     // @dev - Return superblock status
-    function getSuperblockStatus(bytes32 _superblockId) public view returns (Status) {
-        return superblocks[_superblockId].status;
+    function getSuperblockStatus(bytes32 _superblockHash) public view returns (Status) {
+        return superblocks[_superblockHash].status;
     }
 
     // @dev - Return indexNextSuperblock
@@ -553,8 +553,8 @@ contract DogeSuperblocks is DogeErrorCodes {
         return DogeTx.makeMerkle(hashes);
     }
 
-    function isApproved(bytes32 _superblockId) public view returns (bool) {
-        return (getSuperblockStatus(_superblockId) == Status.Approved);
+    function isApproved(bytes32 _superblockHash) public view returns (bool) {
+        return (getSuperblockStatus(_superblockHash) == Status.Approved);
     }
 
     function getChainHeight() public view returns (uint) {

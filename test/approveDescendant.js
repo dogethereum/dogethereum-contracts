@@ -53,9 +53,9 @@ contract('approveDescendant', (accounts) => {
     const superblock2Hashes = superblock2Headers.map(utils.calcBlockSha256Hash);
 
     const superblock0 = utils.makeSuperblock(superblock0Headers, initParentId, 2);
-    const superblock1 = utils.makeSuperblock(superblock1Headers, superblock0.superblockId, 8);
-    const superblock2 = utils.makeSuperblock(superblock2Headers, superblock1.superblockId, 14);
-    const superblock3 = utils.makeSuperblock(superblock3Headers, superblock2.superblockId, 20);
+    const superblock1 = utils.makeSuperblock(superblock1Headers, superblock0.superblockHash, 8);
+    const superblock2 = utils.makeSuperblock(superblock2Headers, superblock1.superblockHash, 14);
+    const superblock3 = utils.makeSuperblock(superblock3Headers, superblock2.superblockHash, 20);
 
     // Copied from claimManager.js
     async function initSuperblocks(dummyChecker, genesisSuperblock) {
@@ -111,7 +111,7 @@ contract('approveDescendant', (accounts) => {
         });
 
         it('Initialized', async () => {
-            superblock0Id = superblock0.superblockId;
+            superblock0Id = superblock0.superblockHash;
             const best = await superblocks.getBestSuperblock();
             assert.equal(superblock0Id, best, 'Best superblock should match');
         });
@@ -129,7 +129,7 @@ contract('approveDescendant', (accounts) => {
                 { from: submitter },
             );
             assert.equal(result.logs[1].event, 'SuperblockClaimCreated', 'New superblock proposed');
-            superblock1Id = result.logs[1].args.superblockId;
+            superblock1Id = result.logs[1].args.superblockHash;
         });
 
         it('Challenge superblock 1', async () => {
@@ -191,7 +191,7 @@ contract('approveDescendant', (accounts) => {
                 { from: submitter },
             );
             assert.equal(result.logs[1].event, 'SuperblockClaimCreated', 'New superblock proposed');
-            superblock2Id = result.logs[1].args.superblockId;
+            superblock2Id = result.logs[1].args.superblockHash;
         });
 
         it('Semi-approve superblock 2', async () => {
@@ -219,7 +219,7 @@ contract('approveDescendant', (accounts) => {
                 { from: submitter },
             );
             assert.equal(result.logs[1].event, 'SuperblockClaimCreated', 'New superblock proposed');
-            superblock3Id = result.logs[1].args.superblockId;
+            superblock3Id = result.logs[1].args.superblockHash;
         });
 
         it('Semi-approve superblock 3', async () => {
@@ -262,7 +262,7 @@ contract('approveDescendant', (accounts) => {
         });
 
         it('Initialized', async () => {
-            superblock0Id = superblock0.superblockId;
+            superblock0Id = superblock0.superblockHash;
             const best = await superblocks.getBestSuperblock();
             assert.equal(superblock0Id, best, 'Best superblock should match');
         });
@@ -280,7 +280,7 @@ contract('approveDescendant', (accounts) => {
                 { from: submitter },
             );
             assert.equal(result.logs[1].event, 'SuperblockClaimCreated', 'New superblock proposed');
-            superblock1Id = result.logs[1].args.superblockId;
+            superblock1Id = result.logs[1].args.superblockHash;
         });
 
         it('Challenge superblock 1', async () => {
@@ -342,7 +342,7 @@ contract('approveDescendant', (accounts) => {
                 { from: submitter },
             );
             assert.equal(result.logs[1].event, 'SuperblockClaimCreated', 'New superblock proposed');
-            superblock2Id = result.logs[1].args.superblockId;
+            superblock2Id = result.logs[1].args.superblockHash;
         });
 
         it('Challenge superblock 2', async () => {
@@ -404,7 +404,7 @@ contract('approveDescendant', (accounts) => {
                 { from: submitter },
             );
             assert.equal(result.logs[1].event, 'SuperblockClaimCreated', 'New superblock proposed');
-            superblock3Id = result.logs[1].args.superblockId;
+            superblock3Id = result.logs[1].args.superblockHash;
         });
 
         it('Semi-approve superblock 3', async () => {

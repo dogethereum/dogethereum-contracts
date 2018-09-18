@@ -173,7 +173,7 @@ function toUint32(value) {
 }
 
 // Calculate a superblock id
-function calcSuperblockId(merkleRoot, accumulatedWork, timestamp, prevTimestamp, lastHash, lastBits, parentId) {
+function calcSuperblockHash(merkleRoot, accumulatedWork, timestamp, prevTimestamp, lastHash, lastBits, parentId) {
   return `0x${Buffer.from(keccak256.arrayBuffer(
     Buffer.concat([
       module.exports.fromHex(merkleRoot),
@@ -208,7 +208,7 @@ function makeSuperblock(headers, parentId, parentAccumulatedWork, parentTimestam
     lastHash,
     lastBits,
     parentId,
-    superblockId: calcSuperblockId(
+    superblockHash: calcSuperblockHash(
       merkleRoot,
       accumulatedWork,
       timestamp,
@@ -279,7 +279,7 @@ module.exports = {
 
     const proposedSuperblock = makeSuperblock(
       headers.slice(1),
-      genesisSuperblock.superblockId,
+      genesisSuperblock.superblockHash,
       genesisSuperblock.accumulatedWork,
     );
 
@@ -299,11 +299,11 @@ module.exports = {
     );
 
     assert.equal(result.logs[1].event, 'SuperblockClaimCreated', 'New superblock proposed');
-    const superblockId = result.logs[1].args.superblockId;
+    const superblockHash = result.logs[1].args.superblockHash;
 
     await blockchainTimeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
 
-    result = await claimManager.checkClaimFinished(superblockId, { from: sender });
+    result = await claimManager.checkClaimFinished(superblockHash, { from: sender });
     assert.equal(result.logs[1].event, 'SuperblockClaimSuccessful', 'Superblock challenged');
 
     const headerAndHashes = {
@@ -411,7 +411,7 @@ module.exports = {
   mineBlocks,
   getBlockNumber,
   verifyThrow,
-  calcSuperblockId,
+  calcSuperblockHash,
   makeSuperblock,
   operatorSignItsEthAddress: function(operatorPrivateKeyString, operatorEthAddress) {
       // bitcoreLib.PrivateKey marks the private key as compressed if it receives a String as a parameter.

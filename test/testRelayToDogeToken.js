@@ -42,7 +42,7 @@ contract('testRelayToDogeToken', function(accounts) {
       blockData,
       blockIndex,
       blockSiblings,
-      headerAndHashes.proposedSuperblock.superblockId,
+      headerAndHashes.proposedSuperblock.superblockHash,
       dogeToken.address,
     );
 
@@ -50,15 +50,15 @@ contract('testRelayToDogeToken', function(accounts) {
     const value = '905853205327';
     const balance = await dogeToken.balanceOf(address);
     const operatorFee = 9058532053;
-    const superblockSubmitterFee = 9058532053; 
+    const superblockSubmitterFee = 9058532053;
     const userValue = value - operatorFee - superblockSubmitterFee;
     assert.equal(balance.toString(10), userValue, `DogeToken's ${address} balance is not the expected one`);
     var operatorTokenBalance = await dogeToken.balanceOf(operatorEthAddress);
     assert.equal(operatorTokenBalance.toNumber(), operatorFee, `DogeToken's operator balance is not the expected one`);
     var superblockSubmitterTokenBalance = await dogeToken.balanceOf(superblockSubmitterAddress);
     assert.equal(superblockSubmitterTokenBalance.toNumber(), superblockSubmitterFee, `DogeToken's superblock submitter balance is not the expected one`);
-    
-    
+
+
     var operator = await dogeToken.operators(operatorPublicKeyHash);
     assert.equal(operator[1].toString(10), value, 'operator dogeAvailableBalance is not the expected one');
   });

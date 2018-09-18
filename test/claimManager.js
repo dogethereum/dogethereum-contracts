@@ -89,12 +89,12 @@ contract('DogeClaimManager', (accounts) => {
       await initSuperblocks(true, genesisSuperblock);
     });
     it('Initialize', async () => {
-      superblock0 = genesisSuperblock.superblockId;
+      superblock0 = genesisSuperblock.superblockHash;
       const best = await superblocks.getBestSuperblock();
       assert.equal(superblock0, best, 'Best superblock should match');
     });
     it('Propose', async () => {
-      const proposedSuperblock = utils.makeSuperblock([headers[0], headers[1], headers[2]], genesisSuperblock.superblockId, genesisSuperblock.accumulatedWork);
+      const proposedSuperblock = utils.makeSuperblock([headers[0], headers[1], headers[2]], genesisSuperblock.superblockHash, genesisSuperblock.accumulatedWork);
       const result = await claimManager.proposeSuperblock(
         proposedSuperblock.merkleRoot,
         proposedSuperblock.accumulatedWork,
@@ -106,7 +106,7 @@ contract('DogeClaimManager', (accounts) => {
         { from: submitter },
       );
       assert.equal(result.logs[1].event, 'SuperblockClaimCreated', 'New superblock proposed');
-      superblock1 = result.logs[1].args.superblockId;
+      superblock1 = result.logs[1].args.superblockHash;
     });
     it('Try to confirm whitout waiting', async () => {
       let result;
@@ -123,7 +123,7 @@ contract('DogeClaimManager', (accounts) => {
       assert.equal(superblock1, best, 'Best superblock should match');
     });
     it('Propose fork', async () => {
-      const proposedSuperblock = utils.makeSuperblock([headers[0], headers[1]], genesisSuperblock.superblockId, genesisSuperblock.accumulatedWork);
+      const proposedSuperblock = utils.makeSuperblock([headers[0], headers[1]], genesisSuperblock.superblockHash, genesisSuperblock.accumulatedWork);
       const result = await claimManager.proposeSuperblock(
         proposedSuperblock.merkleRoot,
         proposedSuperblock.accumulatedWork,
@@ -135,7 +135,7 @@ contract('DogeClaimManager', (accounts) => {
         { from: submitter },
       );
       assert.equal(result.logs[1].event, 'SuperblockClaimCreated', 'New superblock proposed');
-      superblock2 = result.logs[1].args.superblockId;
+      superblock2 = result.logs[1].args.superblockHash;
     });
     it('Confirm fork', async () => {
       await utils.blockchainTimeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
@@ -155,12 +155,12 @@ contract('DogeClaimManager', (accounts) => {
       await initSuperblocks(true, genesisSuperblock);
     });
     it('Initialized', async () => {
-      superblock0 = genesisSuperblock.superblockId;
+      superblock0 = genesisSuperblock.superblockHash;
       const best = await superblocks.getBestSuperblock();
       assert.equal(superblock0, best, 'Best superblock should match');
     });
     it('Propose', async () => {
-      const proposedSuperblock = utils.makeSuperblock([headers[0], headers[1]], genesisSuperblock.superblockId, genesisSuperblock.accumulatedWork);
+      const proposedSuperblock = utils.makeSuperblock([headers[0], headers[1]], genesisSuperblock.superblockHash, genesisSuperblock.accumulatedWork);
       const result = await claimManager.proposeSuperblock(
         proposedSuperblock.merkleRoot,
         proposedSuperblock.accumulatedWork,
@@ -172,7 +172,7 @@ contract('DogeClaimManager', (accounts) => {
         { from: submitter },
       );
       assert.equal(result.logs[1].event, 'SuperblockClaimCreated', 'New superblock proposed');
-      superblock1 = result.logs[1].args.superblockId;
+      superblock1 = result.logs[1].args.superblockHash;
       claim1 = superblock1;
     });
     it('Challenge', async () => {
@@ -223,12 +223,12 @@ contract('DogeClaimManager', (accounts) => {
       await initSuperblocks(true, genesisSuperblock);
     });
     it('Initialize', async () => {
-      superblock0 = genesisSuperblock.superblockId;
+      superblock0 = genesisSuperblock.superblockHash;
       const best = await superblocks.getBestSuperblock();
       assert.equal(superblock0, best, 'Best superblock should match');
     });
     it('Propose', async () => {
-      const proposeSuperblock = utils.makeSuperblock(headers, genesisSuperblock.superblockId, genesisSuperblock.accumulatedWork);
+      const proposeSuperblock = utils.makeSuperblock(headers, genesisSuperblock.superblockHash, genesisSuperblock.accumulatedWork);
       const result = await claimManager.proposeSuperblock(
         proposeSuperblock.merkleRoot,
         proposeSuperblock.accumulatedWork,
@@ -240,7 +240,7 @@ contract('DogeClaimManager', (accounts) => {
         { from: submitter },
       );
       assert.equal(result.logs[1].event, 'SuperblockClaimCreated', 'New superblock proposed');
-      superblock1 = result.logs[1].args.superblockId;
+      superblock1 = result.logs[1].args.superblockHash;
       claim1 = result.logs[1].args.claimId;
     });
     it('Challenge', async () => {
@@ -291,10 +291,10 @@ contract('DogeClaimManager', (accounts) => {
     const beginNewChallenge = async () => {
       let result;
       await initSuperblocks(true, genesisSuperblock);
-      superblock0 = genesisSuperblock.superblockId;
+      superblock0 = genesisSuperblock.superblockHash;
 
       // Propose
-      const proposeSuperblock = utils.makeSuperblock([headers[0], headers[1]], genesisSuperblock.superblockId, genesisSuperblock.accumulatedWork);
+      const proposeSuperblock = utils.makeSuperblock([headers[0], headers[1]], genesisSuperblock.superblockHash, genesisSuperblock.accumulatedWork);
       result = await claimManager.proposeSuperblock(
         proposeSuperblock.merkleRoot,
         proposeSuperblock.accumulatedWork,
@@ -305,7 +305,7 @@ contract('DogeClaimManager', (accounts) => {
         proposeSuperblock.parentId,
         { from: submitter },
       );
-      superblock1 = result.logs[1].args.superblockId;
+      superblock1 = result.logs[1].args.superblockHash;
       claim1 = result.logs[1].args.claimId;
 
       // Challenge

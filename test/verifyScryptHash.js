@@ -105,11 +105,11 @@ contract('verifyScryptHash', (accounts) => {
       let scryptHash;
       const genesisSuperblock = utils.makeSuperblock(genesisHeaders, initParentHash, initAccumulatedWork);
       await initSuperblocks(false, genesisSuperblock);
-      superblock0 = genesisSuperblock.superblockId;
+      superblock0 = genesisSuperblock.superblockHash;
       const best = await superblocks.getBestSuperblock();
       assert.equal(superblock0, best, 'Best superblock should match');
 
-      const proposedSuperblock = utils.makeSuperblock(headers, genesisSuperblock.superblockId, genesisSuperblock.accumulatedWork);
+      const proposedSuperblock = utils.makeSuperblock(headers, genesisSuperblock.superblockHash, genesisSuperblock.accumulatedWork);
 
       result = await claimManager.proposeSuperblock(
         proposedSuperblock.merkleRoot,
@@ -122,7 +122,7 @@ contract('verifyScryptHash', (accounts) => {
         { from: submitter },
       );
       assert.equal(result.logs[1].event, 'SuperblockClaimCreated', 'New superblock proposed');
-      superblock1 = result.logs[1].args.superblockId;
+      superblock1 = result.logs[1].args.superblockHash;
       claim1 = superblock1;
 
       result = await claimManager.challengeSuperblock(superblock1, { from: challenger });

@@ -64,13 +64,13 @@ contract('rejectClaim', (accounts) => {
     const superblockR1Hashes = superblockR1Headers.map(utils.calcBlockSha256Hash);
 
     const superblock0 = utils.makeSuperblock(superblock0Headers, initParentId, 2);
-    const superblock1 = utils.makeSuperblock(superblock1Headers, superblock0.superblockId, 8);
-    const superblock2 = utils.makeSuperblock(superblock2Headers, superblock1.superblockId, 14);
-    const superblock3 = utils.makeSuperblock(superblock3Headers, superblock2.superblockId, 20);
-    const superblock4 = utils.makeSuperblock(superblock4Headers, superblock3.superblockId, 26);
+    const superblock1 = utils.makeSuperblock(superblock1Headers, superblock0.superblockHash, 8);
+    const superblock2 = utils.makeSuperblock(superblock2Headers, superblock1.superblockHash, 14);
+    const superblock3 = utils.makeSuperblock(superblock3Headers, superblock2.superblockHash, 20);
+    const superblock4 = utils.makeSuperblock(superblock4Headers, superblock3.superblockHash, 26);
 
-    const superblockR0 = utils.makeSuperblock(superblockR0Headers, superblock0.superblockId, 4);
-    const superblockR1 = utils.makeSuperblock(superblockR1Headers, superblockR0.superblockId, 6);
+    const superblockR0 = utils.makeSuperblock(superblockR0Headers, superblock0.superblockHash, 4);
+    const superblockR1 = utils.makeSuperblock(superblockR1Headers, superblockR0.superblockHash, 6);
 
     // Copied from claimManager.js
     async function initSuperblocks(dummyChecker, genesisSuperblock) {
@@ -126,7 +126,7 @@ contract('rejectClaim', (accounts) => {
         });
 
         it('Initialized', async () => {
-            superblock0Id = superblock0.superblockId;
+            superblock0Id = superblock0.superblockHash;
             const best = await superblocks.getBestSuperblock();
             assert.equal(superblock0Id, best, 'Best superblock should match');
         });
@@ -144,7 +144,7 @@ contract('rejectClaim', (accounts) => {
                 { from: submitter },
             );
             assert.equal(result.logs[1].event, 'SuperblockClaimCreated', 'New superblock proposed');
-            superblock1Id = result.logs[1].args.superblockId;
+            superblock1Id = result.logs[1].args.superblockHash;
         });
 
         it('Confirm superblock 1', async () => {
@@ -156,7 +156,7 @@ contract('rejectClaim', (accounts) => {
         });
 
         it('Claim does not exist', async () => {
-            const result = await claimManager.rejectClaim(superblockR0.superblockId, { from: submitter });
+            const result = await claimManager.rejectClaim(superblockR0.superblockHash, { from: submitter });
             assert.equal(result.logs[0].event, 'ErrorClaim', 'Claim has not been made');
         });
 
@@ -173,7 +173,7 @@ contract('rejectClaim', (accounts) => {
                 { from: submitter },
             );
             assert.equal(result.logs[1].event, 'SuperblockClaimCreated', 'New superblock proposed');
-            superblockR0Id = result.logs[1].args.superblockId;
+            superblockR0Id = result.logs[1].args.superblockHash;
         });
 
         it('Missing confirmations after one superblock', async () => {
@@ -194,7 +194,7 @@ contract('rejectClaim', (accounts) => {
                 { from: submitter },
             );
             assert.equal(result.logs[1].event, 'SuperblockClaimCreated', 'New superblock proposed');
-            superblock2Id = result.logs[1].args.superblockId;
+            superblock2Id = result.logs[1].args.superblockHash;
         });
 
         it('Confirm superblock 2', async () => {
@@ -222,7 +222,7 @@ contract('rejectClaim', (accounts) => {
                 { from: submitter },
             );
             assert.equal(result.logs[1].event, 'SuperblockClaimCreated', 'New superblock proposed');
-            superblock3Id = result.logs[1].args.superblockId;
+            superblock3Id = result.logs[1].args.superblockHash;
         });
 
         it('Confirm superblock 3', async () => {
@@ -245,7 +245,7 @@ contract('rejectClaim', (accounts) => {
                 { from: submitter },
             );
             assert.equal(result.logs[1].event, 'SuperblockClaimCreated', 'New superblock proposed');
-            superblock4Id = result.logs[1].args.superblockId;
+            superblock4Id = result.logs[1].args.superblockHash;
         });
 
         it('Confirm superblock 4', async () => {
@@ -330,7 +330,7 @@ contract('rejectClaim', (accounts) => {
                 { from: submitter },
             );
             assert.equal(result.logs[1].event, 'SuperblockClaimCreated', 'New superblock proposed');
-            superblockR1Id = result.logs[1].args.superblockId;
+            superblockR1Id = result.logs[1].args.superblockHash;
         });
 
         it('Confirm superblock R1', async () => {

@@ -35,14 +35,14 @@ contract('DogeSuperblocks2', function(accounts) {
     );
 
     const best = await superblocks.getBestSuperblock();
-    assert.equal(best, genesisSuperblock.superblockId, 'Best superblock updated');
+    assert.equal(best, genesisSuperblock.superblockHash, 'Best superblock updated');
 
     const locator = await superblocks.getSuperblockLocator();
     assert.equal(locator.length, 9, 'Superblock locator');
-    assert.equal(locator[0], genesisSuperblock.superblockId, 'Superblock locator 0');
-    assert.equal(locator[1], genesisSuperblock.superblockId, 'Superblock locator 1');
-    assert.equal(locator[2], genesisSuperblock.superblockId, 'Superblock locator 2');
-    assert.equal(locator[8], genesisSuperblock.superblockId, 'Superblock locator 8');
+    assert.equal(locator[0], genesisSuperblock.superblockHash, 'Superblock locator 0');
+    assert.equal(locator[1], genesisSuperblock.superblockHash, 'Superblock locator 1');
+    assert.equal(locator[2], genesisSuperblock.superblockHash, 'Superblock locator 2');
+    assert.equal(locator[8], genesisSuperblock.superblockHash, 'Superblock locator 8');
 
     const height = await superblocks.getSuperblockHeight(best);
     assert.equal(height.toNumber(), 1, 'Superblock height');
