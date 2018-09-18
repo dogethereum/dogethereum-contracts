@@ -101,7 +101,7 @@ function getBlockDifficulty(blockHeader) {
 
 const timeout = async (ms) => new Promise((resolve, reject) => setTimeout(resolve, ms));
 
-const timeoutSeconds = async (s) => {
+const blockchainTimeoutSeconds = async (s) => {
   await web3.currentProvider.send({
     jsonrpc: '2.0',
     method: 'evm_increaseTime',
@@ -301,7 +301,7 @@ module.exports = {
     assert.equal(result.logs[1].event, 'SuperblockClaimCreated', 'New superblock proposed');
     const superblockId = result.logs[1].args.superblockId;
 
-    await timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+    await blockchainTimeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
 
     result = await claimManager.checkClaimFinished(superblockId, { from: sender });
     assert.equal(result.logs[1].event, 'SuperblockClaimSuccessful', 'Superblock challenged');
@@ -407,7 +407,7 @@ module.exports = {
   getBlockDifficultyBits,
   getBlockDifficulty,
   timeout,
-  timeoutSeconds,
+  blockchainTimeoutSeconds,
   mineBlocks,
   getBlockNumber,
   verifyThrow,

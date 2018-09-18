@@ -180,7 +180,7 @@ contract('validateSuperblocks', (accounts) => {
       assert.equal(result.logs[0].event, 'ChallengerConvicted', 'Challenger failed');
 
       // Confirm superblock
-      await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+      await utils.blockchainTimeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
       result = await claimManager.checkClaimFinished(superblock1, { from: submitter });
       assert.equal(result.logs[0].event, 'SuperblockClaimPending', 'Superblock semi approved');
     });
@@ -228,7 +228,7 @@ contract('validateSuperblocks', (accounts) => {
       assert.equal(result.logs[1].event, 'SubmitterConvicted', 'Submitter failed');
 
       // Confirm superblock
-      await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+      await utils.blockchainTimeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
       result = await claimManager.checkClaimFinished(superblock1, { from: challenger });
       assert.equal(result.logs[0].event, 'SuperblockClaimFailed', 'Superblock rejected');
     });
@@ -276,7 +276,7 @@ contract('validateSuperblocks', (accounts) => {
       assert.equal(result.logs[1].event, 'SubmitterConvicted', 'Submitter failed');
 
       // Confirm superblock
-      await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+      await utils.blockchainTimeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
       result = await claimManager.checkClaimFinished(superblock1, { from: challenger });
       assert.equal(result.logs[0].event, 'SuperblockClaimFailed', 'Superblock rejected');
     });
@@ -324,7 +324,7 @@ contract('validateSuperblocks', (accounts) => {
       assert.equal(result.logs[1].event, 'SubmitterConvicted', 'Submitter failed');
 
       // Confirm superblock
-      await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+      await utils.blockchainTimeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
       result = await claimManager.checkClaimFinished(superblock1, { from: challenger });
       assert.equal(result.logs[0].event, 'SuperblockClaimFailed', 'Superblock rejected');
     });
@@ -360,7 +360,7 @@ contract('validateSuperblocks', (accounts) => {
       assert.equal(result.logs[0].event, 'ErrorBattle', 'Respond merkle root hashes');
       assert.equal(result.logs[0].args.err, '50150', 'Bad last hash');
 
-      await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+      await utils.blockchainTimeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
       result = await battleManager.timeout(session1, { from: challenger });
       assert.equal(result.logs[0].event, 'SubmitterConvicted', 'Should convict claimant');
       result = await claimManager.checkClaimFinished(superblock1, { from: challenger });

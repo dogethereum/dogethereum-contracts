@@ -148,7 +148,7 @@ contract('rejectClaim', (accounts) => {
         });
 
         it('Confirm superblock 1', async () => {
-            await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+            await utils.blockchainTimeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
             const result = await claimManager.checkClaimFinished(superblock1Id, { from: submitter });
             assert.equal(result.logs[1].event, 'SuperblockClaimSuccessful', 'Superblock challenged');
             const best = await superblocks.getBestSuperblock();
@@ -198,7 +198,7 @@ contract('rejectClaim', (accounts) => {
         });
 
         it('Confirm superblock 2', async () => {
-            await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+            await utils.blockchainTimeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
             const result = await claimManager.checkClaimFinished(superblock2Id, { from: submitter });
             assert.equal(result.logs[1].event, 'SuperblockClaimSuccessful', 'Superblock challenged');
             const best = await superblocks.getBestSuperblock();
@@ -226,7 +226,7 @@ contract('rejectClaim', (accounts) => {
         });
 
         it('Confirm superblock 3', async () => {
-            await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+            await utils.blockchainTimeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
             const result = await claimManager.checkClaimFinished(superblock3Id, { from: submitter });
             assert.equal(result.logs[1].event, 'SuperblockClaimSuccessful', 'Superblock challenged');
             const best = await superblocks.getBestSuperblock();
@@ -249,7 +249,7 @@ contract('rejectClaim', (accounts) => {
         });
 
         it('Confirm superblock 4', async () => {
-            await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+            await utils.blockchainTimeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
             const result = await claimManager.checkClaimFinished(superblock4Id, { from: submitter });
             assert.equal(result.logs[1].event, 'SuperblockClaimSuccessful', 'Superblock challenged');
             const best = await superblocks.getBestSuperblock();
@@ -310,7 +310,7 @@ contract('rejectClaim', (accounts) => {
         });
 
         it('Confirm forked superblock', async () => {
-            await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+            await utils.blockchainTimeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
             result = await claimManager.checkClaimFinished(superblockR0Id, { from: challenger });
             assert.equal(result.logs[0].event, 'SuperblockClaimPending', 'Superblock challenged');
             const status = await superblocks.getSuperblockStatus(superblockR0Id);
@@ -334,7 +334,7 @@ contract('rejectClaim', (accounts) => {
         });
 
         it('Confirm superblock R1', async () => {
-            await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+            await utils.blockchainTimeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
             const result = await claimManager.checkClaimFinished(superblockR1Id, { from: submitter });
             assert.equal(result.logs[0].event, 'SuperblockClaimPending', 'Superblock challenged');
             const status = await superblocks.getSuperblockStatus(superblockR1Id);

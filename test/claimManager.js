@@ -116,7 +116,7 @@ contract('DogeClaimManager', (accounts) => {
       assert.equal(result.logs[0].event, 'ErrorClaim', 'Invalid timeout');
     });
     it('Confirm', async () => {
-      await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+      await utils.blockchainTimeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
       const result = await claimManager.checkClaimFinished(superblock1, { from: challenger });
       assert.equal(result.logs[1].event, 'SuperblockClaimSuccessful', 'Superblock challenged');
       const best = await superblocks.getBestSuperblock();
@@ -138,7 +138,7 @@ contract('DogeClaimManager', (accounts) => {
       superblock2 = result.logs[1].args.superblockId;
     });
     it('Confirm fork', async () => {
-      await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+      await utils.blockchainTimeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
       const result = await claimManager.checkClaimFinished(superblock2, { from: challenger });
       assert.equal(result.logs[1].event, 'SuperblockClaimSuccessful', 'Superblock challenged');
       const best = await superblocks.getBestSuperblock();
@@ -208,7 +208,7 @@ contract('DogeClaimManager', (accounts) => {
       assert.equal(result.logs[0].event, 'ChallengerConvicted', 'Challenger failed');
     });
     it('Confirm', async () => {
-      await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+      await utils.blockchainTimeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
       const result = await claimManager.checkClaimFinished(superblock1, { from: challenger });
       assert.equal(result.logs[0].event, 'SuperblockClaimPending', 'Superblock challenged');
     });
@@ -277,7 +277,7 @@ contract('DogeClaimManager', (accounts) => {
       assert.equal(result.logs[0].event, 'ChallengerConvicted', 'Superblock verified');
     });
     it('Accept superblock', async () => {
-      await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+      await utils.blockchainTimeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
       const result = await claimManager.checkClaimFinished(claim1, { from: submitter });
       assert.equal(result.logs[0].event, 'SuperblockClaimPending', 'Superblock accepted');
     });
@@ -319,7 +319,7 @@ contract('DogeClaimManager', (accounts) => {
       let result;
       result = await battleManager.timeout(session1, { from: submitter });
       assert.equal(result.logs[0].event, 'ErrorBattle', 'Timeout too early');
-      await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+      await utils.blockchainTimeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
       result = await battleManager.timeout(session1, { from: submitter });
       assert.equal(result.logs[0].event, 'ChallengerConvicted', 'Should convict challenger');
     });
@@ -329,7 +329,7 @@ contract('DogeClaimManager', (accounts) => {
       assert.equal(result.logs[0].event, 'QueryMerkleRootHashes', 'Query merkle root hashes');
       result = await battleManager.timeout(session1, { from: challenger });
       assert.equal(result.logs[0].event, 'ErrorBattle', 'Timeout too early');
-      await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+      await utils.blockchainTimeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
       result = await battleManager.timeout(session1, { from: challenger });
       assert.equal(result.logs[0].event, 'SubmitterConvicted', 'Should convict claimant');
     });
@@ -341,7 +341,7 @@ contract('DogeClaimManager', (accounts) => {
       assert.equal(result.logs[0].event, 'RespondMerkleRootHashes', 'Respond merkle root hashes');
       result = await battleManager.timeout(session1, { from: submitter });
       assert.equal(result.logs[0].event, 'ErrorBattle', 'Timeout too early');
-      await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+      await utils.blockchainTimeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
       result = await battleManager.timeout(session1, { from: submitter });
       assert.equal(result.logs[0].event, 'ChallengerConvicted', 'Should convict challenger');
     });
@@ -355,7 +355,7 @@ contract('DogeClaimManager', (accounts) => {
       assert.equal(result.logs[0].event, 'QueryBlockHeader', 'Query block header');
       result = await battleManager.timeout(session1, { from: challenger });
       assert.equal(result.logs[0].event, 'ErrorBattle', 'Timeout too early');
-      await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+      await utils.blockchainTimeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
       result = await battleManager.timeout(session1, { from: challenger });
       assert.equal(result.logs[0].event, 'SubmitterConvicted', 'Should convict claimant');
     });
@@ -373,7 +373,7 @@ contract('DogeClaimManager', (accounts) => {
       assert.equal(result.logs[0].event, 'RespondBlockHeader', 'Respond block header');
       result = await battleManager.timeout(session1, { from: submitter });
       assert.equal(result.logs[0].event, 'ErrorBattle', 'Timeout too early');
-      await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+      await utils.blockchainTimeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
       result = await battleManager.timeout(session1, { from: submitter });
       assert.equal(result.logs[0].event, 'ChallengerConvicted', 'Should convict challenger');
     });

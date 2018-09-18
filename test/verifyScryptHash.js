@@ -274,7 +274,7 @@ contract('verifyScryptHash', (accounts) => {
         assert.equal(result.logs[0].event, 'ChallengerConvicted', 'Challenger failed');
 
         // Confirm superblock
-        await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+        await utils.blockchainTimeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
         result = await claimManager.checkClaimFinished(superblock1, { from: submitter });
         assert.equal(result.logs[0].event, 'SuperblockClaimPending', 'Superblock challenged');
       });
@@ -389,7 +389,7 @@ contract('verifyScryptHash', (accounts) => {
       });
       it('Reject scrypt hash claim', async () => {
         // Reject scrypt hash
-        await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+        await utils.blockchainTimeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
         result = await scryptChecker.checkClaimSuccessful(claimID, { from: challenger });
         assert.equal(result.logs[0].event, 'ClaimFailed', 'Scrypt hash failed');
       });
@@ -398,7 +398,7 @@ contract('verifyScryptHash', (accounts) => {
         result = await battleManager.verifySuperblock(session1, { from: challenger });
         assert.equal(result.logs[0].event, 'SubmitterConvicted', 'Superblock failed');
         // Confirm superblock
-        await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+        await utils.blockchainTimeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
         result = await claimManager.checkClaimFinished(superblock1, { from: challenger });
         assert.equal(result.logs[0].event, 'SuperblockClaimFailed', 'Superblock failed');
       });
@@ -423,12 +423,12 @@ contract('verifyScryptHash', (accounts) => {
       it('Timeout without sumitting to scrypt checker', async () => {
         result = await battleManager.timeout(session1, { from: challenger });
         assert.equal(result.logs[0].event, 'ErrorBattle', 'Timeout did not elapse');
-        await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+        await utils.blockchainTimeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
         result = await battleManager.timeout(session1, { from: challenger });
         assert.equal(result.logs[0].event, 'SubmitterConvicted', 'Scrypt hash failed');
       });
       it('Confirm superblock', async () => {
-        await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+        await utils.blockchainTimeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
         result = await claimManager.checkClaimFinished(superblock1, { from: challenger });
         assert.equal(result.logs[0].event, 'SuperblockClaimFailed', 'Superblock failed');
       });
@@ -462,12 +462,12 @@ contract('verifyScryptHash', (accounts) => {
       it('Timeout after challenger abandoned', async () => {
         result = await battleManager.timeout(session1, { from: submitter });
         assert.equal(result.logs[0].event, 'ErrorBattle', 'Timeout did not elapse');
-        await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+        await utils.blockchainTimeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
         result = await battleManager.timeout(session1, { from: submitter });
         assert.equal(result.logs[0].event, 'ChallengerConvicted', 'Challenger abandoned');
       });
       it('Confirm superblock', async () => {
-        await utils.timeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+        await utils.blockchainTimeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
         result = await claimManager.checkClaimFinished(superblock1, { from: challenger });
         assert.equal(result.logs[0].event, 'SuperblockClaimPending', 'Superblock semi confirmed');
       });
