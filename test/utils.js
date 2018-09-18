@@ -101,7 +101,14 @@ function getBlockDifficulty(blockHeader) {
 
 const timeout = async (ms) => new Promise((resolve, reject) => setTimeout(resolve, ms));
 
-const timeoutSeconds = async (s) => new Promise((resolve, reject) => setTimeout(resolve, s * 1000));
+const timeoutSeconds = async (s) => {
+  await web3.currentProvider.send({
+    jsonrpc: '2.0',
+    method: 'evm_increaseTime',
+    params: [s],
+    id: 0,
+  });
+};
 
 const mineBlocks = async (web3, n) => {
   for (let i = 0; i < n; i++) {
