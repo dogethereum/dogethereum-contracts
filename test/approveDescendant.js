@@ -135,7 +135,7 @@ contract('approveDescendant', (accounts) => {
         it('Challenge superblock 1', async () => {
             const result = await claimManager.challengeSuperblock(superblock1Id, { from: challenger });
             assert.equal(result.logs[1].event, 'SuperblockClaimChallenged', 'Superblock challenged');
-            assert.equal(superblock1Id, result.logs[1].args.claimId);
+            assert.equal(superblock1Id, result.logs[1].args.superblockHash);
             assert.equal(result.logs[2].event, 'VerificationGameStarted', 'Battle started');
             session1 = result.logs[2].args.sessionId;
         });
@@ -286,7 +286,7 @@ contract('approveDescendant', (accounts) => {
         it('Challenge superblock 1', async () => {
             const result = await claimManager.challengeSuperblock(superblock1Id, { from: challenger });
             assert.equal(result.logs[1].event, 'SuperblockClaimChallenged', 'Superblock challenged');
-            assert.equal(superblock1Id, result.logs[1].args.claimId);
+            assert.equal(superblock1Id, result.logs[1].args.superblockHash);
             assert.equal(result.logs[2].event, 'VerificationGameStarted', 'Battle started');
             session1 = result.logs[2].args.sessionId;
         });
@@ -348,7 +348,7 @@ contract('approveDescendant', (accounts) => {
         it('Challenge superblock 2', async () => {
             const result = await claimManager.challengeSuperblock(superblock2Id, { from: challenger });
             assert.equal(result.logs[1].event, 'SuperblockClaimChallenged', 'Superblock challenged');
-            assert.equal(superblock2Id, result.logs[1].args.claimId);
+            assert.equal(superblock2Id, result.logs[1].args.superblockHash);
             assert.equal(result.logs[2].event, 'VerificationGameStarted', 'Battle started');
             session1 = result.logs[2].args.sessionId;
         });

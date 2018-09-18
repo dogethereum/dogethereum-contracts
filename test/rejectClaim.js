@@ -266,7 +266,7 @@ contract('rejectClaim', (accounts) => {
         it('Challenge fork', async () => {
             const result = await claimManager.challengeSuperblock(superblockR0Id, { from: challenger });
             assert.equal(result.logs[1].event, 'SuperblockClaimChallenged', 'Superblock challenged');
-            assert.equal(superblockR0Id, result.logs[1].args.claimId);
+            assert.equal(superblockR0Id, result.logs[1].args.superblockHash);
             assert.equal(result.logs[2].event, 'VerificationGameStarted', 'Battle started');
             session1 = result.logs[2].args.sessionId;
         });

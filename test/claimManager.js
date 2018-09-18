@@ -178,7 +178,7 @@ contract('DogeClaimManager', (accounts) => {
     it('Challenge', async () => {
       const result = await claimManager.challengeSuperblock(superblock1, { from: challenger });
       assert.equal(result.logs[1].event, 'SuperblockClaimChallenged', 'Superblock challenged');
-      assert.equal(claim1, result.logs[1].args.claimId);
+      assert.equal(claim1, result.logs[1].args.superblockHash);
       assert.equal(result.logs[2].event, 'VerificationGameStarted', 'Battle started');
       session1 = result.logs[2].args.sessionId;
     });
@@ -241,12 +241,12 @@ contract('DogeClaimManager', (accounts) => {
       );
       assert.equal(result.logs[1].event, 'SuperblockClaimCreated', 'New superblock proposed');
       superblock1 = result.logs[1].args.superblockHash;
-      claim1 = result.logs[1].args.claimId;
+      claim1 = result.logs[1].args.superblockHash;
     });
     it('Challenge', async () => {
       const result = await claimManager.challengeSuperblock(superblock1, { from: challenger });
       assert.equal(result.logs[1].event, 'SuperblockClaimChallenged', 'Superblock challenged');
-      assert.equal(claim1, result.logs[1].args.claimId);
+      assert.equal(claim1, result.logs[1].args.superblockHash);
       assert.equal(result.logs[2].event, 'VerificationGameStarted', 'Battle started');
       session1 = result.logs[2].args.sessionId;
     });
@@ -306,7 +306,7 @@ contract('DogeClaimManager', (accounts) => {
         { from: submitter },
       );
       superblock1 = result.logs[1].args.superblockHash;
-      claim1 = result.logs[1].args.claimId;
+      claim1 = result.logs[1].args.superblockHash;
 
       // Challenge
       result = await claimManager.challengeSuperblock(claim1, { from: challenger });

@@ -127,7 +127,7 @@ contract('verifyScryptHash', (accounts) => {
 
       result = await claimManager.challengeSuperblock(superblock1, { from: challenger });
       assert.equal(result.logs[1].event, 'SuperblockClaimChallenged', 'Superblock challenged');
-      assert.equal(claim1, result.logs[1].args.claimId);
+      assert.equal(claim1, result.logs[1].args.superblockHash);
       assert.equal(result.logs[2].event, 'VerificationGameStarted', 'Battle started');
       session1 = result.logs[2].args.sessionId;
 
