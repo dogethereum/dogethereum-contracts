@@ -285,7 +285,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
 
     // @dev - Verify that block timestamp is in the superblock timestamp interval
     function verifyTimestamp(bytes32 superblockHash, bytes blockHeader) internal view returns (bool) {
-        uint blockTimestamp = DogeTx.getTimestamp(blockHeader, 0);
+        uint blockTimestamp = DogeMessageLibrary.getTimestamp(blockHeader, 0);
         uint superblockTimestamp;
 
         (, , superblockTimestamp, , , , , , ) = getSuperblockInfo(superblockHash);

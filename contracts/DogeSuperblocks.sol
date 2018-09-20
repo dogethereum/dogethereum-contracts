@@ -322,7 +322,7 @@ contract DogeSuperblocks is DogeErrorCodes {
         uint dogeBlockHash = DogeMessageLibrary.dblShaFlip(_dogeBlockHeader);
 
         // Check if Doge block belongs to given superblock
-        if (bytes32(DogeTx.computeMerkle(dogeBlockHash, _dogeBlockIndex, _dogeBlockSiblings))
+        if (bytes32(DogeMessageLibrary.computeMerkle(dogeBlockHash, _dogeBlockIndex, _dogeBlockSiblings))
             != getSuperblockMerkleRoot(_superblockHash)) {
             // Doge block is not in superblock
             emit VerifyTransaction(bytes32(DogeMessageLibrary.dblShaFlip(_txBytes)), ERR_SUPERBLOCK);
