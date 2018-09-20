@@ -3,8 +3,8 @@ const Set = artifacts.require('./token/Set.sol');
 const ECRecovery = artifacts.require('ECRecovery');
 const DogeToken = artifacts.require('./token/DogeToken.sol');
 const DogeTokenForTests = artifacts.require('./token/DogeTokenForTests.sol');
-const DogeTx = artifacts.require('./DogeParser/DogeTx.sol');
-const DogeTxForTests = artifacts.require('./DogeParser/DogeTxForTests.sol');
+const DogeMessageLibrary = artifacts.require('./DogeParser/DogeMessageLibrary.sol');
+const DogeMessageLibraryForTests = artifacts.require('./DogeParser/DogeMessageLibraryForTests.sol');
 const ScryptCheckerDummy = artifacts.require('./ScryptCheckerDummy.sol');
 const DogeSuperblocks = artifacts.require('./DogeSuperblocks.sol');
 const DogeClaimManager = artifacts.require('./DogeClaimManager.sol');
@@ -64,12 +64,12 @@ const SUPERBLOCK_TIMES_LOCAL = {
 
 async function deployDevelopment(deployer, network, accounts, networkId, trustedDogeEthPriceOracle, dogethereumRecipient, superblockTimes) {
   await deployer.deploy(Set);
-  await deployer.deploy(DogeTx);
+  await deployer.deploy(DogeMessageLibrary);
   await deployer.deploy(SafeMath);
   await deployer.deploy(ECRecovery);
 
   await deployer.link(Set, DogeTokenForTests);
-  await deployer.link(DogeTx, [DogeTxForTests, DogeTokenForTests, DogeSuperblocks, DogeBattleManager, DogeClaimManager]);
+  await deployer.link(DogeMessageLibrary, [DogeMessageLibraryForTests, DogeTokenForTests, DogeSuperblocks, DogeBattleManager, DogeClaimManager]);
   await deployer.link(ECRecovery, DogeTokenForTests);
 
   await deployer.deploy(DogeSuperblocks);
@@ -99,7 +99,7 @@ async function deployDevelopment(deployer, network, accounts, networkId, trusted
 
   await deployer.deploy(ScryptCheckerDummy, true)
 
-  await deployer.deploy(DogeTxForTests);
+  await deployer.deploy(DogeMessageLibraryForTests);
 
   // await deployer.deploy(ScryptRunner);
 
@@ -113,12 +113,12 @@ async function deployDevelopment(deployer, network, accounts, networkId, trusted
 
 async function deployIntegration(deployer, network, accounts, networkId, trustedDogeEthPriceOracle, dogethereumRecipient, superblockTimes) {
   await deployer.deploy(Set, {gas: 300000});
-  await deployer.deploy(DogeTx, {gas: 2000000});
+  await deployer.deploy(DogeMessageLibrary, {gas: 2000000});
   await deployer.deploy(SafeMath, {gas: 100000});
   await deployer.deploy(ECRecovery, {gas: 100000});
 
   await deployer.link(Set, DogeToken);
-  await deployer.link(DogeTx, [DogeToken, DogeSuperblocks, DogeBattleManager, DogeClaimManager]);
+  await deployer.link(DogeMessageLibrary, [DogeToken, DogeSuperblocks, DogeBattleManager, DogeClaimManager]);
   await deployer.link(ECRecovery, DogeToken);
 
   await deployer.deploy(ScryptCheckerDummy, true, {gas: 1500000})

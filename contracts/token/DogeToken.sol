@@ -3,7 +3,7 @@ pragma solidity ^0.4.8;
 import "./HumanStandardToken.sol";
 import "./Set.sol";
 import "./../TransactionProcessor.sol";
-import "../DogeParser/DogeTx.sol";
+import "../DogeParser/DogeMessageLibrary.sol";
 import "./../ECRecovery.sol";
 
 contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), TransactionProcessor {
@@ -134,13 +134,13 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         //log1(bytes20(msg.sender), signedMessage);
         address recoveredAddress = ECRecovery.recover(signedMessage, signature);
         //log1(bytes32(recoveredAddress),
-        //     bytes32(DogeTx.pub2address(uint(operatorPublicKeyX), operatorPublicKeyOdd)));                
-        if (recoveredAddress != DogeTx.pub2address(uint(operatorPublicKeyX), operatorPublicKeyOdd)) {
+        //     bytes32(DogeMessageLibrary.pub2address(uint(operatorPublicKeyX), operatorPublicKeyOdd)));                
+        if (recoveredAddress != DogeMessageLibrary.pub2address(uint(operatorPublicKeyX), operatorPublicKeyOdd)) {
             emit ErrorDogeToken(ERR_OPERATOR_SIGNATURE);
             return;
         }
         // Create operator
-        bytes20 operatorPublicKeyHash = DogeTx.pub2PubKeyHash(operatorPublicKeyX, operatorPublicKeyOdd);
+        bytes20 operatorPublicKeyHash = DogeMessageLibrary.pub2PubKeyHash(operatorPublicKeyX, operatorPublicKeyOdd);
         //log0(operatorPublicKeyHash);
         Operator storage operator = operators[operatorPublicKeyHash];
         // Check that operator does not exist yet
@@ -218,7 +218,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         bytes32 firstInputPublicKeyX;
         bool firstInputPublicKeyOdd;
         uint16 outputIndex;
-        (value, firstInputPublicKeyX, firstInputPublicKeyOdd, outputIndex) = DogeTx.parseTransaction(dogeTx, operatorPublicKeyHash);
+        (value, firstInputPublicKeyX, firstInputPublicKeyOdd, outputIndex) = DogeMessageLibrary.parseTransaction(dogeTx, operatorPublicKeyHash);
 
         // Add tx to the dogeTxHashesAlreadyProcessed
         bool inserted = Set.insert(dogeTxHashesAlreadyProcessed, txHash);
@@ -235,7 +235,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         operator.dogeAvailableBalance += value;
 
         // See if the first input was signed by the operator
-        bytes20 firstInputPublicKeyHash = DogeTx.pub2PubKeyHash(firstInputPublicKeyX, firstInputPublicKeyOdd);
+        bytes20 firstInputPublicKeyHash = DogeMessageLibrary.pub2PubKeyHash(firstInputPublicKeyX, firstInputPublicKeyOdd);
         if (operatorPublicKeyHash != firstInputPublicKeyHash) {
             // this is a lock tx
 
@@ -263,7 +263,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
                                     uint value, address operatorEthAddress, 
                                     address superblockSubmitterAddress) private {
         // Calculate ethereum address from dogecoin public key
-        address destinationAddress = DogeTx.pub2address(uint(firstInputPublicKeyX), firstInputPublicKeyOdd);
+        address destinationAddress = DogeMessageLibrary.pub2address(uint(firstInputPublicKeyX), firstInputPublicKeyOdd);
 
         uint operatorFee = value * OPERATOR_LOCK_FEE / 1000;
         balances[operatorEthAddress] += operatorFee;

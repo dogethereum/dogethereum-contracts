@@ -101,7 +101,7 @@
 pragma solidity ^0.4.19;
 
 // parse a raw bitcoin transaction byte array
-library DogeTx {
+library DogeMessageLibrary {
 
     uint constant p = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f;  // secp256k1
     uint constant q = (p + 1) / 4;

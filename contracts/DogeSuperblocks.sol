@@ -1,6 +1,6 @@
 pragma solidity ^0.4.19;
 
-import {DogeTx} from "./DogeParser/DogeTx.sol";
+import {DogeMessageLibrary} from "./DogeParser/DogeMessageLibrary.sol";
 import {DogeErrorCodes} from "./DogeErrorCodes.sol";
 import {TransactionProcessor} from "./TransactionProcessor.sol";
 
@@ -319,13 +319,13 @@ contract DogeSuperblocks is DogeErrorCodes {
         bytes32 _superblockHash,
         TransactionProcessor _targetContract
     ) public returns (uint) {
-        uint dogeBlockHash = DogeTx.dblShaFlip(_dogeBlockHeader);
+        uint dogeBlockHash = DogeMessageLibrary.dblShaFlip(_dogeBlockHeader);
 
         // Check if Doge block belongs to given superblock
         if (bytes32(DogeTx.computeMerkle(dogeBlockHash, _dogeBlockIndex, _dogeBlockSiblings))
             != getSuperblockMerkleRoot(_superblockHash)) {
             // Doge block is not in superblock
-            emit VerifyTransaction(bytes32(DogeTx.dblShaFlip(_txBytes)), ERR_SUPERBLOCK);
+            emit VerifyTransaction(bytes32(DogeMessageLibrary.dblShaFlip(_txBytes)), ERR_SUPERBLOCK);
             return ERR_SUPERBLOCK;
         }
 
@@ -357,7 +357,7 @@ contract DogeSuperblocks is DogeErrorCodes {
         bytes _txBlockHeaderBytes,
         bytes32 _txsuperblockHash
     ) public returns (uint) {
-        uint txHash = DogeTx.dblShaFlip(_txBytes);
+        uint txHash = DogeMessageLibrary.dblShaFlip(_txBytes);
 
         if (_txBytes.length == 64) {  // todo: is check 32 also needed?
             emit VerifyTransaction(bytes32(txHash), ERR_TX_64BYTE);
@@ -406,8 +406,8 @@ contract DogeSuperblocks is DogeErrorCodes {
         }
 
         // Verify tx Merkle root
-        uint merkle = DogeTx.getHeaderMerkleRoot(_blockHeaderBytes, 0);
-        if (DogeTx.computeMerkle(_txHash, _txIndex, _siblings) != merkle) {
+        uint merkle = DogeMessageLibrary.getHeaderMerkleRoot(_blockHeaderBytes, 0);
+        if (DogeMessageLibrary.computeMerkle(_txHash, _txIndex, _siblings) != merkle) {
             emit VerifyTransaction(bytes32(_txHash), ERR_MERKLE_ROOT);
             return (ERR_MERKLE_ROOT);
         }
@@ -550,7 +550,7 @@ contract DogeSuperblocks is DogeErrorCodes {
 
     // @dev - Calculte merkle root from hashes
     function makeMerkle(bytes32[] hashes) public pure returns (bytes32) {
-        return DogeTx.makeMerkle(hashes);
+        return DogeMessageLibrary.makeMerkle(hashes);
     }
 
     function isApproved(bytes32 _superblockHash) public view returns (bool) {

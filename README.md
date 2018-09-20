@@ -18,7 +18,7 @@ If you are new to the Dogecoin <-> Ethereum bridge, please check the [docs](http
 * [DogeClaimManager contract](contracts/DogeClaimManager.sol)
   * Manages the interactive (challenge/response) validation of Superblocks.
   * Inspired on Truebit's Scrypt interactive [ClaimManager](https://github.com/TrueBitFoundation/scrypt-interactive/blob/master/contracts/ClaimManager.sol)
-* [DogeTx library](contracts/DogeParser/DogeTx.sol)
+* [DogeMessageLibrary](contracts/DogeParser/DogeMessageLibrary.sol)
   - Library for parsing/working with Dogecoin blocks, txs and merkle trees 
 
 

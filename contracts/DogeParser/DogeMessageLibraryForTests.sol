@@ -1,9 +1,9 @@
 pragma solidity ^0.4.19;
 
-import {DogeTx} from './DogeTx.sol';
+import {DogeMessageLibrary} from './DogeMessageLibrary.sol';
 
 // @dev - Manages a battle session between superblock submitter and challenger
-contract DogeTxForTests {
+contract DogeMessageLibraryForTests {
 
     function bytesToUint32Public(bytes memory input) public pure returns (uint32 result) {
         return bytesToUint32(input, 0);
@@ -14,19 +14,19 @@ contract DogeTxForTests {
     }
 
     function sliceArrayPublic(bytes original, uint32 offset, uint32 endIndex) public view returns (bytes result) {
-        return DogeTx.sliceArray(original, offset, endIndex);
+        return DogeMessageLibrary.sliceArray(original, offset, endIndex);
     }
 
     function targetFromBitsPublic(uint32 bits) public pure returns (uint) {
-        return DogeTx.targetFromBits(bits) ;
+        return DogeMessageLibrary.targetFromBits(bits) ;
     }
 
     function concatHashPublic(uint tx1, uint tx2) public pure returns (uint) {
-        return DogeTx.concatHash(tx1, tx2);
+        return DogeMessageLibrary.concatHash(tx1, tx2);
     }
 
     function flip32BytesPublic(uint input) public pure returns (uint) {
-        return DogeTx.flip32Bytes(input);
+        return DogeMessageLibrary.flip32Bytes(input);
     }
 
     function checkAuxPoWPublic(uint blockHash, bytes auxBytes) public view returns (uint) {
@@ -35,11 +35,11 @@ contract DogeTxForTests {
 
     // doesn't check merge mining to see if other error codes work
     function checkAuxPoWForTests(uint _blockHash, bytes memory _auxBytes) internal view returns (uint) {
-        DogeTx.AuxPoW memory ap = DogeTx.parseAuxPoW(_auxBytes, 0, _auxBytes.length);
+        DogeMessageLibrary.AuxPoW memory ap = DogeMessageLibrary.parseAuxPoW(_auxBytes, 0, _auxBytes.length);
 
         //uint32 version = bytesToUint32Flipped(_auxBytes, 0);
 
-        if (!DogeTx.isMergeMined(_auxBytes, 0)) {
+        if (!DogeMessageLibrary.isMergeMined(_auxBytes, 0)) {
             return ERR_NOT_MERGE_MINED;
         }
 
@@ -51,11 +51,11 @@ contract DogeTxForTests {
             return ap.coinbaseMerkleRootCode;
         }
 
-        if (DogeTx.computeChainMerkle(_blockHash, ap) != ap.coinbaseMerkleRoot) {
+        if (DogeMessageLibrary.computeChainMerkle(_blockHash, ap) != ap.coinbaseMerkleRoot) {
             return ERR_CHAIN_MERKLE;
         }
 
-        if (DogeTx.computeParentMerkle(ap) != ap.parentMerkleRoot) {
+        if (DogeMessageLibrary.computeParentMerkle(ap) != ap.parentMerkleRoot) {
             return ERR_PARENT_MERKLE;
         }
 

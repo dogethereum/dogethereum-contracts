@@ -3,7 +3,7 @@ pragma solidity ^0.4.19;
 import {DogeDepositsManager} from './DogeDepositsManager.sol';
 import {DogeSuperblocks} from './DogeSuperblocks.sol';
 import {DogeBattleManager} from './DogeBattleManager.sol';
-import {DogeTx} from './DogeParser/DogeTx.sol';
+import {DogeMessageLibrary} from './DogeParser/DogeMessageLibrary.sol';
 import {DogeErrorCodes} from "./DogeErrorCodes.sol";
 
 // @dev - Manager of superblock claims

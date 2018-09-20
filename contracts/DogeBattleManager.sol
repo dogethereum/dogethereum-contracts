@@ -3,7 +3,7 @@ pragma solidity ^0.4.19;
 import {DogeClaimManager} from './DogeClaimManager.sol';
 import {DogeErrorCodes} from "./DogeErrorCodes.sol";
 import {DogeSuperblocks} from './DogeSuperblocks.sol';
-import {DogeTx} from './DogeParser/DogeTx.sol';
+import {DogeMessageLibrary} from './DogeParser/DogeMessageLibrary.sol';
 import {IScryptChecker} from "./IScryptChecker.sol";
 import {IScryptCheckerListener} from "./IScryptCheckerListener.sol";
 
@@ -84,7 +84,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
     mapping (bytes32 => ScryptHashVerification) public scryptHashVerifications;
 
     // network that the stored blocks belong to
-    DogeTx.Network private net;
+    DogeMessageLibrary.Network private net;
 
     // ScryptHash checker
     IScryptChecker public scryptChecker;
@@ -129,7 +129,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
     // @param _superblockDuration Superblock duration (in seconds)
     // @param _superblockTimeout Time to wait for challenges (in seconds)
     constructor(
-        DogeTx.Network _network,
+        DogeMessageLibrary.Network _network,
         DogeSuperblocks _superblocks,
         uint _superblockDuration,
         uint _superblockTimeout
@@ -217,7 +217,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
             if (lastHash != blockHashes[blockHashes.length - 1]){
                 return ERR_SUPERBLOCK_BAD_LASTBLOCK;
             }
-            if (merkleRoot != DogeTx.makeMerkle(blockHashes)) {
+            if (merkleRoot != DogeMessageLibrary.makeMerkle(blockHashes)) {
                 return ERR_SUPERBLOCK_INVALID_MERKLE;
             }
             (uint err, ) = bondDeposit(session.superblockHash, msg.sender, minDeposit);
@@ -324,17 +324,17 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
         bytes blockHeader
     ) internal returns (uint, bytes) {
         (uint err, , uint blockScryptHash, bool isMergeMined) =
-            DogeTx.verifyBlockHeader(blockHeader, 0, blockHeader.length, uint(proposedBlockScryptHash));
+            DogeMessageLibrary.verifyBlockHeader(blockHeader, 0, blockHeader.length, uint(proposedBlockScryptHash));
         if (err != 0) {
             return (err, new bytes(0));
         }
         bytes memory powBlockHeader = (isMergeMined) ?
-            DogeTx.sliceArray(blockHeader, blockHeader.length - 80, blockHeader.length) :
-            DogeTx.sliceArray(blockHeader, 0, 80);
+            DogeMessageLibrary.sliceArray(blockHeader, blockHeader.length - 80, blockHeader.length) :
+            DogeMessageLibrary.sliceArray(blockHeader, 0, 80);
 
-        blockInfo.timestamp = DogeTx.getTimestamp(blockHeader, 0);
-        blockInfo.bits = DogeTx.getBits(blockHeader, 0);
-        blockInfo.prevBlock = bytes32(DogeTx.getHashPrevBlock(blockHeader, 0));
+        blockInfo.timestamp = DogeMessageLibrary.getTimestamp(blockHeader, 0);
+        blockInfo.bits = DogeMessageLibrary.getBits(blockHeader, 0);
+        blockInfo.prevBlock = bytes32(DogeMessageLibrary.getHashPrevBlock(blockHeader, 0));
         blockInfo.scryptHash = bytes32(blockScryptHash);
         blockInfo.powBlockHeader = powBlockHeader;
         return (ERR_SUPERBLOCK_OK, powBlockHeader);
@@ -351,7 +351,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
             return (ERR_SUPERBLOCK_MIN_DEPOSIT, new bytes(0));
         }
         if (session.challengeState == ChallengeState.QueryBlockHeader) {
-            bytes32 blockSha256Hash = bytes32(DogeTx.dblShaFlipMem(blockHeader, 0, 80));
+            bytes32 blockSha256Hash = bytes32(DogeMessageLibrary.dblShaFlipMem(blockHeader, 0, 80));
             BlockInfo storage blockInfo = session.blocksInfo[blockSha256Hash];
             if (blockInfo.status != BlockInfoStatus.Requested) {
                 return (ERR_SUPERBLOCK_BAD_DOGE_STATUS, new bytes(0));
@@ -501,23 +501,23 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
             if (session.blocksInfo[blockSha256Hash].prevBlock != prevBlock) {
                 return ERR_SUPERBLOCK_BAD_PARENT;
             }
-            if (net != DogeTx.Network.REGTEST) {
-                uint32 newBits = DogeTx.calculateDigishieldDifficulty(int64(parentTimestamp) - int64(gpTimestamp), prevBits);
-                if (net == DogeTx.Network.TESTNET && session.blocksInfo[blockSha256Hash].timestamp - parentTimestamp > 120) {
+            if (net != DogeMessageLibrary.Network.REGTEST) {
+                uint32 newBits = DogeMessageLibrary.calculateDigishieldDifficulty(int64(parentTimestamp) - int64(gpTimestamp), prevBits);
+                if (net == DogeMessageLibrary.Network.TESTNET && session.blocksInfo[blockSha256Hash].timestamp - parentTimestamp > 120) {
                     newBits = 0x1e0fffff;
                 }
                 if (bits != newBits) {
                     return ERR_SUPERBLOCK_BAD_BITS;
                 }
             }
-            work += DogeTx.diffFromBits(session.blocksInfo[blockSha256Hash].bits);
+            work += DogeMessageLibrary.diffFromBits(session.blocksInfo[blockSha256Hash].bits);
             prevBlock = blockSha256Hash;
             prevBits = session.blocksInfo[blockSha256Hash].bits;
             gpTimestamp = parentTimestamp;
             parentTimestamp = session.blocksInfo[blockSha256Hash].timestamp;
             idx += 1;
         }
-        if (net != DogeTx.Network.REGTEST && parentWork + work != accWork) {
+        if (net != DogeMessageLibrary.Network.REGTEST && parentWork + work != accWork) {
             return ERR_SUPERBLOCK_BAD_ACCUMULATED_WORK;
         }
         return ERR_SUPERBLOCK_OK;
