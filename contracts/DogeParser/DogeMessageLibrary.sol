@@ -226,17 +226,25 @@ library DogeMessageLibrary {
         (variables.inputPubKey, variables.inputPubKeyOdd) = getInputPubKey(txBytes, input_script_starts[0]);
 
         (output_values, output_script_starts, output_script_lens, variables.pos) = scanOutputs(txBytes, variables.pos, 2);
+
+        bytes20 firstInputPublicKeyHash = pub2PubKeyHash(variables.inputPubKey, variables.inputPubKeyOdd);
+
         // The output we are looking for should be the first or the second output
         variables.output_public_key_hash = parseP2PKHOutputScript(txBytes, output_script_starts[0], output_script_lens[0]);
-        variables.output_value = output_values[0];
-        variables.outputIndex = 0;
-
-        if (variables.output_public_key_hash != expected_output_public_key_hash) {
-            variables.output_public_key_hash = parseP2PKHOutputScript(txBytes, output_script_starts[1], output_script_lens[1]);
-            variables.output_value = output_values[1];
-            variables.outputIndex = 1;
+        if (variables.output_public_key_hash == expected_output_public_key_hash) {
+            variables.output_value = output_values[0];
+            variables.outputIndex = 0;
+        } else {
+            variables.output_public_key_hash = (output_values.length > 1) ? parseP2PKHOutputScript(txBytes, output_script_starts[1], output_script_lens[1]) : bytes20(0x0);
+            if (variables.output_public_key_hash == expected_output_public_key_hash) {
+                variables.output_value = output_values[1];
+                variables.outputIndex = 1;
+            } else {
+                variables.output_public_key_hash = 0x0;
+            }
         }
-        require(variables.output_public_key_hash == expected_output_public_key_hash);
+        require(variables.output_public_key_hash == expected_output_public_key_hash ||
+            firstInputPublicKeyHash == expected_output_public_key_hash);
 
         return (variables.output_value, variables.inputPubKey, variables.inputPubKeyOdd, variables.outputIndex);
     }
