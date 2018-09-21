@@ -9,7 +9,7 @@ let web3 = new Web3();
 web3.setProvider(new web3.providers.HttpProvider('http://localhost:8545'));
 
 let input = {
-    'DogeParser/DogeTx.sol' : fs.readFileSync('./contracts/DogeParser/DogeTx.sol', 'utf8'),
+    'DogeParser/DogeMessageLibrary.sol' : fs.readFileSync('./contracts/DogeParser/DogeMessageLibrary.sol', 'utf8'),
     'DummyTransactionProcessor.sol' : fs.readFileSync('./contracts/DummyTransactionProcessor.sol', 'utf8'),
     'IDogeRelay.sol' : fs.readFileSync('./contracts/IDogeRelay.sol', 'utf8'),
     'IScryptChecker.sol' : fs.readFileSync('./contracts/IScryptChecker.sol', 'utf8'),
