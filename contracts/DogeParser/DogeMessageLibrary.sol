@@ -100,7 +100,7 @@
 
 pragma solidity ^0.4.19;
 
-// parse a raw bitcoin transaction byte array
+// parse a raw Dogecoin transaction byte array
 library DogeMessageLibrary {
 
     uint constant p = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f;  // secp256k1
@@ -121,8 +121,6 @@ library DogeMessageLibrary {
 
     // AuxPoW block fields
     struct AuxPoW {
-        // uint firstBytes;
-
         uint scryptHash;
 
         uint txHash;
@@ -202,15 +200,15 @@ library DogeMessageLibrary {
         bool inputPubKeyOdd;
     }
 
-    // Parses a doge tx
-    // Inputs
-    // txBytes: tx byte array
-    // expected_output_public_key_hash: lock address (actually, it's public key hash expected to be on 1st or 2nd output, require() fails otherwise)
+    // @dev - Parses a doge tx
+    //
+    // @param txBytes - tx byte array
+    // @param expected_output_public_key_hash - lock address (actually, it's public key hash expected to be on 1st or 2nd output, require() fails otherwise)
     // Outputs
-    // output_value: amount sent to the lock address in satoshis
-    // inputPubKey: "x" axis value of the public key used to sign the first output
-    // inputPubKeyOdd: Indicates inputPubKey odd bit
-    // outputIndex: number of output where expected_output_address was found
+    // @return output_value - amount sent to the lock address in satoshis
+    // @return inputPubKey - "x" axis value of the public key used to sign the first output
+    // @return inputPubKeyOdd - Indicates inputPubKey odd bit
+    // @return outputIndex - number of output where expected_output_address was found
 
     function parseTransaction(bytes txBytes, bytes20 expected_output_public_key_hash) internal pure
              returns (uint, bytes32, bool, uint16)
@@ -1050,12 +1048,12 @@ library DogeMessageLibrary {
     }
 
     // @dev - Verify block header
-    // @param _blockHeaderBytes array of bytes with the block header
-    // @param _pos starting position of the block header
-    // @param _len length of the block header
-    // @param _proposedBlockScryptash proposed block scrypt hash
+    // @param _blockHeaderBytes - array of bytes with the block header
+    // @param _pos - starting position of the block header
+    // @param _len - length of the block header
+    // @param _proposedBlockScryptHash - proposed block scrypt hash
     // @return - [ErrorCode, BlockSha256Hash, BlockScryptHash, IsMergeMined]
-    function verifyBlockHeader(bytes _blockHeaderBytes, uint _pos, uint _len, uint _proposedBlockScryptash) external view returns (uint, uint, uint, bool) {
+    function verifyBlockHeader(bytes _blockHeaderBytes, uint _pos, uint _len, uint _proposedBlockScryptHash) external view returns (uint, uint, uint, bool) {
         BlockHeader memory blockHeader = parseHeaderBytes(_blockHeaderBytes, _pos);
         uint blockSha256Hash = blockHeader.blockHash;
         if (isMergeMined(blockHeader)) {
@@ -1069,14 +1067,14 @@ library DogeMessageLibrary {
             }
             return (0, blockHeader.blockHash, ap.scryptHash, true);
         } else {
-            if (flip32Bytes(_proposedBlockScryptash) > targetFromBits(blockHeader.bits)) {
-                return (ERR_PROOF_OF_WORK, blockHeader.blockHash, _proposedBlockScryptash, false);
+            if (flip32Bytes(_proposedBlockScryptHash) > targetFromBits(blockHeader.bits)) {
+                return (ERR_PROOF_OF_WORK, blockHeader.blockHash, _proposedBlockScryptHash, false);
             }
-            return (0, blockHeader.blockHash, _proposedBlockScryptash, false);
+            return (0, blockHeader.blockHash, _proposedBlockScryptHash, false);
         }
     }
 
-    // @dev - Calculate difficulty from block compact representation (bits)
+    // @dev - Calculate difficulty from compact representation (bits) found in block
     function diffFromBits(uint32 bits) external pure returns (uint) {
         return targetToDiff(targetFromBits(bits));
     }
@@ -1090,7 +1088,7 @@ library DogeMessageLibrary {
     uint constant POW_LIMIT = 0x00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
 
     // @dev - Implementation of DigiShield, almost directly translated from
-    // C++ implementation of Dogecoin. See function CalculateDogecoinNextWorkRequired
+    // C++ implementation of Dogecoin. See function calculateDogecoinNextWorkRequired
     // on dogecoin/src/dogecoin.cpp for more details.
     // Calculates the next block's difficulty based on the current block's elapsed time
     // and the desired mining time for a block, which is 60 seconds after block 145k.

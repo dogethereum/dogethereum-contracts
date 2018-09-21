@@ -126,13 +126,13 @@ contract DogeSuperblocks is DogeErrorCodes {
 
     // @dev - Proposes a new superblock
     //
-    // A new superblock to be accepted it has to have a parent superblock
-    // approved or semi approved.
+    // To be accepted, a new superblock needs to have its parent
+    // either approved or semi-approved.
     //
     // @param _blocksMerkleRoot Root of the merkle tree of blocks contained in a superblock
     // @param _accumulatedWork Accumulated proof of work of the last block in the superblock
     // @param _timestamp Timestamp of the last block in the superblock
-    // @param _prevTimestamp Timestamp of the block previous to the last
+    // @param _prevTimestamp Timestamp of the last block's parent
     // @param _lastHash Hash of the last block in the superblock
     // @param _lastBits Difficulty bits of the last block in the superblock
     // @param _parentId Id of the parent superblock
@@ -190,7 +190,7 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @dev - Confirm a proposed superblock
     //
     // An unchallenged superblock can be confirmed after a timeout.
-    // A challenged superblock is confirmed if it has enough superblocks
+    // A challenged superblock is confirmed if it has enough descendants
     // in the main chain.
     //
     // @param _superblockHash Id of the superblock to confirm
@@ -271,8 +271,9 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @dev - Invalidates a superblock
     //
     // A superblock with incorrect data can be invalidated immediately.
-    // Superblocks that are not in the main chain can be invalidates
-    // if not enough superblocks follows them.
+    // Superblocks that are not in the main chain can be invalidated
+    // if not enough superblocks follow them, i.e. they don't have
+    // enough descendants.
     //
     // @param _superblockHash Id of the superblock to invalidate
     // @param _validator Address requesting superblock invalidation
@@ -307,7 +308,7 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @param _dogeBlockIndex - block's index withing superblock
     // @param _dogeBlockSiblings - block's merkle siblings
     // @param _superblockHash - superblock containing block header
-    // @param _targetContract -
+    // @param _targetContract - the contract that is going to process the transaction
     function relayTx(
         bytes _txBytes,
         bytes20 _operatorPublicKeyHash,
@@ -373,7 +374,7 @@ contract DogeSuperblocks is DogeErrorCodes {
     }
 
     // @dev - Checks whether the transaction identified by `_txHash` is in the block identified by `_txBlockHash`
-    // and whether the block is in Dogecoin's main chain. Transaction check is done via Merkle proof.
+    // and whether the block is in the Dogecoin main chain. Transaction check is done via Merkle proof.
     // Note: no verification is performed to prevent txHash from just being an
     // internal hash in the Merkle tree. Thus this helper method should NOT be used
     // directly and is intended to be private.
@@ -416,9 +417,7 @@ contract DogeSuperblocks is DogeErrorCodes {
         return (1);
     }
 
-    // @dev - Evaluate the superblockHash
-    //
-    // Evaluate the superblockHash given the superblock data.
+    // @dev - Calculate superblock hash from superblock data
     //
     // @param _blocksMerkleRoot Root of the merkle tree of blocks contained in a superblock
     // @param _accumulatedWork Accumulated proof of work of the last block in the superblock
@@ -450,12 +449,12 @@ contract DogeSuperblocks is DogeErrorCodes {
 
     // @dev - Returns the confirmed superblock with the most accumulated work
     //
-    // @return Superblock id
+    // @return Best superblock hash
     function getBestSuperblock() public view returns (bytes32) {
         return bestSuperblock;
     }
 
-    // @dev - Returns the superblock data for the supplied superblockHash
+    // @dev - Returns the superblock data for the supplied superblock hash
     //
     // @return {
     //   bytes32 _blocksMerkleRoot,
@@ -493,7 +492,7 @@ contract DogeSuperblocks is DogeErrorCodes {
         );
     }
 
-    // Returns superblock height
+    // @dev - Returns superblock height
     function getSuperblockHeight(bytes32 superblockHash) public view returns (uint32) {
         return superblocks[superblockHash].height;
     }
@@ -503,12 +502,12 @@ contract DogeSuperblocks is DogeErrorCodes {
         return superblocks[superblockHash].index;
     }
 
-    // @dev - Return superblock ancestors indexes
+    // @dev - Return superblock ancestors' indexes
     function getSuperblockAncestors(bytes32 superblockHash) public view returns (bytes32) {
         return superblocks[superblockHash].ancestors;
     }
 
-    // @dev - Return superblock blocks' merkle root
+    // @dev - Return superblock blocks' Merkle root
     function getSuperblockMerkleRoot(bytes32 _superblockHash) public view returns (bytes32) {
         return superblocks[_superblockHash].blocksMerkleRoot;
     }
@@ -548,7 +547,7 @@ contract DogeSuperblocks is DogeErrorCodes {
         return indexNextSuperblock;
     }
 
-    // @dev - Calculte merkle root from hashes
+    // @dev - Calculate Merkle root from Doge block hashes
     function makeMerkle(bytes32[] hashes) public pure returns (bytes32) {
         return DogeMessageLibrary.makeMerkle(hashes);
     }
@@ -630,7 +629,7 @@ contract DogeSuperblocks is DogeErrorCodes {
         return indexSuperblock[ancestorsIndex];
     }
 
-    // dev - returns depth associated with an ancestor index; applies to any block
+    // dev - returns depth associated with an ancestor index; applies to any superblock
     //
     // @param _index - index of ancestor to be looked up; an integer between 0 and 7
     // @return - depth corresponding to said index, i.e. 5**index
@@ -638,7 +637,7 @@ contract DogeSuperblocks is DogeErrorCodes {
         return ANCESTOR_STEP**(uint(_index));
     }
 
-    // @dev - return superblock at height in superblock main chain
+    // @dev - return superblock hash at a given height in superblock main chain
     //
     // @param _height - superblock height
     // @return - hash corresponding to block of height _blockHeight

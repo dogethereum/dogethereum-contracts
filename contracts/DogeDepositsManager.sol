@@ -20,14 +20,14 @@ contract DogeDepositsManager {
     }
 
     // @dev – allows a user to deposit eth.
-    // @return – the user's updated deposit amount.
+    // @return – sender's updated deposit amount.
     function makeDeposit() public payable returns (uint) {
         increaseDeposit(msg.sender, msg.value);
         return deposits[msg.sender];
     }
 
     // @dev – increases an account's deposit.
-    // @return – the user's updated deposit amount.
+    // @return – the given user's updated deposit amount.
     function increaseDeposit(address who, uint amount) internal {
         deposits[who] += amount;
         require(deposits[who] <= address(this).balance);
@@ -37,7 +37,7 @@ contract DogeDepositsManager {
 
     // @dev – allows a user to withdraw eth from their deposit.
     // @param amount – how much eth to withdraw
-    // @return – the user's updated deposit amount.
+    // @return – sender's updated deposit amount.
     function withdrawDeposit(uint amount) public returns (uint) {
         require(deposits[msg.sender] >= amount);
 

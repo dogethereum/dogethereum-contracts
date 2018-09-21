@@ -47,7 +47,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
     address public trustedRelayerContract;
     // Doge-Eth price oracle to trust.
     address public trustedDogeEthPriceOracle;
-    // Number of times the operator eth collateral should cover her doge holdings 
+    // Number of times the eth collateral operator should cover her doge holdings 
     uint8 public collateralRatio;
 
 
@@ -202,7 +202,6 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         operator.ethBalance -= value;
         msg.sender.transfer(value);
     }
-
 
     function processTransaction(bytes dogeTx, uint txHash, bytes20 operatorPublicKeyHash, address superblockSubmitterAddress) public returns (uint) {
         require(msg.sender == trustedRelayerContract);
