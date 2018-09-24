@@ -1,9 +1,3 @@
-const HDWalletProvider = require('truffle-hdwallet-provider');
-const config = require('./config');
-
-const engine = (config.wallet) ?
-  new HDWalletProvider(config.wallet.seed, config.rpcpath) : undefined;
-
 module.exports = {
   networks: {
     development: {
@@ -16,7 +10,7 @@ module.exports = {
     integrationDogeMain: {
       host: "localhost",
       port: 8545,
-      network_id: "32000", 
+      network_id: "32000",
       gas: 4700000,
       gasPrice: 1
     },
