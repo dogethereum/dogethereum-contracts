@@ -242,6 +242,11 @@ function base58ToBytes20(str) {
     return "0x" + decoded.toString('hex').slice(2, 42);
 }
 
+function findLog(logs, name) {
+  const index = logs.findIndex(log => log.event === name);
+  return index >= 0 ? logs[index] : undefined;
+}
+
 module.exports = {
   SUPERBLOCK_TIMES_DOGE_REGTEST,
   DOGE_MAINNET,
@@ -439,5 +444,6 @@ module.exports = {
       return [operatorPublicKeyCompressedString, signature];
   },
   forgeDogeBlockHeader,
-  base58ToBytes20
+  base58ToBytes20,
+  findLog,
 };
