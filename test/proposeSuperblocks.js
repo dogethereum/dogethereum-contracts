@@ -25,7 +25,7 @@ let superblock3LastDogeBlockHash = "0x49c9fee33f814e654979094f3694ebe109993c2f99
 let superblock3ParentId = superblock2Id;
 let superblock3Id = "0xd2a92b0e691fddd3413d4c07e548b629a5655572a27337c0994728969ba1e086";
 
-contract('DogeSuperblocks', (accounts) => {
+contract('proposeSuperblocks', (accounts) => {
     describe.skip('Superblock proposal integration test', function() {
         let dogeSuperblocks;
         let claimManager;
@@ -34,7 +34,7 @@ contract('DogeSuperblocks', (accounts) => {
         let dogeSuperblocksParsedJSON = JSON.parse(dogeSuperblocksJSON);
         let networks = dogeSuperblocksParsedJSON['networks'];
         let networkKey = Object.keys(networks)[0];
-        let dogeSuperblocksAddress = networks[networkKey].address;
+        let dogeSuperblocksAddress = typeof networks[networkKey] !== 'undefined' ? networks[networkKey].address : '0x0';
 
         // let dogeClaimManagerJSON = fs.readFileSync('./build/contracts/DogeClaimManager.json', 'utf8');
         // let dogeClaimManagerParsedJSON = JSON.parse(dogeClaimManagerJSON);
