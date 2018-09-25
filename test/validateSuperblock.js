@@ -1,7 +1,3 @@
-const DogeClaimManager = artifacts.require('DogeClaimManager');
-const DogeBattleManager = artifacts.require('DogeBattleManager');
-const DogeSuperblocks = artifacts.require('DogeSuperblocks');
-const ScryptCheckerDummy = artifacts.require('ScryptCheckerDummy');
 const utils = require('./utils');
 
 contract('validateSuperblocks', (accounts) => {
@@ -50,7 +46,8 @@ contract('validateSuperblocks', (accounts) => {
         battleManager,
         scryptChecker,
       } = await utils.initSuperblockChain({
-        dummyChecker: false,
+        network: utils.DOGE_MAINNET,
+        dummyChecker: true,
         genesisSuperblock,
         params: utils.SUPERBLOCK_TIMES_DOGE_REGTEST,
         from: owner,
@@ -60,7 +57,6 @@ contract('validateSuperblocks', (accounts) => {
       assert.equal(superblock0, best, 'Best superblock should match');
       await claimManager.makeDeposit({ value: 10, from: submitter });
       await claimManager.makeDeposit({ value: 11, from: challenger });
-
     });
     it('Confirm superblock with one header', async () => {
       result = await claimManager.proposeSuperblock(

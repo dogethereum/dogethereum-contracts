@@ -12,6 +12,8 @@ const DogeClaimManager = artifacts.require('DogeClaimManager');
 const DogeBattleManager = artifacts.require('DogeBattleManager');
 const DogeSuperblocks = artifacts.require('DogeSuperblocks');
 const ScryptCheckerDummy = artifacts.require('ScryptCheckerDummy');
+const ScryptVerifier = artifacts.require('ScryptVerifier');
+const ClaimManager = artifacts.require('ClaimManager');
 
 const SUPERBLOCK_TIMES_DOGE_REGTEST = {
   DURATION: 600,    // 10 minute
@@ -253,12 +255,13 @@ function findEvent(logs, name) {
 }
 
 async function initSuperblockChain(options) {
-  const superblocks = await DogeSuperblocks.new();
+  const superblocks = await DogeSuperblocks.new({ from: options.from });
   const battleManager = await DogeBattleManager.new(
-    DOGE_MAINNET,
+    options.network,
     superblocks.address,
     options.params.DURATION,
     options.params.TIMEOUT,
+    { from: options.from },
   );
   const claimManager = await DogeClaimManager.new(
     superblocks.address,
@@ -266,12 +269,20 @@ async function initSuperblockChain(options) {
     options.params.DELAY,
     options.params.TIMEOUT,
     options.params.CONFIRMATIONS,
+    { from: options.from },
   );
-  const scryptChecker = await ScryptCheckerDummy.new(false);
+  let scryptVerifier;
+  let scryptChecker;
+  if (options.dummyChecker) {
+    scryptChecker = await ScryptCheckerDummy.new(false, { from: options.from });
+  } else {
+    scryptVerifier = await ScryptVerifier.new({ from: options.from });
+    scryptChecker = await ClaimManager.new(scryptVerifier.address, { from: options.from });
+  }
 
-  await superblocks.setClaimManager(claimManager.address);
-  await battleManager.setDogeClaimManager(claimManager.address);
-  await battleManager.setScryptChecker(scryptChecker.address);
+  await superblocks.setClaimManager(claimManager.address, { from: options.from });
+  await battleManager.setDogeClaimManager(claimManager.address, { from: options.from });
+  await battleManager.setScryptChecker(scryptChecker.address, { from: options.from });
   await superblocks.initialize(
     options.genesisSuperblock.merkleRoot,
     options.genesisSuperblock.accumulatedWork,
@@ -287,7 +298,91 @@ async function initSuperblockChain(options) {
     claimManager,
     battleManager,
     scryptChecker,
+    scryptVerifier,
   };
+}
+
+async function initSuperblockChainAndChallenge(options) {
+  let result;
+  let scryptHash;
+  const {
+    superblocks,
+    claimManager,
+    battleManager,
+    scryptChecker,
+    scryptVerifier,
+  } = await initSuperblockChain(options);
+  const superblock0 = options.genesisSuperblock.superblockHash;
+  const best = await superblocks.getBestSuperblock();
+  assert.equal(superblock0, best, 'Best superblock should match');
+
+  await claimManager.makeDeposit({ value: 10, from: options.submitter });
+  await claimManager.makeDeposit({ value: 11, from: options.challenger });
+
+  await scryptChecker.makeDeposit({ value: 10, from: options.submitter });
+  await scryptChecker.makeDeposit({ value: 11, from: options.challenger });
+
+  const proposedSuperblock = makeSuperblock(
+    options.headers,
+    options.genesisSuperblock.superblockHash,
+    options.genesisSuperblock.accumulatedWork
+  );
+
+  result = await claimManager.proposeSuperblock(
+    proposedSuperblock.merkleRoot,
+    proposedSuperblock.accumulatedWork,
+    proposedSuperblock.timestamp,
+    proposedSuperblock.prevTimestamp,
+    proposedSuperblock.lastHash,
+    proposedSuperblock.lastBits,
+    proposedSuperblock.parentId,
+    { from: options.submitter },
+  );
+  const superblockClaimCreated = findEvent(result.logs, 'SuperblockClaimCreated');
+  assert.ok(superblockClaimCreated, 'New superblock proposed');
+  const proposedSuperblockHash = superblockClaimCreated.args.superblockHash;
+
+  result = await claimManager.challengeSuperblock(proposedSuperblockHash, { from: options.challenger });
+  const superblockClaimChallenged = findEvent(result.logs, 'SuperblockClaimChallenged');
+  assert.ok(superblockClaimChallenged, 'Superblock challenged');
+  assert.equal(proposedSuperblockHash, superblockClaimChallenged.args.superblockHash);
+  const verificationGameStarted = findEvent(result.logs, 'VerificationGameStarted')
+  assert.ok(verificationGameStarted, 'Battle started');
+  const battleSessionId = verificationGameStarted.args.sessionId;
+
+  result = await battleManager.queryMerkleRootHashes(proposedSuperblockHash, battleSessionId, { from: options.challenger });
+  assert.ok(findEvent(result.logs, 'QueryMerkleRootHashes'), 'Query merkle root hashes');
+
+  result = await battleManager.respondMerkleRootHashes(proposedSuperblockHash, battleSessionId, options.hashes, { from: options.submitter });
+  assert.ok(findEvent(result.logs, 'RespondMerkleRootHashes'), 'Respond merkle root hashes');
+
+  result = await battleManager.queryBlockHeader(proposedSuperblockHash, battleSessionId, options.hashes[1], { from: options.challenger });
+  assert.ok(findEvent(result.logs, 'QueryBlockHeader'), 'Query block header');
+
+  scryptHash = `0x${module.exports.calcHeaderPoW(options.headers[1])}`;
+  result = await battleManager.respondBlockHeader(proposedSuperblockHash, battleSessionId, scryptHash, `0x${options.headers[1]}`, { from: options.submitter });
+  assert.ok(findEvent(result.logs, 'RespondBlockHeader'), 'Respond block header');
+
+  result = await battleManager.queryBlockHeader(proposedSuperblockHash, battleSessionId, options.hashes[0], { from: options.challenger });
+  assert.ok(findEvent(result.logs, 'QueryBlockHeader'), 'Query block header');
+
+  scryptHash = `0x${module.exports.calcHeaderPoW(options.headers[0])}`;
+  result = await battleManager.respondBlockHeader(proposedSuperblockHash, battleSessionId, scryptHash, `0x${options.headers[0]}`, { from: options.submitter });
+  assert.ok(findEvent(result.logs, 'RespondBlockHeader'), 'Respond block header');
+
+  return {
+    superblocks,
+    claimManager,
+    battleManager,
+    scryptChecker,
+    scryptVerifier,
+    genesisSuperblock: options.genesisSuperblock,
+    headers: options.headers,
+    hashes: options.hashes,
+    proposedSuperblock,
+    proposedSuperblockHash,
+    battleSessionId,
+  }
 }
 
 module.exports = {
@@ -490,4 +585,5 @@ module.exports = {
   base58ToBytes20,
   findEvent,
   initSuperblockChain,
+  initSuperblockChainAndChallenge,
 };
