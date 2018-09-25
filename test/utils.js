@@ -8,6 +8,11 @@ const bitcoreLib = require('bitcore-lib');
 const ECDSA = bitcoreLib.crypto.ECDSA;
 const bitcoreMessage = require('bitcore-message');
 
+const DogeClaimManager = artifacts.require('DogeClaimManager');
+const DogeBattleManager = artifacts.require('DogeBattleManager');
+const DogeSuperblocks = artifacts.require('DogeSuperblocks');
+const ScryptCheckerDummy = artifacts.require('ScryptCheckerDummy');
+
 const SUPERBLOCK_TIMES_DOGE_REGTEST = {
   DURATION: 600,    // 10 minute
   DELAY: 60,        // 1 minute
@@ -242,9 +247,47 @@ function base58ToBytes20(str) {
     return "0x" + decoded.toString('hex').slice(2, 42);
 }
 
-function findLog(logs, name) {
+function findEvent(logs, name) {
   const index = logs.findIndex(log => log.event === name);
   return index >= 0 ? logs[index] : undefined;
+}
+
+async function initSuperblockChain(options) {
+  const superblocks = await DogeSuperblocks.new();
+  const battleManager = await DogeBattleManager.new(
+    DOGE_MAINNET,
+    superblocks.address,
+    options.params.DURATION,
+    options.params.TIMEOUT,
+  );
+  const claimManager = await DogeClaimManager.new(
+    superblocks.address,
+    battleManager.address,
+    options.params.DELAY,
+    options.params.TIMEOUT,
+    options.params.CONFIRMATIONS,
+  );
+  const scryptChecker = await ScryptCheckerDummy.new(false);
+
+  await superblocks.setClaimManager(claimManager.address);
+  await battleManager.setDogeClaimManager(claimManager.address);
+  await battleManager.setScryptChecker(scryptChecker.address);
+  await superblocks.initialize(
+    options.genesisSuperblock.merkleRoot,
+    options.genesisSuperblock.accumulatedWork,
+    options.genesisSuperblock.timestamp,
+    options.genesisSuperblock.prevTimestamp,
+    options.genesisSuperblock.lastHash,
+    options.genesisSuperblock.lastBits,
+    options.genesisSuperblock.parentId,
+    { from: options.from },
+  );
+  return {
+    superblocks,
+    claimManager,
+    battleManager,
+    scryptChecker,
+  };
 }
 
 module.exports = {
@@ -445,5 +488,6 @@ module.exports = {
   },
   forgeDogeBlockHeader,
   base58ToBytes20,
-  findLog,
+  findEvent,
+  initSuperblockChain,
 };
