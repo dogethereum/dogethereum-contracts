@@ -83,8 +83,8 @@ contract DogeMessageLibraryForTests {
         return out;
     }
 
-    function parseTransaction(bytes txBytes, bytes20 expected_output_public_key_hash) public pure
-             returns (uint, bytes32, bool, uint16) {
+    function parseTransaction(bytes txBytes, bytes20 expected_output_public_key_hash) public view
+             returns (uint, bytes20, address, uint16) {
         return DogeMessageLibrary.parseTransaction(txBytes, expected_output_public_key_hash);
      }
 

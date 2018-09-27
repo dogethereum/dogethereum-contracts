@@ -326,6 +326,11 @@ function publicKeyHashFromKeyPair(keyPair) {
   return `0x${bitcoin.crypto.ripemd160(bitcoin.crypto.sha256(keyPair.publicKey)).toString('hex')}`;
 }
 
+function ethAddressFromKeyPair(keyPair) {
+  const uncompressedPublicKey = bitcoin.ECPair.fromPublicKey(keyPair.publicKey, { compressed: false });
+  return `0x${Buffer.from(keccak256.arrayBuffer(uncompressedPublicKey.publicKey.slice(1))).slice(12).toString('hex')}`;
+}
+
 function buildDogeTransaction({ signer, inputs, outputs }) {
   const txBuilder = new bitcoin.TransactionBuilder(DOGECOIN);
   txBuilder.setVersion(1);
@@ -546,4 +551,5 @@ module.exports = {
   dogeAddressFromKeyPair,
   publicKeyHashFromKeyPair,
   buildDogeTransaction,
+  ethAddressFromKeyPair,
 };

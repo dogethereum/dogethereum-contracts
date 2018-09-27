@@ -210,8 +210,8 @@ library DogeMessageLibrary {
     // @return inputPubKeyOdd - Indicates inputPubKey odd bit
     // @return outputIndex - number of output where expected_output_address was found
 
-    function parseTransaction(bytes txBytes, bytes20 expected_output_public_key_hash) internal pure
-             returns (uint, bytes32, bool, uint16)
+    function parseTransaction(bytes txBytes, bytes20 expected_output_public_key_hash) internal view
+             returns (uint, bytes20, address, uint16)
     {
         ParseTransactionVariablesStruct memory variables;
         uint[] memory input_script_lens;
@@ -228,6 +228,7 @@ library DogeMessageLibrary {
         (output_values, output_script_starts, output_script_lens, variables.pos) = scanOutputs(txBytes, variables.pos, 2);
 
         bytes20 firstInputPublicKeyHash = pub2PubKeyHash(variables.inputPubKey, variables.inputPubKeyOdd);
+        address firstInputEthAddress = pub2address(uint(variables.inputPubKey), variables.inputPubKeyOdd);
 
         // The output we are looking for should be the first or the second output
         variables.output_public_key_hash = parseP2PKHOutputScript(txBytes, output_script_starts[0], output_script_lens[0]);
@@ -246,7 +247,7 @@ library DogeMessageLibrary {
         require(variables.output_public_key_hash == expected_output_public_key_hash ||
             firstInputPublicKeyHash == expected_output_public_key_hash);
 
-        return (variables.output_value, variables.inputPubKey, variables.inputPubKeyOdd, variables.outputIndex);
+        return (variables.output_value, firstInputPublicKeyHash, firstInputEthAddress, variables.outputIndex);
     }
 
     // scan the full transaction bytes and return the first two output
@@ -617,7 +618,7 @@ library DogeMessageLibrary {
         return (uint8(txBytes[pos]), pos + 1);
     }
 
-    function expmod(uint256 base, uint256 e, uint256 m) internal returns (uint256 o) {
+    function expmod(uint256 base, uint256 e, uint256 m) internal view returns (uint256 o) {
         assembly {
             // pointer to free memory
             let p := mload(0x40)
@@ -628,7 +629,7 @@ library DogeMessageLibrary {
             mstore(add(p, 0x80), e)     // Exponent
             mstore(add(p, 0xa0), m)     // Modulus
             // call modexp precompile!
-            if iszero(call(not(0), 0x05, 0, p, 0xc0, p, 0x20)) {
+            if iszero(staticcall(gas, 0x05, p, 0xc0, p, 0x20)) {
                 revert(0, 0)
             }
             // data
@@ -636,7 +637,7 @@ library DogeMessageLibrary {
         }
     }
 
-    function pub2address(uint x, bool odd) internal returns (address) {
+    function pub2address(uint x, bool odd) internal view returns (address) {
         // First, uncompress pub key
         uint yy = mulmod(x, x, p);
         yy = mulmod(yy, x, p);

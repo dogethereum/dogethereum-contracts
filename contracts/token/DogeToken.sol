@@ -214,10 +214,10 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         }
 
         uint value;
-        bytes32 firstInputPublicKeyX;
-        bool firstInputPublicKeyOdd;
+        bytes20 firstInputPublicKeyHash;
+        address firstInputEthAddress;
         uint16 outputIndex;
-        (value, firstInputPublicKeyX, firstInputPublicKeyOdd, outputIndex) = DogeMessageLibrary.parseTransaction(dogeTx, operatorPublicKeyHash);
+        (value, firstInputPublicKeyHash, firstInputEthAddress, outputIndex) = DogeMessageLibrary.parseTransaction(dogeTx, operatorPublicKeyHash);
 
         // Add tx to the dogeTxHashesAlreadyProcessed
         bool inserted = Set.insert(dogeTxHashesAlreadyProcessed, txHash);
@@ -236,7 +236,6 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         operator.dogeAvailableBalance += value;
 
         // See if the first input was signed by the operator
-        bytes20 firstInputPublicKeyHash = DogeMessageLibrary.pub2PubKeyHash(firstInputPublicKeyX, firstInputPublicKeyOdd);
         if (operatorPublicKeyHash != firstInputPublicKeyHash) {
             // this is a lock tx
 
@@ -245,7 +244,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
                 return;
             }
 
-            processLockTransaction(firstInputPublicKeyX, firstInputPublicKeyOdd, value, 
+            processLockTransaction(firstInputEthAddress, value,
                                    operator.ethAddress, superblockSubmitterAddress);
             return value;
         } else {
@@ -260,12 +259,9 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         return Set.contains(dogeTxHashesAlreadyProcessed, txHash);
     }
 
-    function processLockTransaction(bytes32 firstInputPublicKeyX, bool firstInputPublicKeyOdd,
-                                    uint value, address operatorEthAddress, 
+    function processLockTransaction(address destinationAddress,
+                                    uint value, address operatorEthAddress,
                                     address superblockSubmitterAddress) private {
-        // Calculate ethereum address from dogecoin public key
-        address destinationAddress = DogeMessageLibrary.pub2address(uint(firstInputPublicKeyX), firstInputPublicKeyOdd);
-
         uint operatorFee = value * OPERATOR_LOCK_FEE / 1000;
         balances[operatorEthAddress] += operatorFee;
         emit NewToken(operatorEthAddress, operatorFee);

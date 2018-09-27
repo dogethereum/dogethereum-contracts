@@ -23,10 +23,10 @@ contract('testParseTransaction', (accounts) => {
     const txData = `0x${tx.toHex()}`;
     const txHash = `0x${tx.getId()}`;
 
-    const [ amount, inputPubKey, inputPubKeyOdd, outputIndex ] = await dogeMessageLibraryForTests.parseTransaction(txData, operatorPublicKeyHash);
+    const [ amount, inputPubKeyHash, inputEthAddress, outputIndex ] = await dogeMessageLibraryForTests.parseTransaction(txData, operatorPublicKeyHash);
     assert.equal(amount, 1000002, 'Amount deposited to operator');
-    assert.equal(inputPubKey, `0x${keys[1].publicKey.slice(1).toString('hex')}`, 'Sender public key');
-    assert.equal(inputPubKeyOdd, keys[1].publicKey[0] === 3, 'Sender public key parity');
+    assert.equal(inputPubKeyHash, utils.publicKeyHashFromKeyPair(keys[1]), 'Sender public key hash');
+    assert.equal(inputEthAddress, utils.ethAddressFromKeyPair(keys[1]), 'Sender ethereum address');
     assert.equal(outputIndex, 1, 'Operator is second output');
   });
   it('Parse transation without operator output', async () => {
@@ -41,10 +41,10 @@ contract('testParseTransaction', (accounts) => {
     const txData = `0x${tx.toHex()}`;
     const txHash = `0x${tx.getId()}`;
 
-    const [ amount, inputPubKey, inputPubKeyOdd, outputIndex ] = await dogeMessageLibraryForTests.parseTransaction(txData, operatorPublicKeyHash);
+    const [ amount, inputPubKeyHash, inputEthAddress, outputIndex ] = await dogeMessageLibraryForTests.parseTransaction(txData, operatorPublicKeyHash);
     assert.equal(amount, 0, 'Amount deposited to operator');
-    assert.equal(inputPubKey, `0x${keys[1].publicKey.slice(1).toString('hex')}`, 'Sender public key');
-    assert.equal(inputPubKeyOdd, keys[1].publicKey[0] === 3, 'Sender public key parity');
-    assert.equal(outputIndex, 0, 'Operator is second output');
+    assert.equal(inputPubKeyHash, utils.publicKeyHashFromKeyPair(keys[1]), 'Sender public key hash');
+    assert.equal(inputEthAddress, utils.ethAddressFromKeyPair(keys[1]), 'Sender ethereum address');
+    assert.equal(outputIndex, 0, 'Operator has no output');
   });
 });
