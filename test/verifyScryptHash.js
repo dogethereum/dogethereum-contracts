@@ -20,28 +20,89 @@ contract('verifyScryptHash', (accounts) => {
   const challenger = accounts[2];
   let claimManager;
   let superblocks;
+  let battleManager;
   let scryptChecker;
   let scryptVerifier;
-  let scryptRunner;
+  let proposedSuperblock;
   let proposedSuperblockHash;
   let battleSessionId;
 
-  async function initSuperblockChainAndChallenge(options) {
+  async function initSuperblockChainAndChallenge({ genesisSuperblock, headers, hashes }) {
+    let scryptHash;
+    let result;
+
     ({
       superblocks,
       claimManager,
       battleManager,
       scryptChecker,
       scryptVerifier,
-      proposedSuperblockHash,
-      battleSessionId,
-    } = await utils.initSuperblockChainAndChallenge({
-      network: utils.DOGE_MAINNET,
+    } = await utils.initSuperblockChain({
+      network: utils.DOGE_REGTEST,
       dummyChecker: false,
       params: utils.SUPERBLOCK_TIMES_DOGE_REGTEST,
       from: owner,
-      ...options
+      genesisSuperblock,
     }));
+
+    const genesisSuperblockHash = genesisSuperblock.superblockHash;
+    const best = await superblocks.getBestSuperblock();
+    assert.equal(genesisSuperblockHash, best, 'Best superblock should match');
+
+    await claimManager.makeDeposit({ value: 10, from: submitter });
+    await claimManager.makeDeposit({ value: 11, from: challenger });
+
+    await scryptChecker.makeDeposit({ value: 10, from: submitter });
+    await scryptChecker.makeDeposit({ value: 11, from: challenger });
+
+    proposedSuperblock = utils.makeSuperblock(
+      headers,
+      genesisSuperblock.superblockHash,
+      genesisSuperblock.accumulatedWork
+    );
+
+    result = await claimManager.proposeSuperblock(
+      proposedSuperblock.merkleRoot,
+      proposedSuperblock.accumulatedWork,
+      proposedSuperblock.timestamp,
+      proposedSuperblock.prevTimestamp,
+      proposedSuperblock.lastHash,
+      proposedSuperblock.lastBits,
+      proposedSuperblock.parentId,
+      { from: submitter },
+    );
+
+    const superblockClaimCreated = utils.findEvent(result.logs, 'SuperblockClaimCreated');
+    assert.ok(superblockClaimCreated, 'New superblock proposed');
+    proposedSuperblockHash = superblockClaimCreated.args.superblockHash;
+
+    result = await claimManager.challengeSuperblock(proposedSuperblockHash, { from: challenger });
+    const superblockClaimChallenged = utils.findEvent(result.logs, 'SuperblockClaimChallenged');
+    assert.ok(superblockClaimChallenged, 'Superblock challenged');
+    assert.equal(proposedSuperblockHash, superblockClaimChallenged.args.superblockHash);
+    const verificationGameStarted = utils.findEvent(result.logs, 'VerificationGameStarted')
+    assert.ok(verificationGameStarted, 'Battle started');
+    battleSessionId = verificationGameStarted.args.sessionId;
+
+    result = await battleManager.queryMerkleRootHashes(proposedSuperblockHash, battleSessionId, { from: challenger });
+    assert.ok(utils.findEvent(result.logs, 'QueryMerkleRootHashes'), 'Query merkle root hashes');
+
+    result = await battleManager.respondMerkleRootHashes(proposedSuperblockHash, battleSessionId, hashes, { from: submitter });
+    assert.ok(utils.findEvent(result.logs, 'RespondMerkleRootHashes'), 'Respond merkle root hashes');
+
+    result = await battleManager.queryBlockHeader(proposedSuperblockHash, battleSessionId, hashes[1], { from: challenger });
+    assert.ok(utils.findEvent(result.logs, 'QueryBlockHeader'), 'Query block header');
+
+    scryptHash = `0x${utils.calcHeaderPoW(headers[1])}`;
+    result = await battleManager.respondBlockHeader(proposedSuperblockHash, battleSessionId, scryptHash, `0x${headers[1]}`, { from: submitter });
+    assert.ok(utils.findEvent(result.logs, 'RespondBlockHeader'), 'Respond block header');
+
+    result = await battleManager.queryBlockHeader(proposedSuperblockHash, battleSessionId, hashes[0], { from: challenger });
+    assert.ok(utils.findEvent(result.logs, 'QueryBlockHeader'), 'Query block header');
+
+    scryptHash = `0x${utils.calcHeaderPoW(headers[0])}`;
+    result = await battleManager.respondBlockHeader(proposedSuperblockHash, battleSessionId, scryptHash, `0x${headers[0]}`, { from: submitter });
+    assert.ok(utils.findEvent(result.logs, 'RespondBlockHeader'), 'Respond block header');
   }
 
 
@@ -62,8 +123,6 @@ contract('verifyScryptHash', (accounts) => {
       before(async () => {
         await initSuperblockChainAndChallenge({
           genesisSuperblock,
-          submitter,
-          challenger,
           headers,
           hashes,
         });
@@ -193,8 +252,6 @@ contract('verifyScryptHash', (accounts) => {
       before(async () => {
         await initSuperblockChainAndChallenge({
           genesisSuperblock,
-          submitter,
-          challenger,
           headers,
           hashes,
         });
@@ -325,8 +382,6 @@ contract('verifyScryptHash', (accounts) => {
       before(async () => {
         await initSuperblockChainAndChallenge({
           genesisSuperblock,
-          submitter,
-          challenger,
           headers,
           hashes,
         });
@@ -363,8 +418,6 @@ contract('verifyScryptHash', (accounts) => {
       before(async () => {
         await initSuperblockChainAndChallenge({
           genesisSuperblock,
-          submitter,
-          challenger,
           headers,
           hashes,
         });
