@@ -7,6 +7,7 @@ const keccak256 = require('js-sha3').keccak256;
 const bitcoreLib = require('bitcore-lib');
 const ECDSA = bitcoreLib.crypto.ECDSA;
 const bitcoreMessage = require('bitcore-message');
+const bitcoin = require('bitcoinjs-lib');
 
 const DogeClaimManager = artifacts.require('DogeClaimManager');
 const DogeBattleManager = artifacts.require('DogeBattleManager');
@@ -302,6 +303,45 @@ async function initSuperblockChain(options) {
   };
 }
 
+const DOGECOIN = {
+  messagePrefix: '\x19Dogecoin Signed Message:\n',
+  bip32: {
+    public: 0x02facafd,
+    private: 0x02fac398
+  },
+  pubKeyHash: 0x1e,
+  scriptHash: 0x16,
+  wif: 0x9e
+};
+
+function dogeKeyPairFromWIF(wif) {
+  return bitcoin.ECPair.fromWIF(wif, DOGECOIN);
+}
+
+function dogeAddressFromKeyPair(keyPair) {
+  return bitcoin.payments.p2pkh({ pubkey: keyPair.publicKey, network: DOGECOIN }).address;
+}
+
+function publicKeyHashFromKeyPair(keyPair) {
+  return `0x${bitcoin.crypto.ripemd160(bitcoin.crypto.sha256(keyPair.publicKey)).toString('hex')}`;
+}
+
+function buildDogeTransaction({ signer, inputs, outputs }) {
+  const txBuilder = new bitcoin.TransactionBuilder(DOGECOIN);
+  txBuilder.setVersion(1);
+  inputs.forEach(([ txid, index ]) => txBuilder.addInput(txid, index));
+  outputs.forEach(([address, amount, data]) => {
+    if (address === 'OP_RETURN') {
+      const embed = bitcoin.payments.embed({ data: [data] });
+      txBuilder.addOutput(embed.output, amount);
+    } else {
+      txBuilder.addOutput(address, amount);
+    }
+  });
+  txBuilder.sign(0, signer);
+  return txBuilder.build();
+}
+
 module.exports = {
   SUPERBLOCK_TIMES_DOGE_REGTEST,
   DOGE_MAINNET,
@@ -502,4 +542,8 @@ module.exports = {
   base58ToBytes20,
   findEvent,
   initSuperblockChain,
+  dogeKeyPairFromWIF,
+  dogeAddressFromKeyPair,
+  publicKeyHashFromKeyPair,
+  buildDogeTransaction,
 };
