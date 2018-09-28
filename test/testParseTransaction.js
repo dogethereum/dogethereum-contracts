@@ -47,4 +47,24 @@ contract('testParseTransaction', (accounts) => {
     assert.equal(inputEthAddress, utils.ethAddressFromKeyPair(keys[1]), 'Sender ethereum address');
     assert.equal(outputIndex, 0, 'Operator has no output');
   });
+  it('Parse transation without OP_RETURN', async () => {
+    const tx = utils.buildDogeTransaction({
+      signer: keys[1],
+      inputs: [['edbbd164551c8961cf5f7f4b22d7a299dd418758b611b84c23770219e427df67', 0]],
+      outputs: [
+        [utils.dogeAddressFromKeyPair(keys[1]), 1000001],
+        [utils.dogeAddressFromKeyPair(keys[0]), 1000002],
+        ['OP_RETURN', 0, Buffer.from(accounts[3].slice(2), 'hex')],
+      ],
+    });
+    const operatorPublicKeyHash = utils.publicKeyHashFromKeyPair(keys[0]);
+    const txData = `0x${tx.toHex()}`;
+    const txHash = `0x${tx.getId()}`;
+
+    const [ amount, inputPubKeyHash, inputEthAddress, outputIndex ] = await dogeMessageLibraryForTests.parseTransaction(txData, operatorPublicKeyHash);
+    assert.equal(amount, 1000002, 'Amount deposited to operator');
+    assert.equal(inputPubKeyHash, utils.publicKeyHashFromKeyPair(keys[1]), 'Sender public key hash');
+    assert.equal(inputEthAddress, accounts[3], 'Sender ethereum address');
+    assert.equal(outputIndex, 1, 'Operator is second output');
+  });
 });

@@ -216,38 +216,59 @@ library DogeMessageLibrary {
         ParseTransactionVariablesStruct memory variables;
         uint[] memory input_script_lens;
         uint[] memory input_script_starts;
-        uint[] memory output_script_lens;
-        uint[] memory output_script_starts;
-        uint[] memory output_values;
 
         variables.pos = 4;  // skip version
         (input_script_starts, input_script_lens, variables.pos) = scanInputs(txBytes, variables.pos, 0);
 
         (variables.inputPubKey, variables.inputPubKeyOdd) = getInputPubKey(txBytes, input_script_starts[0]);
 
-        (output_values, output_script_starts, output_script_lens, variables.pos) = scanOutputs(txBytes, variables.pos, 2);
-
         bytes20 firstInputPublicKeyHash = pub2PubKeyHash(variables.inputPubKey, variables.inputPubKeyOdd);
-        address firstInputEthAddress = pub2address(uint(variables.inputPubKey), variables.inputPubKeyOdd);
+        address firstInputEthAddress;
 
-        // The output we are looking for should be the first or the second output
-        variables.output_public_key_hash = parseP2PKHOutputScript(txBytes, output_script_starts[0], output_script_lens[0]);
-        if (variables.output_public_key_hash == expected_output_public_key_hash) {
-            variables.output_value = output_values[0];
-            variables.outputIndex = 0;
-        } else {
-            variables.output_public_key_hash = (output_values.length > 1) ? parseP2PKHOutputScript(txBytes, output_script_starts[1], output_script_lens[1]) : bytes20(0x0);
-            if (variables.output_public_key_hash == expected_output_public_key_hash) {
-                variables.output_value = output_values[1];
-                variables.outputIndex = 1;
-            } else {
-                variables.output_public_key_hash = 0x0;
-            }
-        }
+        uint operator_value;
+        uint16 operator_index;
+        (variables.output_public_key_hash, operator_value, operator_index, firstInputEthAddress) = findOperatorOutput(expected_output_public_key_hash, txBytes, variables.pos);
+
         require(variables.output_public_key_hash == expected_output_public_key_hash ||
             firstInputPublicKeyHash == expected_output_public_key_hash);
-
+        // The output we are looking for should be the first or the second output
+        if (variables.output_public_key_hash == expected_output_public_key_hash) {
+            variables.output_value = operator_value;
+            variables.outputIndex = operator_index;
+        }
+        // If no embedded ethereum address use address derived from first input public
+        if (firstInputEthAddress == address(0x0)) {
+            firstInputEthAddress = pub2address(uint(variables.inputPubKey), variables.inputPubKeyOdd);
+        }
         return (variables.output_value, firstInputPublicKeyHash, firstInputEthAddress, variables.outputIndex);
+    }
+
+    // Search output public key hash and embedded ethereum address in transaction outputs at txBytes
+    // Returns output amount, index and ethereum address
+    function findOperatorOutput(bytes20 expected_output_public_key_hash, bytes memory txBytes, uint pos)
+             private pure returns (bytes20, uint, uint16, address) {
+        uint[] memory output_script_lens;
+        uint[] memory output_script_starts;
+        uint[] memory output_values;
+        (output_values, output_script_starts, output_script_lens, pos) = scanOutputs(txBytes, pos, 3);
+
+        bytes20 output_public_key_hash;
+        uint operator_index = output_script_starts.length;
+        address eth_address;
+        for (uint i=0; i<output_script_starts.length; ++i) {
+            output_public_key_hash = parseP2PKHOutputScript(txBytes, output_script_starts[i], output_script_lens[i]);
+            if (expected_output_public_key_hash == output_public_key_hash) {
+                operator_index = i;
+            }
+            if (isEthereumAddress(txBytes, output_script_starts[i], output_script_lens[i])) {
+                eth_address = readEthereumAddress(txBytes, output_script_starts[i], output_script_lens[i]);
+            }
+        }
+        if (operator_index < output_script_starts.length) {
+            return (expected_output_public_key_hash, output_values[operator_index], uint16(operator_index), eth_address);
+        }
+        // No operator output, it might be an unlock operation
+        return (bytes20(0x0), 0, 0, address(0x0));
     }
 
     // scan the full transaction bytes and return the first two output
@@ -609,6 +630,28 @@ library DogeMessageLibrary {
         }
         pos += 32;
         return (pubKey, odd, pos);
+    }
+
+    // Returns true if the tx output is an embedded ethereum address
+    function isEthereumAddress(bytes txBytes, uint pos, uint len) private pure
+             returns (bool) {
+        // scriptPub format is
+        // 0x6a OP_RETURN
+        // 0x14 PUSH20
+        // []   20 bytes of the ethereum address
+        return len == 20+2 &&
+            txBytes[pos] == byte(0x6a) &&
+            txBytes[pos+1] == byte(20);
+    }
+
+    // Read the ethereum address embedded in the tx output
+    function readEthereumAddress(bytes txBytes, uint pos, uint) private pure
+             returns (address) {
+        uint256 data;
+        assembly {
+            data := mload(add(add(txBytes, 22), pos))
+        }
+        return address(uint160(data));
     }
 
     // Read next opcode from script
