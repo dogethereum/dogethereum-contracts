@@ -281,8 +281,8 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         emit Transfer(0, destinationAddress, userValue);    
     }
 
-    // Unlock section begin
 
+    // Unlock section begin
 
     // Request ERC20 tokens to be burnt and dogecoins be received on the doge blockchain
     function doUnlock(bytes20 dogeAddress, uint value, bytes20 operatorPublicKeyHash) public returns (bool success) {
@@ -338,40 +338,6 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         operator.nextUnspentUtxoIndex += uint32(selectedUtxos.length);
         unlockIdx++;
         return true;
-    }
-
-    function checkDogeAddressValidity(bytes _base58DogeAddress) private returns (uint) {
-        if (_base58DogeAddress.length != 34) {
-            return ERR_UNLOCK_BAD_ADDR_LENGTH;
-        }
-
-        bytes1 secondChar = _base58DogeAddress[1];
-        
-        // First character should be 'D' and second character should be either a number or an uppercase letter,
-        // except for O, I or 0
-        // TODO: add checks for testnet and regtest. As of now, this might fail on either of them
-        if (_base58DogeAddress[0] != 0x44 ||
-            !((secondChar >= 0x41 && secondChar <= 0x5a) || (secondChar >= 0x31 && secondChar <= 0x39)) ||
-            secondChar == 0x4f) {
-            return ERR_UNLOCK_BAD_ADDR_PREFIX;
-        }
-
-        bytes1 currentChar;
-
-        for (uint i = 2; i < 34; i++) {
-            currentChar = _base58DogeAddress[i];
-            
-            // Character must be alphanumeric and not in {I, l, O, 0}
-            if (!((currentChar >= 0x41 && currentChar <= 0x5a) || (currentChar >= 0x31 && currentChar <= 0x39) ||
-                (currentChar >= 0x61 && currentChar <= 0x7a)) ||
-                currentChar == 0x49 || currentChar == 0x6c || currentChar == 0x4f) {
-                return ERR_UNLOCK_BAD_ADDR_CHAR;
-            }
-        }
-
-        // TODO: verify checksum
-
-        return 0;
     }
 
     function selectUtxosAndFee(uint valueToSend, Operator operator) private pure returns (uint errorCode, uint32[] memory selectedUtxos, uint dogeTxFee, uint changeValue) {
