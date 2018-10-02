@@ -5,11 +5,14 @@ import {DogeSuperblocks} from './DogeSuperblocks.sol';
 import {DogeBattleManager} from './DogeBattleManager.sol';
 import {DogeMessageLibrary} from './DogeParser/DogeMessageLibrary.sol';
 import {DogeErrorCodes} from "./DogeErrorCodes.sol";
+import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 
 // @dev - Manager of superblock claims
 //
 // Manages superblocks proposal and challenges
 contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
+
+    using SafeMath for uint;
 
     struct SuperblockClaim {
         bytes32 superblockHash;                       // Superblock Id
@@ -106,8 +109,8 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
             return (ERR_SUPERBLOCK_MIN_DEPOSIT, deposits[account]);
         }
 
-        deposits[account] -= amount;
-        claim.bondedDeposits[account] += amount;
+        deposits[account] = deposits[account].sub(amount);
+        claim.bondedDeposits[account] = claim.bondedDeposits[account].add(amount);
         emit DepositBonded(superblockHash, account, amount);
 
         return (ERR_SUPERBLOCK_OK, claim.bondedDeposits[account]);
@@ -139,7 +142,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
         uint bondedDeposit = claim.bondedDeposits[account];
 
         delete claim.bondedDeposits[account];
-        deposits[account] += bondedDeposit;
+        deposits[account] = deposits[account].add(bondedDeposit);
 
         emit DepositUnbonded(superblockHash, account, bondedDeposit);
 
@@ -408,7 +411,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
         if (confirmDescendants) {
             bytes32[] memory descendants = new bytes32[](numSuperblocks);
             id = descendantId;
-            uint idx=0;
+            uint idx = 0;
             while (id != superblockHash) {
                 descendants[idx] = id;
                 id = superblocks.getSuperblockParentId(id);
@@ -508,21 +511,21 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
         claim.bondedDeposits[claim.submitter] = 0;
         uint totalDeposits = 0;
         uint idx = 0;
-        for (idx=0; idx<claim.currentChallenger; ++idx) {
-            totalDeposits += claim.bondedDeposits[claim.challengers[idx]];
+        for (idx = 0; idx<claim.currentChallenger; ++idx) {
+            totalDeposits = totalDeposits.add(claim.bondedDeposits[claim.challengers[idx]]);
         }
         address challenger;
         uint reward;
-        for (idx=0; idx<claim.currentChallenger; ++idx) {
+        for (idx = 0; idx<claim.currentChallenger; ++idx) {
             challenger = claim.challengers[idx];
-            reward = rewards * claim.bondedDeposits[challenger] / totalDeposits;
-            claim.bondedDeposits[challenger] += reward;
+            reward = rewards.mul(claim.bondedDeposits[challenger]).div(totalDeposits);
+            claim.bondedDeposits[challenger] = claim.bondedDeposits[challenger].add(reward);
         }
         uint bondedDeposit;
-        for (idx=0; idx<claim.challengers.length; ++idx) {
+        for (idx = 0; idx<claim.challengers.length; ++idx) {
             challenger = claim.challengers[idx];
             bondedDeposit = claim.bondedDeposits[challenger];
-            deposits[challenger] += bondedDeposit;
+            deposits[challenger] = deposits[challenger].add(bondedDeposit);
             claim.bondedDeposits[challenger] = 0;
             emit DepositUnbonded(superblockHash, challenger, bondedDeposit);
         }
@@ -536,7 +539,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
             challenger = claim.challengers[idx];
             bondedDeposit = claim.bondedDeposits[challenger];
             claim.bondedDeposits[challenger] = 0;
-            claim.bondedDeposits[claim.submitter] += bondedDeposit;
+            claim.bondedDeposits[claim.submitter] = claim.bondedDeposits[claim.submitter].add(bondedDeposit);
         }
         unbondDeposit(superblockHash, claim.submitter);
     }
@@ -593,7 +596,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
     // @dev - Return the number of challengers whose battles haven't been decided yet
     function getClaimRemainingChallengers(bytes32 superblockHash) public view returns (uint) {
         SuperblockClaim storage claim = claims[superblockHash];
-        return claim.challengers.length - claim.currentChallenger;
+        return claim.challengers.length - (claim.currentChallenger);
     }
 
     // @dev – Return session by challenger

@@ -5,8 +5,11 @@ import "./Set.sol";
 import "./../TransactionProcessor.sol";
 import "../DogeParser/DogeMessageLibrary.sol";
 import "./../ECRecovery.sol";
+import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 
 contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), TransactionProcessor {
+
+    using SafeMath for uint;
 
     // Lock constants
     uint public constant MIN_LOCK_VALUE = 300000000; // 3 doges
@@ -182,7 +185,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
             emit ErrorDogeToken(ERR_OPERATOR_NOT_CREATED_OR_WRONG_SENDER);
             return;
         }
-        operator.ethBalance += msg.value;
+        operator.ethBalance = operator.ethBalance.add(msg.value);
     }
 
     function withdrawOperatorDeposit(bytes20 operatorPublicKeyHash, uint value) public {
@@ -195,11 +198,11 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
             emit ErrorDogeToken(ERR_OPERATOR_WITHDRAWAL_NOT_ENOUGH_BALANCE);
             return;
         }
-        if ((operator.ethBalance - value) / dogeEthPrice < (operator.dogeAvailableBalance + operator.dogePendingBalance) * collateralRatio) {
+        if ((operator.ethBalance.sub(value)).div(dogeEthPrice) < (operator.dogeAvailableBalance.add(operator.dogePendingBalance)).mul(collateralRatio)) {
             emit ErrorDogeToken(ERR_OPERATOR_WITHDRAWAL_COLLATERAL_WOULD_BE_TOO_LOW);
             return;        
         }
-        operator.ethBalance -= value;
+        operator.ethBalance = operator.ethBalance.sub(value);
         msg.sender.transfer(value);
     }
 
@@ -233,7 +236,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         }
 
         // Update operator's doge balance
-        operator.dogeAvailableBalance += value;
+        operator.dogeAvailableBalance = operator.dogeAvailableBalance.add(value);
 
         // See if the first input was signed by the operator
         if (operatorPublicKeyHash != firstInputPublicKeyHash) {
@@ -250,7 +253,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         } else {
             // this is an unlock tx
             // Update operator's doge balance
-            operator.dogePendingBalance -= value;
+            operator.dogePendingBalance = operator.dogePendingBalance.sub(value);
             return 0;
         }
     }
@@ -262,20 +265,20 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
     function processLockTransaction(address destinationAddress,
                                     uint value, address operatorEthAddress,
                                     address superblockSubmitterAddress) private {
-        uint operatorFee = value * OPERATOR_LOCK_FEE / 1000;
-        balances[operatorEthAddress] += operatorFee;
+        uint operatorFee = value.mul(OPERATOR_LOCK_FEE) / 1000;
+        balances[operatorEthAddress] = balances[operatorEthAddress].add(operatorFee);
         emit NewToken(operatorEthAddress, operatorFee);
         // Hack to make etherscan show the event
         emit Transfer(0, operatorEthAddress, operatorFee);
 
-        uint superblockSubmitterFee = value * SUPERBLOCK_SUBMITTER_LOCK_FEE / 1000;
-        balances[superblockSubmitterAddress] += superblockSubmitterFee;
+        uint superblockSubmitterFee = value.mul(SUPERBLOCK_SUBMITTER_LOCK_FEE) / 1000;
+        balances[superblockSubmitterAddress] = balances[superblockSubmitterAddress].add(superblockSubmitterFee);
         emit NewToken(superblockSubmitterAddress, superblockSubmitterFee);
         // Hack to make etherscan show the event
         emit Transfer(0, superblockSubmitterAddress, superblockSubmitterFee);
 
-        uint userValue = value - operatorFee - superblockSubmitterFee;
-        balances[destinationAddress] += userValue;
+        uint userValue = value.sub(operatorFee).sub(superblockSubmitterFee);
+        balances[destinationAddress] = balances[destinationAddress].add(userValue);
         emit NewToken(destinationAddress, userValue);
         // Hack to make etherscan show the event
         emit Transfer(0, destinationAddress, userValue);    
@@ -307,8 +310,8 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
             return;
         }
 
-        uint operatorFee = value * OPERATOR_UNLOCK_FEE / 1000;
-        uint unlockValue = value - operatorFee;
+        uint operatorFee = value.mul(OPERATOR_UNLOCK_FEE) / 1000;
+        uint unlockValue = value.sub(operatorFee);
 
         uint32[] memory selectedUtxos;
         uint dogeTxFee;
@@ -320,10 +323,10 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
             return;
         }
 
-        balances[operator.ethAddress] += operatorFee;
+        balances[operator.ethAddress] = balances[operator.ethAddress].add(operatorFee);
         // Hack to make etherscan show the event
         emit Transfer(msg.sender, operator.ethAddress, operatorFee);
-        balances[msg.sender] -= value;
+        balances[msg.sender] = balances[msg.sender].sub(value);
         // Hack to make etherscan show the event
         emit Transfer(msg.sender, 0, unlockValue);
 
@@ -333,8 +336,8 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
                                                         block.timestamp, selectedUtxos, dogeTxFee,
                                                         operatorPublicKeyHash);
         // Update operator's doge balance
-        operator.dogeAvailableBalance -= (unlockValue + changeValue);
-        operator.dogePendingBalance += changeValue;
+        operator.dogeAvailableBalance = operator.dogeAvailableBalance.sub(unlockValue.add(changeValue));
+        operator.dogePendingBalance = operator.dogePendingBalance.add(changeValue);
         operator.nextUnspentUtxoIndex += uint32(selectedUtxos.length);
         unlockIdx++;
         return true;
@@ -351,8 +354,8 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         uint32 firstSelectedUtxo = operator.nextUnspentUtxoIndex;
         uint32 lastSelectedUtxo = firstSelectedUtxo;
         while (selectedUtxosValue < valueToSend && (lastSelectedUtxo < operator.utxos.length)) {
-            selectedUtxosValue += operator.utxos[lastSelectedUtxo].value;
-            dogeTxFee += DOGE_TX_FEE_PER_INPUT;
+            selectedUtxosValue = selectedUtxosValue.add(operator.utxos[lastSelectedUtxo].value);
+            dogeTxFee = dogeTxFee.add(DOGE_TX_FEE_PER_INPUT);
             lastSelectedUtxo++;
         }
         if (selectedUtxosValue < valueToSend) {
@@ -368,7 +371,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         for(uint32 i = 0; i < numberOfSelectedUtxos; i++) {
             selectedUtxos[i] = i + firstSelectedUtxo;
         }
-        changeValue = selectedUtxosValue - valueToSend;
+        changeValue = selectedUtxosValue.sub(valueToSend);
         errorCode = 0;
         return (errorCode, selectedUtxos, dogeTxFee, changeValue);
     }

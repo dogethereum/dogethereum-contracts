@@ -4,7 +4,6 @@ import {DogeMessageLibrary} from "./DogeParser/DogeMessageLibrary.sol";
 import {DogeErrorCodes} from "./DogeErrorCodes.sol";
 import {TransactionProcessor} from "./TransactionProcessor.sol";
 
-
 // @dev - Manages superblocks
 //
 // Management of superblocks and status transitions
