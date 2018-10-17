@@ -37,10 +37,10 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
     mapping (bytes32 => SuperblockClaim) public claims;
 
     // Superblocks contract
-    DogeSuperblocks public superblocks;
+    DogeSuperblocks public trustedSuperblocks;
 
     // Battle manager contract
-    DogeBattleManager public dogeBattleManager;
+    DogeBattleManager public trustedDogeBattleManager;
 
     // Confirmations required to confirm semi approved superblocks
     uint public superblockConfirmations;
@@ -64,12 +64,12 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
     event ErrorClaim(bytes32 superblockHash, uint err);
 
     modifier onlyBattleManager() {
-        require(msg.sender == address(dogeBattleManager));
+        require(msg.sender == address(trustedDogeBattleManager));
         _;
     }
 
     modifier onlyMeOrBattleManager() {
-        require(msg.sender == address(dogeBattleManager) || msg.sender == address(this));
+        require(msg.sender == address(trustedDogeBattleManager) || msg.sender == address(this));
         _;
     }
 
@@ -86,8 +86,8 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
         uint _superblockTimeout,
         uint _superblockConfirmations
     ) public {
-        superblocks = _superblocks;
-        dogeBattleManager = _dogeBattleManager;
+        trustedSuperblocks = _superblocks;
+        trustedDogeBattleManager = _dogeBattleManager;
         superblockDelay = _superblockDelay;
         superblockTimeout = _superblockTimeout;
         superblockConfirmations = _superblockConfirmations;
@@ -168,7 +168,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
         uint32 _lastBits,
         bytes32 _parentHash
     ) public returns (uint, bytes32) {
-        require(address(superblocks) != 0);
+        require(address(trustedSuperblocks) != 0);
 
         if (deposits[msg.sender] < minDeposit) {
             emit ErrorClaim(0, ERR_SUPERBLOCK_MIN_DEPOSIT);
@@ -182,7 +182,8 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
 
         uint err;
         bytes32 superblockHash;
-        (err, superblockHash) = superblocks.propose(_blocksMerkleRoot, _accumulatedWork, _timestamp, _prevTimestamp, _lastHash, _lastBits, _parentHash, msg.sender);
+        (err, superblockHash) = trustedSuperblocks.propose(_blocksMerkleRoot, _accumulatedWork,
+            _timestamp, _prevTimestamp, _lastHash, _lastBits, _parentHash, msg.sender);
         if (err != 0) {
             emit ErrorClaim(superblockHash, err);
             return (err, superblockHash);
@@ -215,7 +216,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
     // @param superblockHash – Id of the superblock to challenge.
     // @return - Error code and claim Id
     function challengeSuperblock(bytes32 superblockHash) public returns (uint, bytes32) {
-        require(address(superblocks) != 0);
+        require(address(trustedSuperblocks) != 0);
 
         SuperblockClaim storage claim = claims[superblockHash];
 
@@ -233,7 +234,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
         }
 
         uint err;
-        (err, ) = superblocks.challenge(superblockHash, msg.sender);
+        (err, ) = trustedSuperblocks.challenge(superblockHash, msg.sender);
         if (err != 0) {
             emit ErrorClaim(superblockHash, err);
             return (err, 0);
@@ -276,7 +277,8 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
 
         if (claim.currentChallenger < claim.challengers.length) {
 
-            bytes32 sessionId = dogeBattleManager.beginBattleSession(superblockHash, claim.submitter, claim.challengers[claim.currentChallenger]);
+            bytes32 sessionId = trustedDogeBattleManager.beginBattleSession(superblockHash, claim.submitter,
+                claim.challengers[claim.currentChallenger]);
 
             claim.sessions[claim.challengers[claim.currentChallenger]] = sessionId;
             emit VerificationGameStarted(superblockHash, claim.submitter, claim.challengers[claim.currentChallenger], sessionId);
@@ -313,7 +315,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
             // The superblock is invalid, submitter abandoned
             // or superblock data is inconsistent
             claim.decided = true;
-            superblocks.invalidate(claim.superblockHash, msg.sender);
+            trustedSuperblocks.invalidate(claim.superblockHash, msg.sender);
             emit SuperblockClaimFailed(superblockHash, claim.submitter);
             doPayChallengers(superblockHash, claim);
             return false;
@@ -336,19 +338,19 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
         bool confirmImmediately = false;
         // No challengers and parent approved; confirm immediately
         if (claim.challengers.length == 0) {
-            bytes32 parentId = superblocks.getSuperblockParentId(claim.superblockHash);
-            DogeSuperblocks.Status status = superblocks.getSuperblockStatus(parentId);
+            bytes32 parentId = trustedSuperblocks.getSuperblockParentId(claim.superblockHash);
+            DogeSuperblocks.Status status = trustedSuperblocks.getSuperblockStatus(parentId);
             if (status == DogeSuperblocks.Status.Approved) {
                 confirmImmediately = true;
             }
         }
 
         if (confirmImmediately) {
-            superblocks.confirm(claim.superblockHash, msg.sender);
+            trustedSuperblocks.confirm(claim.superblockHash, msg.sender);
             unbondDeposit(superblockHash, claim.submitter);
             emit SuperblockClaimSuccessful(superblockHash, claim.submitter);
         } else {
-            superblocks.semiApprove(claim.superblockHash, msg.sender);
+            trustedSuperblocks.semiApprove(claim.superblockHash, msg.sender);
             emit SuperblockClaimPending(superblockHash, claim.submitter);
         }
         return true;
@@ -372,14 +374,14 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
                 emit ErrorClaim(superblockHash, ERR_SUPERBLOCK_BAD_CLAIM);
                 return false;
             }
-            if (superblocks.getSuperblockStatus(id) != DogeSuperblocks.Status.SemiApproved) {
+            if (trustedSuperblocks.getSuperblockStatus(id) != DogeSuperblocks.Status.SemiApproved) {
                 emit ErrorClaim(superblockHash, ERR_SUPERBLOCK_BAD_STATUS);
                 return false;
             }
             if (confirmDescendants && claim.challengers.length > 0) {
                 confirmDescendants = false;
             }
-            id = superblocks.getSuperblockParentId(id);
+            id = trustedSuperblocks.getSuperblockParentId(id);
             claim = claims[id];
             numSuperblocks += 1;
         }
@@ -388,18 +390,18 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
             emit ErrorClaim(superblockHash, ERR_SUPERBLOCK_MISSING_CONFIRMATIONS);
             return false;
         }
-        if (superblocks.getSuperblockStatus(id) != DogeSuperblocks.Status.SemiApproved) {
+        if (trustedSuperblocks.getSuperblockStatus(id) != DogeSuperblocks.Status.SemiApproved) {
             emit ErrorClaim(superblockHash, ERR_SUPERBLOCK_BAD_STATUS);
             return false;
         }
 
-        bytes32 parentId = superblocks.getSuperblockParentId(superblockHash);
-        if (superblocks.getSuperblockStatus(parentId) != DogeSuperblocks.Status.Approved) {
+        bytes32 parentId = trustedSuperblocks.getSuperblockParentId(superblockHash);
+        if (trustedSuperblocks.getSuperblockStatus(parentId) != DogeSuperblocks.Status.Approved) {
             emit ErrorClaim(superblockHash, ERR_SUPERBLOCK_BAD_STATUS);
             return false;
         }
 
-        (uint err, ) = superblocks.confirm(superblockHash, msg.sender);
+        (uint err, ) = trustedSuperblocks.confirm(superblockHash, msg.sender);
         if (err != ERR_SUPERBLOCK_OK) {
             emit ErrorClaim(superblockHash, err);
             return false;
@@ -414,14 +416,14 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
             uint idx = 0;
             while (id != superblockHash) {
                 descendants[idx] = id;
-                id = superblocks.getSuperblockParentId(id);
+                id = trustedSuperblocks.getSuperblockParentId(id);
                 idx += 1;
             }
             while (idx > 0) {
                 idx -= 1;
                 id = descendants[idx];
                 claim = claims[id];
-                (err, ) = superblocks.confirm(id, msg.sender);
+                (err, ) = trustedSuperblocks.confirm(id, msg.sender);
                 require(err == ERR_SUPERBLOCK_OK);
                 emit SuperblockClaimSuccessful(id, claim.submitter);
                 doPaySubmitter(id, claim);
@@ -445,17 +447,17 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
             return false;
         }
 
-        uint height = superblocks.getSuperblockHeight(superblockHash);
-        bytes32 id = superblocks.getBestSuperblock();
-        if (superblocks.getSuperblockHeight(id) < height + superblockConfirmations) {
+        uint height = trustedSuperblocks.getSuperblockHeight(superblockHash);
+        bytes32 id = trustedSuperblocks.getBestSuperblock();
+        if (trustedSuperblocks.getSuperblockHeight(id) < height + superblockConfirmations) {
             emit ErrorClaim(superblockHash, ERR_SUPERBLOCK_MISSING_CONFIRMATIONS);
             return false;
         }
 
-        id = superblocks.getSuperblockAt(height);
+        id = trustedSuperblocks.getSuperblockAt(height);
 
         if (id != superblockHash) {
-            DogeSuperblocks.Status status = superblocks.getSuperblockStatus(superblockHash);
+            DogeSuperblocks.Status status = trustedSuperblocks.getSuperblockStatus(superblockHash);
 
             if (status != DogeSuperblocks.Status.SemiApproved) {
                 emit ErrorClaim(superblockHash, ERR_SUPERBLOCK_BAD_STATUS);
@@ -467,7 +469,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
                 return false;
             }
 
-            superblocks.invalidate(superblockHash, msg.sender);
+            trustedSuperblocks.invalidate(superblockHash, msg.sender);
             emit SuperblockClaimFailed(superblockHash, claim.submitter);
             doPayChallengers(superblockHash, claim);
             return true;
@@ -547,7 +549,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
     // @dev - Check if a superblock can be semi approved by calling checkClaimFinished
     function getInBattleAndSemiApprovable(bytes32 superblockHash) public view returns (bool) {
         SuperblockClaim storage claim = claims[superblockHash];
-        return (superblocks.getSuperblockStatus(superblockHash) == DogeSuperblocks.Status.InBattle &&
+        return (trustedSuperblocks.getSuperblockStatus(superblockHash) == DogeSuperblocks.Status.InBattle &&
             !claim.invalid && !claim.verificationOngoing && block.timestamp > claim.challengeTimeout
             && claim.currentChallenger >= claim.challengers.length);
     }
@@ -620,6 +622,6 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
         address _submitter,
         DogeSuperblocks.Status _status
     ) {
-        return superblocks.getSuperblock(superblockHash);
+        return trustedSuperblocks.getSuperblock(superblockHash);
     }
 }

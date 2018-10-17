@@ -178,7 +178,6 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         return uint24(operatorKeys.length);
     }
 
-
     function addOperatorDeposit(bytes20 operatorPublicKeyHash) public payable {
         Operator storage operator = operators[operatorPublicKeyHash];
         if (operator.ethAddress != msg.sender) {
@@ -198,7 +197,8 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
             emit ErrorDogeToken(ERR_OPERATOR_WITHDRAWAL_NOT_ENOUGH_BALANCE);
             return;
         }
-        if ((operator.ethBalance.sub(value)).div(dogeEthPrice) < (operator.dogeAvailableBalance.add(operator.dogePendingBalance)).mul(collateralRatio)) {
+        if ((operator.ethBalance.sub(value)).div(dogeEthPrice) <
+            (operator.dogeAvailableBalance.add(operator.dogePendingBalance)).mul(collateralRatio)) {
             emit ErrorDogeToken(ERR_OPERATOR_WITHDRAWAL_COLLATERAL_WOULD_BE_TOO_LOW);
             return;        
         }
@@ -206,7 +206,8 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         msg.sender.transfer(value);
     }
 
-    function processTransaction(bytes dogeTx, uint txHash, bytes20 operatorPublicKeyHash, address superblockSubmitterAddress) public returns (uint) {
+    function processTransaction(bytes dogeTx, uint txHash, bytes20 operatorPublicKeyHash, address superblockSubmitterAddress)
+        public returns (uint) {
         require(msg.sender == trustedRelayerContract);
 
         Operator storage operator = operators[operatorPublicKeyHash];

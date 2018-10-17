@@ -49,10 +49,10 @@ contract DogeSuperblocks is DogeErrorCodes {
     event RelayTransaction(bytes32 txHash, uint returnCode);
 
     // DogeClaimManager
-    address public claimManager;
+    address public trustedClaimManager;
 
     modifier onlyClaimManager() {
-        require(msg.sender == claimManager);
+        require(msg.sender == trustedClaimManager);
         _;
     }
 
@@ -60,11 +60,11 @@ contract DogeSuperblocks is DogeErrorCodes {
     constructor() public {}
 
     // @dev - sets ClaimManager instance associated with managing superblocks.
-    // Once claimManager has been set, it cannot be changed.
+    // Once trustedClaimManager has been set, it cannot be changed.
     // @param _claimManager - address of the ClaimManager contract to be associated with
     function setClaimManager(address _claimManager) public {
-        require(address(claimManager) == 0x0 && _claimManager != 0x0);
-        claimManager = _claimManager;
+        require(address(trustedClaimManager) == 0x0 && _claimManager != 0x0);
+        trustedClaimManager = _claimManager;
     }
 
     // @dev - Initializes superblocks contract
@@ -146,7 +146,7 @@ contract DogeSuperblocks is DogeErrorCodes {
         bytes32 _parentId,
         address submitter
     ) public returns (uint, bytes32) {
-        if (msg.sender != claimManager) {
+        if (msg.sender != trustedClaimManager) {
             emit ErrorSuperblock(0, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
             return (ERR_SUPERBLOCK_NOT_CLAIMMANAGER, 0);
         }
@@ -196,7 +196,7 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @param _validator Address requesting superblock confirmation
     // @return Error code and superblockHash
     function confirm(bytes32 _superblockHash, address _validator) public returns (uint, bytes32) {
-        if (msg.sender != claimManager) {
+        if (msg.sender != trustedClaimManager) {
             emit ErrorSuperblock(_superblockHash, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
             return (ERR_SUPERBLOCK_NOT_CLAIMMANAGER, 0);
         }
@@ -228,7 +228,7 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @param _challenger Address requesting a challenge
     // @return Error code and superblockHash
     function challenge(bytes32 _superblockHash, address _challenger) public returns (uint, bytes32) {
-        if (msg.sender != claimManager) {
+        if (msg.sender != trustedClaimManager) {
             emit ErrorSuperblock(_superblockHash, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
             return (ERR_SUPERBLOCK_NOT_CLAIMMANAGER, 0);
         }
@@ -252,7 +252,7 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @param _validator Address requesting semi approval
     // @return Error code and superblockHash
     function semiApprove(bytes32 _superblockHash, address _validator) public returns (uint, bytes32) {
-        if (msg.sender != claimManager) {
+        if (msg.sender != trustedClaimManager) {
             emit ErrorSuperblock(_superblockHash, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
             return (ERR_SUPERBLOCK_NOT_CLAIMMANAGER, 0);
         }
@@ -278,7 +278,7 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @param _validator Address requesting superblock invalidation
     // @return Error code and superblockHash
     function invalidate(bytes32 _superblockHash, address _validator) public returns (uint, bytes32) {
-        if (msg.sender != claimManager) {
+        if (msg.sender != trustedClaimManager) {
             emit ErrorSuperblock(_superblockHash, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
             return (ERR_SUPERBLOCK_NOT_CLAIMMANAGER, 0);
         }
@@ -292,7 +292,7 @@ contract DogeSuperblocks is DogeErrorCodes {
         return (ERR_SUPERBLOCK_OK, _superblockHash);
     }
 
-    // @dev - relays transaction `_txBytes` to `_targetContract`'s processTransaction() method.
+    // @dev - relays transaction `_txBytes` to `_untrustedTargetContract`'s processTransaction() method.
     // Also logs the value of processTransaction.
     // Note: callers cannot be 100% certain when an ERR_RELAY_VERIFY occurs because
     // it may also have been returned by processTransaction(). Callers should be
@@ -307,7 +307,7 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @param _dogeBlockIndex - block's index withing superblock
     // @param _dogeBlockSiblings - block's merkle siblings
     // @param _superblockHash - superblock containing block header
-    // @param _targetContract - the contract that is going to process the transaction
+    // @param _untrustedTargetContract - the contract that is going to process the transaction
     function relayTx(
         bytes _txBytes,
         bytes20 _operatorPublicKeyHash,
@@ -317,7 +317,7 @@ contract DogeSuperblocks is DogeErrorCodes {
         uint _dogeBlockIndex,
         uint[] _dogeBlockSiblings,
         bytes32 _superblockHash,
-        TransactionProcessor _targetContract
+        TransactionProcessor _untrustedTargetContract
     ) public returns (uint) {
         uint dogeBlockHash = DogeMessageLibrary.dblShaFlip(_dogeBlockHeader);
 
@@ -331,7 +331,7 @@ contract DogeSuperblocks is DogeErrorCodes {
 
         uint txHash = verifyTx(_txBytes, _txIndex, _txSiblings, _dogeBlockHeader, _superblockHash);
         if (txHash != 0) {
-            uint returnCode = _targetContract.processTransaction(_txBytes, txHash, _operatorPublicKeyHash, superblocks[_superblockHash].submitter);
+            uint returnCode = _untrustedTargetContract.processTransaction(_txBytes, txHash, _operatorPublicKeyHash, superblocks[_superblockHash].submitter);
             emit RelayTransaction(bytes32(txHash), returnCode);
             return (returnCode);
         }
@@ -350,6 +350,7 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @param _txBlockHeaderBytes - block header containing transaction
     // @param _txsuperblockHash - superblock containing block header
     // @return - SHA-256 hash of _txBytes if the transaction is in the block, 0 otherwise
+    // TODO: this can probably be made private
     function verifyTx(
         bytes _txBytes,
         uint _txIndex,
