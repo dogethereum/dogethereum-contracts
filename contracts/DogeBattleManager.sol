@@ -156,7 +156,8 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
     }
 
     // @dev - Start a battle session
-    function beginBattleSession(bytes32 superblockHash, address submitter, address challenger) onlyFrom(trustedDogeClaimManager) public returns (bytes32) {
+    function beginBattleSession(bytes32 superblockHash, address submitter, address challenger)
+        onlyFrom(trustedDogeClaimManager) public returns (bytes32) {
         bytes32 sessionId = keccak256(abi.encode(superblockHash, msg.sender, sessionsCount));
         BattleSession storage session = sessions[sessionId];
         session.id = sessionId;
