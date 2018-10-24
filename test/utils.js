@@ -9,13 +9,6 @@ const ECDSA = bitcoreLib.crypto.ECDSA;
 const bitcoreMessage = require('bitcore-message');
 const bitcoin = require('bitcoinjs-lib');
 
-const DogeClaimManager = artifacts.require('DogeClaimManager');
-const DogeBattleManager = artifacts.require('DogeBattleManager');
-const DogeSuperblocks = artifacts.require('DogeSuperblocks');
-const ScryptCheckerDummy = artifacts.require('ScryptCheckerDummy');
-const ScryptVerifier = artifacts.require('ScryptVerifier');
-const ClaimManager = artifacts.require('ClaimManager');
-
 const SUPERBLOCK_TIMES_DOGE_REGTEST = {
   DURATION: 600,    // 10 minute
   DELAY: 60,        // 1 minute
@@ -256,6 +249,13 @@ function findEvent(logs, name) {
 }
 
 async function initSuperblockChain(options) {
+  const DogeClaimManager = artifacts.require('DogeClaimManager');
+  const DogeBattleManager = artifacts.require('DogeBattleManager');
+  const DogeSuperblocks = artifacts.require('DogeSuperblocks');
+  const ScryptCheckerDummy = artifacts.require('ScryptCheckerDummy');
+  const ScryptVerifier = artifacts.require('ScryptVerifier');
+  const ClaimManager = artifacts.require('ClaimManager');
+
   const superblocks = await DogeSuperblocks.new({ from: options.from });
   const battleManager = await DogeBattleManager.new(
     options.network,
