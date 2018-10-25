@@ -48,6 +48,9 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
     // Minimum deposit required to start/continue challenge
     uint public minDeposit = 1;
 
+    // Expected number of Doge block hashes in a superblock; network-dependent
+    uint public hashesPerSuperblock;
+
     uint public superblockDelay;    // Delay required to submit superblocks (in seconds)
     uint public superblockTimeout;  // Timeout for action (in seconds)
 
@@ -84,13 +87,15 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
         DogeBattleManager _dogeBattleManager,
         uint _superblockDelay,
         uint _superblockTimeout,
-        uint _superblockConfirmations
+        uint _superblockConfirmations,
+        uint _hashesPerSuperblock
     ) public {
         trustedSuperblocks = _superblocks;
         trustedDogeBattleManager = _dogeBattleManager;
         superblockDelay = _superblockDelay;
         superblockTimeout = _superblockTimeout;
         superblockConfirmations = _superblockConfirmations;
+        hashesPerSuperblock = _hashesPerSuperblock;
     }
 
     // @dev – locks up part of a user's deposit into a claim.
@@ -124,6 +129,10 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
         SuperblockClaim storage claim = claims[superblockHash];
         require(claimExists(claim));
         return claim.bondedDeposits[account];
+    }
+
+    function getDeposit(address account) public view returns (uint) {
+        return deposits[account];
     }
 
     // @dev – unlocks a user's bonded deposits from a claim.

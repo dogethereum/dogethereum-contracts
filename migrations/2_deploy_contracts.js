@@ -34,35 +34,44 @@ const DOGE_MAINNET = 0;
 const DOGE_TESTNET = 1;
 const DOGE_REGTEST = 2;
 
-const SUPERBLOCK_TIMES_PRODUCTION = {
+const SUPERBLOCK_OPTIONS_PRODUCTION = {
   DURATION: 3600,   // 60 minutes
   DELAY: 3 * 3600,  // 3 hours
   TIMEOUT: 300,     // 5 minutes
-  CONFIRMATIONS: 3,  // Superblocks required to confirm semi approved superblock
+  CONFIRMATIONS: 3, // Superblocks required to confirm semi approved superblock
+  HASHES: 60        // Expected number of Doge block hashes per superblock
 };
 
-const SUPERBLOCK_TIMES_INTEGRATION_SLOW_SYNC = {
+const SUPERBLOCK_OPTIONS_INTEGRATION_SLOW_SYNC = {
   DURATION: 600,    // 10 minutes
   DELAY: 300,       // 5 minutes
   TIMEOUT: 60,      // 1 minutes
-  CONFIRMATIONS: 1,  // Superblocks required to confirm semi approved superblock
+  CONFIRMATIONS: 1, // Superblocks required to confirm semi approved superblock
+  HASHES: 10        // Expected number of Doge block hashes per superblock  
 };
 
-const SUPERBLOCK_TIMES_INTEGRATION_FAST_SYNC = {
+const SUPERBLOCK_OPTIONS_INTEGRATION_FAST_SYNC = {
   DURATION: 600,    // 10 minutes
   DELAY: 300,       // 5 minutes
   TIMEOUT: 10,      // 10 seconds
-  CONFIRMATIONS: 1,  // Superblocks required to confirm semi approved superblock
+  CONFIRMATIONS: 1, // Superblocks required to confirm semi approved superblock
+  HASHES: 10        // Expected number of Doge block hashes per superblock  
 };
 
-const SUPERBLOCK_TIMES_LOCAL = {
+const SUPERBLOCK_OPTIONS_LOCAL = {
   DURATION: 60,     // 1 minute
   DELAY: 60,        // 1 minute
   TIMEOUT: 30,      // 30 seconds
-  CONFIRMATIONS: 1,  // Superblocks required to confirm semi approved superblock
+  CONFIRMATIONS: 1, // Superblocks required to confirm semi approved superblock
+  HASHES: 3         // Expected number of Doge block hashes per superblock  
 };
 
-async function deployDevelopment(deployer, network, accounts, networkId, trustedDogeEthPriceOracle, dogethereumRecipient, superblockTimes) {
+const HASHES_PER_SUPERBLOCK_LOCAL = 3;
+const HASHES_PER_SUPERBLOCK_INTEGRATION = 10;
+const HASHES_PER_SUPERBLOCK_PRODUCTION = 60;
+
+async function deployDevelopment(deployer, network, accounts, networkId, trustedDogeEthPriceOracle,
+    dogethereumRecipient, superblockOptions) {
   await deployer.deploy(Set);
   await deployer.deploy(DogeMessageLibrary);
   await deployer.deploy(SafeMath);
@@ -85,16 +94,17 @@ async function deployDevelopment(deployer, network, accounts, networkId, trusted
   await deployer.deploy(DogeBattleManager,
     networkId,
     DogeSuperblocks.address,
-    superblockTimes.DURATION,
-    superblockTimes.TIMEOUT,
+    superblockOptions.DURATION,
+    superblockOptions.TIMEOUT,
   );
 
   await deployer.deploy(DogeClaimManager,
     DogeSuperblocks.address,
     DogeBattleManager.address,
-    superblockTimes.DELAY,
-    superblockTimes.TIMEOUT,
-    superblockTimes.CONFIRMATIONS,
+    superblockOptions.DELAY,
+    superblockOptions.TIMEOUT,
+    superblockOptions.CONFIRMATIONS,
+    superblockOptions.HASHES
   );
 
   await deployer.deploy(ScryptCheckerDummy, true)
@@ -111,7 +121,8 @@ async function deployDevelopment(deployer, network, accounts, networkId, trusted
   await dogeBattleManager.setScryptChecker(ScryptCheckerDummy.address);
 }
 
-async function deployIntegration(deployer, network, accounts, networkId, trustedDogeEthPriceOracle, dogethereumRecipient, superblockTimes) {
+async function deployIntegration(deployer, network, accounts, networkId, trustedDogeEthPriceOracle,
+    dogethereumRecipient, superblockOptions) {
   await deployer.deploy(Set, {gas: 300000});
   await deployer.deploy(DogeMessageLibrary, {gas: 2000000});
   await deployer.deploy(SafeMath, {gas: 100000});
@@ -134,18 +145,19 @@ async function deployIntegration(deployer, network, accounts, networkId, trusted
   await deployer.deploy(DogeBattleManager,
     networkId,
     DogeSuperblocks.address,
-    superblockTimes.DURATION,
-    superblockTimes.TIMEOUT,
+    superblockOptions.DURATION,
+    superblockOptions.TIMEOUT,
     {gas: 4000000},
   );
 
   await deployer.deploy(DogeClaimManager,
     DogeSuperblocks.address,
     DogeBattleManager.address,
-    superblockTimes.DELAY,
-    superblockTimes.TIMEOUT,
-    superblockTimes.CONFIRMATIONS,
-    {gas: 4000000},
+    superblockOptions.DELAY,
+    superblockOptions.TIMEOUT,
+    superblockOptions.CONFIRMATIONS,
+    superblockOptions.HASHES,
+    {gas: 4000000}
   );
 
   const superblocks = DogeSuperblocks.at(DogeSuperblocks.address);
@@ -173,15 +185,15 @@ module.exports = function(deployer, network, accounts) {
     }
 
     if (network === 'development') {
-      await deployDevelopment(deployer, network, accounts, DOGE_MAINNET, trustedDogeEthPriceOracle, null, SUPERBLOCK_TIMES_LOCAL);
+      await deployDevelopment(deployer, network, accounts, DOGE_MAINNET, trustedDogeEthPriceOracle, null, SUPERBLOCK_OPTIONS_LOCAL);
     } else if (network === 'ropsten') {
-      await deployIntegration(deployer, network, accounts, DOGE_MAINNET, trustedDogeEthPriceOracle, null, SUPERBLOCK_TIMES_INTEGRATION_FAST_SYNC);
+      await deployIntegration(deployer, network, accounts, DOGE_MAINNET, trustedDogeEthPriceOracle, null, SUPERBLOCK_OPTIONS_INTEGRATION_FAST_SYNC);
     } else if (network === 'rinkeby') {
-      await deployIntegration(deployer, network, accounts, DOGE_MAINNET, trustedDogeEthPriceOracle, null, SUPERBLOCK_TIMES_INTEGRATION_FAST_SYNC);
+      await deployIntegration(deployer, network, accounts, DOGE_MAINNET, trustedDogeEthPriceOracle, null, SUPERBLOCK_OPTIONS_INTEGRATION_FAST_SYNC);
     } else if (network === 'integrationDogeMain') {
-      await deployIntegration(deployer, network, accounts, DOGE_MAINNET, trustedDogeEthPriceOracle, null, SUPERBLOCK_TIMES_INTEGRATION_FAST_SYNC);
+      await deployIntegration(deployer, network, accounts, DOGE_MAINNET, trustedDogeEthPriceOracle, null, SUPERBLOCK_OPTIONS_INTEGRATION_FAST_SYNC);
     } else if (network === 'integrationDogeRegtest') {
-      await deployIntegration(deployer, network, accounts, DOGE_REGTEST, trustedDogeEthPriceOracle, null, SUPERBLOCK_TIMES_LOCAL);
+      await deployIntegration(deployer, network, accounts, DOGE_REGTEST, trustedDogeEthPriceOracle, null, SUPERBLOCK_OPTIONS_LOCAL);
     }
   });
 };

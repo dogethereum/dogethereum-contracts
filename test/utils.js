@@ -9,11 +9,12 @@ const ECDSA = bitcoreLib.crypto.ECDSA;
 const bitcoreMessage = require('bitcore-message');
 const bitcoin = require('bitcoinjs-lib');
 
-const SUPERBLOCK_TIMES_DOGE_REGTEST = {
-  DURATION: 600,    // 10 minute
-  DELAY: 60,        // 1 minute
-  TIMEOUT: 15,      // 15 seconds
-  CONFIRMATIONS: 1,  // Superblocks required to confirm semi approved superblock
+const OPTIONS_DOGE_REGTEST = {
+  DURATION: 600,           // 10 minute
+  DELAY: 60,               // 1 minute
+  TIMEOUT: 15,             // 15 seconds
+  CONFIRMATIONS: 1,        // Superblocks required to confirm semi approved superblock
+  HASHES: 3                // Expected number of hashes in a superblock
 };
 
 const DOGE_MAINNET = 0;
@@ -270,6 +271,7 @@ async function initSuperblockChain(options) {
     options.params.DELAY,
     options.params.TIMEOUT,
     options.params.CONFIRMATIONS,
+    options.params.HASHES,
     { from: options.from },
   );
   let scryptVerifier;
@@ -348,7 +350,7 @@ function buildDogeTransaction({ signer, inputs, outputs }) {
 }
 
 module.exports = {
-  SUPERBLOCK_TIMES_DOGE_REGTEST,
+  OPTIONS_DOGE_REGTEST,
   DOGE_MAINNET,
   DOGE_TESTNET,
   DOGE_REGTEST,
@@ -406,7 +408,7 @@ module.exports = {
     assert.equal(result.logs[1].event, 'SuperblockClaimCreated', 'New superblock proposed');
     const superblockHash = result.logs[1].args.superblockHash;
 
-    await blockchainTimeoutSeconds(3*SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+    await blockchainTimeoutSeconds(3*OPTIONS_DOGE_REGTEST.TIMEOUT);
 
     result = await claimManager.checkClaimFinished(superblockHash, { from: sender });
     assert.equal(result.logs[1].event, 'SuperblockClaimSuccessful', 'Superblock challenged');
