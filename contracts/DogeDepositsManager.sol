@@ -1,6 +1,10 @@
 pragma solidity ^0.4.19;
 
+import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+
 contract DogeDepositsManager {
+
+    using SafeMath for uint;
 
     mapping(address => uint) public deposits;
 
@@ -29,7 +33,7 @@ contract DogeDepositsManager {
     // @dev – increases an account's deposit.
     // @return – the given user's updated deposit amount.
     function increaseDeposit(address who, uint amount) internal {
-        deposits[who] += amount;
+        deposits[who] = deposits[who].add(amount);
         require(deposits[who] <= address(this).balance);
 
         emit DepositMade(who, amount);
@@ -41,7 +45,7 @@ contract DogeDepositsManager {
     function withdrawDeposit(uint amount) public returns (uint) {
         require(deposits[msg.sender] >= amount);
 
-        deposits[msg.sender] -= amount;
+        deposits[msg.sender] = deposits[msg.sender].sub(amount);
         msg.sender.transfer(amount);
 
         emit DepositWithdrawn(msg.sender, amount);

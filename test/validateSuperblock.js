@@ -44,7 +44,7 @@ contract('validateSuperblocks', (accounts) => {
         network: utils.DOGE_MAINNET,
         dummyChecker: true,
         genesisSuperblock,
-        params: utils.SUPERBLOCK_TIMES_DOGE_REGTEST,
+        params: utils.OPTIONS_DOGE_REGTEST,
         from: owner,
       }));
       genesisSuperblockHash = genesisSuperblock.superblockHash;
@@ -93,7 +93,7 @@ contract('validateSuperblocks', (accounts) => {
       assert.ok(utils.findEvent(result.logs, 'ChallengerConvicted'), 'Challenger failed');
 
       // Confirm superblock
-      await utils.blockchainTimeoutSeconds(2*utils.SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+      await utils.blockchainTimeoutSeconds(2*utils.OPTIONS_DOGE_REGTEST.TIMEOUT);
       result = await claimManager.checkClaimFinished(proposesSuperblockHash, { from: submitter });
       assert.ok(utils.findEvent(result.logs, 'SuperblockClaimPending'), 'Superblock semi approved');
     });
@@ -140,7 +140,7 @@ contract('validateSuperblocks', (accounts) => {
       assert.ok(utils.findEvent(result.logs, 'SubmitterConvicted'), 'Submitter failed');
 
       // Confirm superblock
-      await utils.blockchainTimeoutSeconds(2*utils.SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+      await utils.blockchainTimeoutSeconds(2*utils.OPTIONS_DOGE_REGTEST.TIMEOUT);
       result = await claimManager.checkClaimFinished(proposesSuperblockHash, { from: challenger });
       assert.ok(utils.findEvent(result.logs, 'SuperblockClaimFailed'), 'Superblock rejected');
     });
@@ -187,7 +187,7 @@ contract('validateSuperblocks', (accounts) => {
       assert.ok(utils.findEvent(result.logs, 'SubmitterConvicted'), 'Submitter failed');
 
       // Confirm superblock
-      await utils.blockchainTimeoutSeconds(2*utils.SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+      await utils.blockchainTimeoutSeconds(2*utils.OPTIONS_DOGE_REGTEST.TIMEOUT);
       result = await claimManager.checkClaimFinished(proposesSuperblockHash, { from: challenger });
       assert.ok(utils.findEvent(result.logs, 'SuperblockClaimFailed'), 'Superblock rejected');
     });
@@ -234,7 +234,7 @@ contract('validateSuperblocks', (accounts) => {
       assert.ok(utils.findEvent(result.logs, 'SubmitterConvicted'), 'Submitter failed');
 
       // Confirm superblock
-      await utils.blockchainTimeoutSeconds(2*utils.SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+      await utils.blockchainTimeoutSeconds(2*utils.OPTIONS_DOGE_REGTEST.TIMEOUT);
       result = await claimManager.checkClaimFinished(proposesSuperblockHash, { from: challenger });
       assert.ok(utils.findEvent(result.logs, 'SuperblockClaimFailed'), 'Superblock rejected');
     });
@@ -268,7 +268,7 @@ contract('validateSuperblocks', (accounts) => {
       assert.ok(errorBattleEvent, 'Respond merkle root hashes');
       assert.equal(errorBattleEvent.args.err, '50150', 'Bad last hash');
 
-      await utils.blockchainTimeoutSeconds(2*utils.SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+      await utils.blockchainTimeoutSeconds(2*utils.OPTIONS_DOGE_REGTEST.TIMEOUT);
       result = await battleManager.timeout(battleSessionId, { from: challenger });
       assert.ok(utils.findEvent(result.logs, 'SubmitterConvicted'), 'Submitter failed');
 

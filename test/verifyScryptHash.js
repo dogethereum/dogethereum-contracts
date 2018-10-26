@@ -40,7 +40,7 @@ contract('verifyScryptHash', (accounts) => {
     } = await utils.initSuperblockChain({
       network: utils.DOGE_REGTEST,
       dummyChecker: false,
-      params: utils.SUPERBLOCK_TIMES_DOGE_REGTEST,
+      params: utils.OPTIONS_DOGE_REGTEST,
       from: owner,
       genesisSuperblock,
     }));
@@ -243,7 +243,7 @@ contract('verifyScryptHash', (accounts) => {
         assert.ok(utils.findEvent(result.logs, 'ChallengerConvicted'), 'Challenger failed');
 
         // Confirm superblock
-        await utils.blockchainTimeoutSeconds(2*utils.SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+        await utils.blockchainTimeoutSeconds(2*utils.OPTIONS_DOGE_REGTEST.TIMEOUT);
         result = await claimManager.checkClaimFinished(proposedSuperblockHash, { from: submitter });
         assert.ok(utils.findEvent(result.logs,  'SuperblockClaimPending'), 'Superblock challenged');
       });
@@ -364,7 +364,7 @@ contract('verifyScryptHash', (accounts) => {
       });
       it('Reject scrypt hash claim', async () => {
         // Reject scrypt hash
-        await utils.blockchainTimeoutSeconds(2*utils.SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+        await utils.blockchainTimeoutSeconds(2*utils.OPTIONS_DOGE_REGTEST.TIMEOUT);
         result = await scryptChecker.checkClaimSuccessful(claimID, { from: challenger });
         assert.ok(utils.findEvent(result.logs, 'ClaimFailed'), 'Scrypt hash failed');
       });
@@ -373,7 +373,7 @@ contract('verifyScryptHash', (accounts) => {
         result = await battleManager.verifySuperblock(battleSessionId, { from: challenger });
         assert.ok(utils.findEvent(result.logs, 'SubmitterConvicted'), 'Superblock failed');
         // Confirm superblock
-        await utils.blockchainTimeoutSeconds(2*utils.SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+        await utils.blockchainTimeoutSeconds(2*utils.OPTIONS_DOGE_REGTEST.TIMEOUT);
         result = await claimManager.checkClaimFinished(proposedSuperblockHash, { from: challenger });
         assert.ok(utils.findEvent(result.logs, 'SuperblockClaimFailed'), 'Superblock failed');
       });
@@ -404,12 +404,12 @@ contract('verifyScryptHash', (accounts) => {
         result = await battleManager.timeout(battleSessionId, { from: challenger });
         assert.ok(utils.findEvent(result.logs, 'ErrorBattle'), 'Timeout did not elapse');
 
-        await utils.blockchainTimeoutSeconds(2*utils.SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+        await utils.blockchainTimeoutSeconds(2*utils.OPTIONS_DOGE_REGTEST.TIMEOUT);
         result = await battleManager.timeout(battleSessionId, { from: challenger });
         assert.ok(utils.findEvent(result.logs, 'SubmitterConvicted'), 'Scrypt hash failed');
       });
       it('Confirm superblock', async () => {
-        await utils.blockchainTimeoutSeconds(2*utils.SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+        await utils.blockchainTimeoutSeconds(2*utils.OPTIONS_DOGE_REGTEST.TIMEOUT);
         result = await claimManager.checkClaimFinished(proposedSuperblockHash, { from: challenger });
         assert.ok(utils.findEvent(result.logs, 'SuperblockClaimFailed'), 'Superblock failed');
       });
@@ -451,12 +451,12 @@ contract('verifyScryptHash', (accounts) => {
         result = await battleManager.timeout(battleSessionId, { from: submitter });
         assert.ok(utils.findEvent(result.logs, 'ErrorBattle'), 'Timeout did not elapse');
 
-        await utils.blockchainTimeoutSeconds(2*utils.SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+        await utils.blockchainTimeoutSeconds(2*utils.OPTIONS_DOGE_REGTEST.TIMEOUT);
         result = await battleManager.timeout(battleSessionId, { from: submitter });
         assert.ok(utils.findEvent(result.logs, 'ChallengerConvicted'), 'Challenger abandoned');
       });
       it('Confirm superblock', async () => {
-        await utils.blockchainTimeoutSeconds(2*utils.SUPERBLOCK_TIMES_DOGE_REGTEST.TIMEOUT);
+        await utils.blockchainTimeoutSeconds(2*utils.OPTIONS_DOGE_REGTEST.TIMEOUT);
         result = await claimManager.checkClaimFinished(proposedSuperblockHash, { from: challenger });
         assert.ok(utils.findEvent(result.logs, 'SuperblockClaimPending'), 'Superblock semi confirmed');
       });
