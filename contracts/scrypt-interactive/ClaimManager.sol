@@ -105,10 +105,10 @@ contract ClaimManager is DepositsManager, IScryptChecker {
     return uint(keccak256(abi.encodePacked(claimant, _hash, _proposalId)));
   }
 
-  // @dev – check whether a DogeCoin blockHash was calculated correctly from the plaintext block header.
+  // @dev – check whether a Dogecoin block hash was calculated correctly from the plaintext block header.
   // only callable by the DogeRelay contract.
   // @param _plaintext – the plaintext blockHeader.
-  // @param _blockHash – the blockHash.
+  // @param _hash – Doge block hash.
   // @param claimant – the address of the Dogecoin block submitter.
   function checkScrypt(bytes _data, bytes32 _hash, bytes32 _proposalId, IScryptCheckerListener _scryptDependent) external payable {
     // dogeRelay can directly make a deposit on behalf of the claimant.

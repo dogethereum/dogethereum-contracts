@@ -14,7 +14,7 @@ const OPTIONS_DOGE_REGTEST = {
   DELAY: 60,               // 1 minute
   TIMEOUT: 15,             // 15 seconds
   CONFIRMATIONS: 1,        // Superblocks required to confirm semi approved superblock
-  HASHES: 3                // Expected number of hashes in a superblock
+  REWARD: 3                // Monetary reward for opponent in case battle is lost
 };
 
 const DOGE_MAINNET = 0;
@@ -271,7 +271,7 @@ async function initSuperblockChain(options) {
     options.params.DELAY,
     options.params.TIMEOUT,
     options.params.CONFIRMATIONS,
-    options.params.HASHES,
+    options.params.REWARD,
     { from: options.from },
   );
   let scryptVerifier;

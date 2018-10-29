@@ -39,7 +39,7 @@ const SUPERBLOCK_OPTIONS_PRODUCTION = {
   DELAY: 3 * 3600,  // 3 hours
   TIMEOUT: 300,     // 5 minutes
   CONFIRMATIONS: 3, // Superblocks required to confirm semi approved superblock
-  HASHES: 60        // Expected number of Doge block hashes per superblock
+  REWARD: 10        // Monetary reward for opponent in case a battle is lost
 };
 
 const SUPERBLOCK_OPTIONS_INTEGRATION_SLOW_SYNC = {
@@ -47,7 +47,7 @@ const SUPERBLOCK_OPTIONS_INTEGRATION_SLOW_SYNC = {
   DELAY: 300,       // 5 minutes
   TIMEOUT: 60,      // 1 minutes
   CONFIRMATIONS: 1, // Superblocks required to confirm semi approved superblock
-  HASHES: 10        // Expected number of Doge block hashes per superblock  
+  REWARD: 10        // Monetary reward for opponent in case a battle is lost  
 };
 
 const SUPERBLOCK_OPTIONS_INTEGRATION_FAST_SYNC = {
@@ -55,7 +55,7 @@ const SUPERBLOCK_OPTIONS_INTEGRATION_FAST_SYNC = {
   DELAY: 300,       // 5 minutes
   TIMEOUT: 10,      // 10 seconds
   CONFIRMATIONS: 1, // Superblocks required to confirm semi approved superblock
-  HASHES: 10        // Expected number of Doge block hashes per superblock  
+  REWARD: 10        // Monetary reward for opponent in case a battle is lost  
 };
 
 const SUPERBLOCK_OPTIONS_LOCAL = {
@@ -63,12 +63,8 @@ const SUPERBLOCK_OPTIONS_LOCAL = {
   DELAY: 60,        // 1 minute
   TIMEOUT: 30,      // 30 seconds
   CONFIRMATIONS: 1, // Superblocks required to confirm semi approved superblock
-  HASHES: 3         // Expected number of Doge block hashes per superblock  
+  REWARD: 10        // Monetary reward for opponent in case a battle is lost  
 };
-
-const HASHES_PER_SUPERBLOCK_LOCAL = 3;
-const HASHES_PER_SUPERBLOCK_INTEGRATION = 10;
-const HASHES_PER_SUPERBLOCK_PRODUCTION = 60;
 
 async function deployDevelopment(deployer, network, accounts, networkId, trustedDogeEthPriceOracle,
     dogethereumRecipient, superblockOptions) {
@@ -104,7 +100,7 @@ async function deployDevelopment(deployer, network, accounts, networkId, trusted
     superblockOptions.DELAY,
     superblockOptions.TIMEOUT,
     superblockOptions.CONFIRMATIONS,
-    superblockOptions.HASHES
+    superblockOptions.REWARD
   );
 
   await deployer.deploy(ScryptCheckerDummy, true)
@@ -156,7 +152,7 @@ async function deployIntegration(deployer, network, accounts, networkId, trusted
     superblockOptions.DELAY,
     superblockOptions.TIMEOUT,
     superblockOptions.CONFIRMATIONS,
-    superblockOptions.HASHES,
+    superblockOptions.REWARD,
     {gas: 4000000}
   );
 

@@ -48,8 +48,8 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
     // Minimum deposit required to start/continue challenge
     uint public minDeposit = 1;
 
-    // Expected number of Doge block hashes in a superblock; network-dependent
-    uint public hashesPerSuperblock;
+    // Monetary reward for opponent in case battle is lost
+    uint public battleReward;
 
     uint public superblockDelay;    // Delay required to submit superblocks (in seconds)
     uint public superblockTimeout;  // Timeout for action (in seconds)
@@ -88,14 +88,14 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
         uint _superblockDelay,
         uint _superblockTimeout,
         uint _superblockConfirmations,
-        uint _hashesPerSuperblock
+        uint _battleReward
     ) public {
         trustedSuperblocks = _superblocks;
         trustedDogeBattleManager = _dogeBattleManager;
         superblockDelay = _superblockDelay;
         superblockTimeout = _superblockTimeout;
         superblockConfirmations = _superblockConfirmations;
-        hashesPerSuperblock = _hashesPerSuperblock;
+        battleReward = _battleReward;
     }
 
     // @dev – locks up part of a user's deposit into a claim.
