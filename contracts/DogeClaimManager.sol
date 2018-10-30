@@ -213,7 +213,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
         claim.createdAt = block.timestamp;
         claim.challengeTimeout = block.timestamp + superblockTimeout;
 
-        (err, ) = this.bondDeposit(superblockHash, msg.sender, minDeposit);
+        (err, ) = this.bondDeposit(superblockHash, msg.sender, battleReward);
         assert(err == ERR_SUPERBLOCK_OK);
 
         emit SuperblockClaimCreated(superblockHash, msg.sender);
@@ -249,7 +249,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
             return (err, 0);
         }
 
-        (err, ) = this.bondDeposit(superblockHash, msg.sender, minDeposit);
+        (err, ) = this.bondDeposit(superblockHash, msg.sender, battleReward);
         assert(err == ERR_SUPERBLOCK_OK);
 
         claim.challengeTimeout = block.timestamp + superblockTimeout;
@@ -290,7 +290,8 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
                 claim.challengers[claim.currentChallenger]);
 
             claim.sessions[claim.challengers[claim.currentChallenger]] = sessionId;
-            emit VerificationGameStarted(superblockHash, claim.submitter, claim.challengers[claim.currentChallenger], sessionId);
+            emit VerificationGameStarted(superblockHash, claim.submitter,
+                claim.challengers[claim.currentChallenger], sessionId);
 
             claim.verificationOngoing = true;
             claim.currentChallenger += 1;
@@ -493,7 +494,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
     // @param superblockHash - claim Id
     // @param winner – winner of verification game.
     // @param loser – loser of verification game.
-    function sessionDecided(bytes32 sessionId, bytes32 superblockHash, address winner, address loser) onlyBattleManager public {
+    function sessionDecided(bytes32 sessionId, bytes32 superblockHash, address winner, address loser) public onlyBattleManager {
         SuperblockClaim storage claim = claims[superblockHash];
 
         require(claimExists(claim));
@@ -522,18 +523,18 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
         claim.bondedDeposits[claim.submitter] = 0;
         uint totalDeposits = 0;
         uint idx = 0;
-        for (idx = 0; idx<claim.currentChallenger; ++idx) {
+        for (idx = 0; idx < claim.currentChallenger; ++idx) {
             totalDeposits = totalDeposits.add(claim.bondedDeposits[claim.challengers[idx]]);
         }
         address challenger;
         uint reward;
-        for (idx = 0; idx<claim.currentChallenger; ++idx) {
+        for (idx = 0; idx < claim.currentChallenger; ++idx) {
             challenger = claim.challengers[idx];
             reward = rewards.mul(claim.bondedDeposits[challenger]).div(totalDeposits);
             claim.bondedDeposits[challenger] = claim.bondedDeposits[challenger].add(reward);
         }
         uint bondedDeposit;
-        for (idx = 0; idx<claim.challengers.length; ++idx) {
+        for (idx = 0; idx < claim.challengers.length; ++idx) {
             challenger = claim.challengers[idx];
             bondedDeposit = claim.bondedDeposits[challenger];
             deposits[challenger] = deposits[challenger].add(bondedDeposit);
@@ -546,7 +547,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
     function doPaySubmitter(bytes32 superblockHash, SuperblockClaim storage claim) internal {
         address challenger;
         uint bondedDeposit;
-        for (uint idx=0; idx<claim.challengers.length; ++idx) {
+        for (uint idx=0; idx < claim.challengers.length; ++idx) {
             challenger = claim.challengers[idx];
             bondedDeposit = claim.bondedDeposits[challenger];
             claim.bondedDeposits[challenger] = 0;
@@ -564,7 +565,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
     }
 
     // @dev – Check if a claim exists
-    function claimExists(SuperblockClaim claim) pure private returns (bool) {
+    function claimExists(SuperblockClaim claim) private pure returns (bool) {
         return (claim.submitter != 0x0);
     }
 

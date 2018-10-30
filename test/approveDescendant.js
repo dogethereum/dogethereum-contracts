@@ -57,9 +57,9 @@ contract('approveDescendant', (accounts) => {
           from: owner,
       }));
 
-      //FIXME: ganache-cli creates the same transaction hash if two account send the same amount
-      await claimManager.makeDeposit({ value: 20, from: submitter });
-      await claimManager.makeDeposit({ value: 11, from: challenger });
+      //FIXME: ganache-cli creates the same transaction hash if two accounts send the same amount
+      await claimManager.makeDeposit({ value: 80, from: submitter });
+      await claimManager.makeDeposit({ value: 71, from: challenger });
     }
 
     describe('Approve two descendants', () => {

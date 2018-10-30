@@ -52,15 +52,15 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
         uint lastActionChallenger;        // Number last action challenger
         uint actionsCounter;              // Counter session actions
 
-        bytes32[] blockHashes;                      // Block hashes
-        uint countBlockHeaderQueries;               // Number of block header queries
-        uint countBlockHeaderResponses;             // Number of block header responses
+        bytes32[] blockHashes;            // Block hashes
+        uint countBlockHeaderQueries;     // Number of block header queries
+        uint countBlockHeaderResponses;   // Number of block header responses
 
         mapping (bytes32 => BlockInfo) blocksInfo;
 
         bytes32 pendingScryptHashId;
 
-        ChallengeState challengeState;              // Claim state
+        ChallengeState challengeState;    // Claim state
     }
 
     struct ScryptHashVerification {
