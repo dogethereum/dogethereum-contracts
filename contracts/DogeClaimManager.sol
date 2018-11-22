@@ -1,9 +1,9 @@
 pragma solidity ^0.4.19;
 
-import {DogeDepositsManager} from './DogeDepositsManager.sol';
-import {DogeSuperblocks} from './DogeSuperblocks.sol';
-import {DogeBattleManager} from './DogeBattleManager.sol';
-import {DogeMessageLibrary} from './DogeParser/DogeMessageLibrary.sol';
+import {DogeDepositsManager} from "./DogeDepositsManager.sol";
+import {DogeSuperblocks} from "./DogeSuperblocks.sol";
+import {DogeBattleManager} from "./DogeBattleManager.sol";
+import {DogeMessageLibrary} from "./DogeParser/DogeMessageLibrary.sol";
 import {DogeErrorCodes} from "./DogeErrorCodes.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 
@@ -494,7 +494,8 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
     // @param superblockHash - claim Id
     // @param winner – winner of verification game.
     // @param loser – loser of verification game.
-    function sessionDecided(bytes32 sessionId, bytes32 superblockHash, address winner, address loser) public onlyBattleManager {
+    function sessionDecided(bytes32 sessionId, bytes32 superblockHash, address winner, address loser)
+    public onlyBattleManager {
         SuperblockClaim storage claim = claims[superblockHash];
 
         require(claimExists(claim));
@@ -547,7 +548,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
     function doPaySubmitter(bytes32 superblockHash, SuperblockClaim storage claim) internal {
         address challenger;
         uint bondedDeposit;
-        for (uint idx=0; idx < claim.challengers.length; ++idx) {
+        for (uint idx = 0; idx < claim.challengers.length; ++idx) {
             challenger = claim.challengers[idx];
             bondedDeposit = claim.bondedDeposits[challenger];
             claim.bondedDeposits[challenger] = 0;
