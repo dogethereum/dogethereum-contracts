@@ -26,6 +26,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
     }
 
     enum BlockInfoStatus {
+        Nonexistent,
         Uninitialized,
         Requested,
         ScryptHashPending,
@@ -249,6 +250,12 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
             session.actionsCounter += 1;
             session.lastActionTimestamp = block.timestamp;
             session.lastActionClaimant = session.actionsCounter;
+
+            // Map blocks to prevent a malicious challenger from requesting one that doesn't exist
+            for (uint i = 0; i < blockHashes.length; ++i) {
+                session.blocksInfo[blockHashes[i]].status = BlockInfoStatus.Uninitialized;
+            }
+
             emit RespondMerkleRootHashes(superblockHash, sessionId, session.challenger, blockHashes);
         }
     }
@@ -261,6 +268,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
         if (session.challengeState == ChallengeState.VerifyScryptHash) {
             skipScryptHashVerification(session);
         }
+        // TODO: see if this condition is worth refactoring
         if ((session.countBlockHeaderQueries == 0 && session.challengeState == ChallengeState.RespondMerkleRootHashes)
         || (session.countBlockHeaderQueries > 0 && session.challengeState == ChallengeState.RespondBlockHeader)) {
             require(session.countBlockHeaderQueries < session.blockHashes.length);
