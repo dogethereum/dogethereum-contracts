@@ -57,25 +57,48 @@ let deployedContracts = {
  *        and each value is said contract's address, e.g. "0x0".
  *        Every contract in this mapping must be included in the sources.
  */
-function measureDeploymentGasPerContract(sources, compilationGasLimit, deploymentGasLimit, deployedContracts) {
-    let compiledContracts = solc.compile({sources: input, gasLimit: compilationGasLimit}, 1);
+function measureDeploymentGasPerContract(
+    sources,
+    compilationGasLimit,
+    deploymentGasLimit,
+    deployedContracts
+) {
+    let compiledContracts = solc.compile({
+        sources: input,
+        gasLimit: compilationGasLimit
+    }, 1);
     let bytecode;
     let gasPerContract = [];
 
     for (contract in deployedContracts) {
         dependencies = deployedContracts[contract];
         bytecode = '0x' + compiledContracts.contracts[contract].bytecode;
+        
         if (Object.keys(dependencies).length > 0) {
             bytecode = linker.linkBytecode(bytecode, dependencies);
         }
-        gasPerContract[contract] = web3.eth.estimateGas({data: bytecode, gasLimit: deploymentGasLimit});
+        
+        gasPerContract[contract] = web3.eth.estimateGas({
+            data: bytecode,
+            gasLimit: deploymentGasLimit
+        });
     }
 
     return gasPerContract;
 }
 
-function measureTotalDeploymentGas(sources, compilationGasLimit, deploymentGasLimit, deployedContracts) {
-    let deploymentGasPerContract = measureDeploymentGasPerContract(sources, compilationGasLimit, deploymentGasLimit, deployedContracts);
+function measureTotalDeploymentGas(
+    sources,
+    compilationGasLimit,
+    deploymentGasLimit,
+    deployedContracts
+) {
+    let deploymentGasPerContract = measureDeploymentGasPerContract(
+        sources,
+        compilationGasLimit,
+        deploymentGasLimit,
+        deployedContracts
+    );
     let totalGas = 0;
     
     for (contract in deploymentGasPerContract) {
@@ -85,7 +108,63 @@ function measureTotalDeploymentGas(sources, compilationGasLimit, deploymentGasLi
     return totalGas;
 }
 
-function measureFunctionGas(contract, func, args) {}
+async function measureFunctionGas(
+    compiledContracts,
+    contractName,
+    dependencies,
+    func,
+    args,
+    callGas
+) {
+    let contract = compiledContracts.contracts[contractName];
+    let bytecode = contract.bytecode;
+    bytecode = linker.linkBytecode(bytecode, dependencies);
+    let abi = JSON.parse(contract.interface);
+    let createdContract = web3.eth.contract(abi);
+    var returnedGas;
 
-// console.log(measureDeploymentGasPerContract(input, "89000000000000", "89000000000000", deployedContracts));
-console.log(measureTotalDeploymentGas(input, "89000000000000", "89000000000000", deployedContracts));
+    await createdContract.new({
+        from: web3.eth.coinbase,
+        gas: callGas,
+        data: '0x' + bytecode
+    }, measureFunctionGasCallback);
+
+    return returnedGas;
+
+    function measureFunctionGasCallback(err, myContract) {
+        if (err) {
+            console.log(err);
+            return;
+        }
+    
+        if (myContract.address != undefined) {
+            let methodSignature = myContract[func].getData.apply(myContract[func], args);
+            
+            let callbackGas = web3.eth.estimateGas({
+                from: web3.eth.coinbase,
+                to: myContract.address,
+                data: methodSignature,
+                gas: callGas
+            });
+    
+            returnedGas = callbackGas;
+        }
+    }
+}
+
+async function main() {
+    let compiledContracts = solc.compile({sources: input, gasLimit: "8900000000"}, 1);
+    
+    let gas = await measureFunctionGas(
+        compiledContracts,
+        "DogeSuperblocks.sol:DogeSuperblocks",
+        {'DogeParser/DogeMessageLibrary.sol:DogeMessageLibrary': '0x0'},
+        "setClaimManager",
+        ["0x1"],
+        1000000000
+    );
+
+    console.log(gas);
+}
+
+main();
