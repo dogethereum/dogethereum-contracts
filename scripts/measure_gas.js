@@ -121,35 +121,33 @@ async function measureFunctionGas(
     bytecode = linker.linkBytecode(bytecode, dependencies);
     let abi = JSON.parse(contract.interface);
     let createdContract = web3.eth.contract(abi);
-    var returnedGas;
+    let returnedGas = await new Promise((resolve, reject) => {
+        createdContract.new({
+            from: web3.eth.coinbase,
+            gas: callGas,
+            data: '0x' + bytecode
+        }, (err, myContract) => {
+            if (err) {
+                console.log(err);
+                return reject(err);
+            }
 
-    await createdContract.new({
-        from: web3.eth.coinbase,
-        gas: callGas,
-        data: '0x' + bytecode
-    }, measureFunctionGasCallback);
+            if (myContract.address != undefined) {
+                let methodSignature = myContract[func].getData.apply(myContract[func], args);
+                
+                let promiseGas = web3.eth.estimateGas({
+                    from: web3.eth.coinbase,
+                    to: myContract.address,
+                    data: methodSignature,
+                    gas: callGas
+                });
+        
+                resolve(promiseGas);
+            }
+        });
+    });
 
     return returnedGas;
-
-    function measureFunctionGasCallback(err, myContract) {
-        if (err) {
-            console.log(err);
-            return;
-        }
-    
-        if (myContract.address != undefined) {
-            let methodSignature = myContract[func].getData.apply(myContract[func], args);
-            
-            let callbackGas = web3.eth.estimateGas({
-                from: web3.eth.coinbase,
-                to: myContract.address,
-                data: methodSignature,
-                gas: callGas
-            });
-    
-            returnedGas = callbackGas;
-        }
-    }
 }
 
 async function main() {
