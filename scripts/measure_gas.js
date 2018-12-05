@@ -58,15 +58,11 @@ let deployedContracts = {
  *        Every contract in this mapping must be included in the sources.
  */
 function measureDeploymentGasPerContract(
-    sources,
+    compiledContracts,
     compilationGasLimit,
     deploymentGasLimit,
     deployedContracts
 ) {
-    let compiledContracts = solc.compile({
-        sources: input,
-        gasLimit: compilationGasLimit
-    }, 1);
     let bytecode;
     let gasPerContract = [];
 
@@ -88,13 +84,13 @@ function measureDeploymentGasPerContract(
 }
 
 function measureTotalDeploymentGas(
-    sources,
+    compiledContracts,
     compilationGasLimit,
     deploymentGasLimit,
     deployedContracts
 ) {
     let deploymentGasPerContract = measureDeploymentGasPerContract(
-        sources,
+        compiledContracts,
         compilationGasLimit,
         deploymentGasLimit,
         deployedContracts
