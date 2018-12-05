@@ -30,13 +30,26 @@ let input = {
 };
 
 let deployedContracts = {
-    'DogeBattleManager.sol:DogeBattleManager' : {'DogeParser/DogeMessageLibrary.sol:DogeMessageLibrary': '0x0'},
-    'DogeClaimManager.sol:DogeClaimManager' : {},
-    'DogeSuperblocks.sol:DogeSuperblocks' : {'DogeParser/DogeMessageLibrary.sol:DogeMessageLibrary': '0x0'},
-    'token/DogeToken.sol:DogeToken' : {'token/Set.sol:Set': '0x1'}
-};
+    'DogeBattleManager.sol:DogeBattleManager' : {
+        dependencies: {'DogeParser/DogeMessageLibrary.sol:DogeMessageLibrary': '0x0'},
+        deploymentGasLimit: "80000000"
+    },
 
-// TODO: make deployment gas limit variable for each contract
+    'DogeClaimManager.sol:DogeClaimManager' : {
+        dependencies: {},
+        deploymentGasLimit: "80000000"
+    },
+    
+    'DogeSuperblocks.sol:DogeSuperblocks' : {
+        dependencies: {'DogeParser/DogeMessageLibrary.sol:DogeMessageLibrary': '0x0'},
+        deploymentGasLimit: "80000000"
+    },
+    
+    'token/DogeToken.sol:DogeToken' : {
+        dependencies: {'token/Set.sol:Set': '0x1'},
+        deploymentGasLimit: "80000000"
+    }
+};
 
 /**
  * @param {Object.<string, string>} sources
@@ -60,14 +73,13 @@ let deployedContracts = {
 function measureDeploymentGasPerContract(
     compiledContracts,
     compilationGasLimit,
-    deploymentGasLimit,
     deployedContracts
 ) {
     let bytecode;
     let gasPerContract = [];
 
     for (contract in deployedContracts) {
-        dependencies = deployedContracts[contract];
+        dependencies = deployedContracts[contract].dependencies;
         bytecode = '0x' + compiledContracts.contracts[contract].bytecode;
         
         if (Object.keys(dependencies).length > 0) {
@@ -76,7 +88,7 @@ function measureDeploymentGasPerContract(
         
         gasPerContract[contract] = web3.eth.estimateGas({
             data: bytecode,
-            gasLimit: deploymentGasLimit
+            gasLimit: deployedContracts[contract].deploymentGasLimit
         });
     }
 
@@ -86,13 +98,11 @@ function measureDeploymentGasPerContract(
 function measureTotalDeploymentGas(
     compiledContracts,
     compilationGasLimit,
-    deploymentGasLimit,
     deployedContracts
 ) {
     let deploymentGasPerContract = measureDeploymentGasPerContract(
         compiledContracts,
         compilationGasLimit,
-        deploymentGasLimit,
         deployedContracts
     );
     let totalGas = 0;
@@ -148,17 +158,23 @@ async function measureFunctionGas(
 
 async function main() {
     let compiledContracts = solc.compile({sources: input, gasLimit: "8900000000"}, 1);
-    
-    let gas = await measureFunctionGas(
+    let totalGas = measureTotalDeploymentGas(
         compiledContracts,
-        "DogeSuperblocks.sol:DogeSuperblocks",
-        {'DogeParser/DogeMessageLibrary.sol:DogeMessageLibrary': '0x0'},
-        "setClaimManager",
-        ["0x1"],
-        1000000000
+        "80000000",
+        deployedContracts
     );
+    console.log(totalGas);
+    
+    // let gas = await measureFunctionGas(
+    //     compiledContracts,
+    //     "DogeSuperblocks.sol:DogeSuperblocks",
+    //     {'DogeParser/DogeMessageLibrary.sol:DogeMessageLibrary': '0x0'},
+    //     "setClaimManager",
+    //     ["0x1"],
+    //     1000000000
+    // );
 
-    console.log(gas);
+    // console.log(gas);
 }
 
 main();
