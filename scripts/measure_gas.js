@@ -52,29 +52,27 @@ let deployedContracts = {
 };
 
 /**
- * @param {Object.<string, string>} sources
- *        Mapping containing all contract sources to be compiled.
- *        Key: relative contract paths, e.g. "token/MyToken.sol".
- *        Value: contract source code,
- *        e.g. fs.readFileSync("./contracts/token/MyToken.sol").
- * @param {string} compilationGasLimit
- *        Gas limit for compiling each contract.
- *        It's a string because it must be passed as an argument to solc.compile
- *        and JavaScript's integer size limit might be too small.
- * @param {string} deploymentGasLimit
- *        Gas limit for deploying each contract.
- * @param {Object.<string, Object.<string, string>} deployedContracts
- *        Mapping containing the dependencies for each contract to be deployed.
- *        Key: relative contract path, e.g. "token/MyToken.sol".
- *        Value: another mapping where each key is a contract path, e.g. "token/Set.sol",
- *        and each value is said contract's address, e.g. "0x0".
- *        Every contract in this mapping must be included in the sources.
+ * Maps contract names to their deployment dependencies
+ * and deployment gas limit.
+ * @typedef {{dependencies: contractToAddr, deploymentGasLimit: string}} deploymentInfo
  */
-function measureDeploymentGasPerContract(
-    compiledContracts,
-    compilationGasLimit,
-    deployedContracts
-) {
+
+/**
+ * @typedef {Object.<string, string>} contractToAddr
+ */
+
+/**
+ * Measures deployment gas usage for each contract.
+ * @param {Object} compiledContracts
+ * Output of solc.compile(...) with the contracts to be deployed
+ * as its sources.
+ * @param {Object.<string, deploymentInfo>} deployedContracts
+ * Mapping containing the dependencies and deployment gas limit
+ * for each contract to be deployed.
+ * @returns {Object.<string, int>}
+ * Mapping: contract name -> gas usage
+ */
+function measureDeploymentGasPerContract(compiledContracts, deployedContracts) {
     let bytecode;
     let gasPerContract = [];
 
@@ -95,17 +93,23 @@ function measureDeploymentGasPerContract(
     return gasPerContract;
 }
 
-function measureTotalDeploymentGas(
-    compiledContracts,
-    compilationGasLimit,
-    deployedContracts
-) {
+/**
+ * Measures gas usage for deploying all contracts.
+ * @param {Object} compiledContracts
+ * Output of solc.compile(...) with the contracts to be deployed
+ * as its sources.
+ * @param {Object.<string, deploymentInfo>} deployedContracts
+ * Mapping containing the dependencies and deployment gas limit
+ * for each contract to be deployed.
+ * @returns {int}
+ * Total deployment gas usage
+ */
+function measureTotalDeploymentGas(compiledContracts, deployedContracts) {
+    let totalGas = 0;
     let deploymentGasPerContract = measureDeploymentGasPerContract(
         compiledContracts,
-        compilationGasLimit,
         deployedContracts
     );
-    let totalGas = 0;
     
     for (contract in deploymentGasPerContract) {
         totalGas += deploymentGasPerContract[contract];
@@ -114,6 +118,26 @@ function measureTotalDeploymentGas(
     return totalGas;
 }
 
+/**
+ * Measures gas usage for a single function.
+ * Deploys contract first.
+ * @param {Object} compiledContracts
+ * Output of solc.compile(...) with the contract the function belongs to
+ * as one of its sources.
+ * @param {string} contractName
+ * Name of the contract that the function belongs to,
+ * e.g. "token/MyToken.sol:MyToken".
+ * @param {contractToAddr} dependencies
+ * Deployment dependencies for the contract.
+ * @param {string} func
+ * Name of the function whose gas usage is being measured,
+ * e.g. "balanceOf".
+ * @param {string[]} args
+ * Call arguments, e.g. ["0xdeadbeef"].
+ * @param {string} callGas
+ * Gas for calling the function.
+ * Passed as a string in order to avoid JavaScript's int size limit.
+ */
 async function measureFunctionGas(
     compiledContracts,
     contractName,
@@ -139,7 +163,10 @@ async function measureFunctionGas(
             }
 
             if (myContract.address != undefined) {
-                let methodSignature = myContract[func].getData.apply(myContract[func], args);
+                let methodSignature = myContract[func].getData.apply(
+                    myContract[func],
+                    args
+                );
                 
                 let promiseGas = web3.eth.estimateGas({
                     from: web3.eth.coinbase,
@@ -156,13 +183,18 @@ async function measureFunctionGas(
     return returnedGas;
 }
 
+// TODO: implement
+async function measureBatchFunctionGas(
+    compiledContracts,
+    deployedContracts,
+    args
+) {
+    for (contract in deployedContracts) {}
+}
+
 async function main() {
     let compiledContracts = solc.compile({sources: input, gasLimit: "8900000000"}, 1);
-    let totalGas = measureTotalDeploymentGas(
-        compiledContracts,
-        "80000000",
-        deployedContracts
-    );
+    let totalGas = measureTotalDeploymentGas(compiledContracts, deployedContracts);
     console.log(totalGas);
     
     // let gas = await measureFunctionGas(
