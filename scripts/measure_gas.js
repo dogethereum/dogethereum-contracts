@@ -29,21 +29,25 @@ let input = {
         fs.readFileSync('./node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol', 'utf8')
 };
 
+let dogeClaimManagerDeploymentInfo = {
+    dependencies: {},
+    deploymentGasLimit: "80000000"
+};
+
+let dogeSuperblocksDeploymentInfo = {
+    dependencies: {'DogeParser/DogeMessageLibrary.sol:DogeMessageLibrary': '0x0'},
+    deploymentGasLimit: "80000000"
+};
+
 let contractDeploymentInfo = {
     'DogeBattleManager.sol:DogeBattleManager' : {
         dependencies: {'DogeParser/DogeMessageLibrary.sol:DogeMessageLibrary': '0x0'},
         deploymentGasLimit: "80000000"
     },
 
-    'DogeClaimManager.sol:DogeClaimManager' : {
-        dependencies: {},
-        deploymentGasLimit: "80000000"
-    },
+    'DogeClaimManager.sol:DogeClaimManager' : dogeClaimManagerDeploymentInfo,
     
-    'DogeSuperblocks.sol:DogeSuperblocks' : {
-        dependencies: {'DogeParser/DogeMessageLibrary.sol:DogeMessageLibrary': '0x0'},
-        deploymentGasLimit: "80000000"
-    },
+    'DogeSuperblocks.sol:DogeSuperblocks' : dogeSuperblocksDeploymentInfo,
     
     'token/DogeToken.sol:DogeToken' : {
         dependencies: {'token/Set.sol:Set': '0x1'},
@@ -51,18 +55,25 @@ let contractDeploymentInfo = {
     }
 };
 
+
+/**
+ * @typedef {Object.<string, string>} ContractToAddr
+ */
+
 /**
  * Object containing a contract's deployment dependencies
  * and deployment gas limit.
- * @typedef {{dependencies: contractToAddr, deploymentGasLimit: string}} deploymentInfo
+ * @typedef {{dependencies: contractToAddr, deploymentGasLimit: string}} DeploymentInfo
  */
 
 /**
- * @typedef {Object.<string, string>} contractToAddr
+ * @typedef {{args: string[], callGas: string}} FunctionInfo
  */
 
 /**
- * @typedef {{args: string[], callGas: string}} callInfo
+ * Object containing a contract's deployment dependencies and gas limit
+ * and a mapping of function names from the contract to their call arguments and call gas.
+ * @typedef {{deploymentInfo: deploymentInfo, functions: Object.<string, callInfo>}} DeploymentAndFunctions
  */
 
 /**
@@ -70,7 +81,7 @@ let contractDeploymentInfo = {
  * @param {Object} compiledContracts
  * Output of solc.compile(...) with the contracts to be deployed
  * as its sources.
- * @param {Object.<string, deploymentInfo>} contractDeploymentInfo
+ * @param {Object.<string, DeploymentInfo>} contractDeploymentInfo
  * Mapping containing the dependencies and deployment gas limit
  * for each contract to be deployed.
  * @returns {Object.<string, int>}
@@ -122,6 +133,8 @@ function measureTotalDeploymentGas(compiledContracts, contractDeploymentInfo) {
     return totalGas;
 }
 
+// TODO: map arguments as well as function name
+
 /**
  * Measures gas usage for a set of functions from a single contract.
  * Deploys contract first.
@@ -131,11 +144,13 @@ function measureTotalDeploymentGas(compiledContracts, contractDeploymentInfo) {
  * @param {string} contractName
  * Name of the contract that the functions belong to,
  * e.g. "token/MyToken.sol:MyToken".
- * @param {contractToAddr} dependencies
+ * @param {ContractToAddr} dependencies
  * Deployment dependencies for the contract.
- * @param {Object.<string, callInfo>} functionInfo
+ * @param {Object.<string, FunctionInfo>} functionInfo
  * Mapping containing the arguments and call gas limit
  * for each function.
+ * @returns {Object.<string, int>}
+ * Mapping: function name -> gas usage
  */
 async function measureFunctionGas(
     compiledContracts,
@@ -187,7 +202,35 @@ async function measureFunctionGas(
     return returnedMap;
 }
 
-let functions = {
+/**
+ * Measures gas usage for several function sets belonging to different contracts.
+ * @param {Object} compiledContracts
+ * Output of solc.compile(...) with the contracts to be deployed
+ * as its sources.
+ * @param {Object.<string, DeploymentAndFunctions>} contractInfo
+ * Mapping containing the dependencies, deployment gas limit
+ * and functions to be called for each contract.
+ */
+async function measureBatchFunctionGas(compiledContracts, contractInfo) {
+    let functionsPerContract = [];
+    let deploymentInfo;
+
+    for (contractName in contractInfo) {
+        deploymentInfo = contractInfo[contractName].deploymentInfo;
+        let gasPerFunction = await measureFunctionGas(
+            compiledContracts,
+            contractName,
+            deploymentInfo.deploymentGasLimit,
+            deploymentInfo.dependencies,
+            contractInfo[contractName].functions
+        );
+        functionsPerContract[contractName] = gasPerFunction;
+    }
+
+    return functionsPerContract;
+}
+
+let dogeSuperblocksFunctions = {
     "setClaimManager" : {
         args: ["0x1"],
         callGas: "1000000000"
@@ -199,50 +242,41 @@ let functions = {
     }
 }
 
-// TODO: implement
-async function measureBatchFunctionGas(
-    compiledContracts,
-    contractDeploymentInfo,
-    contractFunctions
-) {
-    let contract;
-    let dependencies;
-    let abi;
+let dogeClaimManagerFunctions = {
+    "getClaimSubmitter" : {
+        args: ["0xc48beef32273a1cf1be0df0db9cea15cf798faecbe548574b07ceeb24f4e4293"],
+        callGas: "1000000"
+    },
 
-    // Deploy contracts
-    for (contractName in contractDeploymentInfo) {
-        contract = compiledContracts.contracts[contractName];
-        dependencies = contractDeploymentInfo[contractName].dependencies;
-        abi = JSON.parse(contract.interface);
-        let bytecode = '0x' + contract.bytecode;
-        if (Object.keys(dependencies).length > 0) {
-            bytecode = linker.linkBytecode(bytecode, dependencies);
-        }
+    "getClaimExists" : {
+        args: ["0xc48beef32273a1cf1be0df0db9cea15cf798faecbe548574b07ceeb24f4e4293"],
+        callGas: "1000000"
     }
-
-    // let gasPerFunction = [];
-    // let functionContract;
-
-    // for (functionName in functions) {
-    //     functionContract = functions[functionName].contract;
-    //     measureFunctionGas(
-    //         compiledContracts,
-    //         functionContract,
-    //         contractDeploymentInfo[functionContract].gas
-    //     );
-    // }
 }
+
+let contractInfo = {
+    "DogeSuperblocks.sol:DogeSuperblocks" : {
+        deploymentInfo: dogeSuperblocksDeploymentInfo,
+        functions: dogeSuperblocksFunctions
+    },
+
+    "DogeClaimManager.sol:DogeClaimManager" : {
+        deploymentInfo: dogeClaimManagerDeploymentInfo,
+        functions: dogeClaimManagerFunctions
+    }
+};
 
 async function main() {
     let compiledContracts = solc.compile({sources: input, gasLimit: "8900000000"}, 1);
-    let gasPerFunction = await measureFunctionGas(
-        compiledContracts,
-        "DogeSuperblocks.sol:DogeSuperblocks",
-        "100000000",
-        {'DogeParser/DogeMessageLibrary.sol:DogeMessageLibrary': '0x0'},
-        functions
-    );
-    console.log(gasPerFunction);
+    let functionGasPerContract = await measureBatchFunctionGas(compiledContracts, contractInfo);
+    // let gasPerFunction = await measureFunctionGas(
+    //     compiledContracts,
+    //     "DogeSuperblocks.sol:DogeSuperblocks",
+    //     "100000000",
+    //     {'DogeParser/DogeMessageLibrary.sol:DogeMessageLibrary': '0x0'},
+    //     functions
+    // );
+    console.log(functionGasPerContract);
     // let totalGas = measureTotalDeploymentGas(compiledContracts, contractDeploymentInfo);
     // console.log(totalGas);
     // measureBatchFunctionGas(compiledContracts, contractDeploymentInfo, functions);
