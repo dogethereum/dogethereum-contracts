@@ -69,9 +69,6 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
         bytes32 blockSha256Hash;
     }
 
-    // Minimum deposit required to start/continue challenge
-    uint public minDeposit = 1;
-
     mapping (bytes32 => BattleSession) public sessions;
 
     uint public sessionsCount = 0;
@@ -185,13 +182,13 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
 
     // @dev - Challenger makes a query for superblock hashes
     function doQueryMerkleRootHashes(BattleSession storage session) internal returns (uint) {
-        if (!hasDeposit(msg.sender, minDeposit)) {
+        if (!hasDeposit(msg.sender, respondMerkleRootHashesCost)) {
             return ERR_SUPERBLOCK_MIN_DEPOSIT;
         }
         if (session.challengeState == ChallengeState.Challenged) {
             session.challengeState = ChallengeState.QueryMerkleRootHashes;
             assert(msg.sender == session.challenger);
-            (uint err, ) = bondDeposit(session.superblockHash, msg.sender, minDeposit);
+            (uint err, ) = bondDeposit(session.superblockHash, msg.sender, respondMerkleRootHashesCost);
             if (err != ERR_SUPERBLOCK_OK) {
                 return err;
             }
@@ -216,7 +213,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
 
     // @dev - Submitter sends hashes to verify superblock merkle root
     function doVerifyMerkleRootHashes(BattleSession storage session, bytes32[] blockHashes) internal returns (uint) {
-        if (!hasDeposit(msg.sender, minDeposit)) {
+        if (!hasDeposit(msg.sender, verifySuperblockCost)) {
             return ERR_SUPERBLOCK_MIN_DEPOSIT;
         }
         require(session.blockHashes.length == 0);
@@ -228,7 +225,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
             if (merkleRoot != DogeMessageLibrary.makeMerkle(blockHashes)) {
                 return ERR_SUPERBLOCK_INVALID_MERKLE;
             }
-            (uint err, ) = bondDeposit(session.superblockHash, msg.sender, minDeposit);
+            (uint err, ) = bondDeposit(session.superblockHash, msg.sender, verifySuperblockCost);
             if (err != ERR_SUPERBLOCK_OK) {
                 return err;
             }
@@ -262,7 +259,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
 
     // @dev - Challenger makes a query for block header data for a hash
     function doQueryBlockHeader(BattleSession storage session, bytes32 blockHash) internal returns (uint) {
-        if (!hasDeposit(msg.sender, minDeposit)) {
+        if (!hasDeposit(msg.sender, respondBlockHeaderCost)) {
             return ERR_SUPERBLOCK_MIN_DEPOSIT;
         }
         if (session.challengeState == ChallengeState.VerifyScryptHash) {
@@ -273,7 +270,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
         || (session.countBlockHeaderQueries > 0 && session.challengeState == ChallengeState.RespondBlockHeader)) {
             require(session.countBlockHeaderQueries < session.blockHashes.length);
             require(session.blocksInfo[blockHash].status == BlockInfoStatus.Uninitialized);
-            (uint err, ) = bondDeposit(session.superblockHash, msg.sender, minDeposit);
+            (uint err, ) = bondDeposit(session.superblockHash, msg.sender, respondBlockHeaderCost);
             if (err != ERR_SUPERBLOCK_OK) {
                 return err;
             }
@@ -364,7 +361,8 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
         bytes32 proposedBlockScryptHash,
         bytes blockHeader
     ) internal returns (uint, bytes) {
-        if (!hasDeposit(msg.sender, minDeposit)) {
+        // TODO: see if this should fund Scrypt verification
+        if (!hasDeposit(msg.sender, respondBlockHeaderCost)) {
             return (ERR_SUPERBLOCK_MIN_DEPOSIT, new bytes(0));
         }
         if (session.challengeState == ChallengeState.QueryBlockHeader) {
@@ -386,7 +384,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
 
             blockInfo.status = BlockInfoStatus.ScryptHashPending;
 
-            (err, ) = bondDeposit(session.superblockHash, msg.sender, minDeposit);
+            (err, ) = bondDeposit(session.superblockHash, msg.sender, respondBlockHeaderCost);
             if (err != ERR_SUPERBLOCK_OK) {
                 return (err, new bytes(0));
             }
@@ -433,13 +431,13 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
         bytes32 sessionId,
         bytes32 blockSha256Hash
     ) internal returns (uint) {
-        if (!hasDeposit(msg.sender, minDeposit)) {
+        if (!hasDeposit(msg.sender, queryMerkleRootHashesCost)) {
             return ERR_SUPERBLOCK_MIN_DEPOSIT;
         }
         if (session.challengeState == ChallengeState.VerifyScryptHash) {
             BlockInfo storage blockInfo = session.blocksInfo[blockSha256Hash];
             if (blockInfo.status == BlockInfoStatus.ScryptHashPending) {
-                (uint err, ) = bondDeposit(session.superblockHash, msg.sender, minDeposit);
+                (uint err, ) = bondDeposit(session.superblockHash, msg.sender, queryMerkleRootHashesCost);
                 if (err != ERR_SUPERBLOCK_OK) {
                     return err;
                 }

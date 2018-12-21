@@ -21,6 +21,20 @@ const DOGE_MAINNET = 0;
 const DOGE_TESTNET = 1;
 const DOGE_REGTEST = 2;
 
+const DEPOSITS = {
+    MIN_REWARD: 400000,
+    SUPERBLOCK_COST: 440000,
+    CHALLENGE_COST: 34000,
+    MIN_PROPOSAL_DEPOSIT: 434000,
+    MIN_CHALLENGE_DEPOSIT: 840000,
+    QUERY_MERKLE_COST: 88000,
+    QUERY_HEADER_COST: 102000,
+    RESPOND_MERKLE_COST: 378000, // TODO: measure this with 60 hashes
+    RESPOND_HEADER_COST: 40000,
+    REQUEST_SCRYPT_COST: 80000,
+    VERIFY_SUPERBLOCK_COST: 220000
+};
+
 async function parseDataFile(filename) {
   const headers = [];
   const hashes = [];
@@ -354,6 +368,7 @@ module.exports = {
   DOGE_MAINNET,
   DOGE_TESTNET,
   DOGE_REGTEST,
+  DEPOSITS,
   formatHexUint32: function (str) {
     // To format 32 bytes is 64 hexadecimal characters
     return formatHexUint(str, 64);
@@ -390,7 +405,7 @@ module.exports = {
       genesisSuperblock.accumulatedWork,
     );
 
-    await claimManager.makeDeposit({ value: 10, from: sender });
+    await claimManager.makeDeposit({ value: DEPOSITS.MIN_PROPOSAL_DEPOSIT, from: sender });
 
     let result;
 

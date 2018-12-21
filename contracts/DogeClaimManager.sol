@@ -45,9 +45,6 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
     // Confirmations required to confirm semi approved superblocks
     uint public superblockConfirmations;
 
-    // Minimum deposit required to start/continue challenge
-    uint public minDeposit = 1;
-
     // Monetary reward for opponent in case battle is lost
     uint public battleReward;
 
@@ -179,7 +176,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
     ) public returns (uint, bytes32) {
         require(address(trustedSuperblocks) != 0);
 
-        if (deposits[msg.sender] < minDeposit) {
+        if (deposits[msg.sender] < minProposalDeposit) {
             emit ErrorClaim(0, ERR_SUPERBLOCK_MIN_DEPOSIT);
             return (ERR_SUPERBLOCK_MIN_DEPOSIT, 0);
         }
@@ -237,7 +234,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
             emit ErrorClaim(superblockHash, ERR_SUPERBLOCK_CLAIM_DECIDED);
             return (ERR_SUPERBLOCK_CLAIM_DECIDED, superblockHash);
         }
-        if (deposits[msg.sender] < minDeposit) {
+        if (deposits[msg.sender] < minChallengeDeposit) {
             emit ErrorClaim(superblockHash, ERR_SUPERBLOCK_MIN_DEPOSIT);
             return (ERR_SUPERBLOCK_MIN_DEPOSIT, superblockHash);
         }

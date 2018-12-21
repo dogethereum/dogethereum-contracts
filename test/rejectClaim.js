@@ -79,8 +79,8 @@ contract('rejectClaim', (accounts) => {
             }));
 
             //FIXME: ganache-cli creates the same transaction hash if two account send the same amount
-            await claimManager.makeDeposit({ value: 10, from: submitter });
-            await claimManager.makeDeposit({ value: 11, from: challenger });
+            await claimManager.makeDeposit({ value: utils.DEPOSITS.MIN_PROPOSAL_DEPOSIT, from: submitter });
+            await claimManager.makeDeposit({ value: utils.DEPOSITS.MIN_CHALLENGE_DEPOSIT, from: challenger });
         });
 
         it('Initialized', async () => {
@@ -143,6 +143,7 @@ contract('rejectClaim', (accounts) => {
 
         // Propose two more superblocks
         it('Propose superblock 2', async () => {
+            await claimManager.makeDeposit({ value: utils.DEPOSITS.MIN_PROPOSAL_DEPOSIT, from: submitter });
             const result = await claimManager.proposeSuperblock(
                 superblock2.merkleRoot,
                 superblock2.accumulatedWork,
@@ -243,22 +244,32 @@ contract('rejectClaim', (accounts) => {
         });
 
         it('Query and verify hashes', async () => {
+            await claimManager.makeDeposit({ value: utils.DEPOSITS.RESPOND_MERKLE_COST, from: challenger });
             result = await battleManager.queryMerkleRootHashes(superblockR0Id, session1, { from: challenger });
             assert.ok(utils.findEvent(result.logs, 'QueryMerkleRootHashes'), 'Query merkle root hashes');
+
+            await claimManager.makeDeposit({ value: utils.DEPOSITS.VERIFY_SUPERBLOCK_COST, from: submitter });
             result = await battleManager.respondMerkleRootHashes(superblockR0Id, session1, superblockR0Hashes, { from: submitter });
             assert.ok(utils.findEvent(result.logs, 'RespondMerkleRootHashes'), 'Respond merkle root hashes');
         });
 
         it('Query and reply block header', async () => {
             let scryptHash;
+            await claimManager.makeDeposit({ value: utils.DEPOSITS.RESPOND_HEADER_COST, from: challenger });
             result = await battleManager.queryBlockHeader(superblockR0Id, session1, superblockR0Hashes[0], { from: challenger });
             assert.ok(utils.findEvent(result.logs, 'QueryBlockHeader'), 'Query block header');
+
             scryptHash = `0x${utils.calcHeaderPoW(superblockR0Headers[0])}`;
+            await claimManager.makeDeposit({ value: utils.DEPOSITS.VERIFY_SUPERBLOCK_COST, from: submitter });
             result = await battleManager.respondBlockHeader(superblockR0Id, session1, scryptHash, `0x${superblockR0Headers[0]}`, { from: submitter });
             assert.ok(utils.findEvent(result.logs, 'RespondBlockHeader'), 'Respond block header');
+
+            await claimManager.makeDeposit({ value: utils.DEPOSITS.RESPOND_HEADER_COST, from: challenger });
             result = await battleManager.queryBlockHeader(superblockR0Id, session1, superblockR0Hashes[1], { from: challenger });
             assert.ok(utils.findEvent(result.logs, 'QueryBlockHeader'), 'Query block header');
+
             scryptHash = `0x${utils.calcHeaderPoW(superblockR0Headers[1])}`;
+            await claimManager.makeDeposit({ value: utils.DEPOSITS.VERIFY_SUPERBLOCK_COST, from: submitter });
             result = await battleManager.respondBlockHeader(superblockR0Id, session1, scryptHash, `0x${superblockR0Headers[1]}`, { from: submitter });
             assert.ok(utils.findEvent(result.logs, 'RespondBlockHeader'), 'Respond block header');
         });

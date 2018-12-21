@@ -49,8 +49,8 @@ contract('verifyScryptHash', (accounts) => {
     const best = await superblocks.getBestSuperblock();
     assert.equal(genesisSuperblockHash, best, 'Best superblock should match');
 
-    await claimManager.makeDeposit({ value: 10, from: submitter });
-    await claimManager.makeDeposit({ value: 11, from: challenger });
+    await claimManager.makeDeposit({ value: utils.DEPOSITS.MIN_PROPOSAL_DEPOSIT, from: submitter });
+    await claimManager.makeDeposit({ value: utils.DEPOSITS.MIN_CHALLENGE_DEPOSIT, from: challenger });
 
     await scryptChecker.makeDeposit({ value: 10, from: submitter });
     await scryptChecker.makeDeposit({ value: 11, from: challenger });
@@ -76,6 +76,7 @@ contract('verifyScryptHash', (accounts) => {
     assert.ok(superblockClaimCreated, 'New superblock proposed');
     proposedSuperblockHash = superblockClaimCreated.args.superblockHash;
 
+    // await claimManager.makeDeposit({ value: utils.DEPOSITS.MIN_CHALLENGE_DEPOSIT, from: challenger });
     result = await claimManager.challengeSuperblock(proposedSuperblockHash, { from: challenger });
     const superblockClaimChallenged = utils.findEvent(result.logs, 'SuperblockClaimChallenged');
     assert.ok(superblockClaimChallenged, 'Superblock challenged');
@@ -84,27 +85,32 @@ contract('verifyScryptHash', (accounts) => {
     assert.ok(verificationGameStarted, 'Battle started');
     battleSessionId = verificationGameStarted.args.sessionId;
 
+    await claimManager.makeDeposit({ value: utils.DEPOSITS.RESPOND_MERKLE_COST, from: challenger });
     result = await battleManager.queryMerkleRootHashes(proposedSuperblockHash, battleSessionId, { from: challenger });
     assert.ok(utils.findEvent(result.logs, 'QueryMerkleRootHashes'), 'Query merkle root hashes');
 
+    await claimManager.makeDeposit({ value: utils.DEPOSITS.VERIFY_SUPERBLOCK_COST, from: submitter });
     result = await battleManager.respondMerkleRootHashes(proposedSuperblockHash, battleSessionId, hashes, { from: submitter });
     assert.ok(utils.findEvent(result.logs, 'RespondMerkleRootHashes'), 'Respond merkle root hashes');
 
+    await claimManager.makeDeposit({ value: utils.DEPOSITS.RESPOND_HEADER_COST, from: challenger });
     result = await battleManager.queryBlockHeader(proposedSuperblockHash, battleSessionId, hashes[1], { from: challenger });
     assert.ok(utils.findEvent(result.logs, 'QueryBlockHeader'), 'Query block header');
 
     scryptHash = `0x${utils.calcHeaderPoW(headers[1])}`;
+    await claimManager.makeDeposit({ value: utils.DEPOSITS.VERIFY_SUPERBLOCK_COST, from: challenger });
     result = await battleManager.respondBlockHeader(proposedSuperblockHash, battleSessionId, scryptHash, `0x${headers[1]}`, { from: submitter });
     assert.ok(utils.findEvent(result.logs, 'RespondBlockHeader'), 'Respond block header');
 
+    await claimManager.makeDeposit({ value: utils.DEPOSITS.RESPOND_HEADER_COST, from: challenger });
     result = await battleManager.queryBlockHeader(proposedSuperblockHash, battleSessionId, hashes[0], { from: challenger });
     assert.ok(utils.findEvent(result.logs, 'QueryBlockHeader'), 'Query block header');
 
     scryptHash = `0x${utils.calcHeaderPoW(headers[0])}`;
+    await claimManager.makeDeposit({ value: utils.DEPOSITS.VERIFY_SUPERBLOCK_COST, from: challenger });
     result = await battleManager.respondBlockHeader(proposedSuperblockHash, battleSessionId, scryptHash, `0x${headers[0]}`, { from: submitter });
     assert.ok(utils.findEvent(result.logs, 'RespondBlockHeader'), 'Respond block header');
   }
-
 
   describe('Scrypt hash validations', () => {
     const genesisHeaders = [
@@ -119,6 +125,7 @@ contract('verifyScryptHash', (accounts) => {
       `03016200bff4360d94ea7624df49ec8f1ecd2c5bee9374a277d2c028078597a30331116f23e08af3eb7ccf1cd9b51f0ff58b8e650a135cb03b69f71fcb8a6e22003dda64e4b95856dfdb041b0000000001000000010000000000000000000000000000000000000000000000000000000000000000ffffffff4c0350a30d04e6b958560803c6ab5924230000fabe6d6d64e9f965a067a65f6a9b33dc2e4185dba3354e9c18422b5fe022e7e61f93ade140000000000000000d2f6e6f64655374726174756d2f0000000001317df395000000001976a9145da2560b857f5ba7874de4a1173e67b4d509c46688ac00000000a775b379e1595dc4a6cd4d1af61675c0f774b3402cd40e3144ffe7b461e56890030a38444acf4349d6f7b4503d49d720d56c4fc8866d9bd8c42f010d6d59a66fea71079e7cb78500b821c75d52cd5425e43cc30d7c4be864262b6e31dc4ccbb8c93fc0dd81bec3570585aa3077560d5b0ecc6d195bba587450a52b96cbc419346f00000000060000000000000000000000000000000000000000000000000000000000000000e2f61c3f71d1defd3fa999dfa36953755c690689799962b48bebd836974e8cf97d24db2bfa41474bfb2f877d688fac5faa5e10a2808cf9de307370b93352e54894857d3e08918f70395d9206410fbfa942f1a889aa5ab8188ec33c2f6e207dc7e2e8f54c11979e19d88494d76ec021cd03d0f51075c4bd49179db1ec099d2c37a1dd9584e8e20d8d03bb0490cffb8d64eaed6e46ea8b4f7f4652c6a225e4a3113800000003000000d5f3c7e4e889b24c9f949578b51c9d8b86182d2dc6e14948fadaecca3e521c7e315411eef7e7a67c02e95f9f3d0c1b7defa545665e6abd945634a27c623c68ebe5b9585651a3011bae439905`,
     ];
     const hashes = headers.map(header => utils.calcBlockSha256Hash(header));
+
     describe('Confirm valid block scrypt hash', () => {
       before(async () => {
         await initSuperblockChainAndChallenge({
@@ -127,45 +134,53 @@ contract('verifyScryptHash', (accounts) => {
           hashes,
         });
       });
+
       it('Request scrypt hash validation', async () => {
         // Request scrypt hash validation
         result = await battleManager.requestScryptHashValidation(proposedSuperblockHash, battleSessionId, hashes[0], { from: challenger });
         const requestScryptHashValidation =  utils.findEvent(result.logs, 'RequestScryptHashValidation');
         assert.ok(requestScryptHashValidation, 'Request scrypt hash validation');
+
         plaintext = requestScryptHashValidation.args.blockHeader;
         scryptHash = requestScryptHashValidation.args.blockScryptHash;
         proposalId = requestScryptHashValidation.args.proposalId;
       });
+
       it('Start scrypt hash validation', async () => {
         result = await scryptChecker.checkScrypt(plaintext, scryptHash, proposalId, battleManager.address, { from: submitter });
         const claimCreated = utils.findEvent(result.logs, 'ClaimCreated');
         assert.ok(claimCreated, 'Create scrypt hash claim');
-        claimID = claimCreated.args.claimID;
+
         // Make a challenge
+        claimID = claimCreated.args.claimID;
         result = await scryptChecker.challengeClaim(claimID, { from: challenger });
         assert.ok(utils.findEvent(result.logs, 'ClaimChallenged'), 'Make challenge to scrypt hash');
+        
         // Start verification game
         result = await scryptChecker.runNextVerificationGame(claimID, { from: challenger });
         assert.ok(utils.findEvent(result.logs, 'VerificationGameStarted'), 'Start challenge scrypt hash game');
       });
+
       it('Query step 1030', async () => {
+          // Start session
         sessionId = await scryptChecker.getSession.call(claimID, challenger);
-        // Start session
         session = toSession(await scryptVerifier.getSession.call(sessionId));
         assert.equal(session.lowStep.toNumber(), 0);
         assert.equal(session.medStep.toNumber(), 0);
         assert.equal(session.highStep.toNumber(), 2049);
         assert.equal(session.medHash, '0x0000000000000000000000000000000000000000000000000000000000000000');
+      
         // Steps are hardcoded because ganache is too slow to calculate them
         step = 1030;
         result = await scryptVerifier.query(sessionId, step, { from: challenger });
-
+        
         session = toSession(await scryptVerifier.getSession.call(sessionId));
         assert.equal(session.lowStep.toNumber(), 0);
         assert.equal(session.medStep.toNumber(), 1030);
         assert.equal(session.highStep.toNumber(), 2049);
         assert.equal(session.medHash, '0x0000000000000000000000000000000000000000000000000000000000000000');
       });
+
       it('Respond step 1030', async () => {
         // A step can be calculated calling getStateProofAndHash from ScryptRunner
         //result = await scryptRunner.getStateProofAndHash.call(plaintext, step);
@@ -175,24 +190,27 @@ contract('verifyScryptHash', (accounts) => {
           proof: "0xc4b087e75ac60ff8d6974263ec7899d94b39085bcdd5236f8ddcd9e963478be2e6e6c0e734d1f0a22e6bbb6d4be83c04627b05d2622b45d20c586cb41c83bcec5ec03e727d5dabc7f4e6e8c1a10eced3f143dd6286b78da5b882382da380279f35965becc5f63b5c190c7b6ee270fac05372ec51a9749ef4a66f76a2943e7813cb803825a8e324a5a03b1d255e97f74a4f369346503b1b06da037909de9130a62853f5e81499d3c6648b5f907640f2c1d3548a944fd604b7f2a067e375ed1dce03dab6eb852513b5559d51c3da1e74d1792d3dbc6661672a2b707cee744dc6424ff5ed61afed5d7fdbf2bf24ef5fa3a7549abc4ec14094e7a43feaedd03fcdba1836de7e1020cb68339efefa35e034219340baf02d274d2c693f6eb810f44d12a4480e221f98ad1442aae81262e9847a5c02262d5645139a417f1da5e0f15179876f5b19a07f3a25b3736f598898b543690937146063c2dffaf0becde9308a0c44ab196f0fd24d9fc12c9bff1d0cdbda217b137586e77c1c6de131f235f93cc68ad3281b66c3c11f15e65edb937d7601a56c61ddf2810998f80bbf0796734453256037543340cee021f6c549e0e1ce4246e6d5100a7c132a3634e957859b6c9f",
           stateHash: "0x84984aedd2cb8489c5c2f82770ebc86e8468bcc6d8b1b0e9fbfd81458b13154d",
         };
+        
         result = await scryptVerifier.respond(sessionId, step, computeStep.stateHash, { from: submitter });
-
+        
         session = toSession(await scryptVerifier.getSession.call(sessionId));
         assert.equal(session.lowStep.toNumber(), 0);
         assert.equal(session.medStep.toNumber(), 1030);
         assert.equal(session.highStep.toNumber(), 2049);
         assert.equal(session.medHash, computeStep1030.stateHash);
       });
+
       it('Query step 1031', async () => {
         step = 1031;
         result = await scryptVerifier.query(sessionId, step, { from: challenger });
-
+        
         session = toSession(await scryptVerifier.getSession.call(sessionId));
         assert.equal(session.lowStep.toNumber(), 1030);
         assert.equal(session.medStep.toNumber(), 1031);
         assert.equal(session.highStep.toNumber(), 2049);
         assert.equal(session.medHash, '0x0000000000000000000000000000000000000000000000000000000000000000');
       });
+
       it('Respond step 1031', async () => {
         //result = await scryptRunner.getStateProofAndHash.call(plaintext, step);
         //computeStep = toResult(result);
@@ -201,25 +219,28 @@ contract('verifyScryptHash', (accounts) => {
           proof: "0x52ab62e20055bf1126eab0741f545a5dcbbbca6282d2ffdb1ba9120b5753af5d5f852517b17ea2f11714ad9f1a19dc087c7a16390d75443388bd8af5c4ee2f061fa30a6b243063657da5c3ff5275bca8e1c448f576ab97ae309bbc3a0c9a98e956fb8e8a26c6bc86ccce55e87ef088878a8359e545976c79e7c5791c038ed92146e0ff2c9fe72624081b77bd6658cff7a640d89b6cc314a1070949ad390ab6091b80c73daff8c9339ba86cc00ca1ba568d646def9ea2776fe319010e1cc32c6077cdd40369b4993a851bb7905884803b0e55d92521cf1aa15dea102600e6180c262b69a0ec68aa05e808da6b0c661668c9f28957a6e5d3e33635f40c69dc2d2764ee00aa6f167d86946070649d653e0769951ca52c520a957c353dc7a518cf7e267ffe293b6e4692ace9d009cba7bd6de199e600c117ab4e6a7e405d4b49577fde3f0aed6db5b4a889b02d21d79c6189441efceb56668ed76268a0fc4dc0c80e1858d2cda77da52ebbd11904c9186f67b4402ca21fb4f950e0428de9f1c020f3515d18d3b17f81f13eac6fb0176e44d9046e3c91261c830915286518f5cb70f4ba22cb2aae0a1e1d1f3c8ae32a0603262532401358a56b4810b54cc15cc7cff5",
           stateHash: "0xc1ac3aa2639fdac2aa9943a51178d42b924680887dc4a700e5661a269f2ab7f2",
         };
-        result = await scryptVerifier.respond(sessionId, step, computeStep.stateHash, { from: submitter });
 
+        result = await scryptVerifier.respond(sessionId, step, computeStep.stateHash, { from: submitter });
+        
         session = toSession(await scryptVerifier.getSession.call(sessionId));
         assert.equal(session.lowStep.toNumber(), 1030);
         assert.equal(session.medStep.toNumber(), 1031);
         assert.equal(session.highStep.toNumber(), 2049);
         assert.equal(session.medHash, computeStep1031.stateHash);
       });
+
       it('Finish queries', async () => {
         // To finish we need to set session.lowStep + 1 == session.highStep
         step = 1030;
         result = await scryptVerifier.query(sessionId, step, { from: challenger });
-
+        
         session = toSession(await scryptVerifier.getSession.call(sessionId));
         assert.equal(session.lowStep.toNumber(), 1030);
         assert.equal(session.medStep.toNumber(), 1031);
         assert.equal(session.highStep.toNumber(), 1031);
         assert.equal(session.medHash, computeStep1031.stateHash);
       });
+      
       it('Evaluate step 1030', async () => {
         // Final step can be executed by either submitter or challenger
         result = await scryptVerifier.performStepVerification(
@@ -233,10 +254,12 @@ contract('verifyScryptHash', (accounts) => {
         );
         assert.ok(utils.findEvent(result.logs, 'ChallengerConvicted'), 'Challenger convicted');
       });
+
       it('Validate scrypt hash calculation', async () => {
         result = await scryptChecker.checkClaimSuccessful(claimID, { from: submitter });
         assert.ok(utils.findEvent(result.logs, 'ClaimSuccessful'), 'Scrypt hash verified');
       });
+      
       it('Verify superblock', async () => {
         // Verify superblock
         result = await battleManager.verifySuperblock(battleSessionId, { from: submitter });
@@ -248,6 +271,7 @@ contract('verifyScryptHash', (accounts) => {
         assert.ok(utils.findEvent(result.logs,  'SuperblockClaimPending'), 'Superblock challenged');
       });
     });
+
     describe('Reject invalid block scrypt hash', () => {
       before(async () => {
         await initSuperblockChainAndChallenge({
@@ -256,6 +280,7 @@ contract('verifyScryptHash', (accounts) => {
           hashes,
         });
       });
+
       it('Request scrypt hash validation', async () => {
         let result;
         let session;
@@ -270,18 +295,22 @@ contract('verifyScryptHash', (accounts) => {
         scryptHash = requestScryptHashValidation.args.blockScryptHash;
         proposalId = requestScryptHashValidation.args.proposalId;
       });
+      
       it('Start scrypt hash validation', async () => {
         result = await scryptChecker.checkScrypt(plaintext, scryptHash, proposalId, battleManager.address, { from: submitter });
         const claimCreated = utils.findEvent(result.logs, 'ClaimCreated');
         assert.ok(claimCreated, 'Create scrypt hash claim');
-        claimID = claimCreated.args.claimID;
+      
         // Make a challenge
+        claimID = claimCreated.args.claimID;
         result = await scryptChecker.challengeClaim(claimID, { from: challenger });
         assert.ok(utils.findEvent(result.logs, 'ClaimChallenged'), 'Make challenge to scrypt hash');
+      
         // Start verification game
         result = await scryptChecker.runNextVerificationGame(claimID, { from: challenger });
         assert.ok(utils.findEvent(result.logs, 'VerificationGameStarted'), 'Start challenge scrypt hash game');
       });
+
       it('Query step 1030', async () => {
         sessionId = await scryptChecker.getSession.call(claimID, challenger);
 
@@ -302,6 +331,7 @@ contract('verifyScryptHash', (accounts) => {
         assert.equal(session.highStep.toNumber(), 2049);
         assert.equal(session.medHash, '0x0000000000000000000000000000000000000000000000000000000000000000');
       });
+
       it('Respond step 1030', async () => {
         // A step can be calculated calling getStateProofAndHash from ScryptRunner
         //result = await scryptRunner.getStateProofAndHash.call(plaintext, step);
@@ -311,6 +341,7 @@ contract('verifyScryptHash', (accounts) => {
           proof: "0xc4b087e75ac60ff8d6974263ec7899d94b39085bcdd5236f8ddcd9e963478be2e6e6c0e734d1f0a22e6bbb6d4be83c04627b05d2622b45d20c586cb41c83bcec5ec03e727d5dabc7f4e6e8c1a10eced3f143dd6286b78da5b882382da380279f35965becc5f63b5c190c7b6ee270fac05372ec51a9749ef4a66f76a2943e7813cb803825a8e324a5a03b1d255e97f74a4f369346503b1b06da037909de9130a62853f5e81499d3c6648b5f907640f2c1d3548a944fd604b7f2a067e375ed1dce03dab6eb852513b5559d51c3da1e74d1792d3dbc6661672a2b707cee744dc6424ff5ed61afed5d7fdbf2bf24ef5fa3a7549abc4ec14094e7a43feaedd03fcdba1836de7e1020cb68339efefa35e034219340baf02d274d2c693f6eb810f44d12a4480e221f98ad1442aae81262e9847a5c02262d5645139a417f1da5e0f15179876f5b19a07f3a25b3736f598898b543690937146063c2dffaf0becde9308a0c44ab196f0fd24d9fc12c9bff1d0cdbda217b137586e77c1c6de131f235f93cc68ad3281b66c3c11f15e65edb937d7601a56c61ddf2810998f80bbf0796734453256037543340cee021f6c549e0e1ce4246e6d5100a7c132a3634e957859b6c9f",
           stateHash: "0x84984aedd2cb8489c5c2f82770ebc86e8468bcc6d8b1b0e9fbfd81458b13154d",
         };
+
         result = await scryptVerifier.respond(sessionId, step, computeStep.stateHash, { from: submitter });
 
         session = toSession(await scryptVerifier.getSession.call(sessionId));
@@ -319,6 +350,7 @@ contract('verifyScryptHash', (accounts) => {
         assert.equal(session.highStep.toNumber(), 2049);
         assert.equal(session.medHash, computeStep1030.stateHash);
       });
+
       it('Query step 1031', async () => {
         step = 1031;
         result = await scryptVerifier.query(sessionId, step, { from: challenger });
@@ -329,6 +361,7 @@ contract('verifyScryptHash', (accounts) => {
         assert.equal(session.highStep.toNumber(), 2049);
         assert.equal(session.medHash, '0x0000000000000000000000000000000000000000000000000000000000000000');
       });
+
       it('Query step 1031', async () => {
         result = await scryptVerifier.respond(sessionId, step, computeStep.stateHash, { from: submitter });
 
@@ -338,6 +371,7 @@ contract('verifyScryptHash', (accounts) => {
         assert.equal(session.highStep.toNumber(), 2049);
         assert.equal(session.medHash, computeStep1030.stateHash);
       });
+      
       it('Finish queries', async () => {
         // To finish we need to set session.lowStep + 1 == session.highStep
         step = 1030;
@@ -349,6 +383,7 @@ contract('verifyScryptHash', (accounts) => {
         assert.equal(session.highStep.toNumber(), 1031);
         assert.equal(session.medHash, computeStep1030.stateHash);
       });
+
       it('Evaluate step 1030', async () => {
         // Final step can be executed by either submitter or challenger
         result = await scryptVerifier.performStepVerification(
@@ -360,14 +395,17 @@ contract('verifyScryptHash', (accounts) => {
           scryptChecker.address,
           { from: challenger }
         );
+
         assert.ok(utils.findEvent(result.logs, 'ClaimantConvicted'), 'Claimant convicted');
       });
+
       it('Reject scrypt hash claim', async () => {
         // Reject scrypt hash
         await utils.blockchainTimeoutSeconds(2*utils.OPTIONS_DOGE_REGTEST.TIMEOUT);
         result = await scryptChecker.checkClaimSuccessful(claimID, { from: challenger });
         assert.ok(utils.findEvent(result.logs, 'ClaimFailed'), 'Scrypt hash failed');
       });
+      
       it('Verify superblock', async () => {
         // Verify superblock
         result = await battleManager.verifySuperblock(battleSessionId, { from: challenger });
@@ -378,6 +416,7 @@ contract('verifyScryptHash', (accounts) => {
         assert.ok(utils.findEvent(result.logs, 'SuperblockClaimFailed'), 'Superblock failed');
       });
     });
+
     describe('Timeout scrypt validation request', () => {
       before(async () => {
         await initSuperblockChainAndChallenge({
@@ -386,6 +425,7 @@ contract('verifyScryptHash', (accounts) => {
           hashes,
         });
       });
+
       it('Request scrypt hash validation', async () => {
         let result;
         let session;
@@ -400,6 +440,7 @@ contract('verifyScryptHash', (accounts) => {
         scryptHash = requestScryptHashValidation.args.blockScryptHash;
         proposalId = requestScryptHashValidation.args.proposalId;
       });
+
       it('Timeout without sumitting to scrypt checker', async () => {
         result = await battleManager.timeout(battleSessionId, { from: challenger });
         assert.ok(utils.findEvent(result.logs, 'ErrorBattle'), 'Timeout did not elapse');
@@ -408,12 +449,14 @@ contract('verifyScryptHash', (accounts) => {
         result = await battleManager.timeout(battleSessionId, { from: challenger });
         assert.ok(utils.findEvent(result.logs, 'SubmitterConvicted'), 'Scrypt hash failed');
       });
+
       it('Confirm superblock', async () => {
         await utils.blockchainTimeoutSeconds(2*utils.OPTIONS_DOGE_REGTEST.TIMEOUT);
         result = await claimManager.checkClaimFinished(proposedSuperblockHash, { from: challenger });
         assert.ok(utils.findEvent(result.logs, 'SuperblockClaimFailed'), 'Superblock failed');
       });
     });
+
     describe('Timeout after scrypt validation', () => {
       before(async () => {
         await initSuperblockChainAndChallenge({
@@ -422,6 +465,7 @@ contract('verifyScryptHash', (accounts) => {
           hashes,
         });
       });
+
       it('Request scrypt hash validation', async () => {
         let result;
         let session;
@@ -442,11 +486,13 @@ contract('verifyScryptHash', (accounts) => {
         assert.ok(claimCreated, 'Create scrypt hash claim');
         claimID = claimCreated.args.claimID;
       });
+
       it('Validate scrypt hash no challengers', async () => {
         await utils.mineBlocks(web3, 5);
         result = await scryptChecker.checkClaimSuccessful(claimID, { from: submitter });
         assert.ok(utils.findEvent(result.logs, 'ClaimSuccessful'), 'Scrypt hash unchallenged');
       });
+
       it('Timeout after challenger abandoned', async () => {
         result = await battleManager.timeout(battleSessionId, { from: submitter });
         assert.ok(utils.findEvent(result.logs, 'ErrorBattle'), 'Timeout did not elapse');
@@ -455,6 +501,7 @@ contract('verifyScryptHash', (accounts) => {
         result = await battleManager.timeout(battleSessionId, { from: submitter });
         assert.ok(utils.findEvent(result.logs, 'ChallengerConvicted'), 'Challenger abandoned');
       });
+
       it('Confirm superblock', async () => {
         await utils.blockchainTimeoutSeconds(2*utils.OPTIONS_DOGE_REGTEST.TIMEOUT);
         result = await claimManager.checkClaimFinished(proposedSuperblockHash, { from: challenger });
