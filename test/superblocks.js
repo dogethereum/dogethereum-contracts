@@ -167,8 +167,8 @@ contract('DogeSuperblocks', (accounts) => {
     let id3;
     const merkleRoot = utils.makeMerkle(['0x0000000000000000000000000000000000000000000000000000000000000000']);
     const accumulatedWork = 0;
-    const timestamp = (new Date()).getTime() / 1000;
-    const prevTimestamp = timestamp - 1;
+    const timestamp = web3.utils.toBN((new Date()).getTime()).div(web3.utils.toBN(1000));
+    const prevTimestamp = timestamp.sub(web3.utils.toBN(1));
     const lastBits = 0;
     const lastHash = '0x00';
     const parentHash = '0x00';
@@ -230,8 +230,8 @@ contract('DogeSuperblocks', (accounts) => {
     let id3;
     const merkleRoot = utils.makeMerkle(['0x0000000000000000000000000000000000000000000000000000000000000000']);
     const accumulatedWork = 0;
-    const timestamp = 1;
-    const prevTimestamp = 0;
+    const timestamp = web3.utils.toBN(1);
+    const prevTimestamp = web3.utils.toBN(0);
     const lastBits = 0;
     const lastHash = '0x0000000000000000000000000000000000000000000000000000000000000000';
     const parentHash = '0x0000000000000000000000000000000000000000000000000000000000000000';
