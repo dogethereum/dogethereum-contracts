@@ -8,7 +8,7 @@ contract('DogeToken - Operators', (accounts) => {
 
   const operatorPublicKeyHash = '0x03cd041b0139d3240607b9fd1b2d1b691e22b5d6';
   const operatorPrivateKeyString = "105bd30419904ef409e9583da955037097f22b6b23c57549fe38ab8ffa9deaa3";
-  const operatorEthAddress = web3.eth.accounts[1];
+  const operatorEthAddress = accounts[1];
 
 
   async function sendAddOperator(dogeToken, wrongSignature) {
@@ -91,7 +91,7 @@ contract('DogeToken - Operators', (accounts) => {
     it('deleteOperator fail - operator has eth balance', async () => {
       const dogeToken = await DogeToken.new(trustedRelayerContract, trustedDogeEthPriceOracle, collateralRatio);
       await sendAddOperator(dogeToken);
-      await dogeToken.addOperatorDeposit(operatorPublicKeyHash, {value: 1000000000000000000, from : operatorEthAddress});
+      await dogeToken.addOperatorDeposit(operatorPublicKeyHash, {value: web3.utils.toBN("1000000000000000000"), from : operatorEthAddress});
       var deleteOperatorTxReceipt = await dogeToken.deleteOperator(operatorPublicKeyHash, {from : operatorEthAddress});
       assert.equal(60030, deleteOperatorTxReceipt.logs[0].args.err, "Expected ERR_OPERATOR_HAS_BALANCE error");
       var operator = await dogeToken.operators(operatorPublicKeyHash);
@@ -104,41 +104,41 @@ contract('DogeToken - Operators', (accounts) => {
     it('withdrawOperatorDeposit success - no utxo', async () => {
       const dogeToken = await DogeToken.new(trustedRelayerContract, trustedDogeEthPriceOracle, collateralRatio);
       await sendAddOperator(dogeToken);
-      await dogeToken.addOperatorDeposit(operatorPublicKeyHash, {value: 1000000000000000000, from : operatorEthAddress});
-      var operatorEthAddressBalanceBeforeWithdraw = web3.eth.getBalance(operatorEthAddress);
+      await dogeToken.addOperatorDeposit(operatorPublicKeyHash, {value: web3.utils.toBN("1000000000000000000"), from : operatorEthAddress});
+      var operatorEthAddressBalanceBeforeWithdraw = web3.utils.toBN(await web3.eth.getBalance(operatorEthAddress));
       await dogeToken.setDogeEthPrice(1, {from : accounts[0]});
-      var withdrawOperatorDepositTxReceipt = await dogeToken.withdrawOperatorDeposit(operatorPublicKeyHash, 400000000000000000, {from : operatorEthAddress});
-      var operatorEthAddressBalanceAfterWithdraw = web3.eth.getBalance(operatorEthAddress);
+      var withdrawOperatorDepositTxReceipt = await dogeToken.withdrawOperatorDeposit(operatorPublicKeyHash, web3.utils.toBN("400000000000000000"), {from : operatorEthAddress});
+      var operatorEthAddressBalanceAfterWithdraw = web3.utils.toBN(await web3.eth.getBalance(operatorEthAddress));
       var operator = await dogeToken.operators(operatorPublicKeyHash);
-      assert.equal(operator[4], 600000000000000000, 'Deposit not what expected');
-      var tx = web3.eth.getTransaction(withdrawOperatorDepositTxReceipt.tx);
-      var txCost = withdrawOperatorDepositTxReceipt.receipt.cumulativeGasUsed * tx.gasPrice;
-      assert.equal(operatorEthAddressBalanceAfterWithdraw.sub(operatorEthAddressBalanceBeforeWithdraw).add(txCost).equals(web3.utils.toBN(400000000000000000)), true, 'balance not what expected');
+      assert.equal(operator[4].toString(), "600000000000000000", 'Deposit not what expected');
+      var tx = await web3.eth.getTransaction(withdrawOperatorDepositTxReceipt.tx);
+      var txCost = web3.utils.toBN(withdrawOperatorDepositTxReceipt.receipt.cumulativeGasUsed).mul(web3.utils.toBN(tx.gasPrice));
+      assert.equal(operatorEthAddressBalanceAfterWithdraw.sub(operatorEthAddressBalanceBeforeWithdraw).add(txCost).eq(web3.utils.toBN("400000000000000000")), true, 'balance not what expected');
     });
     it('withdrawOperatorDeposit success - with utxos', async () => {
       const dogeToken = await DogeToken.new(trustedRelayerContract, trustedDogeEthPriceOracle, collateralRatio);
       await sendAddOperator(dogeToken);
       await dogeToken.addOperatorDeposit(operatorPublicKeyHash, {value: 5000, from : operatorEthAddress});
-      var operatorEthAddressBalanceBeforeWithdraw = web3.eth.getBalance(operatorEthAddress);
+      var operatorEthAddressBalanceBeforeWithdraw = web3.utils.toBN(await web3.eth.getBalance(operatorEthAddress));
       await dogeToken.setDogeEthPrice(3, {from : accounts[0]});
       await dogeToken.addUtxo(operatorPublicKeyHash, 400, 1, 1);
       var withdrawOperatorDepositTxReceipt = await dogeToken.withdrawOperatorDeposit(operatorPublicKeyHash, 100, {from : operatorEthAddress});
-      var operatorEthAddressBalanceAfterWithdraw = web3.eth.getBalance(operatorEthAddress);
+      var operatorEthAddressBalanceAfterWithdraw = web3.utils.toBN(await web3.eth.getBalance(operatorEthAddress));
       var operator = await dogeToken.operators(operatorPublicKeyHash);
       assert.equal(operator[4], 4900, 'Deposit not what expected');
-      var tx = web3.eth.getTransaction(withdrawOperatorDepositTxReceipt.tx);
-      var txCost = withdrawOperatorDepositTxReceipt.receipt.cumulativeGasUsed * tx.gasPrice;
-      assert.equal(operatorEthAddressBalanceAfterWithdraw.sub(operatorEthAddressBalanceBeforeWithdraw).add(txCost).equals(web3.utils.toBN(100)), true, 'balance not what expected');
+      var tx = await web3.eth.getTransaction(withdrawOperatorDepositTxReceipt.tx);
+      var txCost = web3.utils.toBN(withdrawOperatorDepositTxReceipt.receipt.cumulativeGasUsed).mul(web3.utils.toBN(tx.gasPrice));
+      assert.equal(operatorEthAddressBalanceAfterWithdraw.sub(operatorEthAddressBalanceBeforeWithdraw).add(txCost).eq(web3.utils.toBN(100)), true, 'balance not what expected');
     });
     it('withdrawOperatorDeposit fail - not enough balance', async () => {
       const dogeToken = await DogeToken.new(trustedRelayerContract, trustedDogeEthPriceOracle, collateralRatio);
       await sendAddOperator(dogeToken);
-      await dogeToken.addOperatorDeposit(operatorPublicKeyHash, {value: 1000000000000000000, from : operatorEthAddress});
+      await dogeToken.addOperatorDeposit(operatorPublicKeyHash, {value: web3.utils.toBN("1000000000000000000"), from : operatorEthAddress});
       await dogeToken.setDogeEthPrice(1, {from : accounts[0]});
-      var withdrawOperatorDepositTxReceipt = await dogeToken.withdrawOperatorDeposit(operatorPublicKeyHash, 2000000000000000000, {from : operatorEthAddress});
+      var withdrawOperatorDepositTxReceipt = await dogeToken.withdrawOperatorDeposit(operatorPublicKeyHash, web3.utils.toBN("2000000000000000000"), {from : operatorEthAddress});
       assert.equal(60040, withdrawOperatorDepositTxReceipt.logs[0].args.err, "Expected ERR_OPERATOR_WITHDRAWAL_NOT_ENOUGH_BALANCE error");
       var operator = await dogeToken.operators(operatorPublicKeyHash);
-      assert.equal(operator[4], 1000000000000000000, 'Operator eth balance was modified');
+      assert.equal(operator[4].toString(), "1000000000000000000", 'Operator eth balance was modified');
     });
     it('withdrawOperatorDeposit faril - deposit would be too low', async () => {
       const dogeToken = await DogeToken.new(trustedRelayerContract, trustedDogeEthPriceOracle, collateralRatio);
