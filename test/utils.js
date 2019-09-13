@@ -118,11 +118,18 @@ function getBlockDifficulty(blockHeader) {
 const timeout = async (ms) => new Promise((resolve, reject) => setTimeout(resolve, ms));
 
 const blockchainTimeoutSeconds = async (s) => {
-  await web3.currentProvider.send({
-    jsonrpc: '2.0',
-    method: 'evm_increaseTime',
-    params: [s],
-    id: 0,
+  return new Promise((resolve, reject) => {
+    web3.currentProvider.send({
+      jsonrpc: '2.0',
+      method: 'evm_increaseTime',
+      params: [s],
+      id: 0,
+    }, (err, result) => {
+      if (err) {
+        return reject(err);
+      }
+      return resolve(result);
+    });
   });
 };
 
