@@ -20,7 +20,7 @@ contract('DogeMessageLibrary', (accounts) => {
   });
   it("target from bits 1", async () => {
     const target = await dogeMessageLibraryForTests.targetFromBitsPublic.call("0x19015f53");
-    assert.equal(target.toNumber(), "8614444778121073626993210829679478604092861119379437256704", "target is not the expected one");
+    assert.equal(target.toString(), "8614444778121073626993210829679478604092861119379437256704", "target is not the expected one");
   });
   it("target from bits 2", async () => {
     const target = await dogeMessageLibraryForTests.targetFromBitsPublic.call("453281356");
@@ -28,8 +28,9 @@ contract('DogeMessageLibrary', (accounts) => {
   });
   it("target from bits 3", async () => {
     const target = await dogeMessageLibraryForTests.targetFromBitsPublic.call("0x1d00ffff"); // EASIEST_DIFFICULTY_TARGET
-    maxTargetRounded = (Math.pow(2,16) - 1) * Math.pow(2,208);  // http://bitcoin.stackexchange.com/questions/8806/what-is-difficulty-and-how-it-relates-to-target
-    assert.equal(target.toNumber(), maxTargetRounded, "target is not the expected one");
+    //maxTargetRounded = (Math.pow(2,16) - 1) * Math.pow(2,208);  // http://bitcoin.stackexchange.com/questions/8806/what-is-difficulty-and-how-it-relates-to-target
+    maxTargetRounded = "ffff0000000000000000000000000000000000000000000000000000";
+    assert.equal(target.toString(16), maxTargetRounded, "target is not the expected one");
   });
   it("bytesToBytes32", async () => {
     const result = await dogeMessageLibraryForTests.bytesToBytes32Public.call("0x0102030405060708090a0b0c0d0e0f000102030405060708090a0b0c0d0e0f00");
