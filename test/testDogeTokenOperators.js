@@ -113,7 +113,7 @@ contract('DogeToken - Operators', (accounts) => {
       assert.equal(operator[4], 600000000000000000, 'Deposit not what expected');
       var tx = web3.eth.getTransaction(withdrawOperatorDepositTxReceipt.tx);
       var txCost = withdrawOperatorDepositTxReceipt.receipt.cumulativeGasUsed * tx.gasPrice;
-      assert.equal(operatorEthAddressBalanceAfterWithdraw.sub(operatorEthAddressBalanceBeforeWithdraw).add(txCost).equals(web3.toBigNumber(400000000000000000)), true, 'balance not what expected');
+      assert.equal(operatorEthAddressBalanceAfterWithdraw.sub(operatorEthAddressBalanceBeforeWithdraw).add(txCost).equals(web3.utils.toBN(400000000000000000)), true, 'balance not what expected');
     });
     it('withdrawOperatorDeposit success - with utxos', async () => {
       const dogeToken = await DogeToken.new(trustedRelayerContract, trustedDogeEthPriceOracle, collateralRatio);
@@ -128,7 +128,7 @@ contract('DogeToken - Operators', (accounts) => {
       assert.equal(operator[4], 4900, 'Deposit not what expected');
       var tx = web3.eth.getTransaction(withdrawOperatorDepositTxReceipt.tx);
       var txCost = withdrawOperatorDepositTxReceipt.receipt.cumulativeGasUsed * tx.gasPrice;
-      assert.equal(operatorEthAddressBalanceAfterWithdraw.sub(operatorEthAddressBalanceBeforeWithdraw).add(txCost).equals(web3.toBigNumber(100)), true, 'balance not what expected');
+      assert.equal(operatorEthAddressBalanceAfterWithdraw.sub(operatorEthAddressBalanceBeforeWithdraw).add(txCost).equals(web3.utils.toBN(100)), true, 'balance not what expected');
     });
     it('withdrawOperatorDeposit fail - not enough balance', async () => {
       const dogeToken = await DogeToken.new(trustedRelayerContract, trustedDogeEthPriceOracle, collateralRatio);
