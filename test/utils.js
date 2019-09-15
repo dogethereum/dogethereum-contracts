@@ -135,11 +135,18 @@ const blockchainTimeoutSeconds = async (s) => {
 
 const mineBlocks = async (web3, n) => {
   for (let i = 0; i < n; i++) {
-    await web3.currentProvider.send({
-      jsonrpc: '2.0',
-      method: 'evm_mine',
-      params: [],
-      id: 0,
+    await new Promise((resolve, reject) => {
+      web3.currentProvider.send({
+        jsonrpc: '2.0',
+        method: 'evm_mine',
+        params: [],
+        id: 0,
+      }, (err, result) => {
+        if (err) {
+          return reject(err);
+        }
+        return resolve(result);
+      });
     });
     await timeout(100);
   }
