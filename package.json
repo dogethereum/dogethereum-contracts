@@ -13,8 +13,8 @@
     "js-sha3": "^0.7.0",
     "openzeppelin-solidity": "^1.9.0",
     "scryptsy": "^2.0.0",
-    "solc": "^0.4.23",
-    "web3": "^0.20.0"
+    "solc": "0.4.25",
+    "web3": "0.20.7"
   },
   "devDependencies": {},
   "scripts": {
