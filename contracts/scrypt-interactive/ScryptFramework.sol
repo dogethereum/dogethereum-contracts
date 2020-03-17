@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity 0.5.16;
 
 /**
 * @title ScryptFramework
@@ -44,7 +44,7 @@ contract ScryptFramework {
     *
     * @return returns the serialized Struct instance
     */
-    function encodeState(State memory state) pure internal returns (bytes r) {
+    function encodeState(State memory state) pure internal returns (bytes memory r) {
         r = new bytes(0x20 * 4 + 0x20 + 0x20);
         uint[4] memory vars = state.vars;
         bytes32 memoryHash = state.memoryHash;
@@ -205,7 +205,7 @@ contract ScryptFramework {
 
     // Virtual functions to be implemented in either the runner/prover or the verifier.
     function initMemory(State memory state) pure internal;
-    function writeMemory(State memory state, uint index, uint[4] values, Proofs memory proofs) pure internal;
+    function writeMemory(State memory state, uint index, uint[4] memory values, Proofs memory proofs) pure internal;
     function readMemory(State memory state, uint index, Proofs memory proofs) pure internal returns (uint, uint, uint, uint);
 
     /**
@@ -356,7 +356,7 @@ library Salsa8 {
             (first, second) = columnround(first, second);
             (first, second) = rowround(first, second);
         }
-        for (i = 0; i < 8; i++)
+        for (uint i = 0; i < 8; i++)
         {
             rfirst |= put(get(_first, i) + get(first, i), i);
             rsecond |= put(get(_second, i) + get(second, i), i);
@@ -404,7 +404,7 @@ library Salsa8 {
     *
     * @return returns the result of running Salsa8 on the input values
     */
-    function round(uint[4] values) pure internal returns (uint[4]) {
+    function round(uint[4] memory values) pure internal returns (uint[4] memory) {
         (uint a, uint b, uint c, uint d) = (values[0], values[1], values[2], values[3]);
         (a, b) = salsa20_8(a ^ c, b ^ d);
         (c, d) = salsa20_8(a ^ c, b ^ d);
@@ -421,7 +421,7 @@ library KeyDeriv {
   *
   * @return the hash result
   */
-    function hmacsha256(bytes key, bytes message) pure internal returns (bytes32) {
+    function hmacsha256(bytes memory key, bytes memory message) pure internal returns (bytes32) {
         bytes32 keyl;
         bytes32 keyr;
         uint i;
@@ -429,9 +429,9 @@ library KeyDeriv {
             keyl = sha256(key);
         } else {
             for (i = 0; i < key.length && i < 32; i++)
-                keyl |= bytes32(uint(key[i]) * 2**(8 * (31 - i)));
+                keyl |= bytes32(uint(uint8(key[i])) * 2**(8 * (31 - i)));
             for (i = 32; i < key.length && i < 64; i++)
-                keyr |= bytes32(uint(key[i]) * 2**(8 * (63 - i)));
+                keyr |= bytes32(uint(uint8(key[i])) * 2**(8 * (63 - i)));
         }
         bytes32 threesix = 0x3636363636363636363636363636363636363636363636363636363636363636;
         bytes32 fivec = 0x5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c;
@@ -448,11 +448,11 @@ library KeyDeriv {
     *
     * @return returns the generated key
     */
-    function pbkdf2(bytes key, bytes salt, uint dklen) pure internal returns (uint[4] r) {
+    function pbkdf2(bytes memory key, bytes memory salt, uint dklen) pure internal returns (uint[4] memory r) {
         bytes memory message = new bytes(salt.length + 4);
         for (uint i = 0; i < salt.length; i++)
             message[i] = salt[i];
-        for (i = 0; i * 32 < dklen; i++) {
+        for (uint i = 0; i * 32 < dklen; i++) {
             message[message.length - 1] = bytes1(uint8(i + 1));
             r[i] = uint(hmacsha256(key, message));
         }

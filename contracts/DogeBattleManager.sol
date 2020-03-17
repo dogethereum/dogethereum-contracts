@@ -1,4 +1,4 @@
-pragma solidity ^0.4.19;
+pragma solidity 0.5.16;
 
 import {DogeClaimManager} from "./DogeClaimManager.sol";
 import {DogeErrorCodes} from "./DogeErrorCodes.sol";
@@ -100,13 +100,13 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
     event QueryMerkleRootHashes(bytes32 superblockHash, bytes32 sessionId, address submitter);
     event RespondMerkleRootHashes(bytes32 superblockHash, bytes32 sessionId, address challenger, bytes32[] blockHashes);
     event QueryBlockHeader(bytes32 superblockHash, bytes32 sessionId, address submitter, bytes32 blockSha256Hash);
-    
+
     event RespondBlockHeader(bytes32 superblockHash, bytes32 sessionId, address challenger, bytes32 blockScryptHash,
     bytes blockHeader, bytes powBlockHeader);
-    
+
     event RequestScryptHashValidation(bytes32 superblockHash, bytes32 sessionId, bytes32 blockScryptHash,
     bytes blockHeader, bytes32 proposalId, address submitter);
-    
+
     event ResolvedScryptHashValidation(bytes32 superblockHash, bytes32 sessionId, bytes32 blockScryptHash,
     bytes32 blockSha256Hash, bytes32 proposalId, address challenger, bool valid);
 
@@ -150,18 +150,18 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
     //
     // @param _scryptChecker - address of the ScryptChecker contract to be associated with DogeClaimManager
     function setScryptChecker(IScryptChecker _scryptChecker) public {
-        require(address(trustedScryptChecker) == 0x0 && address(_scryptChecker) != 0x0);
+        require(address(trustedScryptChecker) == address(0x0) && address(_scryptChecker) != address(0x0));
         trustedScryptChecker = _scryptChecker;
     }
 
     function setDogeClaimManager(DogeClaimManager _dogeClaimManager) public {
-        require(address(trustedDogeClaimManager) == 0x0 && address(_dogeClaimManager) != 0x0);
+        require(address(trustedDogeClaimManager) == address(0x0) && address(_dogeClaimManager) != address(0x0));
         trustedDogeClaimManager = _dogeClaimManager;
     }
 
     // @dev - Start a battle session
     function beginBattleSession(bytes32 superblockHash, address submitter, address challenger)
-    public onlyFrom(trustedDogeClaimManager) returns (bytes32) {
+    public onlyFrom(address(trustedDogeClaimManager)) returns (bytes32) {
         bytes32 sessionId = keccak256(abi.encode(superblockHash, msg.sender, sessionsCount));
         BattleSession storage session = sessions[sessionId];
         session.id = sessionId;
@@ -212,7 +212,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
     }
 
     // @dev - Submitter sends hashes to verify superblock merkle root
-    function doVerifyMerkleRootHashes(BattleSession storage session, bytes32[] blockHashes) internal returns (uint) {
+    function doVerifyMerkleRootHashes(BattleSession storage session, bytes32[] memory blockHashes) internal returns (uint) {
         if (!hasDeposit(msg.sender, verifySuperblockCost)) {
             return ERR_SUPERBLOCK_MIN_DEPOSIT;
         }
@@ -237,7 +237,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
     }
 
     // @dev - For the submitter to respond to challenger queries
-    function respondMerkleRootHashes(bytes32 superblockHash, bytes32 sessionId, bytes32[] blockHashes)
+    function respondMerkleRootHashes(bytes32 superblockHash, bytes32 sessionId, bytes32[] memory blockHashes)
     public onlyClaimant(sessionId) {
         BattleSession storage session = sessions[sessionId];
         uint err = doVerifyMerkleRootHashes(session, blockHashes);
@@ -298,7 +298,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
     }
 
     // @dev - Verify that block timestamp is in the superblock timestamp interval
-    function verifyTimestamp(bytes32 superblockHash, bytes blockHeader) internal view returns (bool) {
+    function verifyTimestamp(bytes32 superblockHash, bytes memory blockHeader) internal view returns (bool) {
         uint blockTimestamp = DogeMessageLibrary.getTimestamp(blockHeader, 0);
         uint superblockTimestamp;
 
@@ -335,8 +335,8 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
     function verifyBlockAuxPoW(
         BlockInfo storage blockInfo,
         bytes32 proposedBlockScryptHash,
-        bytes blockHeader
-    ) internal returns (uint, bytes) {
+        bytes memory blockHeader
+    ) internal returns (uint, bytes memory) {
         (uint err, , uint blockScryptHash, bool isMergeMined) =
             DogeMessageLibrary.verifyBlockHeader(blockHeader, 0, blockHeader.length, uint(proposedBlockScryptHash));
         if (err != 0) {
@@ -359,8 +359,8 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
         BattleSession storage session,
         bytes32 sessionId,
         bytes32 proposedBlockScryptHash,
-        bytes blockHeader
-    ) internal returns (uint, bytes) {
+        bytes memory blockHeader
+    ) internal returns (uint, bytes memory) {
         // TODO: see if this should fund Scrypt verification
         if (!hasDeposit(msg.sender, respondBlockHeaderCost)) {
             return (ERR_SUPERBLOCK_MIN_DEPOSIT, new bytes(0));
@@ -410,7 +410,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
         bytes32 superblockHash,
         bytes32 sessionId,
         bytes32 blockScryptHash,
-        bytes blockHeader
+        bytes memory blockHeader
     ) public onlyClaimant(sessionId) {
         BattleSession storage session = sessions[sessionId];
         (uint err, bytes memory powBlockHeader) = doVerifyBlockHeader(session, sessionId, blockScryptHash, blockHeader);
@@ -651,7 +651,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
     }
 
     // @dev - Compare two 80-byte Doge block headers
-    function compareBlockHeader(bytes left, bytes right) internal pure returns (int) {
+    function compareBlockHeader(bytes memory left, bytes memory right) internal pure returns (int) {
         require(left.length == 80);
         require(right.length == 80);
         int a;
@@ -686,9 +686,9 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
     function scryptSubmitted(
         bytes32 scryptChallengeId,
         bytes32 _scryptHash,
-        bytes _data,
+        bytes calldata _data,
         address _submitter
-    ) external onlyFrom(trustedScryptChecker) {
+    ) external onlyFrom(address(trustedScryptChecker)) {
         require(_data.length == 80);
         ScryptHashVerification storage verification = scryptHashVerifications[scryptChallengeId];
         BattleSession storage session = sessions[verification.sessionId];
@@ -728,12 +728,12 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
     }
 
     // @dev - Scrypt verification succeeded
-    function scryptVerified(bytes32 scryptChallengeId) external onlyFrom(trustedScryptChecker) {
+    function scryptVerified(bytes32 scryptChallengeId) external onlyFrom(address(trustedScryptChecker)) {
         doNotifyScryptVerificationResult(scryptChallengeId, true);
     }
 
     // @dev - Scrypt verification failed
-    function scryptFailed(bytes32 scryptChallengeId) external onlyFrom(trustedScryptChecker) {
+    function scryptFailed(bytes32 scryptChallengeId) external onlyFrom(address(trustedScryptChecker)) {
         doNotifyScryptVerificationResult(scryptChallengeId, false);
     }
 
@@ -754,7 +754,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
     }
 
     // @dev - Return Doge block hashes associated with a certain battle session
-    function getDogeBlockHashes(bytes32 sessionId) public view returns (bytes32[]) {
+    function getDogeBlockHashes(bytes32 sessionId) public view returns (bytes32[] memory) {
         return sessions[sessionId].blockHashes;
     }
 

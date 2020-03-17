@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity 0.5.16;
 
 import {ScryptFramework} from "./ScryptFramework.sol";
 
@@ -29,10 +29,10 @@ contract ScryptRunner is ScryptFramework {
     *
     * @return the state variables, the memoryHash, the merkle proof and the output byte array
     */
-    function run(bytes input, uint upToStep)
+    function run(bytes memory input, uint upToStep)
         pure
         public
-        returns (bytes32 stateHash, uint[4] vars, bytes32 memoryHash, bytes32[] proof, bytes output)
+        returns (bytes32 stateHash, uint[4] memory vars, bytes32 memoryHash, bytes32[] memory proof, bytes memory output)
     {
         State memory s = inputToState(input);
         Proofs memory proofs;
@@ -56,10 +56,10 @@ contract ScryptRunner is ScryptFramework {
     * @dev run scrypt up to a certain step and return the state and proof,
     *      The proof being the one required to get from the previous step to the given one.
     */
-    function getStateAndProof(bytes input, uint step)
+    function getStateAndProof(bytes memory input, uint step)
         pure
         public
-        returns (bytes state, bytes proof)
+        returns (bytes memory state, bytes memory proof)
     {
         require(step <= 2050);
         if (step == 0) {
@@ -85,10 +85,10 @@ contract ScryptRunner is ScryptFramework {
         return (finalStateToOutput(s, input), input);
     }
 
-    function getStateProofAndHash(bytes input, uint step)
+    function getStateProofAndHash(bytes memory input, uint step)
         pure
         public
-        returns (bytes state, bytes proof, bytes32 stateHash)
+        returns (bytes memory state, bytes memory proof, bytes32 stateHash)
     {
         (state, proof) = getStateAndProof(input, step);
         return (state, proof, keccak256(state));
@@ -97,7 +97,7 @@ contract ScryptRunner is ScryptFramework {
     /**
     * @dev get the state hash of a specific step.
     */
-    function getStateHash(bytes input, uint step)
+    function getStateHash(bytes memory input, uint step)
         pure
         public
         returns (bytes32 stateHash)
@@ -158,7 +158,7 @@ contract ScryptRunner is ScryptFramework {
     *
     * @return none
     */
-    function writeMemory(State memory state, uint index, uint[4] values, Proofs memory proofs)
+    function writeMemory(State memory state, uint index, uint[4] memory values, Proofs memory proofs)
         pure
         internal
     {
@@ -207,10 +207,10 @@ contract ScryptRunner is ScryptFramework {
     *
     * @return the merkle proof and the value stored at index
     */
-    function generateMemoryProof(uint[] fullMem, uint index)
+    function generateMemoryProof(uint[] memory fullMem, uint index)
         pure
         internal
-        returns (bytes32[] proof, bytes32)
+        returns (bytes32[] memory proof, bytes32)
     {
         uint access = index;
         proof = new bytes32[](14);
@@ -225,7 +225,7 @@ contract ScryptRunner is ScryptFramework {
             proof[step] = hashes[access ^ 1];
             access /= 2;
             numHashes /= 2;
-            for (i = 0; i < numHashes; i++) {
+            for (uint i = 0; i < numHashes; i++) {
                 hashes[i] = keccak256(abi.encodePacked(hashes[2 * i], hashes[2 * i + 1]));
             }
         }

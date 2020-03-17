@@ -1,6 +1,6 @@
-pragma solidity ^0.4.19;
+pragma solidity 0.5.16;
 
-import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
 
 contract DogeDepositsManager {
 
@@ -12,14 +12,14 @@ contract DogeDepositsManager {
     event DepositWithdrawn(address who, uint amount);
 
     // @dev – fallback to calling makeDeposit when ether is sent directly to contract.
-    function() public payable {
+    function() external payable {
         makeDeposit();
     }
 
     // @dev – returns an account's deposit
     // @param who – the account's address.
     // @return – the account's deposit.
-    function getDeposit(address who) constant public returns (uint) {
+    function getDeposit(address who) view public returns (uint) {
         return deposits[who];
     }
 

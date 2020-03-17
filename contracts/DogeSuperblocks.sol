@@ -1,4 +1,4 @@
-pragma solidity ^0.4.19;
+pragma solidity 0.5.16;
 
 import {DogeMessageLibrary} from "./DogeParser/DogeMessageLibrary.sol";
 import {DogeErrorCodes} from "./DogeErrorCodes.sol";
@@ -63,7 +63,7 @@ contract DogeSuperblocks is DogeErrorCodes {
     // Once trustedClaimManager has been set, it cannot be changed.
     // @param _claimManager - address of the ClaimManager contract to be associated with
     function setClaimManager(address _claimManager) public {
-        require(address(trustedClaimManager) == 0x0 && _claimManager != 0x0);
+        require(address(trustedClaimManager) == address(0x0) && _claimManager != address(0x0));
         trustedClaimManager = _claimManager;
     }
 
@@ -153,7 +153,7 @@ contract DogeSuperblocks is DogeErrorCodes {
 
         SuperblockInfo storage parent = superblocks[_parentId];
         if (parent.status != Status.SemiApproved && parent.status != Status.Approved) {
-            emit ErrorSuperblock(superblockHash, ERR_SUPERBLOCK_BAD_PARENT);
+            emit ErrorSuperblock(0, ERR_SUPERBLOCK_BAD_PARENT);
             return (ERR_SUPERBLOCK_BAD_PARENT, 0);
         }
 
@@ -309,13 +309,13 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @param _superblockHash - superblock containing block header
     // @param _untrustedTargetContract - the contract that is going to process the transaction
     function relayTx(
-        bytes _txBytes,
+        bytes memory _txBytes,
         bytes20 _operatorPublicKeyHash,
         uint _txIndex,
-        uint[] _txSiblings,
-        bytes _dogeBlockHeader,
+        uint[] memory _txSiblings,
+        bytes memory _dogeBlockHeader,
         uint _dogeBlockIndex,
-        uint[] _dogeBlockSiblings,
+        uint[] memory _dogeBlockSiblings,
         bytes32 _superblockHash,
         TransactionProcessor _untrustedTargetContract
     ) public returns (uint) {
@@ -352,10 +352,10 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @return - SHA-256 hash of _txBytes if the transaction is in the block, 0 otherwise
     // TODO: this can probably be made private
     function verifyTx(
-        bytes _txBytes,
+        bytes memory _txBytes,
         uint _txIndex,
-        uint[] _siblings,
-        bytes _txBlockHeaderBytes,
+        uint[] memory _siblings,
+        bytes memory _txBlockHeaderBytes,
         bytes32 _txsuperblockHash
     ) public returns (uint) {
         uint txHash = DogeMessageLibrary.dblShaFlip(_txBytes);
@@ -390,8 +390,8 @@ contract DogeSuperblocks is DogeErrorCodes {
     function helperVerifyHash(
         uint256 _txHash,
         uint _txIndex,
-        uint[] _siblings,
-        bytes _blockHeaderBytes,
+        uint[] memory _siblings,
+        bytes memory _blockHeaderBytes,
         bytes32 _txsuperblockHash
     ) private returns (uint) {
         // TODO: implement when dealing with incentives
@@ -548,7 +548,7 @@ contract DogeSuperblocks is DogeErrorCodes {
     }
 
     // @dev - Calculate Merkle root from Doge block hashes
-    function makeMerkle(bytes32[] hashes) public pure returns (bytes32) {
+    function makeMerkle(bytes32[] memory hashes) public pure returns (bytes32) {
         return DogeMessageLibrary.makeMerkle(hashes);
     }
 
@@ -605,13 +605,13 @@ contract DogeSuperblocks is DogeErrorCodes {
     // (bestSuperblock-1) - ((bestSuperblock-1) % 78125)
     //
     // @return - list of up to 9 ancestor supeerblock id
-    function getSuperblockLocator() public view returns (bytes32[9]) {
+    function getSuperblockLocator() public view returns (bytes32[9] memory) {
         bytes32[9] memory locator;
         locator[0] = bestSuperblock;
         bytes32 ancestors = getSuperblockAncestors(bestSuperblock);
         uint i = NUM_ANCESTOR_DEPTHS;
         while (i > 0) {
-            locator[i] = indexSuperblock[uint32(ancestors & 0xFFFFFFFF)];
+            locator[i] = indexSuperblock[uint32(uint(ancestors) & 0xFFFFFFFF)];
             ancestors >>= 32;
             --i;
         }
@@ -622,10 +622,10 @@ contract DogeSuperblocks is DogeErrorCodes {
     function getSuperblockAncestor(bytes32 superblockHash, uint index) internal view returns (bytes32) {
         bytes32 ancestors = superblocks[superblockHash].ancestors;
         uint32 ancestorsIndex =
-            uint32(ancestors[4*index + 0]) * 0x1000000 +
-            uint32(ancestors[4*index + 1]) * 0x10000 +
-            uint32(ancestors[4*index + 2]) * 0x100 +
-            uint32(ancestors[4*index + 3]) * 0x1;
+            uint32(uint8(ancestors[4*index + 0])) * 0x1000000 +
+            uint32(uint8(ancestors[4*index + 1])) * 0x10000 +
+            uint32(uint8(ancestors[4*index + 2])) * 0x100 +
+            uint32(uint8(ancestors[4*index + 3])) * 0x1;
         return indexSuperblock[ancestorsIndex];
     }
 

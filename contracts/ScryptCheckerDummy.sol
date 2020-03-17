@@ -1,4 +1,4 @@
-pragma solidity ^0.4.19;
+pragma solidity 0.5.16;
 
 import {IScryptCheckerListener} from "./IScryptCheckerListener.sol";
 import {IScryptChecker} from "./IScryptChecker.sol";
@@ -26,7 +26,7 @@ contract ScryptCheckerDummy is IScryptChecker {
     }
 
     // Mark to accept _hash as the scrypt hash of _data
-    function storeScryptHash(bytes _data, bytes32 _hash) public {
+    function storeScryptHash(bytes memory _data, bytes32 _hash) public {
         hashStorage[keccak256(_data)] = _hash;
     }
 
@@ -35,7 +35,7 @@ contract ScryptCheckerDummy is IScryptChecker {
     // @param _hash – result of applying scrypt to data.
     // @param _submitter – the address of the submitter.
     // @param _requestId – request identifier of the call.
-    function checkScrypt(bytes _data, bytes32 _hash, bytes32 _proposalId, IScryptCheckerListener _scryptDependent) external payable {
+    function checkScrypt(bytes calldata _data, bytes32 _hash, bytes32 _proposalId, IScryptCheckerListener _scryptDependent) external payable {
         if (acceptAll || hashStorage[keccak256(_data)] == _hash) {
             _scryptDependent.scryptSubmitted(_proposalId, _hash, _data, msg.sender);
             _scryptDependent.scryptVerified(_proposalId);

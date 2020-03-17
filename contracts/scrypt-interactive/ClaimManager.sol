@@ -1,4 +1,4 @@
-pragma solidity ^0.4.0;
+pragma solidity 0.5.16;
 
 import {DepositsManager} from './DepositsManager.sol';
 import {ScryptVerifier} from "./ScryptVerifier.sol";
@@ -101,7 +101,7 @@ contract ClaimManager is DepositsManager, IScryptChecker {
     return bondedDeposit;
   }
 
-  function calcId(bytes, bytes32 _hash, address claimant, bytes32 _proposalId) public pure returns (uint) {
+  function calcId(bytes memory, bytes32 _hash, address claimant, bytes32 _proposalId) public pure returns (uint) {
     return uint(keccak256(abi.encodePacked(claimant, _hash, _proposalId)));
   }
 
@@ -110,7 +110,7 @@ contract ClaimManager is DepositsManager, IScryptChecker {
   // @param _plaintext – the plaintext blockHeader.
   // @param _hash – Doge block hash.
   // @param claimant – the address of the Dogecoin block submitter.
-  function checkScrypt(bytes _data, bytes32 _hash, bytes32 _proposalId, IScryptCheckerListener _scryptDependent) external payable {
+  function checkScrypt(bytes calldata _data, bytes32 _hash, bytes32 _proposalId, IScryptCheckerListener _scryptDependent) external payable {
     // dogeRelay can directly make a deposit on behalf of the claimant.
 
     bytes memory _blockHash = new bytes(32);
@@ -270,8 +270,8 @@ contract ClaimManager is DepositsManager, IScryptChecker {
     }
   }
 
-  function claimExists(ScryptClaim claim) pure private returns(bool) {
-    return claim.claimant != 0x0;
+  function claimExists(ScryptClaim storage claim) view private returns(bool) {
+    return claim.claimant != address(0x0);
   }
 
   function firstChallenger(uint claimID) public view returns(address) {
@@ -288,7 +288,7 @@ contract ClaimManager is DepositsManager, IScryptChecker {
     return claims[claimID].sessions[challenger];
   }
 
-  function getChallengers(uint claimID) public view returns(address[]) {
+  function getChallengers(uint claimID) public view returns(address[] memory) {
     return claims[claimID].challengers;
   }
 
@@ -303,7 +303,7 @@ contract ClaimManager is DepositsManager, IScryptChecker {
   function getClaim(uint claimID)
     public
     view
-    returns(address claimant, bytes plaintext, bytes blockHash, bytes32 proposalId)
+    returns(address claimant, bytes memory plaintext, bytes memory blockHash, bytes32 proposalId)
   {
     ScryptClaim storage claim = claims[claimID];
 

@@ -1,4 +1,4 @@
-pragma solidity ^0.4.19;
+pragma solidity 0.5.16;
 
 import {DogeMessageLibrary} from './DogeMessageLibrary.sol';
 
@@ -9,11 +9,11 @@ contract DogeMessageLibraryForTests {
         return bytesToUint32(input, 0);
     }
 
-    function bytesToBytes32Public(bytes b) public pure returns (bytes32) {
+    function bytesToBytes32Public(bytes memory b) public pure returns (bytes32) {
         return bytesToBytes32(b, 0);
     }
 
-    function sliceArrayPublic(bytes original, uint32 offset, uint32 endIndex) public view returns (bytes result) {
+    function sliceArrayPublic(bytes memory original, uint32 offset, uint32 endIndex) public view returns (bytes memory result) {
         return DogeMessageLibrary.sliceArray(original, offset, endIndex);
     }
 
@@ -29,7 +29,7 @@ contract DogeMessageLibraryForTests {
         return DogeMessageLibrary.flip32Bytes(input);
     }
 
-    function checkAuxPoWPublic(uint blockHash, bytes auxBytes) public view returns (uint) {
+    function checkAuxPoWPublic(uint blockHash, bytes memory auxBytes) public view returns (uint) {
         return checkAuxPoWForTests(blockHash, auxBytes);
     }
 
@@ -65,7 +65,10 @@ contract DogeMessageLibraryForTests {
     // @dev - Converts a bytes of size 4 to uint32,
     // e.g. for input [0x01, 0x02, 0x03 0x04] returns 0x01020304
     function bytesToUint32(bytes memory input, uint pos) internal pure returns (uint32 result) {
-        result = uint32(input[pos])*(2**24) + uint32(input[pos + 1])*(2**16) + uint32(input[pos + 2])*(2**8) + uint32(input[pos + 3]);
+        result = uint32(uint8(input[pos]))*(2**24)
+          + uint32(uint8(input[pos + 1]))*(2**16)
+          + uint32(uint8(input[pos + 2]))*(2**8)
+          + uint32(uint8(input[pos + 3]));
     }
 
     // @dev converts bytes of any length to bytes32.
@@ -75,7 +78,7 @@ contract DogeMessageLibraryForTests {
     //
     // @param _rawBytes - arbitrary length bytes
     // @return - leftmost 32 or less bytes of input value; padded if less than 32
-    function bytesToBytes32(bytes _rawBytes, uint pos) internal pure returns (bytes32) {
+    function bytesToBytes32(bytes memory _rawBytes, uint pos) internal pure returns (bytes32) {
         bytes32 out;
         assembly {
             out := mload(add(add(_rawBytes, 0x20), pos))
@@ -83,7 +86,7 @@ contract DogeMessageLibraryForTests {
         return out;
     }
 
-    function parseTransaction(bytes txBytes, bytes20 expected_output_public_key_hash) public view
+    function parseTransaction(bytes memory txBytes, bytes20 expected_output_public_key_hash) public view
              returns (uint, bytes20, address, uint16) {
         return DogeMessageLibrary.parseTransaction(txBytes, expected_output_public_key_hash);
      }

@@ -1,4 +1,4 @@
-pragma solidity ^0.4.0;
+pragma solidity 0.5.16;
 import {ClaimManager} from "./ClaimManager.sol";
 // Simple generic challenge-response computation verifier.
 //
@@ -43,8 +43,8 @@ contract Verifier {
         uint claimId,
         address challenger,
         address claimant,
-        bytes _input,
-        bytes _output,
+        bytes memory _input,
+        bytes memory _output,
         uint steps
     )
         public
@@ -166,9 +166,9 @@ contract Verifier {
     function performStepVerification(
         uint sessionId,
         uint claimID,
-        bytes preValue,
-        bytes postValue,
-        bytes proofs,
+        bytes memory preValue,
+        bytes memory postValue,
+        bytes memory proofs,
         ClaimManager claimManager
     )
         //onlyClaimant(sessionId)
@@ -177,7 +177,7 @@ contract Verifier {
         VerificationSession storage s = sessions[sessionId];
         require(s.lowStep + 1 == s.highStep);
         // ^ must be at the end of the binary search according to the smart contract
-        
+
         require(claimID == sessionsClaimId[sessionId]);
 
         //prove game ended
@@ -194,9 +194,9 @@ contract Verifier {
     function performStepVerificationSpecific(
         VerificationSession storage session,
         uint step,
-        bytes preState,
-        bytes postState,
-        bytes proof
+        bytes memory preState,
+        bytes memory postState,
+        bytes memory proof
     )
         internal
         returns (bool);
@@ -210,7 +210,7 @@ contract Verifier {
         public
     {
         VerificationSession storage session = sessions[sessionId];
-        require(session.claimant != 0);
+        require(session.claimant != address(0));
         if (
             session.lastChallengerMessage > session.lastClaimantMessage &&
             now > session.lastChallengerMessage + responseTime
@@ -253,7 +253,7 @@ contract Verifier {
     function getSession(uint sessionId)
         public
         view
-        returns (uint, uint, uint, bytes, bytes32)
+        returns (uint, uint, uint, bytes memory, bytes32)
     {
         VerificationSession storage session = sessions[sessionId];
         return (

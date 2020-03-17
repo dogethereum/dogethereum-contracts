@@ -1,4 +1,4 @@
-pragma solidity ^0.4.19;
+pragma solidity 0.5.16;
 
 import "./DogeToken.sol";
 
