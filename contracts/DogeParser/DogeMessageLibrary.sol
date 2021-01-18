@@ -666,19 +666,19 @@ library DogeMessageLibrary {
     function expmod(uint256 base, uint256 e, uint256 m) internal view returns (uint256 o) {
         assembly {
             // pointer to free memory
-            let p := mload(0x40)
-            mstore(p, 0x20)             // Length of Base
-            mstore(add(p, 0x20), 0x20)  // Length of Exponent
-            mstore(add(p, 0x40), 0x20)  // Length of Modulus
-            mstore(add(p, 0x60), base)  // Base
-            mstore(add(p, 0x80), e)     // Exponent
-            mstore(add(p, 0xa0), m)     // Modulus
+            let pos := mload(0x40)
+            mstore(pos, 0x20)             // Length of Base
+            mstore(add(pos, 0x20), 0x20)  // Length of Exponent
+            mstore(add(pos, 0x40), 0x20)  // Length of Modulus
+            mstore(add(pos, 0x60), base)  // Base
+            mstore(add(pos, 0x80), e)     // Exponent
+            mstore(add(pos, 0xa0), m)     // Modulus
             // call modexp precompile!
-            if iszero(staticcall(gas(), 0x05, p, 0xc0, p, 0x20)) {
+            if iszero(staticcall(gas(), 0x05, pos, 0xc0, pos, 0x20)) {
                 revert(0, 0)
             }
             // data
-            o := mload(p)
+            o := mload(pos)
         }
     }
 
@@ -915,12 +915,12 @@ library DogeMessageLibrary {
     function sha256mem(bytes memory _rawBytes, uint offset, uint len) internal view returns (bytes32 result) {
         assembly {
             // Call sha256 precompiled contract (located in address 0x02) to copy data.
-            // Assign to ptr the next available memory position (stored in memory position 0x40).
-            let ptr := mload(0x40)
-            if iszero(staticcall(gas(), 0x02, add(add(_rawBytes, 0x20), offset), len, ptr, 0x20)) {
+            // Assign to pos the next available memory position (stored in memory position 0x40).
+            let pos := mload(0x40)
+            if iszero(staticcall(gas(), 0x02, add(add(_rawBytes, 0x20), offset), len, pos, 0x20)) {
                 revert(0, 0)
             }
-            result := mload(ptr)
+            result := mload(pos)
         }
     }
 
