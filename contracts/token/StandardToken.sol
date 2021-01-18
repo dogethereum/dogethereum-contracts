@@ -8,7 +8,7 @@ If you deploy this, you won't have anything useful.)
 
 Implements ERC 20 Token standard: https://github.com/ethereum/EIPs/issues/20
 .*/
-pragma solidity ^0.8.0;
+pragma solidity ^0.7.6;
 
 import "./Token.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";

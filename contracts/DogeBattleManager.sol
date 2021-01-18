@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.7.6;
 
 import {DogeClaimManager} from "./DogeClaimManager.sol";
 import {DogeErrorCodes} from "./DogeErrorCodes.sol";

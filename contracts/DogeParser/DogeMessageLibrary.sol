@@ -100,7 +100,7 @@
 // Addresses are the scriptHash with a version prefix of 5, encoded as
 // Base58check. These addresses begin with a '3'.
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.7.6;
 
 // parse a raw Dogecoin transaction byte array
 library DogeMessageLibrary {
