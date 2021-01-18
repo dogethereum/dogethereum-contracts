@@ -642,8 +642,8 @@ library DogeMessageLibrary {
         // 0x14 PUSH20
         // []   20 bytes of the ethereum address
         return len == 20+2 &&
-            txBytes[pos] == byte(0x6a) &&
-            txBytes[pos+1] == byte(20);
+            txBytes[pos] == bytes1(0x6a) &&
+            txBytes[pos+1] == bytes1(20);
     }
 
     // Read the ethereum address embedded in the tx output
@@ -698,7 +698,7 @@ library DogeMessageLibrary {
 
     // Gets the public key hash given a public key
     function pub2PubKeyHash(bytes32 pub, bool odd) internal pure returns (bytes20) {
-        byte firstByte = odd ? byte(0x03) : byte(0x02);
+        bytes1 firstByte = odd ? bytes1(0x03) : bytes1(0x02);
         return ripemd160(abi.encodePacked(sha256(abi.encodePacked(firstByte, pub))));
     }
 
