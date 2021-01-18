@@ -13,7 +13,7 @@ contract DepositsManager {
   event DepositWithdrawn(address who, uint amount);
 
   // @dev – fallback to calling makeDeposit when ether is sent directly to contract.
-  function() public payable {
+  receive() external payable {
     makeDeposit();
   }
 
