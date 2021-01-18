@@ -537,7 +537,7 @@ library DogeMessageLibrary {
         bytes memory result = new bytes(len);
         assembly {
             // Call precompiled contract to copy data
-            if iszero(staticcall(gas, 0x04, add(add(_rawBytes, 0x20), offset), len, add(result, 0x20), len)) {
+            if iszero(staticcall(gas(), 0x04, add(add(_rawBytes, 0x20), offset), len, add(result, 0x20), len)) {
                 revert(0, 0)
             }
         }
@@ -674,7 +674,7 @@ library DogeMessageLibrary {
             mstore(add(p, 0x80), e)     // Exponent
             mstore(add(p, 0xa0), m)     // Modulus
             // call modexp precompile!
-            if iszero(staticcall(gas, 0x05, p, 0xc0, p, 0x20)) {
+            if iszero(staticcall(gas(), 0x05, p, 0xc0, p, 0x20)) {
                 revert(0, 0)
             }
             // data
@@ -917,7 +917,7 @@ library DogeMessageLibrary {
             // Call sha256 precompiled contract (located in address 0x02) to copy data.
             // Assign to ptr the next available memory position (stored in memory position 0x40).
             let ptr := mload(0x40)
-            if iszero(staticcall(gas, 0x02, add(add(_rawBytes, 0x20), offset), len, ptr, 0x20)) {
+            if iszero(staticcall(gas(), 0x02, add(add(_rawBytes, 0x20), offset), len, ptr, 0x20)) {
                 revert(0, 0)
             }
             result := mload(ptr)
