@@ -153,13 +153,14 @@ contract DogeSuperblocks is DogeErrorCodes {
             return (ERR_SUPERBLOCK_NOT_CLAIMMANAGER, 0);
         }
 
+        bytes32 superblockHash = calcSuperblockHash(_blocksMerkleRoot, _accumulatedWork, _timestamp, _prevTimestamp, _lastHash, _lastBits, _parentId);
+
         SuperblockInfo storage parent = superblocks[_parentId];
         if (parent.status != Status.SemiApproved && parent.status != Status.Approved) {
             emit ErrorSuperblock(superblockHash, ERR_SUPERBLOCK_BAD_PARENT);
             return (ERR_SUPERBLOCK_BAD_PARENT, 0);
         }
 
-        bytes32 superblockHash = calcSuperblockHash(_blocksMerkleRoot, _accumulatedWork, _timestamp, _prevTimestamp, _lastHash, _lastBits, _parentId);
         SuperblockInfo storage superblock = superblocks[superblockHash];
         if (superblock.status != Status.Unitialized) {
             emit ErrorSuperblock(superblockHash, ERR_SUPERBLOCK_EXIST);
