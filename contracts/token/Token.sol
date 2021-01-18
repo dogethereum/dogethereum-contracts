@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-only    
+
 // Abstract contract for the full ERC 20 Token standard
 // https://github.com/ethereum/EIPs/issues/20
 pragma solidity ^0.8.0;

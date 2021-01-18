@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 /*
 Example contract that can process Doge transactions relayed to it via
 DogeSuperblocks. This stores the Doge transaction hash and the Ethereum block

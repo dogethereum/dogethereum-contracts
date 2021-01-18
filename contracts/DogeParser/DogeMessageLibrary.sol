@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Bitcoin transaction parsing library - modified for DOGE
 
 // Copyright 2016 rain <https://keybase.io/rain>

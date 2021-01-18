@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-only    
+
 /*
 You should inherit from StandardToken or, for a token like you would want to
 deploy in something like Mist, see HumanStandardToken.sol.
