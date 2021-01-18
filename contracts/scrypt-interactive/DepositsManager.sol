@@ -20,7 +20,7 @@ contract DepositsManager {
   // @dev – returns an account's deposit
   // @param who – the account's address.
   // @return – the account's deposit.
-  function getDeposit(address who) constant public returns (uint) {
+  function getDeposit(address who) view public returns (uint) {
     return deposits[who];
   }
 
