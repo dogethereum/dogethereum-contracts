@@ -358,7 +358,7 @@ library Salsa8 {
             (first, second) = columnround(first, second);
             (first, second) = rowround(first, second);
         }
-        for (i = 0; i < 8; i++)
+        for (uint i = 0; i < 8; i++)
         {
             rfirst |= put(get(_first, i) + get(first, i), i);
             rsecond |= put(get(_second, i) + get(second, i), i);
@@ -454,7 +454,7 @@ library KeyDeriv {
         bytes memory message = new bytes(salt.length + 4);
         for (uint i = 0; i < salt.length; i++)
             message[i] = salt[i];
-        for (i = 0; i * 32 < dklen; i++) {
+        for (uint i = 0; i * 32 < dklen; i++) {
             message[message.length - 1] = bytes1(uint8(i + 1));
             r[i] = uint(hmacsha256(key, message));
         }

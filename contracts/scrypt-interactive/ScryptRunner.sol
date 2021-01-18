@@ -227,7 +227,7 @@ contract ScryptRunner is ScryptFramework {
             proof[step] = hashes[access ^ 1];
             access /= 2;
             numHashes /= 2;
-            for (i = 0; i < numHashes; i++) {
+            for (uint i = 0; i < numHashes; i++) {
                 hashes[i] = keccak256(abi.encodePacked(hashes[2 * i], hashes[2 * i + 1]));
             }
         }
