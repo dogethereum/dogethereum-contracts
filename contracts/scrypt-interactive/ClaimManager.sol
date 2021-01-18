@@ -1,4 +1,4 @@
-pragma solidity ^0.4.0;
+pragma solidity ^0.8.0;
 
 import {DepositsManager} from './DepositsManager.sol';
 import {ScryptVerifier} from "./ScryptVerifier.sol";

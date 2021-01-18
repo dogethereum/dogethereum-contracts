@@ -1,4 +1,4 @@
-pragma solidity ^0.4.19;
+pragma solidity ^0.8.0;
 
 // Interface contract to be implemented by DogeToken
 contract TransactionProcessor {

@@ -4,7 +4,7 @@ DogeSuperblocks. This stores the Doge transaction hash and the Ethereum block
 number (so people running the same example with the same Doge transaction
 can get an indication that the storage was indeed updated).
 */
-pragma solidity ^0.4.19;
+pragma solidity ^0.8.0;
 
 import "./TransactionProcessor.sol";
 

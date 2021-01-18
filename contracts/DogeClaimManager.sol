@@ -1,4 +1,4 @@
-pragma solidity ^0.4.19;
+pragma solidity ^0.8.0;
 
 import {DogeDepositsManager} from "./DogeDepositsManager.sol";
 import {DogeSuperblocks} from "./DogeSuperblocks.sol";

@@ -1,4 +1,4 @@
-pragma solidity ^0.4.4;
+pragma solidity ^0.8.0;
 import './ClaimManager.sol';
 import '../IScryptCheckerListener.sol';
 
