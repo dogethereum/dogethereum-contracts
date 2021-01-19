@@ -13,8 +13,6 @@ contract ScryptRunner is ScryptFramework {
     * @dev reserve 4096 bytes for the fullMemory member of the State struct
     *
     * @param state the State struct instance
-    *
-    * @return none
     */
     function initMemory(State memory state)
         pure
@@ -29,7 +27,11 @@ contract ScryptRunner is ScryptFramework {
     * @param input the input
     * @param upToStep which step to stop running at
     *
-    * @return the state variables, the memoryHash, the merkle proof and the output byte array
+    * @return stateHash the state hash
+    * @return vars the state variables
+    * @return memoryHash the memoryHash
+    * @return proof the merkle proof
+    * @return output the output byte array
     */
     function run(bytes input, uint upToStep)
         pure
@@ -119,7 +121,10 @@ contract ScryptRunner is ScryptFramework {
     * @param index the index at which to read from fullMemory
     * @param proofs the merkle proofs for the read
     *
-    * @return returns the values read from fullMem
+    * @return a value a read from fullMem
+    * @return b value b read from fullMem
+    * @return c value c read from fullMem
+    * @return d value d read from fullMem
     */
     function readMemory(State memory state, uint index, Proofs memory proofs)
         pure
@@ -157,8 +162,6 @@ contract ScryptRunner is ScryptFramework {
     * @param index the index at which the write is perfomed
     * @param values the values that are going to be written in fullMemory
     * @param proofs the proofs to be updated
-    *
-    * @return none
     */
     function writeMemory(State memory state, uint index, uint[4] values, Proofs memory proofs)
         pure
@@ -207,7 +210,8 @@ contract ScryptRunner is ScryptFramework {
     * @param fullMem full memory
     * @param index the index of the value to be retunred
     *
-    * @return the merkle proof and the value stored at index
+    * @return proof the merkle proof 
+    * @return bytes32 the value stored at index
     */
     function generateMemoryProof(uint[] fullMem, uint index)
         pure

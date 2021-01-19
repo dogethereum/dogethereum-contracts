@@ -44,7 +44,7 @@ contract ScryptVerifier is ScryptFramework, Verifier {
     * @param postState the next step's state's serialized State struct instance
     * @param proof the merkle proof
     *
-    * @return returns true on success
+    * @return success true on success
     */
     function verifyStep(uint step, bytes preState, bytes postState, bytes proof)
         pure
@@ -92,7 +92,10 @@ contract ScryptVerifier is ScryptFramework, Verifier {
     * @param index the offset
     * @param proofs the proofs
     *
-    * @return returns the read result
+    * @return a part 1 of the read result
+    * @return b part 2 of the read result
+    * @return c part 3 of the read result
+    * @return d part 4 of the read result
     */
     function readMemory(State memory state, uint index, Proofs memory proofs)
         pure
@@ -141,7 +144,7 @@ contract ScryptVerifier is ScryptFramework, Verifier {
     * @param index the index of fullMemory
     * @param proofs the merkle proofs
     *
-    * @return return whether the verification passed.
+    * @return whether the verification passed.
     */
     function preCheckProof(State memory state, uint index, Proofs memory proofs)
         pure
