@@ -45,8 +45,8 @@ contract Verifier {
         uint claimId,
         address challenger,
         address claimant,
-        bytes _input,
-        bytes _output,
+        bytes calldata _input,
+        bytes calldata _output,
         uint steps
     )
         public
@@ -168,9 +168,9 @@ contract Verifier {
     function performStepVerification(
         uint sessionId,
         uint claimID,
-        bytes preValue,
-        bytes postValue,
-        bytes proofs,
+        bytes calldata preValue,
+        bytes calldata postValue,
+        bytes calldata proofs,
         ClaimManager claimManager
     )
         //onlyClaimant(sessionId)
@@ -196,9 +196,9 @@ contract Verifier {
     function performStepVerificationSpecific(
         VerificationSession storage session,
         uint step,
-        bytes preState,
-        bytes postState,
-        bytes proof
+        bytes memory preState,
+        bytes memory postState,
+        bytes memory proof
     )
         internal
         returns (bool);
@@ -255,7 +255,7 @@ contract Verifier {
     function getSession(uint sessionId)
         public
         view
-        returns (uint, uint, uint, bytes, bytes32)
+        returns (uint, uint, uint, bytes memory, bytes32)
     {
         VerificationSession storage session = sessions[sessionId];
         return (

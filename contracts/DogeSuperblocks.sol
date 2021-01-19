@@ -312,13 +312,13 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @param _superblockHash - superblock containing block header
     // @param _untrustedTargetContract - the contract that is going to process the transaction
     function relayTx(
-        bytes _txBytes,
+        bytes calldata _txBytes,
         bytes20 _operatorPublicKeyHash,
         uint _txIndex,
-        uint[] _txSiblings,
-        bytes _dogeBlockHeader,
+        uint[] calldata _txSiblings,
+        bytes calldata _dogeBlockHeader,
         uint _dogeBlockIndex,
-        uint[] _dogeBlockSiblings,
+        uint[] calldata _dogeBlockSiblings,
         bytes32 _superblockHash,
         TransactionProcessor _untrustedTargetContract
     ) public returns (uint) {
@@ -355,10 +355,10 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @return - SHA-256 hash of _txBytes if the transaction is in the block, 0 otherwise
     // TODO: this can probably be made private
     function verifyTx(
-        bytes _txBytes,
+        bytes calldata _txBytes,
         uint _txIndex,
-        uint[] _siblings,
-        bytes _txBlockHeaderBytes,
+        uint[] calldata _siblings,
+        bytes calldata _txBlockHeaderBytes,
         bytes32 _txsuperblockHash
     ) public returns (uint) {
         uint txHash = DogeMessageLibrary.dblShaFlip(_txBytes);
@@ -393,8 +393,8 @@ contract DogeSuperblocks is DogeErrorCodes {
     function helperVerifyHash(
         uint256 _txHash,
         uint _txIndex,
-        uint[] _siblings,
-        bytes _blockHeaderBytes,
+        uint[] memory _siblings,
+        bytes memory _blockHeaderBytes,
         bytes32 _txsuperblockHash
     ) private returns (uint) {
         // TODO: implement when dealing with incentives
@@ -551,7 +551,7 @@ contract DogeSuperblocks is DogeErrorCodes {
     }
 
     // @dev - Calculate Merkle root from Doge block hashes
-    function makeMerkle(bytes32[] hashes) public pure returns (bytes32) {
+    function makeMerkle(bytes32[] calldata hashes) public pure returns (bytes32) {
         return DogeMessageLibrary.makeMerkle(hashes);
     }
 
@@ -608,7 +608,7 @@ contract DogeSuperblocks is DogeErrorCodes {
     // (bestSuperblock-1) - ((bestSuperblock-1) % 78125)
     //
     // @return - list of up to 9 ancestor supeerblock id
-    function getSuperblockLocator() public view returns (bytes32[9]) {
+    function getSuperblockLocator() public view returns (bytes32[9] memory) {
         bytes32[9] memory locator;
         locator[0] = bestSuperblock;
         bytes32 ancestors = getSuperblockAncestors(bestSuperblock);

@@ -26,9 +26,9 @@ contract ScryptVerifier is ScryptFramework, Verifier {
     function performStepVerificationSpecific(
         VerificationSession storage,
         uint step,
-        bytes preState,
-        bytes postState,
-        bytes proof
+        bytes memory preState,
+        bytes memory postState,
+        bytes memory proof
     )
         internal
         returns (bool)
@@ -46,7 +46,7 @@ contract ScryptVerifier is ScryptFramework, Verifier {
     *
     * @return success true on success
     */
-    function verifyStep(uint step, bytes preState, bytes postState, bytes proof)
+    function verifyStep(uint step, bytes calldata preState, bytes calldata postState, bytes calldata proof)
         pure
         public
         returns (bool success)
@@ -122,7 +122,7 @@ contract ScryptVerifier is ScryptFramework, Verifier {
     * @param proofs the write proofs
     *
     */
-    function writeMemory(State memory state, uint index, uint[4] values, Proofs memory proofs)
+    function writeMemory(State memory state, uint index, uint[4] memory values, Proofs memory proofs)
         pure
         internal
     {
@@ -174,7 +174,7 @@ contract ScryptVerifier is ScryptFramework, Verifier {
     *
     * @return proofHash bytes32
     */
-    function executeProof(bytes32[] proof, uint index)
+    function executeProof(bytes32[] memory proof, uint index)
         pure
         internal
         returns (bytes32)

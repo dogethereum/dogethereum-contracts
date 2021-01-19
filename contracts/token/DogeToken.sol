@@ -121,7 +121,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
     //                  signature[0] = v
     //                  signature[1-32] = r
     //                  signature[33-64] = s
-    function addOperator(bytes operatorPublicKeyCompressed, bytes signature) public {
+    function addOperator(bytes calldata operatorPublicKeyCompressed, bytes calldata signature) public {
         //log0(bytes32(operatorPublicKeyCompressed.length));
         //log0(bytes32(signature.length));
 
@@ -208,7 +208,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         msg.sender.transfer(value);
     }
 
-    function processTransaction(bytes dogeTx, uint txHash, bytes20 operatorPublicKeyHash, address superblockSubmitterAddress)
+    function processTransaction(bytes calldata dogeTx, uint txHash, bytes20 operatorPublicKeyHash, address superblockSubmitterAddress)
         public returns (uint) {
         require(msg.sender == trustedRelayerContract);
 
@@ -346,7 +346,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         return true;
     }
 
-    function selectUtxosAndFee(uint valueToSend, Operator operator) private pure returns (uint errorCode, uint32[] memory selectedUtxos, uint dogeTxFee, uint changeValue) {
+    function selectUtxosAndFee(uint valueToSend, Operator memory operator) private pure returns (uint errorCode, uint32[] memory selectedUtxos, uint dogeTxFee, uint changeValue) {
         // There should be at least 1 utxo available
         if (operator.nextUnspentUtxoIndex >= operator.utxos.length) {
             errorCode = ERR_UNLOCK_NO_AVAILABLE_UTXOS;
@@ -384,7 +384,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         dogeEthPrice = _dogeEthPrice;
     }
 
-    function getUnlockPendingInvestorProof(uint32 index) public view returns (address from, bytes20 dogeAddress, uint value, uint operatorFee, uint timestamp, uint32[] selectedUtxos, uint dogeTxFee, bytes20 operatorPublicKeyHash) {
+    function getUnlockPendingInvestorProof(uint32 index) public view returns (address from, bytes20 dogeAddress, uint value, uint operatorFee, uint timestamp, uint32[] memory selectedUtxos, uint dogeTxFee, bytes20 operatorPublicKeyHash) {
         Unlock storage unlock = unlocksPendingInvestorProof[index];
         from = unlock.from;
         dogeAddress = unlock.dogeAddress;

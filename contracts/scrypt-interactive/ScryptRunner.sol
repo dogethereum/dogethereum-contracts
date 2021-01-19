@@ -33,10 +33,10 @@ contract ScryptRunner is ScryptFramework {
     * @return proof the merkle proof
     * @return output the output byte array
     */
-    function run(bytes input, uint upToStep)
+    function run(bytes calldata input, uint upToStep)
         pure
         public
-        returns (bytes32 stateHash, uint[4] vars, bytes32 memoryHash, bytes32[] proof, bytes output)
+        returns (bytes32 stateHash, uint[4] memory vars, bytes32 memoryHash, bytes32[] memory proof, bytes memory output)
     {
         State memory s = inputToState(input);
         Proofs memory proofs;
@@ -60,10 +60,10 @@ contract ScryptRunner is ScryptFramework {
     * @dev run scrypt up to a certain step and return the state and proof,
     *      The proof being the one required to get from the previous step to the given one.
     */
-    function getStateAndProof(bytes input, uint step)
+    function getStateAndProof(bytes calldata input, uint step)
         pure
         public
-        returns (bytes state, bytes proof)
+        returns (bytes memory state, bytes memory proof)
     {
         require(step <= 2050);
         if (step == 0) {
@@ -89,10 +89,10 @@ contract ScryptRunner is ScryptFramework {
         return (finalStateToOutput(s, input), input);
     }
 
-    function getStateProofAndHash(bytes input, uint step)
+    function getStateProofAndHash(bytes calldata input, uint step)
         pure
         public
-        returns (bytes state, bytes proof, bytes32 stateHash)
+        returns (bytes memory state, bytes memory proof, bytes32 stateHash)
     {
         (state, proof) = getStateAndProof(input, step);
         return (state, proof, keccak256(state));
@@ -101,7 +101,7 @@ contract ScryptRunner is ScryptFramework {
     /**
     * @dev get the state hash of a specific step.
     */
-    function getStateHash(bytes input, uint step)
+    function getStateHash(bytes calldata input, uint step)
         pure
         public
         returns (bytes32 stateHash)
@@ -163,7 +163,7 @@ contract ScryptRunner is ScryptFramework {
     * @param values the values that are going to be written in fullMemory
     * @param proofs the proofs to be updated
     */
-    function writeMemory(State memory state, uint index, uint[4] values, Proofs memory proofs)
+    function writeMemory(State memory state, uint index, uint[4] memory values, Proofs memory proofs)
         pure
         internal
     {
@@ -213,10 +213,10 @@ contract ScryptRunner is ScryptFramework {
     * @return proof the merkle proof 
     * @return bytes32 the value stored at index
     */
-    function generateMemoryProof(uint[] fullMem, uint index)
+    function generateMemoryProof(uint[] memory fullMem, uint index)
         pure
         internal
-        returns (bytes32[] proof, bytes32)
+        returns (bytes32[] memory proof, bytes32)
     {
         uint access = index;
         proof = new bytes32[](14);

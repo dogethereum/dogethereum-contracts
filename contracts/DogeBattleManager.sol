@@ -214,7 +214,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
     }
 
     // @dev - Submitter sends hashes to verify superblock merkle root
-    function doVerifyMerkleRootHashes(BattleSession storage session, bytes32[] blockHashes) internal returns (uint) {
+    function doVerifyMerkleRootHashes(BattleSession storage session, bytes32[] memory blockHashes) internal returns (uint) {
         if (!hasDeposit(msg.sender, verifySuperblockCost)) {
             return ERR_SUPERBLOCK_MIN_DEPOSIT;
         }
@@ -239,7 +239,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
     }
 
     // @dev - For the submitter to respond to challenger queries
-    function respondMerkleRootHashes(bytes32 superblockHash, bytes32 sessionId, bytes32[] blockHashes)
+    function respondMerkleRootHashes(bytes32 superblockHash, bytes32 sessionId, bytes32[] calldata blockHashes)
     public onlyClaimant(sessionId) {
         BattleSession storage session = sessions[sessionId];
         uint err = doVerifyMerkleRootHashes(session, blockHashes);
@@ -300,7 +300,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
     }
 
     // @dev - Verify that block timestamp is in the superblock timestamp interval
-    function verifyTimestamp(bytes32 superblockHash, bytes blockHeader) internal view returns (bool) {
+    function verifyTimestamp(bytes32 superblockHash, bytes memory blockHeader) internal view returns (bool) {
         uint blockTimestamp = DogeMessageLibrary.getTimestamp(blockHeader, 0);
         uint superblockTimestamp;
 
@@ -337,8 +337,8 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
     function verifyBlockAuxPoW(
         BlockInfo storage blockInfo,
         bytes32 proposedBlockScryptHash,
-        bytes blockHeader
-    ) internal returns (uint, bytes) {
+        bytes memory blockHeader
+    ) internal returns (uint, bytes memory) {
         (uint err, , uint blockScryptHash, bool isMergeMined) =
             DogeMessageLibrary.verifyBlockHeader(blockHeader, 0, blockHeader.length, uint(proposedBlockScryptHash));
         if (err != 0) {
@@ -361,8 +361,8 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
         BattleSession storage session,
         bytes32 sessionId,
         bytes32 proposedBlockScryptHash,
-        bytes blockHeader
-    ) internal returns (uint, bytes) {
+        bytes memory blockHeader
+    ) internal returns (uint, bytes memory) {
         // TODO: see if this should fund Scrypt verification
         if (!hasDeposit(msg.sender, respondBlockHeaderCost)) {
             return (ERR_SUPERBLOCK_MIN_DEPOSIT, new bytes(0));
@@ -412,7 +412,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
         bytes32 superblockHash,
         bytes32 sessionId,
         bytes32 blockScryptHash,
-        bytes blockHeader
+        bytes calldata blockHeader
     ) public onlyClaimant(sessionId) {
         BattleSession storage session = sessions[sessionId];
         (uint err, bytes memory powBlockHeader) = doVerifyBlockHeader(session, sessionId, blockScryptHash, blockHeader);
@@ -653,7 +653,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
     }
 
     // @dev - Compare two 80-byte Doge block headers
-    function compareBlockHeader(bytes left, bytes right) internal pure returns (int) {
+    function compareBlockHeader(bytes memory left, bytes memory right) internal pure returns (int) {
         require(left.length == 80);
         require(right.length == 80);
         int a;
@@ -688,7 +688,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
     function scryptSubmitted(
         bytes32 scryptChallengeId,
         bytes32 _scryptHash,
-        bytes _data,
+        bytes calldata _data,
         address _submitter
     ) external onlyFrom(trustedScryptChecker) {
         require(_data.length == 80);
@@ -756,7 +756,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
     }
 
     // @dev - Return Doge block hashes associated with a certain battle session
-    function getDogeBlockHashes(bytes32 sessionId) public view returns (bytes32[]) {
+    function getDogeBlockHashes(bytes32 sessionId) public view returns (bytes32[] memory) {
         return sessions[sessionId].blockHashes;
     }
 

@@ -46,7 +46,7 @@ contract ScryptFramework {
     *
     * @return r the serialized Struct instance
     */
-    function encodeState(State memory state) pure internal returns (bytes r) {
+    function encodeState(State memory state) pure internal returns (bytes memory r) {
         r = new bytes(0x20 * 4 + 0x20 + 0x20);
         uint[4] memory vars = state.vars;
         bytes32 memoryHash = state.memoryHash;
@@ -209,7 +209,7 @@ contract ScryptFramework {
 
     // Virtual functions to be implemented in either the runner/prover or the verifier.
     function initMemory(State memory state) pure internal;
-    function writeMemory(State memory state, uint index, uint[4] values, Proofs memory proofs) pure internal;
+    function writeMemory(State memory state, uint index, uint[4] memory values, Proofs memory proofs) pure internal;
     function readMemory(State memory state, uint index, Proofs memory proofs) pure internal returns (uint, uint, uint, uint);
 
     /**
@@ -409,7 +409,7 @@ library Salsa8 {
     *
     * @return the result of running Salsa8 on the input values
     */
-    function round(uint[4] values) pure internal returns (uint[4]) {
+    function round(uint[4] memory values) pure internal returns (uint[4] memory) {
         (uint a, uint b, uint c, uint d) = (values[0], values[1], values[2], values[3]);
         (a, b) = salsa20_8(a ^ c, b ^ d);
         (c, d) = salsa20_8(a ^ c, b ^ d);
@@ -426,7 +426,7 @@ library KeyDeriv {
   *
   * @return the hash result
   */
-    function hmacsha256(bytes key, bytes message) pure internal returns (bytes32) {
+    function hmacsha256(bytes memory key, bytes memory message) pure internal returns (bytes32) {
         bytes32 keyl;
         bytes32 keyr;
         uint i;
@@ -453,7 +453,7 @@ library KeyDeriv {
     *
     * @return r the generated key
     */
-    function pbkdf2(bytes key, bytes salt, uint dklen) pure internal returns (uint[4] r) {
+    function pbkdf2(bytes memory key, bytes memory salt, uint dklen) pure internal returns (uint[4] memory r) {
         bytes memory message = new bytes(salt.length + 4);
         for (uint i = 0; i < salt.length; i++)
             message[i] = salt[i];

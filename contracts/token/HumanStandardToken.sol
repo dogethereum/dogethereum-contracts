@@ -34,9 +34,9 @@ contract HumanStandardToken is StandardToken {
 
     constructor (
         uint256 _initialAmount,
-        string _tokenName,
+        string memory _tokenName,
         uint8 _decimalUnits,
-        string _tokenSymbol
+        string memory _tokenSymbol
         ) public {
         balances[msg.sender] = _initialAmount;               // Give the creator all initial tokens
         totalSupply = _initialAmount;                        // Update total supply
@@ -46,7 +46,7 @@ contract HumanStandardToken is StandardToken {
     }
 
     /* Approves and then calls the receiving contract */
-    function approveAndCall(address _spender, uint256 _value, bytes _extraData) public returns (bool success) {
+    function approveAndCall(address _spender, uint256 _value, bytes calldata _extraData) public returns (bool success) {
         allowed[msg.sender][_spender] = _value;
         emit Approval(msg.sender, _spender, _value);
 

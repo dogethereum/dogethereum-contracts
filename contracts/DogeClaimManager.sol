@@ -565,7 +565,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
     }
 
     // @dev – Check if a claim exists
-    function claimExists(SuperblockClaim claim) private pure returns (bool) {
+    function claimExists(SuperblockClaim memory claim) private pure returns (bool) {
         return (claim.submitter != 0x0);
     }
 
@@ -616,7 +616,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
         return claims[superblockHash].sessions[challenger];
     }
 
-    function getClaimChallengers(bytes32 superblockHash) public view returns (address[]) {
+    function getClaimChallengers(bytes32 superblockHash) public view returns (address[] memory) {
         SuperblockClaim storage claim = claims[superblockHash];
         return claim.challengers;
     }
