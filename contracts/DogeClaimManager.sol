@@ -565,7 +565,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
     }
 
     // @dev – Check if a claim exists
-    function claimExists(SuperblockClaim memory claim) private pure returns (bool) {
+    function claimExists(SuperblockClaim storage claim) private pure returns (bool) {
         return (claim.submitter != 0x0);
     }
 
