@@ -16,7 +16,7 @@ contract DogeRelayDummy is IScryptCheckerListener {
 		claimManager = _claimManager;
 	}
 
-	function scryptVerified(bytes32 proposalId) external {
+	function scryptVerified(bytes32 proposalId) override external {
 		emit ScryptVerified(proposalId);
 	}
 
@@ -24,11 +24,11 @@ contract DogeRelayDummy is IScryptCheckerListener {
 		ClaimManager(claimManager).checkScrypt.value(msg.value)(_plaintext, _hash, proposalId, this);
 	}
 
-    function scryptSubmitted(bytes32 _proposalId, bytes32 _scryptHash, bytes calldata _data, address _submitter) external {
+    function scryptSubmitted(bytes32 _proposalId, bytes32 _scryptHash, bytes calldata _data, address _submitter) override external {
         emit ScryptSubmitted(_proposalId, _scryptHash, _data, _submitter);
     }
 
-    function scryptFailed(bytes32 _proposalId) external {
+    function scryptFailed(bytes32 _proposalId) override external {
         emit ScryptFailed(_proposalId);
     }
 }

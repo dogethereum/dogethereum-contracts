@@ -130,7 +130,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
         return claim.bondedDeposits[account];
     }
 
-    function getDeposit(address account) public view returns (uint) {
+    function getDeposit(address account) override public view returns (uint) {
         return deposits[account];
     }
 

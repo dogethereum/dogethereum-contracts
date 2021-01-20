@@ -15,6 +15,7 @@ contract ScryptRunner is ScryptFramework {
     * @param state the State struct instance
     */
     function initMemory(State memory state)
+        override
         pure
         internal
     {
@@ -127,6 +128,7 @@ contract ScryptRunner is ScryptFramework {
     * @return d value d read from fullMem
     */
     function readMemory(State memory state, uint index, Proofs memory proofs)
+        override
         pure
         internal
         returns (uint a, uint b, uint c, uint d)
@@ -164,6 +166,7 @@ contract ScryptRunner is ScryptFramework {
     * @param proofs the proofs to be updated
     */
     function writeMemory(State memory state, uint index, uint[4] memory values, Proofs memory proofs)
+        override
         pure
         internal
     {

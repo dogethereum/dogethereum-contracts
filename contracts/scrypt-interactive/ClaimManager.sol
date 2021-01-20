@@ -112,7 +112,7 @@ contract ClaimManager is DepositsManager, IScryptChecker {
   // @param _plaintext – the plaintext blockHeader.
   // @param _hash – Doge block hash.
   // @param claimant – the address of the Dogecoin block submitter.
-  function checkScrypt(bytes calldata _data, bytes32 _hash, bytes32 _proposalId, IScryptCheckerListener _scryptDependent) external payable {
+  function checkScrypt(bytes calldata _data, bytes32 _hash, bytes32 _proposalId, IScryptCheckerListener _scryptDependent) override external payable {
     // dogeRelay can directly make a deposit on behalf of the claimant.
 
     bytes memory _blockHash = new bytes(32);

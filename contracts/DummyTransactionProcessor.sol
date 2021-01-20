@@ -25,7 +25,7 @@ contract DummyTransactionProcessor is TransactionProcessor {
     //
     // this exact function signature is required as it has to match
     // the signature specified in DogeSuperblocks (otherwise DogeSuperblocks will not call it)
-    function processTransaction(bytes calldata dogeTx, uint256 txHash, bytes20 operatorPublicKeyHash, address superblockSubmitterAddress) public returns (uint) {
+    function processTransaction(bytes calldata dogeTx, uint256 txHash, bytes20 operatorPublicKeyHash, address superblockSubmitterAddress) override public returns (uint) {
         log0("processTransaction called");
 
         // only allow trustedRelayerContract, otherwise anyone can provide a fake dogeTx

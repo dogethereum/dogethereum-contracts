@@ -6,7 +6,7 @@ pragma solidity ^0.7.6;
 * @title ScryptFramework
 * @author Christian Reitwiessner
 */
-contract ScryptFramework {
+abstract contract ScryptFramework {
     // The state object, can be used in both generating and verifying mode.
     // In generating mode, only vars and fullMemory is used, in verifying
     // mode only vars and memoryHash is used.
@@ -208,9 +208,9 @@ contract ScryptFramework {
     }
 
     // Virtual functions to be implemented in either the runner/prover or the verifier.
-    function initMemory(State memory state) pure internal;
-    function writeMemory(State memory state, uint index, uint[4] memory values, Proofs memory proofs) pure internal;
-    function readMemory(State memory state, uint index, Proofs memory proofs) pure internal returns (uint, uint, uint, uint);
+    function initMemory(State memory state) virtual pure internal;
+    function writeMemory(State memory state, uint index, uint[4] memory values, Proofs memory proofs) virtual pure internal;
+    function readMemory(State memory state, uint index, Proofs memory proofs) virtual pure internal returns (uint, uint, uint, uint);
 
     /**
     * @dev runs a single step, modifying the state.

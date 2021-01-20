@@ -690,7 +690,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
         bytes32 _scryptHash,
         bytes calldata _data,
         address _submitter
-    ) external onlyFrom(trustedScryptChecker) {
+    ) override external onlyFrom(trustedScryptChecker) {
         require(_data.length == 80);
         ScryptHashVerification storage verification = scryptHashVerifications[scryptChallengeId];
         BattleSession storage session = sessions[verification.sessionId];
@@ -730,12 +730,12 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
     }
 
     // @dev - Scrypt verification succeeded
-    function scryptVerified(bytes32 scryptChallengeId) external onlyFrom(trustedScryptChecker) {
+    function scryptVerified(bytes32 scryptChallengeId) override external onlyFrom(trustedScryptChecker) {
         doNotifyScryptVerificationResult(scryptChallengeId, true);
     }
 
     // @dev - Scrypt verification failed
-    function scryptFailed(bytes32 scryptChallengeId) external onlyFrom(trustedScryptChecker) {
+    function scryptFailed(bytes32 scryptChallengeId) override external onlyFrom(trustedScryptChecker) {
         doNotifyScryptVerificationResult(scryptChallengeId, false);
     }
 

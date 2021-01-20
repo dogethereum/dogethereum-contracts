@@ -209,7 +209,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
     }
 
     function processTransaction(bytes calldata dogeTx, uint txHash, bytes20 operatorPublicKeyHash, address superblockSubmitterAddress)
-        public returns (uint) {
+        override public returns (uint) {
         require(msg.sender == trustedRelayerContract);
 
         Operator storage operator = operators[operatorPublicKeyHash];

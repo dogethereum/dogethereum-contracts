@@ -11,7 +11,7 @@ import {ClaimManager} from "./ClaimManager.sol";
   * @title Verifier
   * @author Christian Reitwiessner
 */
-contract Verifier {
+abstract contract Verifier {
 
     event NewSession(uint sessionId, address claimant, address challenger);
     event NewQuery(uint sessionId, address claimant);
@@ -200,11 +200,11 @@ contract Verifier {
         bytes memory postState,
         bytes memory proof
     )
-        internal
+        virtual internal
         returns (bool);
 
     function isInitiallyValid(VerificationSession storage session)
-        internal
+        virtual internal
         returns (bool);
 
     //Able to trigger conviction if time of response is too high

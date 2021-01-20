@@ -17,7 +17,7 @@ contract ScryptVerifier is ScryptFramework, Verifier {
     }
 
     function isInitiallyValid(VerificationSession storage session)
-        internal
+        override internal
         returns (bool)
     {
         return session.output.length == 32 && session.highStep == 2049;
@@ -30,7 +30,7 @@ contract ScryptVerifier is ScryptFramework, Verifier {
         bytes memory postState,
         bytes memory proof
     )
-        internal
+        override internal
         returns (bool)
     {
         return verifyStep(step, preState, postState, proof);
@@ -80,6 +80,7 @@ contract ScryptVerifier is ScryptFramework, Verifier {
     }
 
     function initMemory(State memory)
+        override
         pure
         internal
     {
@@ -98,6 +99,7 @@ contract ScryptVerifier is ScryptFramework, Verifier {
     * @return d part 4 of the read result
     */
     function readMemory(State memory state, uint index, Proofs memory proofs)
+        override
         pure
         internal
         returns (uint a, uint b, uint c, uint d)
@@ -123,6 +125,7 @@ contract ScryptVerifier is ScryptFramework, Verifier {
     *
     */
     function writeMemory(State memory state, uint index, uint[4] memory values, Proofs memory proofs)
+        override
         pure
         internal
     {
