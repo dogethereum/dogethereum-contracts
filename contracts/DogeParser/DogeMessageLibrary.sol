@@ -643,7 +643,7 @@ library DogeMessageLibrary {
         // []   20 bytes of the ethereum address
         return len == 20+2 &&
             txBytes[pos] == bytes1(0x6a) &&
-            txBytes[pos+1] == bytes1(20);
+            txBytes[pos+1] == bytes1(0x14);
     }
 
     // Read the ethereum address embedded in the tx output
