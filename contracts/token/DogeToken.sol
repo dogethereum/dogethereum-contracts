@@ -216,7 +216,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         // Check operator exists 
         if (operator.ethAddress == address(0)) {
             emit ErrorDogeToken(ERR_PROCESS_OPERATOR_NOT_CREATED);
-            return;
+            return 0;
         }
 
         uint value;
@@ -230,7 +230,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         // Check tx was not already processed
         if (!inserted) {
             emit ErrorDogeToken(ERR_PROCESS_TX_ALREADY_PROCESSED);
-            return;        
+            return 0;        
         }
 
         // Add utxo
@@ -247,7 +247,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
 
             if (value < MIN_LOCK_VALUE) {
                 emit ErrorDogeToken(ERR_LOCK_MIN_LOCK_VALUE);
-                return;
+                return 0;
             }
 
             processLockTransaction(firstInputEthAddress, value,
@@ -294,23 +294,23 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
     function doUnlock(bytes20 dogeAddress, uint value, bytes20 operatorPublicKeyHash) public returns (bool success) {
         if (value < MIN_UNLOCK_VALUE) {
             emit ErrorDogeToken(ERR_UNLOCK_MIN_UNLOCK_VALUE);
-            return;
+            return false;
         }
         if (balances[msg.sender] < value) {
             emit ErrorDogeToken(ERR_UNLOCK_USER_BALANCE);
-            return;
+            return false;
         }
 
         Operator storage operator = operators[operatorPublicKeyHash];
         // Check that operator exists 
         if (operator.ethAddress == address(0)) {
             emit ErrorDogeToken(ERR_UNLOCK_OPERATOR_NOT_CREATED);
-            return;
+            return false;
         }
         // Check that operator available balance is enough
         if (operator.dogeAvailableBalance < value) {
             emit ErrorDogeToken(ERR_UNLOCK_OPERATOR_BALANCE);
-            return;
+            return false;
         }
 
         uint operatorFee = value.mul(OPERATOR_UNLOCK_FEE) / 1000;
@@ -323,7 +323,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         (errorCode, selectedUtxos, dogeTxFee, changeValue) = selectUtxosAndFee(unlockValue, operator);
         if (errorCode != 0) {
             emit ErrorDogeToken(errorCode);
-            return;
+            return false;
         }
 
         balances[operator.ethAddress] = balances[operator.ethAddress].add(operatorFee);

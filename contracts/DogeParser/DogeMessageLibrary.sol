@@ -572,7 +572,7 @@ library DogeMessageLibrary {
         } else if (isP2SH(txBytes, pos, script_len)) {
             return sliceBytes20(txBytes, pos + 2);
         } else {
-            return;
+            return bytes20(0);
         }
     }
 
@@ -585,7 +585,7 @@ library DogeMessageLibrary {
         if (isP2PKH(txBytes, pos, script_len)) {
             return sliceBytes20(txBytes, pos + 3);
         } else {
-            return;
+            return bytes20(0);
         }
     }
 
