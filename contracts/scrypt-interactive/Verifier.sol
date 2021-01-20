@@ -64,8 +64,8 @@ abstract contract Verifier {
         s.challenger = challenger;
         s.input = _input;
         s.output = _output;
-        s.lastClaimantMessage = now;
-        s.lastChallengerMessage = now;
+        s.lastClaimantMessage = block.timestamp;
+        s.lastChallengerMessage = block.timestamp;
         s.lowStep = 0;
         s.lowHash = keccak256(_input);
         s.medStep = 0;
@@ -141,7 +141,7 @@ abstract contract Verifier {
             s.medStep = step;
             s.medHash = bytes32(0);
         }
-        s.lastChallengerMessage = now;
+        s.lastChallengerMessage = block.timestamp;
         emit NewQuery(sessionId, s.claimant);
     }
 
@@ -159,7 +159,7 @@ abstract contract Verifier {
         // record the claimed hash
         require(s.medHash == bytes32(0));
         s.medHash = hash;
-        s.lastClaimantMessage = now;
+        s.lastClaimantMessage = block.timestamp;
 
         // notify watchers
         emit NewResponse(sessionId, s.challenger);
@@ -215,12 +215,12 @@ abstract contract Verifier {
         require(session.claimant != address(0));
         if (
             session.lastChallengerMessage > session.lastClaimantMessage &&
-            now > session.lastChallengerMessage + responseTime
+            block.timestamp > session.lastChallengerMessage + responseTime
         ) {
             claimantConvicted(sessionId, session.claimant, claimID, claimManager);
         } else if (
             session.lastClaimantMessage > session.lastChallengerMessage &&
-            now > session.lastClaimantMessage + responseTime
+            block.timestamp > session.lastClaimantMessage + responseTime
         ) {
             challengerConvicted(sessionId, session.challenger, claimID, claimManager);
         } else {
