@@ -121,7 +121,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
     //                  signature[0] = v
     //                  signature[1-32] = r
     //                  signature[33-64] = s
-    function addOperator(bytes calldata operatorPublicKeyCompressed, bytes calldata signature) public {
+    function addOperator(bytes memory operatorPublicKeyCompressed, bytes calldata signature) public {
         //log0(bytes32(operatorPublicKeyCompressed.length));
         //log0(bytes32(signature.length));
 

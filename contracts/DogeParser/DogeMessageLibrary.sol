@@ -1032,7 +1032,7 @@ library DogeMessageLibrary {
     // @param _blockHeader - Dogecoin block header bytes
     // @param pos - where to start reading root from
     // @return - block's Merkle root in big endian format
-    function getHeaderMerkleRoot(bytes calldata _blockHeader, uint pos) public pure returns (uint) {
+    function getHeaderMerkleRoot(bytes memory _blockHeader, uint pos) public pure returns (uint) {
         uint merkle;
         assembly {
             merkle := mload(add(add(_blockHeader, 0x44), pos))
