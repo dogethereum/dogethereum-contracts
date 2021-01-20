@@ -614,7 +614,7 @@ contract DogeSuperblocks is DogeErrorCodes {
         bytes32 ancestors = getSuperblockAncestors(bestSuperblock);
         uint i = NUM_ANCESTOR_DEPTHS;
         while (i > 0) {
-            locator[i] = indexSuperblock[uint32(ancestors & 0xFFFFFFFF)];
+            locator[i] = indexSuperblock[uint32(uint256(ancestors) & 0xFFFFFFFF)];
             ancestors >>= 32;
             --i;
         }
