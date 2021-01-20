@@ -56,7 +56,7 @@ contract ClaimManager is DepositsManager, IScryptChecker {
   }
 
     // @dev – the constructor
-    constructor(ScryptVerifier _scryptVerifier) public {
+    constructor(ScryptVerifier _scryptVerifier) {
         scryptVerifier = _scryptVerifier;
     }
 

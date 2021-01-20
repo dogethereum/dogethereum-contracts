@@ -88,7 +88,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
         uint _superblockTimeout,
         uint _superblockConfirmations,
         uint _battleReward
-    ) public {
+    ) {
         trustedSuperblocks = _superblocks;
         trustedDogeBattleManager = _dogeBattleManager;
         superblockDelay = _superblockDelay;

@@ -12,7 +12,7 @@ contract DogeRelayDummy is IScryptCheckerListener {
 	event ScryptVerified(bytes32 proposalId);
     event ScryptFailed(bytes32 proposalId);
 
-	constructor(ClaimManager _claimManager) public {
+	constructor(ClaimManager _claimManager) {
 		claimManager = _claimManager;
 	}
 

@@ -59,7 +59,7 @@ contract DogeSuperblocks is DogeErrorCodes {
     }
 
     // @dev – the constructor
-    constructor() public {}
+    constructor() {}
 
     // @dev - sets ClaimManager instance associated with managing superblocks.
     // Once trustedClaimManager has been set, it cannot be changed.

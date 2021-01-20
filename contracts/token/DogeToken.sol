@@ -107,7 +107,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         bool deleted;
     }
 
-    constructor (address _trustedRelayerContract, address _trustedDogeEthPriceOracle, uint8 _collateralRatio) public {
+    constructor (address _trustedRelayerContract, address _trustedDogeEthPriceOracle, uint8 _collateralRatio) {
         trustedRelayerContract = _trustedRelayerContract;
         trustedDogeEthPriceOracle = _trustedDogeEthPriceOracle;
         collateralRatio = _collateralRatio;

@@ -16,7 +16,7 @@ contract DummyTransactionProcessor is TransactionProcessor {
 
     address private _trustedRelayerContract;
 
-    constructor(address trustedRelayerContract) public {
+    constructor(address trustedRelayerContract) {
         _trustedRelayerContract = trustedRelayerContract;
     }
 

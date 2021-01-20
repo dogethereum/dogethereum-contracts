@@ -139,7 +139,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
         DogeSuperblocks _superblocks,
         uint _superblockDuration,
         uint _superblockTimeout
-    ) public {
+    ) {
         net = _network;
         trustedSuperblocks = _superblocks;
         superblockDuration = _superblockDuration;

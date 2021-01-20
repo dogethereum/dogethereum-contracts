@@ -23,7 +23,7 @@ contract ScryptCheckerDummy is IScryptChecker {
     mapping (bytes32 => ScryptHashRequest) public pendingRequests;
 
 
-    constructor(bool _acceptAll) public {
+    constructor(bool _acceptAll) {
         acceptAll = _acceptAll;
     }
 
