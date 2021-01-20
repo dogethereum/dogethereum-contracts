@@ -163,7 +163,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
 
     // @dev - Start a battle session
     function beginBattleSession(bytes32 superblockHash, address submitter, address challenger)
-    public onlyFrom(trustedDogeClaimManager) returns (bytes32) {
+    public onlyFrom(address(trustedDogeClaimManager)) returns (bytes32) {
         bytes32 sessionId = keccak256(abi.encode(superblockHash, msg.sender, sessionsCount));
         BattleSession storage session = sessions[sessionId];
         session.id = sessionId;
@@ -690,7 +690,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
         bytes32 _scryptHash,
         bytes calldata _data,
         address _submitter
-    ) override external onlyFrom(trustedScryptChecker) {
+    ) override external onlyFrom(address(trustedScryptChecker)) {
         require(_data.length == 80);
         ScryptHashVerification storage verification = scryptHashVerifications[scryptChallengeId];
         BattleSession storage session = sessions[verification.sessionId];
@@ -730,12 +730,12 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
     }
 
     // @dev - Scrypt verification succeeded
-    function scryptVerified(bytes32 scryptChallengeId) override external onlyFrom(trustedScryptChecker) {
+    function scryptVerified(bytes32 scryptChallengeId) override external onlyFrom(address(trustedScryptChecker)) {
         doNotifyScryptVerificationResult(scryptChallengeId, true);
     }
 
     // @dev - Scrypt verification failed
-    function scryptFailed(bytes32 scryptChallengeId) override external onlyFrom(trustedScryptChecker) {
+    function scryptFailed(bytes32 scryptChallengeId) override external onlyFrom(address(trustedScryptChecker)) {
         doNotifyScryptVerificationResult(scryptChallengeId, false);
     }
 
