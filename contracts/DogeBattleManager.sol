@@ -152,12 +152,12 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
     //
     // @param _scryptChecker - address of the ScryptChecker contract to be associated with DogeClaimManager
     function setScryptChecker(IScryptChecker _scryptChecker) public {
-        require(address(trustedScryptChecker) == 0x0 && address(_scryptChecker) != 0x0);
+        require(address(trustedScryptChecker) == address(0x0) && address(_scryptChecker) != address(0x0));
         trustedScryptChecker = _scryptChecker;
     }
 
     function setDogeClaimManager(DogeClaimManager _dogeClaimManager) public {
-        require(address(trustedDogeClaimManager) == 0x0 && address(_dogeClaimManager) != 0x0);
+        require(address(trustedDogeClaimManager) == address(0x0) && address(_dogeClaimManager) != address(0x0));
         trustedDogeClaimManager = _dogeClaimManager;
     }
 

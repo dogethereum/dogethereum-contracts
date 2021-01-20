@@ -212,7 +212,7 @@ abstract contract Verifier {
         public
     {
         VerificationSession storage session = sessions[sessionId];
-        require(session.claimant != 0);
+        require(session.claimant != address(0));
         if (
             session.lastChallengerMessage > session.lastClaimantMessage &&
             now > session.lastChallengerMessage + responseTime

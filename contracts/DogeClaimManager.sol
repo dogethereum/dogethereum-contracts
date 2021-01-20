@@ -176,7 +176,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
         uint32 _lastBits,
         bytes32 _parentHash
     ) public returns (uint, bytes32) {
-        require(address(trustedSuperblocks) != 0);
+        require(address(trustedSuperblocks) != address(0));
 
         if (deposits[msg.sender] < minProposalDeposit) {
             emit ErrorClaim(0, ERR_SUPERBLOCK_MIN_DEPOSIT);
@@ -224,7 +224,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
     // @param superblockHash – Id of the superblock to challenge.
     // @return - Error code and claim Id
     function challengeSuperblock(bytes32 superblockHash) public returns (uint, bytes32) {
-        require(address(trustedSuperblocks) != 0);
+        require(address(trustedSuperblocks) != address(0));
 
         SuperblockClaim storage claim = claims[superblockHash];
 
@@ -566,7 +566,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
 
     // @dev – Check if a claim exists
     function claimExists(SuperblockClaim storage claim) private pure returns (bool) {
-        return (claim.submitter != 0x0);
+        return (claim.submitter != address(0x0));
     }
 
     // @dev - Return a given superblock's submitter

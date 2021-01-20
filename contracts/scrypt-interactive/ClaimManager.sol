@@ -273,7 +273,7 @@ contract ClaimManager is DepositsManager, IScryptChecker {
   }
 
   function claimExists(ScryptClaim storage claim) pure private returns(bool) {
-    return claim.claimant != 0x0;
+    return claim.claimant != address(0x0);
   }
 
   function firstChallenger(uint claimID) public view returns(address) {

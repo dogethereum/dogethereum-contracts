@@ -150,7 +150,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         Operator storage operator = operators[operatorPublicKeyHash];
         // Check that operator does not exist yet
         //log1(bytes20(operator.ethAddress), bytes32((operator.ethAddress == 0) ? 0 : 1));
-        if (operator.ethAddress != 0) {
+        if (operator.ethAddress != address(0)) {
             emit ErrorDogeToken(ERR_OPERATOR_ALREADY_CREATED);
             return;
         }
@@ -214,7 +214,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
 
         Operator storage operator = operators[operatorPublicKeyHash];
         // Check operator exists 
-        if (operator.ethAddress == 0) {
+        if (operator.ethAddress == address(0)) {
             emit ErrorDogeToken(ERR_PROCESS_OPERATOR_NOT_CREATED);
             return;
         }
@@ -272,19 +272,19 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         balances[operatorEthAddress] = balances[operatorEthAddress].add(operatorFee);
         emit NewToken(operatorEthAddress, operatorFee);
         // Hack to make etherscan show the event
-        emit Transfer(0, operatorEthAddress, operatorFee);
+        emit Transfer(address(0), operatorEthAddress, operatorFee);
 
         uint superblockSubmitterFee = value.mul(SUPERBLOCK_SUBMITTER_LOCK_FEE) / 1000;
         balances[superblockSubmitterAddress] = balances[superblockSubmitterAddress].add(superblockSubmitterFee);
         emit NewToken(superblockSubmitterAddress, superblockSubmitterFee);
         // Hack to make etherscan show the event
-        emit Transfer(0, superblockSubmitterAddress, superblockSubmitterFee);
+        emit Transfer(address(0), superblockSubmitterAddress, superblockSubmitterFee);
 
         uint userValue = value.sub(operatorFee).sub(superblockSubmitterFee);
         balances[destinationAddress] = balances[destinationAddress].add(userValue);
         emit NewToken(destinationAddress, userValue);
         // Hack to make etherscan show the event
-        emit Transfer(0, destinationAddress, userValue);    
+        emit Transfer(address(0), destinationAddress, userValue);    
     }
 
 
@@ -303,7 +303,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
 
         Operator storage operator = operators[operatorPublicKeyHash];
         // Check that operator exists 
-        if (operator.ethAddress == 0) {
+        if (operator.ethAddress == address(0)) {
             emit ErrorDogeToken(ERR_UNLOCK_OPERATOR_NOT_CREATED);
             return;
         }
@@ -331,7 +331,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         emit Transfer(msg.sender, operator.ethAddress, operatorFee);
         balances[msg.sender] = balances[msg.sender].sub(value);
         // Hack to make etherscan show the event
-        emit Transfer(msg.sender, 0, unlockValue);
+        emit Transfer(msg.sender, address(0), unlockValue);
 
         emit UnlockRequest(unlockIdx, operatorPublicKeyHash);
         unlocksPendingInvestorProof[unlockIdx] = Unlock(msg.sender, dogeAddress, value, 
