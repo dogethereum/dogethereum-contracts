@@ -625,10 +625,10 @@ contract DogeSuperblocks is DogeErrorCodes {
     function getSuperblockAncestor(bytes32 superblockHash, uint index) internal view returns (bytes32) {
         bytes32 ancestors = superblocks[superblockHash].ancestors;
         uint32 ancestorsIndex =
-            uint32(ancestors[4*index + 0]) * 0x1000000 +
-            uint32(ancestors[4*index + 1]) * 0x10000 +
-            uint32(ancestors[4*index + 2]) * 0x100 +
-            uint32(ancestors[4*index + 3]) * 0x1;
+            uint32(uint8(ancestors[4*index + 0])) * 0x1000000 +
+            uint32(uint8(ancestors[4*index + 1])) * 0x10000 +
+            uint32(uint8(ancestors[4*index + 2])) * 0x100 +
+            uint32(uint8(ancestors[4*index + 3])) * 0x1;
         return indexSuperblock[ancestorsIndex];
     }
 

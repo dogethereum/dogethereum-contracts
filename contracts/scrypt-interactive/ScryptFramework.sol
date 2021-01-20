@@ -434,9 +434,9 @@ library KeyDeriv {
             keyl = sha256(key);
         } else {
             for (i = 0; i < key.length && i < 32; i++)
-                keyl |= bytes32(uint(key[i]) * 2**(8 * (31 - i)));
+                keyl |= bytes32(uint(uint8(key[i])) * 2**(8 * (31 - i)));
             for (i = 32; i < key.length && i < 64; i++)
-                keyr |= bytes32(uint(key[i]) * 2**(8 * (63 - i)));
+                keyr |= bytes32(uint(uint8(key[i])) * 2**(8 * (63 - i)));
         }
         bytes32 threesix = 0x3636363636363636363636363636363636363636363636363636363636363636;
         bytes32 fivec = 0x5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c;

@@ -174,22 +174,22 @@ library DogeMessageLibrary {
         if (bits == 8) {
             return uint8(data[pos]);
         } else if (bits == 16) {
-            return uint16(data[pos])
-                 + uint16(data[pos + 1]) * 2 ** 8;
+            return uint16(uint8(data[pos]))
+                 + uint16(uint8(data[pos + 1])) * 2 ** 8;
         } else if (bits == 32) {
-            return uint32(data[pos])
-                 + uint32(data[pos + 1]) * 2 ** 8
-                 + uint32(data[pos + 2]) * 2 ** 16
-                 + uint32(data[pos + 3]) * 2 ** 24;
+            return uint32(uint8(data[pos]))
+                 + uint32(uint8(data[pos + 1])) * 2 ** 8
+                 + uint32(uint8(data[pos + 2])) * 2 ** 16
+                 + uint32(uint8(data[pos + 3])) * 2 ** 24;
         } else if (bits == 64) {
-            return uint64(data[pos])
-                 + uint64(data[pos + 1]) * 2 ** 8
-                 + uint64(data[pos + 2]) * 2 ** 16
-                 + uint64(data[pos + 3]) * 2 ** 24
-                 + uint64(data[pos + 4]) * 2 ** 32
-                 + uint64(data[pos + 5]) * 2 ** 40
-                 + uint64(data[pos + 6]) * 2 ** 48
-                 + uint64(data[pos + 7]) * 2 ** 56;
+            return uint64(uint8(data[pos]))
+                 + uint64(uint8(data[pos + 1])) * 2 ** 8
+                 + uint64(uint8(data[pos + 2])) * 2 ** 16
+                 + uint64(uint8(data[pos + 3])) * 2 ** 24
+                 + uint64(uint8(data[pos + 4])) * 2 ** 32
+                 + uint64(uint8(data[pos + 5])) * 2 ** 40
+                 + uint64(uint8(data[pos + 6])) * 2 ** 48
+                 + uint64(uint8(data[pos + 7])) * 2 ** 56;
         }
     }
 
@@ -511,7 +511,7 @@ library DogeMessageLibrary {
         // using uint160 for index i will generate an error
         // "Error: VM Exception while processing transaction: Error: redPow(normalNum)"
         for (uint256 i = 0; i < 20; i++) {
-            slice += uint160(data[i + start]) << uint160(8 * (19 - i));
+            slice += uint160(uint8(data[i + start])) << uint160(8 * (19 - i));
         }
         return bytes20(slice);
     }
@@ -519,7 +519,7 @@ library DogeMessageLibrary {
     function sliceBytes32Int(bytes memory data, uint start) private pure returns (uint slice) {
         for (uint i = 0; i < 32; i++) {
             if (i + start < data.length) {
-                slice += uint(data[i + start]) << (8 * (31 - i));
+                slice += uint(uint8(data[i + start])) << (8 * (31 - i));
             }
         }
     }
@@ -1088,7 +1088,7 @@ library DogeMessageLibrary {
     // @dev - Converts a bytes of size 4 to uint32,
     // e.g. for input [0x01, 0x02, 0x03 0x04] returns 0x01020304
     function bytesToUint32Flipped(bytes memory input, uint pos) internal pure returns (uint32 result) {
-        result = uint32(input[pos]) + uint32(input[pos + 1])*(2**8) + uint32(input[pos + 2])*(2**16) + uint32(input[pos + 3])*(2**24);
+        result = uint32(uint8(input[pos])) + uint32(uint8(input[pos + 1]))*(2**8) + uint32(uint8(input[pos + 2]))*(2**16) + uint32(uint8(input[pos + 3]))*(2**24);
     }
 
     // @dev - checks version to determine if a block has merge mining information
