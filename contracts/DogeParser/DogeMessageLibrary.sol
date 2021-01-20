@@ -511,7 +511,7 @@ library DogeMessageLibrary {
         // using uint160 for index i will generate an error
         // "Error: VM Exception while processing transaction: Error: redPow(normalNum)"
         for (uint256 i = 0; i < 20; i++) {
-            slice += uint160(data[i + start]) << (8 * (19 - i));
+            slice += uint160(data[i + start]) << uint160(8 * (19 - i));
         }
         return bytes20(slice);
     }
