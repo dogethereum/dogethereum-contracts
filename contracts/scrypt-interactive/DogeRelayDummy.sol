@@ -21,7 +21,7 @@ contract DogeRelayDummy is IScryptCheckerListener {
 	}
 
 	function verifyScrypt(bytes calldata _plaintext, bytes32 _hash, bytes32 proposalId) public payable {
-		ClaimManager(claimManager).checkScrypt.value(msg.value)(_plaintext, _hash, proposalId, this);
+		ClaimManager(claimManager).checkScrypt{value: msg.value}(_plaintext, _hash, proposalId, this);
 	}
 
     function scryptSubmitted(bytes32 _proposalId, bytes32 _scryptHash, bytes calldata _data, address _submitter) override external {
