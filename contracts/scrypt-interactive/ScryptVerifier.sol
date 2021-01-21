@@ -46,7 +46,7 @@ contract ScryptVerifier is ScryptFramework, Verifier {
     *
     * @return success true on success
     */
-    function verifyStep(uint step, bytes calldata preState, bytes calldata postState, bytes calldata proof)
+    function verifyStep(uint step, bytes memory preState, bytes memory postState, bytes memory proof)
         pure
         public
         returns (bool success)
