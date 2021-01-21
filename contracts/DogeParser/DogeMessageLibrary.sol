@@ -167,6 +167,9 @@ library DogeMessageLibrary {
             return (getBytesLE(txBytes, pos, 32), pos + 4);
         } else if (ibit == 0xff) {
             return (getBytesLE(txBytes, pos, 64), pos + 8);
+        } else {
+            // Unreachable code, adding to avoid compiler warnings.
+            return (0, 0);
         }
     }
     // convert little endian bytes to uint
@@ -190,6 +193,9 @@ library DogeMessageLibrary {
                  + uint64(uint8(data[pos + 5])) * 2 ** 40
                  + uint64(uint8(data[pos + 6])) * 2 ** 48
                  + uint64(uint8(data[pos + 7])) * 2 ** 56;
+        } else {
+            // Invalid value in bits parameter. Should revert() instead?
+            return 0;
         }
     }
 
@@ -343,6 +349,7 @@ library DogeMessageLibrary {
                 return true;
             }
         }
+        return false;
     }
     // scan the inputs and find the script lengths.
     // return an array of script lengths and the end position
