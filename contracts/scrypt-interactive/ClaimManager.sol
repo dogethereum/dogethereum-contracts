@@ -7,10 +7,14 @@ import {ScryptVerifier} from "./ScryptVerifier.sol";
 import {IScryptCheckerListener} from "../IScryptCheckerListener.sol";
 import {IScryptChecker} from "../IScryptChecker.sol";
 
+import 'openzeppelin-solidity/contracts/math/SafeMath.sol';
 
 // ClaimManager: queues a sequence of challengers to play with a claimant.
 
 contract ClaimManager is DepositsManager, IScryptChecker {
+
+  using SafeMath for uint;
+
   uint private numClaims = 1;     // index as key for the claims mapping.
   uint public minDeposit = 1;    // TODO: what should the minimum deposit be?
 
