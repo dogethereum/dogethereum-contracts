@@ -25,9 +25,9 @@ If you are new to the Dogecoin <-> Ethereum bridge, please check the [docs](http
 ## Running the Tests
 
 * Install prerequisites
-  * [nodejs](https://nodejs.org) v9.2.0 or above.
-  * [truffle](http://truffleframework.com/) v4.1.3 or above.
-  * [ganache-cli](https://github.com/trufflesuite/ganache-cli) v6.1.0 or above.
+  * [nodejs](https://nodejs.org) v15.5.1 or above.
+  * [truffle](http://truffleframework.com/) v5.1.60 or above.
+  * [ganache-cli](https://github.com/trufflesuite/ganache-cli) v6.12.1 or above.
 * Clone this repo.
 * Install npm dependencies.
   * cd to the directory where the repo is cloned.
