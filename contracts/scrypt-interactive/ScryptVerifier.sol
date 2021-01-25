@@ -30,7 +30,7 @@ contract ScryptVerifier is ScryptFramework, Verifier {
         bytes memory postState,
         bytes memory proof
     )
-        override internal view
+        override internal pure
         returns (bool)
     {
         return verifyStep(step, preState, postState, proof);
