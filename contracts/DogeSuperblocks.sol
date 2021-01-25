@@ -312,13 +312,13 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @param _superblockHash - superblock containing block header
     // @param _untrustedTargetContract - the contract that is going to process the transaction
     function relayTx(
-        bytes calldata _txBytes,
+        bytes memory _txBytes,
         bytes20 _operatorPublicKeyHash,
         uint _txIndex,
-        uint[] calldata _txSiblings,
-        bytes calldata _dogeBlockHeader,
+        uint[] memory _txSiblings,
+        bytes memory _dogeBlockHeader,
         uint _dogeBlockIndex,
-        uint[] calldata _dogeBlockSiblings,
+        uint[] memory _dogeBlockSiblings,
         bytes32 _superblockHash,
         TransactionProcessor _untrustedTargetContract
     ) public returns (uint) {
@@ -355,10 +355,10 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @return - SHA-256 hash of _txBytes if the transaction is in the block, 0 otherwise
     // TODO: this can probably be made private
     function verifyTx(
-        bytes calldata _txBytes,
+        bytes memory _txBytes,
         uint _txIndex,
-        uint[] calldata _siblings,
-        bytes calldata _txBlockHeaderBytes,
+        uint[] memory _siblings,
+        bytes memory _txBlockHeaderBytes,
         bytes32 _txsuperblockHash
     ) public returns (uint) {
         uint txHash = DogeMessageLibrary.dblShaFlip(_txBytes);
