@@ -733,7 +733,12 @@ library DogeMessageLibrary {
         }
     }
 
-    function parseAuxPoW(bytes memory rawBytes, uint pos, uint len) internal view
+    // @dev - Parses AuxPow part of block header
+    // @param rawBytes - array of bytes with the block header
+    // @param pos - starting position of the block header
+    // @param uint - length of the block header
+    // @return auxpow - AuxPoW struct with parsed data
+    function parseAuxPoW(bytes memory rawBytes, uint pos, uint) internal view
              returns (AuxPoW memory auxpow)
     {
         // we need to traverse the bytes with a pointer because some fields are of variable length
