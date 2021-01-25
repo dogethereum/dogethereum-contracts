@@ -109,10 +109,10 @@ async function deployDevelopment(deployer, network, accounts, networkId, trusted
 
   // await deployer.deploy(ScryptRunner);
 
-  const superblocks = DogeSuperblocks.at(DogeSuperblocks.address);
+  const superblocks = await DogeSuperblocks.at(DogeSuperblocks.address);
   await superblocks.setClaimManager(DogeClaimManager.address);
 
-  const dogeBattleManager = DogeBattleManager.at(DogeBattleManager.address);
+  const dogeBattleManager = await DogeBattleManager.at(DogeBattleManager.address);
   await dogeBattleManager.setDogeClaimManager(DogeClaimManager.address);
   await dogeBattleManager.setScryptChecker(ScryptCheckerDummy.address);
 }
