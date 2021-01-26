@@ -48,7 +48,6 @@ contract('DogeSuperblocks2', function(accounts) {
     assert.equal(height.toNumber(), 1, 'Superblock height');
 
     const superblock = await superblocks.getSuperblock(best);
-    assert.equal(superblock.length, 9, 'Have enough data');
     assert.equal(superblock[0], genesisSuperblock.merkleRoot, 'Merkle root');
     assert.equal(superblock[1].toString(10), genesisSuperblock.accumulatedWork.toString(10), 'Accumulated work');
     assert.equal(superblock[2], genesisSuperblock.timestamp, 'Last block timestamp');
