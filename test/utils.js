@@ -125,7 +125,7 @@ const blockchainTimeoutSeconds = async (s) => {
     method: 'evm_increaseTime',
     params: [s],
     id: 0,
-  });
+  }, function(error, result) {});
 };
 
 const mineBlocks = async (web3, n) => {
@@ -135,7 +135,7 @@ const mineBlocks = async (web3, n) => {
       method: 'evm_mine',
       params: [],
       id: 0,
-    });
+    }, function(error, result) {});
     await timeout(100);
   }
 }
