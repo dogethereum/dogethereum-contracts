@@ -111,8 +111,8 @@ function getBlockDifficulty(blockHeader) {
   const headerBin = module.exports.fromHex(blockHeader).slice(0, 80);
   const exp = BigNumber(headerBin[75]);
   const mant = BigNumber(headerBin[72] + 256 * headerBin[73] + 256 * 256 * headerBin[74]);
-  const target = mant.mul(BigNumber(256).pow(exp.minus(3)));
-  const difficulty1 = BigNumber(0x00FFFFF).mul(BigNumber(256).pow(BigNumber(0x1e-3)));
+  const target = mant.multipliedBy(BigNumber(256).pow(exp.minus(3)));
+  const difficulty1 = BigNumber(0x00FFFFF).multipliedBy(BigNumber(256).pow(BigNumber(0x1e-3)));
   const difficulty = difficulty1.divToInt(target);
   return difficulty1.divToInt(target);
 }
