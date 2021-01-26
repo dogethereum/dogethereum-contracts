@@ -1,6 +1,7 @@
 var DogeToken = artifacts.require("./DogeToken.sol");
 var Superblocks = artifacts.require("./DogeSuperblocks.sol");
 const utils = require('./../test/utils');
+const BigNumber = require('bignumber.js');
 
 module.exports = async function(callback) {
   console.log("init_contracts_local begin");
@@ -20,7 +21,7 @@ module.exports = async function(callback) {
 
   var sb = await Superblocks.deployed();
   var blocksMerkleRoot = "0x3d2160a3b5dc4a9d62e7e66a295f70313ac808440ef7400d6c0772171ce973a5";
-  var accumulatedWork = web3.toBigNumber("0");
+  var accumulatedWork = BigNumber("0");
   var timestamp = 1296688602;
   var prevTimestamp = 0;
   var lastHash = "0x3d2160a3b5dc4a9d62e7e66a295f70313ac808440ef7400d6c0772171ce973a5";
