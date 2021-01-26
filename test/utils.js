@@ -113,8 +113,8 @@ function getBlockDifficulty(blockHeader) {
   const mant = BigNumber(headerBin[72] + 256 * headerBin[73] + 256 * 256 * headerBin[74]);
   const target = mant.multipliedBy(BigNumber(256).pow(exp.minus(3)));
   const difficulty1 = BigNumber(0x00FFFFF).multipliedBy(BigNumber(256).pow(BigNumber(0x1e-3)));
-  const difficulty = difficulty1.divToInt(target);
-  return difficulty1.divToInt(target);
+  const difficulty = difficulty1.idiv(target);
+  return difficulty1.idiv(target);
 }
 
 const timeout = async (ms) => new Promise((resolve, reject) => setTimeout(resolve, ms));
