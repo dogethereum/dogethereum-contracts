@@ -167,7 +167,7 @@ contract('DogeSuperblocks', (accounts) => {
     let id3;
     const merkleRoot = utils.makeMerkle(['0x0000000000000000000000000000000000000000000000000000000000000000']);
     const accumulatedWork = 0;
-    const timestamp = (new Date()).getTime() / 1000;
+    const timestamp = Math.floor((new Date()).getTime() / 1000);
     const prevTimestamp = timestamp - 1;
     const lastBits = 0;
     const lastHash = '0x00';
