@@ -156,10 +156,10 @@ async function deployIntegration(deployer, network, accounts, networkId, trusted
     {gas: 4000000}
   );
 
-  const superblocks = DogeSuperblocks.at(DogeSuperblocks.address);
+  const superblocks = await DogeSuperblocks.at(DogeSuperblocks.address);
   await superblocks.setClaimManager(DogeClaimManager.address, {gas: 60000});
 
-  const dogeBattleManager = DogeBattleManager.at(DogeBattleManager.address);
+  const dogeBattleManager = await DogeBattleManager.at(DogeBattleManager.address);
   await dogeBattleManager.setDogeClaimManager(DogeClaimManager.address);
   if (network === 'rinkeby' && typeof process.env.CLAIM_MANAGER_ADDRESS !== 'undefined') {
     await dogeBattleManager.setScryptChecker(process.env.CLAIM_MANAGER_ADDRESS, {gas: 60000});
