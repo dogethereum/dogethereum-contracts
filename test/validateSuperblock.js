@@ -284,7 +284,7 @@ contract('validateSuperblocks', (accounts) => {
         proposedSuperblock.accumulatedWork,
         proposedSuperblock.timestamp + 1,
         proposedSuperblock.prevTimestamp,
-        0, // proposedSuperblock.lastHash,
+        "0x00", // proposedSuperblock.lastHash,
         proposedSuperblock.lastBits,
         proposedSuperblock.parentId,
         { from: submitter },
