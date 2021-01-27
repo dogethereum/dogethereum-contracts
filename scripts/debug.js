@@ -64,25 +64,27 @@ module.exports = async function(callback) {
   console.log("Eth Current block : " + ethBlockNumber);
 
   // Unlock events
-  var unlockRequestEvent = dt.UnlockRequest({}, {fromBlock: 0, toBlock: "latest"});
-  var myResults = unlockRequestEvent.get(async function(error, unlockRequestEvents){ 
-     if (error) console.log("error : " + error);
-     console.log("unlockRequestEvents length : " + unlockRequestEvents.length);
-     for (var i = 0; i < unlockRequestEvents.length; i++) {
-        console.log("unlockRequestEvent [" + unlockRequestEvents[i].args.id + "]: ");
-        console.log("  tx block number : " + unlockRequestEvents[i].blockNumber);
-        var unlock = await dt.getUnlockPendingInvestorProof(unlockRequestEvents[i].args.id);
-        console.log("  from : " + unlock[0]);
-        console.log("  dogeAddress : " + unlock[1]);
-        console.log("  value : " + unlock[2].toNumber());
-        console.log("  operator fee : " + unlock[3].toNumber());
-        console.log("  timestamp : " + unlock[4].toNumber());
-        console.log("  selectedUtxos : ");
-        for (var j = 0; j <  unlock[5].length; j++) {
-          console.log("    " + unlock[5][j]);          
-        }
-        console.log("  doge tx fee : " + unlock[6].toNumber());
-        console.log("  operatorPublicKeyHash : " + unlock[7]);
-     }
-  });
+  var unlockRequestEvents = await dt.getPastEvents("UnlockRequest", {fromBlock: 0, toBlock: "latest"});
+  console.log("unlockRequestEvents");
+  console.log(unlockRequestEvents);
+  // var myResults = unlockRequestEvent.get(async function(error, unlockRequestEvents){ 
+  //    if (error) console.log("error : " + error);
+  //    console.log("unlockRequestEvents length : " + unlockRequestEvents.length);
+  //    for (var i = 0; i < unlockRequestEvents.length; i++) {
+  //       console.log("unlockRequestEvent [" + unlockRequestEvents[i].args.id + "]: ");
+  //       console.log("  tx block number : " + unlockRequestEvents[i].blockNumber);
+  //       var unlock = await dt.getUnlockPendingInvestorProof(unlockRequestEvents[i].args.id);
+  //       console.log("  from : " + unlock[0]);
+  //       console.log("  dogeAddress : " + unlock[1]);
+  //       console.log("  value : " + unlock[2].toNumber());
+  //       console.log("  operator fee : " + unlock[3].toNumber());
+  //       console.log("  timestamp : " + unlock[4].toNumber());
+  //       console.log("  selectedUtxos : ");
+  //       for (var j = 0; j <  unlock[5].length; j++) {
+  //         console.log("    " + unlock[5][j]);          
+  //       }
+  //       console.log("  doge tx fee : " + unlock[6].toNumber());
+  //       console.log("  operatorPublicKeyHash : " + unlock[7]);
+  //    }
+  // });
 }
