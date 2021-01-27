@@ -9,7 +9,7 @@ module.exports = async function(callback) {
   // Calculate operator public key
   const operatorPublicKeyHash = '0x03cd041b0139d3240607b9fd1b2d1b691e22b5d6';
   const operatorPrivateKeyString = "105bd30419904ef409e9583da955037097f22b6b23c57549fe38ab8ffa9deaa3";
-  const operatorEthAddress = web3.eth.getAccounts()[3];  
+  const operatorEthAddress = (await web3.eth.getAccounts())[3];  
 
   var operatorSignItsEthAddressResult = utils.operatorSignItsEthAddress(operatorPrivateKeyString, operatorEthAddress)
   var operatorPublicKeyCompressedString = operatorSignItsEthAddressResult[0];
