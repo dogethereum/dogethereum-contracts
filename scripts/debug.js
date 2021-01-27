@@ -60,7 +60,8 @@ module.exports = async function(callback) {
   }
  
   // Current block number 
-  console.log("Eth Current block : " + web3.eth.blockNumber);
+  var ethBlockNumber = await web3.eth.getBlockNumber();
+  console.log("Eth Current block : " + ethBlockNumber);
 
   // Unlock events
   var unlockRequestEvent = dt.UnlockRequest({}, {fromBlock: 0, toBlock: "latest"});
