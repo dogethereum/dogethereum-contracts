@@ -15,7 +15,7 @@ module.exports = async function(callback) {
   console.log("sender eth balance : " + senderAddressEthBalance);
   if (senderAddressEthBalance == "0") {
     console.log("no eth balance, sending some eth...")
-    var fromAddress = web3.eth.getAccounts()[0];
+    var fromAddress = (await web3.eth.getAccounts())[0];
     await web3.eth.sendTransaction({from: fromAddress, to: senderAddress, value: "1000000000000000000"});
     senderAddressEthBalance = await web3.eth.getBalance(senderAddress);     
     console.log("sender eth balance : " + senderAddressEthBalance);  
