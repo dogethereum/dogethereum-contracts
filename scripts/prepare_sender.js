@@ -22,7 +22,7 @@ module.exports = async function(callback) {
   }
 
   // Add senderPrivateKey to eth node (if already added, this makes no harm)
-  await web3.personal.importRawKey(senderPrivateKey, "");
-  await web3.personal.unlockAccount(senderAddress, "", 0);    
+  await web3.eth.personal.importRawKey(senderPrivateKey, "");
+  await web3.eth.personal.unlockAccount(senderAddress, "", 0);    
 }
 
