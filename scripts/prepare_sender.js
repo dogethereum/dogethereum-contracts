@@ -12,13 +12,13 @@ module.exports = async function(callback) {
   var dt = await DogeToken.deployed();
   // Make sure senderAddress has some eth to pay for txs
   var senderAddressEthBalance = await web3.eth.getBalance(senderAddress);     
-  console.log("sender eth balance : " + senderAddressEthBalance.toNumber());
-  if (senderAddressEthBalance.toNumber() == 0) {
+  console.log("sender eth balance : " + senderAddressEthBalance);
+  if (senderAddressEthBalance == "0") {
     console.log("no eth balance, sending some eth...")
     var fromAddress = web3.eth.accounts[0];  
-    await web3.eth.sendTransaction({from: fromAddress, to: senderAddress, value: 1000000000000000000});
+    await web3.eth.sendTransaction({from: fromAddress, to: senderAddress, value: "1000000000000000000"});
     senderAddressEthBalance = await web3.eth.getBalance(senderAddress);     
-    console.log("sender eth balance : " + senderAddressEthBalance.toNumber());  
+    console.log("sender eth balance : " + senderAddressEthBalance);  
   }
 
   // Add senderPrivateKey to eth node (if already added, this makes no harm)
