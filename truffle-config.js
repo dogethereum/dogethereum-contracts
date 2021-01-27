@@ -17,7 +17,7 @@ module.exports = {
     integrationDogeRegtest: {
       host: "localhost",
       port: 8545,
-      network_id: "32001",
+      network_id: "*",
       gas: 4700000,
       gasPrice: 1
     },
