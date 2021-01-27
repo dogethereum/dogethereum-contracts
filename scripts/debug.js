@@ -49,7 +49,7 @@ module.exports = async function(callback) {
                   "dogeAvailableBalance : " + operator[1] + ", " + 
                   "dogePendingBalance : " + operator[2] + ", " + 
                   "nextUnspentUtxoIndex : " + operator[3] + ", " + 
-                  "ethBalance : " + web3.fromWei(operator[4]));
+                  "ethBalance : " + web3.utils.fromWei(operator[4]));
       const utxosLength = await dt.getUtxosLength(operatorPublicKeyHash);
       console.log("utxosLength : " + utxosLength);  
       for (var j = 0; j < utxosLength; j++) {
