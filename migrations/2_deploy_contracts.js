@@ -70,13 +70,11 @@ async function deployDevelopment(deployer, network, accounts, networkId, trusted
     dogethereumRecipient, superblockOptions) {
   await deployer.deploy(Set);
   await deployer.deploy(DogeMessageLibrary);
-  await deployer.deploy(SafeMath);
-  await deployer.deploy(ECRecovery);
 
   await deployer.link(Set, DogeTokenForTests);
   await deployer.link(DogeMessageLibrary, [DogeMessageLibraryForTests, DogeTokenForTests, DogeSuperblocks, DogeBattleManager, DogeClaimManager]);
-  await deployer.link(ECRecovery, DogeTokenForTests);
 
+  await deployer.deploy(ScryptCheckerDummy, true);
   await deployer.deploy(DogeSuperblocks);
 
   await deployer.deploy(DogeTokenForTests,
@@ -103,8 +101,6 @@ async function deployDevelopment(deployer, network, accounts, networkId, trusted
     superblockOptions.REWARD
   );
 
-  await deployer.deploy(ScryptCheckerDummy, true)
-
   await deployer.deploy(DogeMessageLibraryForTests);
 
   // await deployer.deploy(ScryptRunner);
@@ -121,12 +117,9 @@ async function deployIntegration(deployer, network, accounts, networkId, trusted
     dogethereumRecipient, superblockOptions) {
   await deployer.deploy(Set, {gas: 300000});
   await deployer.deploy(DogeMessageLibrary, {gas: 2000000});
-  await deployer.deploy(SafeMath, {gas: 100000});
-  await deployer.deploy(ECRecovery, {gas: 100000});
 
   await deployer.link(Set, DogeToken);
   await deployer.link(DogeMessageLibrary, [DogeToken, DogeSuperblocks, DogeBattleManager, DogeClaimManager]);
-  await deployer.link(ECRecovery, DogeToken);
 
   await deployer.deploy(ScryptCheckerDummy, true, {gas: 1500000})
   await deployer.deploy(DogeSuperblocks, {gas: 2700000});
@@ -171,7 +164,7 @@ async function deployIntegration(deployer, network, accounts, networkId, trusted
 module.exports = function(deployer, network, accounts) {
   deployer.then(async () => {
 
-    var trustedDogeEthPriceOracle;
+    let trustedDogeEthPriceOracle;
     if (network === 'development' || network === 'integrationDogeRegtest' || network === 'integrationDogeMain') {
       trustedDogeEthPriceOracle = accounts[2]
     } else if (network === 'ropsten') {
