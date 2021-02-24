@@ -8,7 +8,7 @@ const bitcoreLib = require('bitcore-lib');
 const ECDSA = bitcoreLib.crypto.ECDSA;
 const bitcoreMessage = require('bitcore-message');
 const bitcoin = require('bitcoinjs-lib');
-const BigNumber = require('bignumber.js');
+const BN = require('bn.js');
 
 
 const OPTIONS_DOGE_REGTEST = {
@@ -109,12 +109,12 @@ function getBlockDifficultyBits(blockHeader) {
 // Get difficulty from dogecoin block header
 function getBlockDifficulty(blockHeader) {
   const headerBin = module.exports.fromHex(blockHeader).slice(0, 80);
-  const exp = BigNumber(headerBin[75]);
-  const mant = BigNumber(headerBin[72] + 256 * headerBin[73] + 256 * 256 * headerBin[74]);
-  const target = mant.multipliedBy(BigNumber(256).pow(exp.minus(3)));
-  const difficulty1 = BigNumber(0x00FFFFF).multipliedBy(BigNumber(256).pow(BigNumber(0x1e-3)));
-  const difficulty = difficulty1.idiv(target);
-  return difficulty1.idiv(target);
+  const exp = new BN(headerBin[75]);
+  const mant = new BN(headerBin[72] + 256 * headerBin[73] + 256 * 256 * headerBin[74]);
+  const target = mant.mul(new BN(256).pow(exp.subn(3)));
+  const difficulty1 = new BN(0x00FFFFF).mul(new BN(256).pow(new BN(0x1e-3)));
+  const difficulty = difficulty1.div(target);
+  return difficulty1.div(target);
 }
 
 const timeout = async (ms) => new Promise((resolve, reject) => setTimeout(resolve, ms));
@@ -211,7 +211,7 @@ function makeSuperblock(headers, parentId, parentAccumulatedWork, parentTimestam
     throw new Error('Requires at least one header to build a superblock');
   }
   const blockHashes = headers.map(header => calcBlockSha256Hash(header));
-  const accumulatedWork = headers.reduce((work, header) => work.plus(getBlockDifficulty(header)), BigNumber(parentAccumulatedWork));
+  const accumulatedWork = headers.reduce((work, header) => work.add(getBlockDifficulty(header)), new BN(parentAccumulatedWork));
   const merkleRoot = makeMerkle(blockHashes);
   const timestamp = getBlockTimestamp(headers[headers.length - 1]);
   const prevTimestamp = (headers.length >= 2) ? getBlockTimestamp(headers[headers.length - 2])
@@ -220,7 +220,7 @@ function makeSuperblock(headers, parentId, parentAccumulatedWork, parentTimestam
   const lastHash = calcBlockSha256Hash(headers[headers.length - 1]);
   return {
     merkleRoot,
-    accumulatedWork,
+    accumulatedWork: accumulatedWork.toString(),
     timestamp,
     prevTimestamp,
     lastHash,
@@ -263,62 +263,6 @@ function base58ToBytes20(str) {
 function findEvent(logs, name) {
   const index = logs.findIndex(log => log.event === name);
   return index >= 0 ? logs[index] : undefined;
-}
-
-async function initSuperblockChain(options) {
-  const DogeClaimManager = artifacts.require('DogeClaimManager');
-  const DogeBattleManager = artifacts.require('DogeBattleManager');
-  const DogeSuperblocks = artifacts.require('DogeSuperblocks');
-  const ScryptCheckerDummy = artifacts.require('ScryptCheckerDummy');
-  const ScryptVerifier = artifacts.require('ScryptVerifier');
-  const ClaimManager = artifacts.require('ClaimManager');
-
-  const superblocks = await DogeSuperblocks.new({ from: options.from });
-  const battleManager = await DogeBattleManager.new(
-    options.network,
-    superblocks.address,
-    options.params.DURATION,
-    options.params.TIMEOUT,
-    { from: options.from },
-  );
-  const claimManager = await DogeClaimManager.new(
-    superblocks.address,
-    battleManager.address,
-    options.params.DELAY,
-    options.params.TIMEOUT,
-    options.params.CONFIRMATIONS,
-    options.params.REWARD,
-    { from: options.from },
-  );
-  let scryptVerifier;
-  let scryptChecker;
-  if (options.dummyChecker) {
-    scryptChecker = await ScryptCheckerDummy.new(false, { from: options.from });
-  } else {
-    scryptVerifier = await ScryptVerifier.new({ from: options.from });
-    scryptChecker = await ClaimManager.new(scryptVerifier.address, { from: options.from });
-  }
-
-  await superblocks.setClaimManager(claimManager.address, { from: options.from });
-  await battleManager.setDogeClaimManager(claimManager.address, { from: options.from });
-  await battleManager.setScryptChecker(scryptChecker.address, { from: options.from });
-  await superblocks.initialize(
-    options.genesisSuperblock.merkleRoot,
-    options.genesisSuperblock.accumulatedWork,
-    options.genesisSuperblock.timestamp,
-    options.genesisSuperblock.prevTimestamp,
-    options.genesisSuperblock.lastHash,
-    options.genesisSuperblock.lastBits,
-    options.genesisSuperblock.parentId,
-    { from: options.from },
-  );
-  return {
-    superblocks,
-    claimManager,
-    battleManager,
-    scryptChecker,
-    scryptVerifier,
-  };
 }
 
 const DOGECOIN = {
@@ -377,9 +321,8 @@ module.exports = {
   },
   remove0x: function (str) {
     return (str.indexOf("0x")==0) ? str.substring(2) : str;
-  }
-  ,
-  storeSuperblockFrom974401: async function (superblocks, claimManager, sender) {
+  },
+  storeSuperblockFrom974401: async function (superblocks, claimManager) {
 
     const { headers, hashes } = await parseDataFile('test/headers/11from974401DogeMain.txt');
 
@@ -398,7 +341,6 @@ module.exports = {
       genesisSuperblock.lastHash,
       genesisSuperblock.lastBits,
       genesisSuperblock.parentId,
-      { from: sender },
     );
 
     const proposedSuperblock = makeSuperblock(
@@ -407,11 +349,9 @@ module.exports = {
       genesisSuperblock.accumulatedWork,
     );
 
-    await claimManager.makeDeposit({ value: DEPOSITS.MIN_PROPOSAL_DEPOSIT, from: sender });
+    await claimManager.makeDeposit({ value: DEPOSITS.MIN_PROPOSAL_DEPOSIT });
 
-    let result;
-
-    result = await claimManager.proposeSuperblock(
+    let result = await claimManager.proposeSuperblock(
       proposedSuperblock.merkleRoot,
       proposedSuperblock.accumulatedWork,
       proposedSuperblock.timestamp,
@@ -419,16 +359,19 @@ module.exports = {
       proposedSuperblock.lastHash,
       proposedSuperblock.lastBits,
       proposedSuperblock.parentId,
-      { from: sender },
     );
+    let receipt = await result.wait();
 
-    assert.equal(result.logs[1].event, 'SuperblockClaimCreated', 'New superblock proposed');
-    const superblockHash = result.logs[1].args.superblockHash;
+    const superblockClaimCreatedEvents = receipt.events.filter((event) => event.event === "SuperblockClaimCreated");
+    assert.lengthOf(superblockClaimCreatedEvents, 1, 'New superblock should be proposed');
+    const superblockHash = receipt.events[1].args.superblockHash;
 
     await blockchainTimeoutSeconds(3*OPTIONS_DOGE_REGTEST.TIMEOUT);
 
-    result = await claimManager.checkClaimFinished(superblockHash, { from: sender });
-    assert.equal(result.logs[1].event, 'SuperblockClaimSuccessful', 'Superblock challenged');
+    result = await claimManager.checkClaimFinished(superblockHash);
+    receipt = await result.wait();
+    const superblockClaimSuccessfulEvents = receipt.events.filter((event) => event.event === "SuperblockClaimSuccessful");
+    assert.lengthOf(superblockClaimSuccessfulEvents, 1, 'Superblock claim should be successful');
 
     const headerAndHashes = {
       header: {
@@ -565,7 +508,6 @@ module.exports = {
   forgeDogeBlockHeader,
   base58ToBytes20,
   findEvent,
-  initSuperblockChain,
   dogeKeyPairFromWIF,
   dogeAddressFromKeyPair,
   publicKeyHashFromKeyPair,

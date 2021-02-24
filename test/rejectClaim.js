@@ -1,4 +1,7 @@
 // Idea: propose descendants and see if they should get invalidated as well
+const hre = require("hardhat");
+
+const deploy = require("../deploy");
 
 const utils = require('./utils');
 
@@ -9,10 +12,11 @@ contract('rejectClaim', (accounts) => {
     const owner = accounts[0];
     const submitter = accounts[1];
     const challenger = accounts[2];
-    let claimManager;
-    let battleManager;
+    let submitterClaimManager;
+    let challengerClaimManager;
+    let submitterBattleManager;
+    let challengerBattleManager;
     let superblocks;
-    let scryptChecker;
     const initParentId = '0x0000000000000000000000000000000000000000000000000000000000000000';
     const initAccumulatedWork = 0;
 
@@ -65,22 +69,27 @@ contract('rejectClaim', (accounts) => {
         let session1;
 
         before(async () => {
-            ({
-                superblocks,
-                claimManager,
-                battleManager,
-                scryptChecker,
-            } = await utils.initSuperblockChain({
+            const superBlockchain = await deploy.initSuperblockChain(hre, {
                 network: utils.DOGE_REGTEST,
                 params: utils.OPTIONS_DOGE_REGTEST,
                 dummyChecker: true,
                 genesisSuperblock: superblock0,
                 from: owner,
-            }));
+            });
+
+            superblocks = superBlockchain.superblocks;
+
+            const submitterSigner = await hre.ethers.getSigner(submitter);
+            const challengerSigner = await hre.ethers.getSigner(challenger);
+
+            submitterClaimManager = superBlockchain.claimManager.connect(submitterSigner);
+            challengerClaimManager = superBlockchain.claimManager.connect(challengerSigner);
+            submitterBattleManager = superBlockchain.battleManager.connect(submitterSigner);
+            challengerBattleManager = superBlockchain.battleManager.connect(challengerSigner);
 
             //FIXME: ganache-cli creates the same transaction hash if two account send the same amount
-            await claimManager.makeDeposit({ value: utils.DEPOSITS.MIN_PROPOSAL_DEPOSIT, from: submitter });
-            await claimManager.makeDeposit({ value: utils.DEPOSITS.MIN_CHALLENGE_DEPOSIT, from: challenger });
+            await submitterClaimManager.makeDeposit({ value: utils.DEPOSITS.MIN_PROPOSAL_DEPOSIT });
+            await challengerClaimManager.makeDeposit({ value: utils.DEPOSITS.MIN_CHALLENGE_DEPOSIT });
         });
 
         it('Initialized', async () => {
@@ -91,7 +100,7 @@ contract('rejectClaim', (accounts) => {
 
         // Propose initial superblock
         it('Propose superblock 1', async () => {
-            const result = await claimManager.proposeSuperblock(
+            const response = await submitterClaimManager.proposeSuperblock(
                 superblock1.merkleRoot,
                 superblock1.accumulatedWork,
                 superblock1.timestamp,
@@ -99,29 +108,31 @@ contract('rejectClaim', (accounts) => {
                 superblock1.lastHash,
                 superblock1.lastBits,
                 superblock1.parentId,
-                { from: submitter },
             );
-            const superblockClaimCreatedEvent = utils.findEvent(result.logs, 'SuperblockClaimCreated');
+            const result = await response.wait();
+            const superblockClaimCreatedEvent = utils.findEvent(result.events, 'SuperblockClaimCreated');
             assert.ok(superblockClaimCreatedEvent, 'New superblock proposed');
             superblock1Id = superblockClaimCreatedEvent.args.superblockHash;
         });
 
         it('Confirm superblock 1', async () => {
             await utils.blockchainTimeoutSeconds(2*utils.OPTIONS_DOGE_REGTEST.TIMEOUT);
-            const result = await claimManager.checkClaimFinished(superblock1Id, { from: submitter });
-            assert.ok(utils.findEvent(result.logs, 'SuperblockClaimSuccessful'), 'Superblock challenged');
+            const response = await submitterClaimManager.checkClaimFinished(superblock1Id);
+            const result = await response.wait();
+            assert.ok(utils.findEvent(result.events, 'SuperblockClaimSuccessful'), 'Superblock challenged');
             const best = await superblocks.getBestSuperblock();
             assert.equal(superblock1Id, best, 'Best superblock should match');
         });
 
         it('Claim does not exist', async () => {
-            const result = await claimManager.rejectClaim(superblockR0.superblockHash, { from: submitter });
-            assert.ok(utils.findEvent(result.logs, 'ErrorClaim'), 'Claim has not been made');
+            const response = await submitterClaimManager.rejectClaim(superblockR0.superblockHash);
+            const result = await response.wait();
+            assert.ok(utils.findEvent(result.events, 'ErrorClaim'), 'Claim has not been made');
         });
 
         // Propose an alternate superblock
         it('Propose fork', async () => {
-            const result = await claimManager.proposeSuperblock(
+            const response = await submitterClaimManager.proposeSuperblock(
                 superblockR0.merkleRoot,
                 superblockR0.accumulatedWork,
                 superblockR0.timestamp,
@@ -129,22 +140,23 @@ contract('rejectClaim', (accounts) => {
                 superblockR0.lastHash,
                 superblockR0.lastBits,
                 superblockR0.parentId,
-                { from: submitter },
             );
-            const superblockClaimCreatedEvent = utils.findEvent(result.logs, 'SuperblockClaimCreated')
+            const result = await response.wait();
+            const superblockClaimCreatedEvent = utils.findEvent(result.events, 'SuperblockClaimCreated')
             assert.ok(superblockClaimCreatedEvent, 'New superblock proposed');
             superblockR0Id = superblockClaimCreatedEvent.args.superblockHash;
         });
 
         it('Missing confirmations after one superblock', async () => {
-            const result = await claimManager.rejectClaim(superblockR0Id, { from: submitter });
-            assert.ok(utils.findEvent(result.logs, 'ErrorClaim'), 'Error claim not raised despite missing confirmations');
+            const response = await submitterClaimManager.rejectClaim(superblockR0Id);
+            const result = await response.wait();
+            assert.ok(utils.findEvent(result.events, 'ErrorClaim'), 'Error claim not raised despite missing confirmations');
         });
 
         // Propose two more superblocks
         it('Propose superblock 2', async () => {
-            await claimManager.makeDeposit({ value: utils.DEPOSITS.MIN_PROPOSAL_DEPOSIT, from: submitter });
-            const result = await claimManager.proposeSuperblock(
+            await submitterClaimManager.makeDeposit({ value: utils.DEPOSITS.MIN_PROPOSAL_DEPOSIT });
+            const response = await submitterClaimManager.proposeSuperblock(
                 superblock2.merkleRoot,
                 superblock2.accumulatedWork,
                 superblock2.timestamp,
@@ -152,28 +164,30 @@ contract('rejectClaim', (accounts) => {
                 superblock2.lastHash,
                 superblock2.lastBits,
                 superblock2.parentId,
-                { from: submitter },
             );
-            const superblockClaimCreatedEvent = utils.findEvent(result.logs, 'SuperblockClaimCreated');
+            const result = await response.wait();
+            const superblockClaimCreatedEvent = utils.findEvent(result.events, 'SuperblockClaimCreated');
             assert.ok(superblockClaimCreatedEvent, 'New superblock proposed');
             superblock2Id = superblockClaimCreatedEvent.args.superblockHash;
         });
 
         it('Confirm superblock 2', async () => {
             await utils.blockchainTimeoutSeconds(2*utils.OPTIONS_DOGE_REGTEST.TIMEOUT);
-            const result = await claimManager.checkClaimFinished(superblock2Id, { from: submitter });
-            assert.ok(utils.findEvent(result.logs, 'SuperblockClaimSuccessful'), 'Superblock challenged');
+            const response = await submitterClaimManager.checkClaimFinished(superblock2Id, { from: submitter });
+            const result = await response.wait();
+            assert.ok(utils.findEvent(result.events, 'SuperblockClaimSuccessful'), 'Superblock challenged');
             const best = await superblocks.getBestSuperblock();
             assert.equal(superblock2Id, best, 'Best superblock should match');
         });
 
         it('Missing confirmations after two superblocks', async () => {
-            const result = await claimManager.rejectClaim(superblockR0Id, { from: submitter });
-            assert.ok(utils.findEvent(result.logs, 'ErrorClaim'), 'Error claim not raised despite missing confirmations');
+            const response = await submitterClaimManager.rejectClaim(superblockR0Id, { from: submitter });
+            const result = await response.wait();
+            assert.ok(utils.findEvent(result.events, 'ErrorClaim'), 'Error claim not raised despite missing confirmations');
         });
 
         it('Propose superblock 3', async () => {
-            const result = await claimManager.proposeSuperblock(
+            const response = await submitterClaimManager.proposeSuperblock(
                 superblock3.merkleRoot,
                 superblock3.accumulatedWork,
                 superblock3.timestamp,
@@ -181,23 +195,24 @@ contract('rejectClaim', (accounts) => {
                 superblock3.lastHash,
                 superblock3.lastBits,
                 superblock3.parentId,
-                { from: submitter },
             );
-            const superblockClaimCreatedEvent = utils.findEvent(result.logs, 'SuperblockClaimCreated');
+            const result = await response.wait();
+            const superblockClaimCreatedEvent = utils.findEvent(result.events, 'SuperblockClaimCreated');
             assert.ok(superblockClaimCreatedEvent, 'New superblock proposed');
             superblock3Id = superblockClaimCreatedEvent.args.superblockHash;
         });
 
         it('Confirm superblock 3', async () => {
             await utils.blockchainTimeoutSeconds(2*utils.OPTIONS_DOGE_REGTEST.TIMEOUT);
-            const result = await claimManager.checkClaimFinished(superblock3Id, { from: submitter });
-            assert.ok(utils.findEvent(result.logs, 'SuperblockClaimSuccessful'), 'Superblock challenged');
+            const response = await submitterClaimManager.checkClaimFinished(superblock3Id);
+            const result = await response.wait();
+            assert.ok(utils.findEvent(result.events, 'SuperblockClaimSuccessful'), 'Superblock challenged');
             const best = await superblocks.getBestSuperblock();
             assert.equal(superblock3Id, best, 'Best superblock should match');
         });
 
         it('Propose superblock 4', async () => {
-            const result = await claimManager.proposeSuperblock(
+            const response = await submitterClaimManager.proposeSuperblock(
                 superblock4.merkleRoot,
                 superblock4.accumulatedWork,
                 superblock4.timestamp,
@@ -205,97 +220,111 @@ contract('rejectClaim', (accounts) => {
                 superblock4.lastHash,
                 superblock4.lastBits,
                 superblock4.parentId,
-                { from: submitter },
             );
-            const superblockClaimCreatedEvent = utils.findEvent(result.logs, 'SuperblockClaimCreated');
+            const result = await response.wait();
+            const superblockClaimCreatedEvent = utils.findEvent(result.events, 'SuperblockClaimCreated');
             assert.ok(superblockClaimCreatedEvent, 'New superblock proposed');
             superblock4Id = superblockClaimCreatedEvent.args.superblockHash;
         });
 
         it('Confirm superblock 4', async () => {
             await utils.blockchainTimeoutSeconds(2*utils.OPTIONS_DOGE_REGTEST.TIMEOUT);
-            const result = await claimManager.checkClaimFinished(superblock4Id, { from: submitter });
-            assert.ok(utils.findEvent(result.logs, 'SuperblockClaimSuccessful'), 'Superblock challenged');
+            const response = await submitterClaimManager.checkClaimFinished(superblock4Id);
+            const result = await response.wait();
+            assert.ok(utils.findEvent(result.events, 'SuperblockClaimSuccessful'), 'Superblock challenged');
             const best = await superblocks.getBestSuperblock();
             assert.equal(superblock4Id, best, 'Best superblock should match');
         });
 
         // This should raise an error because the superblock is neither InBattle nor SemiApproved
         it('Try to reject without challenges', async () => {
-            const result = await claimManager.rejectClaim(superblockR0Id);
-            assert.ok(utils.findEvent(result.logs, 'ErrorClaim'), 'Error claim not raised despite bad status');
+            // TODO: check that this test is correct.
+            // It previously used the default account for the rejectClaim transaction.
+            const response = await submitterClaimManager.rejectClaim(superblockR0Id);
+            const result = await response.wait();
+            assert.ok(utils.findEvent(result.events, 'ErrorClaim'), 'Error claim not raised despite bad status');
         });
 
         // Challenge fork
         it('Challenge fork', async () => {
-            const result = await claimManager.challengeSuperblock(superblockR0Id, { from: challenger });
-            const superblockClaimChallengedEvent = utils.findEvent(result.logs, 'SuperblockClaimChallenged');
+            const response = await challengerClaimManager.challengeSuperblock(superblockR0Id);
+            const result = await response.wait();
+            const superblockClaimChallengedEvent = utils.findEvent(result.events, 'SuperblockClaimChallenged');
             assert.ok(superblockClaimChallengedEvent, 'Superblock challenged');
             assert.equal(superblockR0Id, superblockClaimChallengedEvent.args.superblockHash);
-            const verificationGameStartedEvent = utils.findEvent(result.logs, 'VerificationGameStarted');
+            const verificationGameStartedEvent = utils.findEvent(result.events, 'VerificationGameStarted');
             assert.ok(verificationGameStartedEvent, 'Battle started');
             session1 = verificationGameStartedEvent.args.sessionId;
         });
 
         // Don't reject claim if it's undecided
         it('Try to reject undecided claim', async () => {
-            const result = await claimManager.rejectClaim(superblockR0Id, { from: submitter });
-            assert.ok(utils.findEvent(result.logs, 'ErrorClaim'), 'Error claim not raised despite undecided claim');
+            const response = await submitterClaimManager.rejectClaim(superblockR0Id);
+            const result = await response.wait();
+            assert.ok(utils.findEvent(result.events, 'ErrorClaim'), 'Error claim not raised despite undecided claim');
         });
 
         it('Query and verify hashes', async () => {
-            await claimManager.makeDeposit({ value: utils.DEPOSITS.RESPOND_MERKLE_COST, from: challenger });
-            result = await battleManager.queryMerkleRootHashes(superblockR0Id, session1, { from: challenger });
-            assert.ok(utils.findEvent(result.logs, 'QueryMerkleRootHashes'), 'Query merkle root hashes');
+            await challengerClaimManager.makeDeposit({ value: utils.DEPOSITS.RESPOND_MERKLE_COST });
+            let response = await challengerBattleManager.queryMerkleRootHashes(superblockR0Id, session1);
+            let result = await response.wait();
+            assert.ok(utils.findEvent(result.events, 'QueryMerkleRootHashes'), 'Query merkle root hashes');
 
-            await claimManager.makeDeposit({ value: utils.DEPOSITS.VERIFY_SUPERBLOCK_COST, from: submitter });
-            result = await battleManager.respondMerkleRootHashes(superblockR0Id, session1, superblockR0Hashes, { from: submitter });
-            assert.ok(utils.findEvent(result.logs, 'RespondMerkleRootHashes'), 'Respond merkle root hashes');
+            await submitterClaimManager.makeDeposit({ value: utils.DEPOSITS.VERIFY_SUPERBLOCK_COST });
+            response = await submitterBattleManager.respondMerkleRootHashes(superblockR0Id, session1, superblockR0Hashes);
+            result = await response.wait();
+            assert.ok(utils.findEvent(result.events, 'RespondMerkleRootHashes'), 'Respond merkle root hashes');
         });
 
         it('Query and reply block header', async () => {
-            let scryptHash;
-            await claimManager.makeDeposit({ value: utils.DEPOSITS.RESPOND_HEADER_COST, from: challenger });
-            result = await battleManager.queryBlockHeader(superblockR0Id, session1, superblockR0Hashes[0], { from: challenger });
-            assert.ok(utils.findEvent(result.logs, 'QueryBlockHeader'), 'Query block header');
+            await challengerClaimManager.makeDeposit({ value: utils.DEPOSITS.RESPOND_HEADER_COST });
+            let response = await challengerBattleManager.queryBlockHeader(superblockR0Id, session1, superblockR0Hashes[0]);
+            let result = await response.wait();
+            assert.ok(utils.findEvent(result.events, 'QueryBlockHeader'), 'Query block header');
 
-            scryptHash = `0x${utils.calcHeaderPoW(superblockR0Headers[0])}`;
-            await claimManager.makeDeposit({ value: utils.DEPOSITS.VERIFY_SUPERBLOCK_COST, from: submitter });
-            result = await battleManager.respondBlockHeader(superblockR0Id, session1, scryptHash, `0x${superblockR0Headers[0]}`, { from: submitter });
-            assert.ok(utils.findEvent(result.logs, 'RespondBlockHeader'), 'Respond block header');
+            let scryptHash = `0x${utils.calcHeaderPoW(superblockR0Headers[0])}`;
+            await submitterClaimManager.makeDeposit({ value: utils.DEPOSITS.VERIFY_SUPERBLOCK_COST });
+            response = await submitterBattleManager.respondBlockHeader(superblockR0Id, session1, scryptHash, `0x${superblockR0Headers[0]}`);
+            result = await response.wait();
+            assert.ok(utils.findEvent(result.events, 'RespondBlockHeader'), 'Respond block header');
 
-            await claimManager.makeDeposit({ value: utils.DEPOSITS.RESPOND_HEADER_COST, from: challenger });
-            result = await battleManager.queryBlockHeader(superblockR0Id, session1, superblockR0Hashes[1], { from: challenger });
-            assert.ok(utils.findEvent(result.logs, 'QueryBlockHeader'), 'Query block header');
+            await challengerClaimManager.makeDeposit({ value: utils.DEPOSITS.RESPOND_HEADER_COST });
+            response = await challengerBattleManager.queryBlockHeader(superblockR0Id, session1, superblockR0Hashes[1]);
+            result = await response.wait();
+            assert.ok(utils.findEvent(result.events, 'QueryBlockHeader'), 'Query block header');
 
             scryptHash = `0x${utils.calcHeaderPoW(superblockR0Headers[1])}`;
-            await claimManager.makeDeposit({ value: utils.DEPOSITS.VERIFY_SUPERBLOCK_COST, from: submitter });
-            result = await battleManager.respondBlockHeader(superblockR0Id, session1, scryptHash, `0x${superblockR0Headers[1]}`, { from: submitter });
-            assert.ok(utils.findEvent(result.logs, 'RespondBlockHeader'), 'Respond block header');
+            await submitterClaimManager.makeDeposit({ value: utils.DEPOSITS.VERIFY_SUPERBLOCK_COST });
+            response = await submitterBattleManager.respondBlockHeader(superblockR0Id, session1, scryptHash, `0x${superblockR0Headers[1]}`);
+            result = await response.wait();
+            assert.ok(utils.findEvent(result.events, 'RespondBlockHeader'), 'Respond block header');
         });
 
         it('Verify forked superblock', async () => {
-            result = await battleManager.verifySuperblock(session1, { from: challenger });
-            assert.ok(utils.findEvent(result.logs, 'ChallengerConvicted'), 'Challenger not convicted despite fork being initially valid');
+            const response = await challengerBattleManager.verifySuperblock(session1);
+            const result = await response.wait();
+            assert.ok(utils.findEvent(result.events, 'ChallengerConvicted'), 'Challenger not convicted despite fork being initially valid');
         });
 
         // Call rejectClaim on superblocks that aren't semi approved
         it('Try to reject unconfirmed superblock', async () => {
-            result = await claimManager.rejectClaim(superblockR0Id, { from: submitter });
-            assert.ok(utils.findEvent(result.logs, 'ErrorClaim'), 'Error claim not raised despite bad superblock status');
+            const response = await submitterClaimManager.rejectClaim(superblockR0Id);
+            const result = await response.wait();
+            assert.ok(utils.findEvent(result.events, 'ErrorClaim'), 'Error claim not raised despite bad superblock status');
         });
 
         it('Confirm forked superblock', async () => {
             await utils.blockchainTimeoutSeconds(2*utils.OPTIONS_DOGE_REGTEST.TIMEOUT);
-            result = await claimManager.checkClaimFinished(superblockR0Id, { from: challenger });
-            assert.ok(utils.findEvent(result.logs, 'SuperblockClaimPending'), 'Superblock challenged');
+            const response = await challengerClaimManager.checkClaimFinished(superblockR0Id);
+            const result = await response.wait();
+            assert.ok(utils.findEvent(result.events, 'SuperblockClaimPending'), 'Superblock challenged');
             const status = await superblocks.getSuperblockStatus(superblockR0Id);
-            assert.equal(status.toNumber(), SEMI_APPROVED, 'Superblock was not semi-approved');
+            assert.equal(status, SEMI_APPROVED, 'Superblock was not semi-approved');
         });
 
         // Propose another superblock in the fork
         it('Propose superblock R1', async () => {
-            const result = await claimManager.proposeSuperblock(
+            const response = await submitterClaimManager.proposeSuperblock(
                 superblockR1.merkleRoot,
                 superblockR1.accumulatedWork,
                 superblockR1.timestamp,
@@ -303,34 +332,38 @@ contract('rejectClaim', (accounts) => {
                 superblockR1.lastHash,
                 superblockR1.lastBits,
                 superblockR1.parentId,
-                { from: submitter },
             );
-            assert.equal(result.logs[1].event, 'SuperblockClaimCreated', 'New superblock proposed');
-            superblockR1Id = result.logs[1].args.superblockHash;
+            const result = await response.wait();
+            const claimCreationEvents = result.events.filter((event) => event.event === "SuperblockClaimCreated");
+            assert.lengthOf(claimCreationEvents, 1, 'New superblock should be proposed');
+            superblockR1Id = claimCreationEvents[0].args.superblockHash;
         });
 
         it('Confirm superblock R1', async () => {
             await utils.blockchainTimeoutSeconds(2*utils.OPTIONS_DOGE_REGTEST.TIMEOUT);
-            const result = await claimManager.checkClaimFinished(superblockR1Id, { from: submitter });
-            assert.ok(utils.findEvent(result.logs, 'SuperblockClaimPending'), 'Superblock challenged');
+            const response = await submitterClaimManager.checkClaimFinished(superblockR1Id);
+            const result = await response.wait();
+            assert.ok(utils.findEvent(result.events, 'SuperblockClaimPending'), 'Superblock challenged');
             const status = await superblocks.getSuperblockStatus(superblockR1Id);
-            assert.equal(status.toNumber(), SEMI_APPROVED, 'Superblock was not semi-approved');
+            assert.equal(status, SEMI_APPROVED, 'Superblock was not semi-approved');
         });
 
         // Invalidate superblock and reject claim
         it('Reject superblock R0', async () => {
-            const result = await claimManager.rejectClaim(superblockR0Id, { from: submitter });
-            assert.ok(utils.findEvent(result.logs, 'SuperblockClaimFailed'), 'SuperblockClaimFailed event not found');
-            assert.ok(utils.findEvent(result.logs, 'DepositUnbonded'), 'DepositUnbonded event not found');
+            const response = await submitterClaimManager.rejectClaim(superblockR0Id);
+            const result = await response.wait();
+            assert.ok(utils.findEvent(result.events, 'SuperblockClaimFailed'), 'SuperblockClaimFailed event not found');
+            assert.ok(utils.findEvent(result.events, 'DepositUnbonded'), 'DepositUnbonded event not found');
             const status = await superblocks.getSuperblockStatus(superblockR0Id);
-            assert.equal(status.toNumber(), INVALID, 'Superblock was not invalidated');
+            assert.equal(status, INVALID, 'Superblock was not invalidated');
         });
 
         it('Reject superblock R1', async () => {
-            const result = await claimManager.rejectClaim(superblockR1Id, { from: submitter });
-            assert.ok(utils.findEvent(result.logs, 'SuperblockClaimFailed'), 'SuperblockClaimFailed event not found');
+            const response = await submitterClaimManager.rejectClaim(superblockR1Id);
+            const result = await response.wait();
+            assert.ok(utils.findEvent(result.events, 'SuperblockClaimFailed'), 'SuperblockClaimFailed event not found');
             const status = await superblocks.getSuperblockStatus(superblockR1Id);
-            assert.equal(status.toNumber(), INVALID, 'Superblock was not invalidated');
+            assert.equal(status, INVALID, 'Superblock was not invalidated');
         });
     });
 });

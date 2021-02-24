@@ -5,7 +5,7 @@ const utils = require('./utils');
 contract('errorCodes', (accounts) => {
   let dogeMessageLibraryForTests;
   before(async () => {
-    dogeMessageLibraryForTests = await DogeMessageLibraryForTests.deployed();
+    dogeMessageLibraryForTests = await DogeMessageLibraryForTests.new();
   });
   it("errorCodes", async () => {
     const block974400Hash = "0xa84956d6535a1be26b77379509594bdb8f186b29c3b00143dcb468015bdd16da";

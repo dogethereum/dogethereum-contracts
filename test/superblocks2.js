@@ -1,3 +1,4 @@
+const DogeMessageLibrary = artifacts.require('DogeMessageLibrary');
 const DogeSuperblocks = artifacts.require('DogeSuperblocks');
 const utils = require('./utils');
 
@@ -7,6 +8,8 @@ contract('DogeSuperblocks2', function(accounts) {
   const user = accounts[2];
   let superblocks;
   beforeEach(async () => {
+    const dogeMessageLib = await DogeMessageLibrary.new();
+    await DogeSuperblocks.link(dogeMessageLib);
     superblocks = await DogeSuperblocks.new();
     await superblocks.setClaimManager(claimManager);
   });

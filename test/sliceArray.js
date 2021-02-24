@@ -3,7 +3,7 @@ const DogeMessageLibraryForTests = artifacts.require('DogeMessageLibraryForTests
 contract('sliceArray', (accounts) => {
   let dogeMessageLibraryForTests;
   before(async () => {
-    dogeMessageLibraryForTests = await DogeMessageLibraryForTests.deployed();
+    dogeMessageLibraryForTests = await DogeMessageLibraryForTests.new();
   });
   it("slice middle", async () => {
     const result = await dogeMessageLibraryForTests.sliceArrayPublic.call("0x000102030405060708090a", 2, 5);

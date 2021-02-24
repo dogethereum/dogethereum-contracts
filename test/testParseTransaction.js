@@ -1,5 +1,8 @@
+const hre = require("hardhat");
+
+const deploy = require("../deploy");
+
 const utils = require('./utils');
-const DogeMessageLibraryForTests = artifacts.require('DogeMessageLibraryForTests');
 
 contract('testParseTransaction', (accounts) => {
   let dogeMessageLibraryForTests;
@@ -8,7 +11,13 @@ contract('testParseTransaction', (accounts) => {
     'QULAK58teBn1Xi4eGo4fKea5oQDPMK4vcnmnivqzgvCPagsWHiyf',
   ].map(utils.dogeKeyPairFromWIF);
   before(async () => {
-    dogeMessageLibraryForTests = await DogeMessageLibraryForTests.deployed();
+    const [signer] = await hre.ethers.getSigners();
+    dogeMessageLibraryForTests = await deploy.deployContract(
+      "DogeMessageLibraryForTests",
+      [],
+      hre,
+      { signer }
+    );
   });
   it('Parse simple transation', async () => {
     const tx = utils.buildDogeTransaction({

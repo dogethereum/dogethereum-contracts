@@ -5,7 +5,7 @@ contract('DogeMessageLibrary', (accounts) => {
 
   let dogeMessageLibraryForTests;
   before(async () => {
-    dogeMessageLibraryForTests = await DogeMessageLibraryForTests.deployed();
+    dogeMessageLibraryForTests = await DogeMessageLibraryForTests.new();
   });
   it("concatenate 2 hashes", async () => {
     const concatenatedHashes = await dogeMessageLibraryForTests.concatHashPublic.call("0x8c14f0db3df150123e6f3dbbf30f8b955a8249b62ac1d1ff16284aefa3d06d87", "0xfff2525b8931402dd09222c50775608f75787bd2b87e56995a7bdd30f79702c4");

@@ -1,10 +1,14 @@
-var DogeToken = artifacts.require("./token/DogeTokenForTests.sol");
-var utils = require('./utils');
+const hre = require("hardhat");
+
+const deploy = require("../deploy");
+
+const utils = require('./utils');
 
 
 contract('testDogeTokenProcessTransaction', function(accounts) {
   const trustedDogeEthPriceOracle = '0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
-  const trustedRelayerContract = accounts[0]; // Tell DogeToken to trust accounts[0] as it would be the relayer contract
+  const trustedRelayerContract = accounts[0]; // Tell DogeToken to trust accounts[0] as if it were the relayer contract
+  const operatorEthAddress = accounts[3];
   const collateralRatio = 2;
 
   const operatorPublicKeyHash = `0x4d905b4b815d483cdfabcd292c6f86509d0fad82`;
@@ -13,9 +17,21 @@ contract('testDogeTokenProcessTransaction', function(accounts) {
   const address = '0x30d90d1dbf03aa127d58e6af83ca1da9e748c98d';
   const value = 905853205327;
 
+  let dogeToken;
+
+  beforeEach(async function() {
+    const [signer] = await hre.ethers.getSigners();
+
+    const { setLibrary } = await deploy.deployFixture(hre);
+    dogeToken = await deploy.deployContract(
+      "DogeTokenForTests",
+      [trustedRelayerContract, trustedDogeEthPriceOracle, collateralRatio],
+      hre,
+      { signer, libraries: { Set: setLibrary.address } }
+    );
+  });
+
   it("processTransaction success", async () => {
-    let dogeToken = await DogeToken.new(trustedRelayerContract, trustedDogeEthPriceOracle, collateralRatio);
-    const operatorEthAddress = accounts[3];
     await dogeToken.addOperatorSimple(operatorPublicKeyHash, operatorEthAddress);
 
     const superblockSubmitterAddress = accounts[4];
@@ -26,37 +42,37 @@ contract('testDogeTokenProcessTransaction', function(accounts) {
     const userValue = value - operatorFee - superblockSubmitterFee;
 
     const balance = await dogeToken.balanceOf(address);
-    assert.equal(balance.toString(10), userValue, `DogeToken's ${address} balance is not the expected one`);
-    var operatorTokenBalance = await dogeToken.balanceOf(operatorEthAddress);
-    assert.equal(operatorTokenBalance.toNumber(), operatorFee, `DogeToken's operator balance is not the expected one`);
-    var superblockSubmitterTokenBalance = await dogeToken.balanceOf(superblockSubmitterAddress);
-    assert.equal(superblockSubmitterTokenBalance.toNumber(), superblockSubmitterFee, `DogeToken's superblock submitter balance is not the expected one`);
+    assert.equal(balance, userValue, `DogeToken's ${address} balance is not the expected one`);
+    const operatorTokenBalance = await dogeToken.balanceOf(operatorEthAddress);
+    assert.equal(operatorTokenBalance, operatorFee, `DogeToken's operator balance is not the expected one`);
+    const superblockSubmitterTokenBalance = await dogeToken.balanceOf(superblockSubmitterAddress);
+    assert.equal(superblockSubmitterTokenBalance, superblockSubmitterFee, `DogeToken's superblock submitter balance is not the expected one`);
 
     const utxo = await dogeToken.getUtxo(operatorPublicKeyHash, 0);
     assert.equal(utxo[0], value, `Utxo's value is not the expected one`);
-    assert.equal(utxo[1].toString(16), utils.remove0x(txHash), `Utxo's value is not the expected one`);
+    assert.equal(utxo[1].toHexString(), txHash, `Utxo's value is not the expected one`);
     assert.equal(utxo[2], 0, `Utxo's index is not the expected one`);
 
-    var operator = await dogeToken.operators(operatorPublicKeyHash);
-    assert.equal(operator[1].toString(10), value, 'operator dogeAvailableBalance is not the expected one');
+    const operator = await dogeToken.operators(operatorPublicKeyHash);
+    assert.equal(operator[1], value, 'operator dogeAvailableBalance is not the expected one');
   });
 
   it("processTransaction fail - operator not created", async () => {
-    let dogeToken = await DogeToken.new(trustedRelayerContract, trustedDogeEthPriceOracle, collateralRatio);
     const superblockSubmitterAddress = accounts[4];
-    var processTransactionTxReceipt = await dogeToken.processTransaction(txData, txHash, operatorPublicKeyHash, superblockSubmitterAddress);
-    assert.equal(60060, processTransactionTxReceipt.logs[0].args.err, "Expected ERR_PROCESS_OPERATOR_NOT_CREATED error");
+    const processTransactionTxResponse = await dogeToken.processTransaction(txData, txHash, operatorPublicKeyHash, superblockSubmitterAddress);
+    const processTransactionTxReceipt = await processTransactionTxResponse.wait()
+    assert.equal(60060, processTransactionTxReceipt.events[0].args.err, "Expected ERR_PROCESS_OPERATOR_NOT_CREATED error");
   });
 
   it("processTransaction fail - tx already processed", async () => {
-    let dogeToken = await DogeToken.new(trustedRelayerContract, trustedDogeEthPriceOracle, collateralRatio);
     const operatorEthAddress = accounts[3];
     await dogeToken.addOperatorSimple(operatorPublicKeyHash, operatorEthAddress);
     const superblockSubmitterAddress = accounts[4];
     await dogeToken.processTransaction(txData, txHash, operatorPublicKeyHash, superblockSubmitterAddress);
 
-    var processTransactionTxReceipt = await dogeToken.processTransaction(txData, txHash, operatorPublicKeyHash, superblockSubmitterAddress);
-    assert.equal(60070, processTransactionTxReceipt.logs[0].args.err, "Expected ERR_PROCESS_TX_ALREADY_PROCESSED error");
+    const processTransactionTxResponse = await dogeToken.processTransaction(txData, txHash, operatorPublicKeyHash, superblockSubmitterAddress);
+    const processTransactionTxReceipt = await processTransactionTxResponse.wait()
+    assert.equal(60070, processTransactionTxReceipt.events[0].args.err, "Expected ERR_PROCESS_TX_ALREADY_PROCESSED error");
   });
 
 });

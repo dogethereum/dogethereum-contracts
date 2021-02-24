@@ -1,29 +1,40 @@
+const hre = require("hardhat");
+
+const deploy = require('../deploy');
+
 const utils = require('./utils');
 
 contract('DogeClaimManager', (accounts) => {
   const owner = accounts[0];
   const submitter = accounts[1];
   const challenger = accounts[2];
-  let claimManager;
-  let battleManager;
+  let submitterClaimManager;
+  let challengerClaimManager;
+  let submitterBattleManager;
+  let challengerBattleManager;
   let superblocks;
-  let scryptChecker;
 
   async function initSuperblockChain() {
-    ({
-      superblocks,
-      claimManager,
-      battleManager,
-      scryptChecker,
-    } = await utils.initSuperblockChain({
+    const superBlockchain = await deploy.initSuperblockChain(hre, {
       network: utils.DOGE_MAINNET,
       dummyChecker: true,
       genesisSuperblock,
       params: utils.OPTIONS_DOGE_REGTEST,
       from: owner,
-    }));
-    await claimManager.makeDeposit({ value: utils.DEPOSITS.MIN_PROPOSAL_DEPOSIT, from: submitter });
-    await claimManager.makeDeposit({ value: utils.DEPOSITS.MIN_CHALLENGE_DEPOSIT, from: challenger });
+    });
+
+    superblocks = superBlockchain.superblocks;
+
+    const submitterSigner = await hre.ethers.getSigner(submitter);
+    const challengerSigner = await hre.ethers.getSigner(challenger);
+
+    submitterClaimManager = superBlockchain.claimManager.connect(submitterSigner);
+    challengerClaimManager = superBlockchain.claimManager.connect(challengerSigner);
+    submitterBattleManager = superBlockchain.battleManager.connect(submitterSigner);
+    challengerBattleManager = superBlockchain.battleManager.connect(challengerSigner);
+
+    await submitterClaimManager.makeDeposit({ value: utils.DEPOSITS.MIN_PROPOSAL_DEPOSIT});
+    await challengerClaimManager.makeDeposit({ value: utils.DEPOSITS.MIN_CHALLENGE_DEPOSIT });
   }
 
   const initAccumulatedWork = 0;
@@ -63,7 +74,7 @@ contract('DogeClaimManager', (accounts) => {
         genesisSuperblock.accumulatedWork,
       );
 
-      result = await claimManager.proposeSuperblock(
+      const response = await submitterClaimManager.proposeSuperblock(
         proposedSuperblock.merkleRoot,
         proposedSuperblock.accumulatedWork,
         proposedSuperblock.timestamp,
@@ -71,25 +82,28 @@ contract('DogeClaimManager', (accounts) => {
         proposedSuperblock.lastHash,
         proposedSuperblock.lastBits,
         proposedSuperblock.parentId,
-        { from: submitter },
       );
+      const result = await response.wait();
 
-      const superblockClaimCreatedEvent = utils.findEvent(result.logs, 'SuperblockClaimCreated');
+      const superblockClaimCreatedEvent = utils.findEvent(result.events, 'SuperblockClaimCreated');
       assert.ok(superblockClaimCreatedEvent, 'New superblock proposed');
       proposedSuperblockHash = superblockClaimCreatedEvent.args.superblockHash;
     });
 
     it('Try to confirm whitout waiting', async () => {
-      result = await claimManager.checkClaimFinished('0x02', { from: challenger });
-      assert.ok(utils.findEvent(result.logs, 'ErrorClaim'), 'Invalid claim');
-      result = await claimManager.checkClaimFinished(proposedSuperblockHash, { from: challenger });
-      assert.ok(utils.findEvent(result.logs, 'ErrorClaim'), 'Invalid timeout');
+      let response = await challengerClaimManager.checkClaimFinished('0x0000000000000000000000000000000000000000000000000000000000000002');
+      let result = await response.wait();
+      assert.ok(utils.findEvent(result.events, 'ErrorClaim'), 'Invalid claim');
+      response = await challengerClaimManager.checkClaimFinished(proposedSuperblockHash);
+      result = await response.wait();
+      assert.ok(utils.findEvent(result.events, 'ErrorClaim'), 'Invalid timeout');
     });
 
     it('Confirm', async () => {
       await utils.blockchainTimeoutSeconds(2*utils.OPTIONS_DOGE_REGTEST.TIMEOUT);
-      result = await claimManager.checkClaimFinished(proposedSuperblockHash, { from: challenger });
-      assert.ok(utils.findEvent(result.logs, 'SuperblockClaimSuccessful'), 'Superblock challenged');
+      const response = await challengerClaimManager.checkClaimFinished(proposedSuperblockHash);
+      const result = await response.wait();
+      assert.ok(utils.findEvent(result.events, 'SuperblockClaimSuccessful'), 'Superblock challenged');
       const best = await superblocks.getBestSuperblock();
       assert.equal(proposedSuperblockHash, best, 'Best superblock should match');
     });
@@ -101,7 +115,7 @@ contract('DogeClaimManager', (accounts) => {
         genesisSuperblock.accumulatedWork,
       );
 
-      result = await claimManager.proposeSuperblock(
+      const response = await submitterClaimManager.proposeSuperblock(
         proposedSuperblock.merkleRoot,
         proposedSuperblock.accumulatedWork,
         proposedSuperblock.timestamp,
@@ -109,18 +123,19 @@ contract('DogeClaimManager', (accounts) => {
         proposedSuperblock.lastHash,
         proposedSuperblock.lastBits,
         proposedSuperblock.parentId,
-        { from: submitter },
       );
+      const result = await response.wait();
 
-      const superblockClaimCreatedEvent = utils.findEvent(result.logs, 'SuperblockClaimCreated');
+      const superblockClaimCreatedEvent = utils.findEvent(result.events, 'SuperblockClaimCreated');
       assert.ok(superblockClaimCreatedEvent, 'New superblock proposed');
       proposedForkSuperblockHash = superblockClaimCreatedEvent.args.superblockHash;
     });
 
     it('Confirm fork', async () => {
       await utils.blockchainTimeoutSeconds(2*utils.OPTIONS_DOGE_REGTEST.TIMEOUT);
-      const result = await claimManager.checkClaimFinished(proposedForkSuperblockHash, { from: challenger });
-      assert.ok(utils.findEvent(result.logs, 'SuperblockClaimSuccessful'), 'Superblock challenged');
+      const response = await challengerClaimManager.checkClaimFinished(proposedForkSuperblockHash);
+      const result = await response.wait();
+      assert.ok(utils.findEvent(result.events, 'SuperblockClaimSuccessful'), 'Superblock challenged');
       const best = await superblocks.getBestSuperblock();
       assert.equal(proposedSuperblockHash, best, 'Best superblock did not change');
     });
@@ -141,7 +156,7 @@ contract('DogeClaimManager', (accounts) => {
     
     it('Propose', async () => {
       const proposedSuperblock = utils.makeSuperblock(headers.slice(0, 2), genesisSuperblock.superblockHash, genesisSuperblock.accumulatedWork);
-      result = await claimManager.proposeSuperblock(
+      const response = await submitterClaimManager.proposeSuperblock(
         proposedSuperblock.merkleRoot,
         proposedSuperblock.accumulatedWork,
         proposedSuperblock.timestamp,
@@ -149,64 +164,73 @@ contract('DogeClaimManager', (accounts) => {
         proposedSuperblock.lastHash,
         proposedSuperblock.lastBits,
         proposedSuperblock.parentId,
-        { from: submitter },
       );
+      const result = await response.wait();
 
-      const superblockClaimCreatedEvent = utils.findEvent(result.logs, 'SuperblockClaimCreated');
+      const superblockClaimCreatedEvent = utils.findEvent(result.events, 'SuperblockClaimCreated');
       assert.ok(superblockClaimCreatedEvent, 'SuperblockClaimCreated', 'New superblock proposed');
       proposedSuperblockHash = superblockClaimCreatedEvent.args.superblockHash;
     });
     
     it('Challenge', async () => {
-      await claimManager.makeDeposit({ value: utils.DEPOSITS.SUPERBLOCK_COST, from: challenger });
-      result = await claimManager.challengeSuperblock(proposedSuperblockHash, { from: challenger });
-      const superblockClaimChallengedEvent = utils.findEvent(result.logs, 'SuperblockClaimChallenged');
+      await challengerClaimManager.makeDeposit({ value: utils.DEPOSITS.SUPERBLOCK_COST });
+      const response = await challengerClaimManager.challengeSuperblock(proposedSuperblockHash);
+      const result = await response.wait();
+      const superblockClaimChallengedEvent = utils.findEvent(result.events, 'SuperblockClaimChallenged');
       assert.ok(superblockClaimChallengedEvent, 'Superblock challenged');
       assert.equal(proposedSuperblockHash, superblockClaimChallengedEvent.args.superblockHash);
-      const verificationGameStartedEvent = utils.findEvent(result.logs, 'VerificationGameStarted');
+      const verificationGameStartedEvent = utils.findEvent(result.events, 'VerificationGameStarted');
       assert.ok(verificationGameStartedEvent, 'Battle started');
       battleSessionId = verificationGameStartedEvent.args.sessionId;
     });
 
     it('Query and verify hashes', async () => {
-      await claimManager.makeDeposit({ value: utils.DEPOSITS.RESPOND_MERKLE_COST, from: challenger });
-      result = await battleManager.queryMerkleRootHashes(proposedSuperblockHash, battleSessionId, { from: challenger });
-      assert.ok(utils.findEvent(result.logs, 'QueryMerkleRootHashes'), 'Query merkle root hashes');
+      await challengerClaimManager.makeDeposit({ value: utils.DEPOSITS.RESPOND_MERKLE_COST });
+      let response = await challengerBattleManager.queryMerkleRootHashes(proposedSuperblockHash, battleSessionId);
+      let result = await response.wait();
+      assert.ok(utils.findEvent(result.events, 'QueryMerkleRootHashes'), 'Query merkle root hashes');
 
-      await claimManager.makeDeposit({ value: utils.DEPOSITS.VERIFY_SUPERBLOCK_COST, from: submitter });
-      result = await battleManager.respondMerkleRootHashes(proposedSuperblockHash, battleSessionId, hashes.slice(0, 2), { from: submitter });
-      assert.ok(utils.findEvent(result.logs, 'RespondMerkleRootHashes'), 'Respond merkle root hashes');
+      await submitterClaimManager.makeDeposit({ value: utils.DEPOSITS.VERIFY_SUPERBLOCK_COST });
+      response = await submitterBattleManager.respondMerkleRootHashes(proposedSuperblockHash, battleSessionId, hashes.slice(0, 2));
+      result = await response.wait();
+      assert.ok(utils.findEvent(result.events, 'RespondMerkleRootHashes'), 'Respond merkle root hashes');
     });
 
     it('Query and reply block header', async () => {
-      await claimManager.makeDeposit({ value: utils.DEPOSITS.RESPOND_HEADER_COST, from: challenger });
-      result = await battleManager.queryBlockHeader(proposedSuperblockHash, battleSessionId, hashes[0], { from: challenger });
-      assert.ok(utils.findEvent(result.logs, 'QueryBlockHeader'), 'Query block header');
+      await challengerClaimManager.makeDeposit({ value: utils.DEPOSITS.RESPOND_HEADER_COST });
+      let response = await challengerBattleManager.queryBlockHeader(proposedSuperblockHash, battleSessionId, hashes[0]);
+      let result = await response.wait();
+      assert.ok(utils.findEvent(result.events, 'QueryBlockHeader'), 'Query block header');
 
       const scryptHash = `0x${utils.calcHeaderPoW(headers[0])}`;
-      await claimManager.makeDeposit({ value: utils.DEPOSITS.VERIFY_SUPERBLOCK_COST, from: submitter });
-      result = await battleManager.respondBlockHeader(proposedSuperblockHash, battleSessionId, scryptHash, `0x${headers[0]}`, { from: submitter });
-      assert.ok(utils.findEvent(result.logs, 'RespondBlockHeader'), 'Respond block header');
+      await submitterClaimManager.makeDeposit({ value: utils.DEPOSITS.VERIFY_SUPERBLOCK_COST });
+      response = await submitterBattleManager.respondBlockHeader(proposedSuperblockHash, battleSessionId, scryptHash, `0x${headers[0]}`);
+      result = await response.wait();
+      assert.ok(utils.findEvent(result.events, 'RespondBlockHeader'), 'Respond block header');
       
-      await claimManager.makeDeposit({ value: utils.DEPOSITS.RESPOND_HEADER_COST, from: challenger });      
-      result = await battleManager.queryBlockHeader(proposedSuperblockHash, battleSessionId, hashes[1], { from: challenger });
-      assert.ok(utils.findEvent(result.logs, 'QueryBlockHeader'), 'Query block header');
+      await challengerClaimManager.makeDeposit({ value: utils.DEPOSITS.RESPOND_HEADER_COST });
+      response = await challengerBattleManager.queryBlockHeader(proposedSuperblockHash, battleSessionId, hashes[1]);
+      result = await response.wait();
+      assert.ok(utils.findEvent(result.events, 'QueryBlockHeader'), 'Query block header');
 
       const scryptHash2 = `0x${utils.calcHeaderPoW(headers[1])}`;
-      await claimManager.makeDeposit({ value: utils.DEPOSITS.VERIFY_SUPERBLOCK_COST, from: submitter });
-      result = await battleManager.respondBlockHeader(proposedSuperblockHash, battleSessionId, scryptHash2, `0x${headers[1]}`, { from: submitter });
-      assert.ok(utils.findEvent(result.logs, 'RespondBlockHeader'), 'Respond block header');
+      await submitterClaimManager.makeDeposit({ value: utils.DEPOSITS.VERIFY_SUPERBLOCK_COST });
+      response = await submitterBattleManager.respondBlockHeader(proposedSuperblockHash, battleSessionId, scryptHash2, `0x${headers[1]}`);
+      result = await response.wait();
+      assert.ok(utils.findEvent(result.events, 'RespondBlockHeader'), 'Respond block header');
     });
 
     it('Verify superblock', async () => {
-      const result = await battleManager.verifySuperblock(battleSessionId, { from: challenger });
-      assert.ok(utils.findEvent(result.logs, 'ChallengerConvicted'), 'Challenger failed');
+      const response = await challengerBattleManager.verifySuperblock(battleSessionId);
+      const result = await response.wait();
+      assert.ok(utils.findEvent(result.events, 'ChallengerConvicted'), 'Challenger failed');
     });
     
     it('Confirm', async () => {
       await utils.blockchainTimeoutSeconds(2*utils.OPTIONS_DOGE_REGTEST.TIMEOUT);
-      const result = await claimManager.checkClaimFinished(proposedSuperblockHash, { from: challenger });
-      assert.ok(utils.findEvent(result.logs, 'SuperblockClaimPending'), 'Superblock challenged');
+      const response = await challengerClaimManager.checkClaimFinished(proposedSuperblockHash);
+      const result = await response.wait();
+      assert.ok(utils.findEvent(result.events, 'SuperblockClaimPending'), 'Superblock challenged');
     });
   });
 
@@ -230,7 +254,7 @@ contract('DogeClaimManager', (accounts) => {
         genesisSuperblock.accumulatedWork,
       );
 
-      result = await claimManager.proposeSuperblock(
+      const response = await submitterClaimManager.proposeSuperblock(
         proposeSuperblock.merkleRoot,
         proposeSuperblock.accumulatedWork,
         proposeSuperblock.timestamp,
@@ -238,83 +262,97 @@ contract('DogeClaimManager', (accounts) => {
         proposeSuperblock.lastHash,
         proposeSuperblock.lastBits,
         proposeSuperblock.parentId,
-        { from: submitter },
       );
+      const result = await response.wait();
 
-      const superblockClaimCreatedEvent = utils.findEvent(result.logs, 'SuperblockClaimCreated');
+      const superblockClaimCreatedEvent = utils.findEvent(result.events, 'SuperblockClaimCreated');
       assert.ok(superblockClaimCreatedEvent, 'New superblock proposed');
       proposedSuperblockHash = superblockClaimCreatedEvent.args.superblockHash;
     });
   
     it('Challenge', async () => {
-      result = await claimManager.challengeSuperblock(proposedSuperblockHash, { from: challenger });
-      const superblockClaimChallengedEvent = utils.findEvent(result.logs, 'SuperblockClaimChallenged');
+      const response = await challengerClaimManager.challengeSuperblock(proposedSuperblockHash);
+      const result = await response.wait();
+      const superblockClaimChallengedEvent = utils.findEvent(result.events, 'SuperblockClaimChallenged');
       assert.ok(superblockClaimChallengedEvent, 'Superblock challenged');
       assert.equal(proposedSuperblockHash, superblockClaimChallengedEvent.args.superblockHash);
-      const verificationGameStartedEvent = utils.findEvent(result.logs, 'VerificationGameStarted');
+      const verificationGameStartedEvent = utils.findEvent(result.events, 'VerificationGameStarted');
       assert.ok(verificationGameStartedEvent, 'Battle started');
       battleSessionId = verificationGameStartedEvent.args.sessionId;
     });
   
     it('Query hashes', async () => {
-      const session = await claimManager.getSession(proposedSuperblockHash, challenger);
+      const session = await challengerClaimManager.getSession(proposedSuperblockHash, challenger);
       assert.equal(session, battleSessionId, 'Sessions should match');
-      result = await battleManager.queryMerkleRootHashes(proposedSuperblockHash, battleSessionId, { from: challenger });
-      assert.ok(utils.findEvent(result.logs, 'QueryMerkleRootHashes'), 'Query merkle root hashes');
+      const response = await challengerBattleManager.queryMerkleRootHashes(proposedSuperblockHash, battleSessionId);
+      const result = await response.wait();
+      assert.ok(utils.findEvent(result.events, 'QueryMerkleRootHashes'), 'Query merkle root hashes');
     });
     
     it('Verify hashes', async () => {
-      await claimManager.makeDeposit({ value: utils.DEPOSITS.VERIFY_SUPERBLOCK_COST, from: submitter });
-      const result = await battleManager.respondMerkleRootHashes(proposedSuperblockHash, battleSessionId, hashes, { from: submitter });
-      assert.ok(utils.findEvent(result.logs, 'RespondMerkleRootHashes'), 'Respond merkle root hashes');
+      await submitterClaimManager.makeDeposit({ value: utils.DEPOSITS.VERIFY_SUPERBLOCK_COST });
+      const response = await submitterBattleManager.respondMerkleRootHashes(proposedSuperblockHash, battleSessionId, hashes);
+      const result = await response.wait();
+      assert.ok(utils.findEvent(result.events, 'RespondMerkleRootHashes'), 'Respond merkle root hashes');
     });
     
     hashes.forEach((hash, idx) => {
       it(`Query block header ${hash.slice(0, 20)}..`, async () => {
-        const result = await battleManager.queryBlockHeader(proposedSuperblockHash, battleSessionId, hash, { from: challenger });
-        assert.ok(utils.findEvent(result.logs, 'QueryBlockHeader'), 'Query block header');
+        const response = await challengerBattleManager.queryBlockHeader(proposedSuperblockHash, battleSessionId, hash);
+        const result = await response.wait();
+        assert.ok(utils.findEvent(result.events, 'QueryBlockHeader'), 'Query block header');
       });
 
       it(`Answer block header ${hash.slice(0, 20)}..`, async () => {
         const scryptHash = `0x${utils.calcHeaderPoW(headers[idx])}`;
-        await claimManager.makeDeposit({ value: utils.DEPOSITS.VERIFY_SUPERBLOCK_COST, from: submitter });
-        result = await battleManager.respondBlockHeader(proposedSuperblockHash, battleSessionId, scryptHash, `0x${headers[idx]}`, { from: submitter });
-        assert.ok(utils.findEvent(result.logs, 'RespondBlockHeader'), 'Respond block header');
+        await submitterClaimManager.makeDeposit({ value: utils.DEPOSITS.VERIFY_SUPERBLOCK_COST });
+        const response = await submitterBattleManager.respondBlockHeader(proposedSuperblockHash, battleSessionId, scryptHash, `0x${headers[idx]}`);
+        const result = await response.wait();
+        assert.ok(utils.findEvent(result.events, 'RespondBlockHeader'), 'Respond block header');
       });
     });
 
     it('Verify superblock', async () => {
-      const result = await battleManager.verifySuperblock(battleSessionId, { from: challenger });
-      assert.ok(utils.findEvent(result.logs, 'ChallengerConvicted'), 'Superblock verified');
+      const response = await challengerBattleManager.verifySuperblock(battleSessionId);
+      const result = await response.wait();
+      assert.ok(utils.findEvent(result.events, 'ChallengerConvicted'), 'Superblock verified');
     });
     
     it('Accept superblock', async () => {
       await utils.blockchainTimeoutSeconds(2*utils.OPTIONS_DOGE_REGTEST.TIMEOUT);
-      const result = await claimManager.checkClaimFinished(proposedSuperblockHash, { from: submitter });
-      assert.ok(utils.findEvent(result.logs, 'SuperblockClaimPending'), 'Superblock accepted');
+      const response = await submitterClaimManager.checkClaimFinished(proposedSuperblockHash);
+      const result = await response.wait();
+      assert.ok(utils.findEvent(result.events, 'SuperblockClaimPending'), 'Superblock accepted');
     });
   });
 
+  // TODO: perhaps move this into a separate describe suite?
+  // The fact that it shares variables with the other suites makes it a bit confusing.
   describe('Challenge timeouts', () => {
     let genesisSuperblockHash;
     let proposedSuperblockHash;
     let battleSessionId;
     const beginNewChallenge = async () => {
-      let result;
-      ({
-        superblocks,
-        claimManager,
-        battleManager,
-        scryptChecker,
-      } = await utils.initSuperblockChain({
+      const superBlockchain = await deploy.initSuperblockChain(hre, {
         network: utils.DOGE_MAINNET,
         dummyChecker: true,
         genesisSuperblock,
         params: utils.OPTIONS_DOGE_REGTEST,
         from: owner,
-      }));
-      await claimManager.makeDeposit({ value: utils.DEPOSITS.MIN_PROPOSAL_DEPOSIT, from: submitter });
-      await claimManager.makeDeposit({ value: utils.DEPOSITS.MIN_CHALLENGE_DEPOSIT, from: challenger });
+      });
+
+      superblocks = superBlockchain.superblocks;
+
+      const submitterSigner = await hre.ethers.getSigner(submitter);
+      const challengerSigner = await hre.ethers.getSigner(challenger);
+
+      submitterClaimManager = superBlockchain.claimManager.connect(submitterSigner);
+      challengerClaimManager = superBlockchain.claimManager.connect(challengerSigner);
+      submitterBattleManager = superBlockchain.battleManager.connect(submitterSigner);
+      challengerBattleManager = superBlockchain.battleManager.connect(challengerSigner);
+
+      await submitterClaimManager.makeDeposit({ value: utils.DEPOSITS.MIN_PROPOSAL_DEPOSIT });
+      await challengerClaimManager.makeDeposit({ value: utils.DEPOSITS.MIN_CHALLENGE_DEPOSIT });
       genesisSuperblockHash = genesisSuperblock.superblockHash;
 
       // Propose
@@ -323,7 +361,7 @@ contract('DogeClaimManager', (accounts) => {
         genesisSuperblock.superblockHash,
         genesisSuperblock.accumulatedWork,
       );
-      result = await claimManager.proposeSuperblock(
+      let response = await submitterClaimManager.proposeSuperblock(
         proposeSuperblock.merkleRoot,
         proposeSuperblock.accumulatedWork,
         proposeSuperblock.timestamp,
@@ -331,143 +369,160 @@ contract('DogeClaimManager', (accounts) => {
         proposeSuperblock.lastHash,
         proposeSuperblock.lastBits,
         proposeSuperblock.parentId,
-        { from: submitter },
       );
-      const superblockClaimCreatedEvent = utils.findEvent(result.logs, 'SuperblockClaimCreated');
+      let result = await response.wait();
+      const superblockClaimCreatedEvent = utils.findEvent(result.events, 'SuperblockClaimCreated');
       proposedSuperblockHash = superblockClaimCreatedEvent.args.superblockHash;
 
       // Challenge
-      await claimManager.makeDeposit({ value: utils.DEPOSITS.MIN_CHALLENGE_DEPOSIT, from: challenger });
-      result = await claimManager.challengeSuperblock(proposedSuperblockHash, { from: challenger });
-      const verificationGameStartedEvent = utils.findEvent(result.logs, 'VerificationGameStarted');
+      await challengerClaimManager.makeDeposit({ value: utils.DEPOSITS.MIN_CHALLENGE_DEPOSIT });
+      response = await challengerClaimManager.challengeSuperblock(proposedSuperblockHash);
+      result = await response.wait();
+      const verificationGameStartedEvent = utils.findEvent(result.events, 'VerificationGameStarted');
       assert.ok(verificationGameStartedEvent, 'Battle started');
       battleSessionId = verificationGameStartedEvent.args.sessionId;
     };
 
-    beforeEach(async () => {
-      await beginNewChallenge();
+    beforeEach(() => {
+      return beginNewChallenge();
     });
     
     it('Timeout query hashes', async () => {
-      let result;
-      result = await battleManager.timeout(battleSessionId, { from: submitter });
-      assert.ok(utils.findEvent(result.logs, 'ErrorBattle'), 'Timeout too early');
+      let response = await submitterBattleManager.timeout(battleSessionId);
+      let result = await response.wait();
+      assert.ok(utils.findEvent(result.events, 'ErrorBattle'), 'Timeout too early');
       await utils.blockchainTimeoutSeconds(2*utils.OPTIONS_DOGE_REGTEST.TIMEOUT);
-      result = await battleManager.timeout(battleSessionId, { from: submitter });
-      assert.ok(utils.findEvent(result.logs, 'ChallengerConvicted'), 'Should convict challenger');
+      response = await submitterBattleManager.timeout(battleSessionId);
+      result = await response.wait();
+      assert.ok(utils.findEvent(result.events, 'ChallengerConvicted'), 'Should convict challenger');
     });
     
     it('Timeout reply hashes', async () => {
-      let result;
-      result = await battleManager.queryMerkleRootHashes(proposedSuperblockHash, battleSessionId, { from: challenger });
-      assert.ok(utils.findEvent(result.logs, 'QueryMerkleRootHashes'), 'Query merkle root hashes');
-      result = await battleManager.timeout(battleSessionId, { from: challenger });
-      assert.ok(utils.findEvent(result.logs, 'ErrorBattle'), 'Timeout too early');
+      let response = await challengerBattleManager.queryMerkleRootHashes(proposedSuperblockHash, battleSessionId);
+      let result = await response.wait();
+      assert.ok(utils.findEvent(result.events, 'QueryMerkleRootHashes'), 'Query merkle root hashes');
+      response = await challengerBattleManager.timeout(battleSessionId);
+      result = await response.wait();
+      assert.ok(utils.findEvent(result.events, 'ErrorBattle'), 'Timeout too early');
       await utils.blockchainTimeoutSeconds(2*utils.OPTIONS_DOGE_REGTEST.TIMEOUT);
-      result = await battleManager.timeout(battleSessionId, { from: challenger });
-      assert.ok(utils.findEvent(result.logs, 'SubmitterConvicted'), 'Should convict claimant');
+      response = await challengerBattleManager.timeout(battleSessionId);
+      result = await response.wait();
+      assert.ok(utils.findEvent(result.events, 'SubmitterConvicted'), 'Should convict claimant');
     });
     
     it('Timeout query block headers', async () => {
-      let result;
-      await claimManager.makeDeposit({ value: utils.DEPOSITS.RESPOND_MERKLE_COST, from: challenger });
-      result = await battleManager.queryMerkleRootHashes(proposedSuperblockHash, battleSessionId, { from: challenger });
-      assert.ok(utils.findEvent(result.logs, 'QueryMerkleRootHashes'), 'Query merkle root hashes');
+      await challengerClaimManager.makeDeposit({ value: utils.DEPOSITS.RESPOND_MERKLE_COST });
+      let response = await challengerBattleManager.queryMerkleRootHashes(proposedSuperblockHash, battleSessionId);
+      let result = await response.wait();
+      assert.ok(utils.findEvent(result.events, 'QueryMerkleRootHashes'), 'Query merkle root hashes');
 
-      await claimManager.makeDeposit({ value: utils.DEPOSITS.VERIFY_SUPERBLOCK_COST, from: submitter });
-      result = await battleManager.respondMerkleRootHashes(proposedSuperblockHash, battleSessionId, hashes.slice(0, 2), { from: submitter });
-      assert.ok(utils.findEvent(result.logs, 'RespondMerkleRootHashes'), 'Respond merkle root hashes');
+      await submitterClaimManager.makeDeposit({ value: utils.DEPOSITS.VERIFY_SUPERBLOCK_COST });
+      response = await submitterBattleManager.respondMerkleRootHashes(proposedSuperblockHash, battleSessionId, hashes.slice(0, 2));
+      result = await response.wait();
+      assert.ok(utils.findEvent(result.events, 'RespondMerkleRootHashes'), 'Respond merkle root hashes');
 
-      result = await battleManager.timeout(battleSessionId, { from: submitter });
-      assert.ok(utils.findEvent(result.logs, 'ErrorBattle'), 'Timeout too early');
+      response = await submitterBattleManager.timeout(battleSessionId);
+      result = await response.wait();
+      assert.ok(utils.findEvent(result.events, 'ErrorBattle'), 'Timeout too early');
 
       await utils.blockchainTimeoutSeconds(2*utils.OPTIONS_DOGE_REGTEST.TIMEOUT);
-      result = await battleManager.timeout(battleSessionId, { from: submitter });
-      assert.ok(utils.findEvent(result.logs, 'ChallengerConvicted'), 'Should convict challenger');
+      response = await submitterBattleManager.timeout(battleSessionId);
+      result = await response.wait();
+      assert.ok(utils.findEvent(result.events, 'ChallengerConvicted'), 'Should convict challenger');
     });
     
     it('Timeout reply block headers', async () => {
-      let result;
-      await claimManager.makeDeposit({ value: utils.DEPOSITS.RESPOND_MERKLE_COST, from: challenger });
-      result = await battleManager.queryMerkleRootHashes(proposedSuperblockHash, battleSessionId, { from: challenger });
-      assert.ok(utils.findEvent(result.logs, 'QueryMerkleRootHashes'), 'Query merkle root hashes');
+      await challengerClaimManager.makeDeposit({ value: utils.DEPOSITS.RESPOND_MERKLE_COST });
+      let response = await challengerBattleManager.queryMerkleRootHashes(proposedSuperblockHash, battleSessionId);
+      let result = await response.wait();
+      assert.ok(utils.findEvent(result.events, 'QueryMerkleRootHashes'), 'Query merkle root hashes');
 
-      await claimManager.makeDeposit({ value: utils.DEPOSITS.VERIFY_SUPERBLOCK_COST, from: submitter });
-      result = await battleManager.respondMerkleRootHashes(proposedSuperblockHash, battleSessionId, hashes.slice(0, 2), { from: submitter });
-      assert.ok(utils.findEvent(result.logs, 'RespondMerkleRootHashes'), 'Respond merkle root hashes');
+      await submitterClaimManager.makeDeposit({ value: utils.DEPOSITS.VERIFY_SUPERBLOCK_COST });
+      response = await submitterBattleManager.respondMerkleRootHashes(proposedSuperblockHash, battleSessionId, hashes.slice(0, 2));
+      result = await response.wait();
+      assert.ok(utils.findEvent(result.events, 'RespondMerkleRootHashes'), 'Respond merkle root hashes');
 
-      await claimManager.makeDeposit({ value: utils.DEPOSITS.RESPOND_HEADER_COST, from: challenger });
-      result = await battleManager.queryBlockHeader(proposedSuperblockHash, battleSessionId, hashes[0], { from: challenger });
-      assert.ok(utils.findEvent(result.logs, 'QueryBlockHeader'), 'Query block header');
-      
-      result = await battleManager.timeout(battleSessionId, { from: challenger });
-      assert.ok(utils.findEvent(result.logs, 'ErrorBattle'), 'Timeout too early');
-      
+      await challengerClaimManager.makeDeposit({ value: utils.DEPOSITS.RESPOND_HEADER_COST });
+      response = await challengerBattleManager.queryBlockHeader(proposedSuperblockHash, battleSessionId, hashes[0]);
+      result = await response.wait();
+      assert.ok(utils.findEvent(result.events, 'QueryBlockHeader'), 'Query block header');
+      response = await challengerBattleManager.timeout(battleSessionId);
+      result = await response.wait();
+      assert.ok(utils.findEvent(result.events, 'ErrorBattle'), 'Timeout too early');
+
       await utils.blockchainTimeoutSeconds(2*utils.OPTIONS_DOGE_REGTEST.TIMEOUT);
-      result = await battleManager.timeout(battleSessionId, { from: challenger });
-      assert.ok(utils.findEvent(result.logs, 'SubmitterConvicted'), 'Should convict claimant');
+      response = await challengerBattleManager.timeout(battleSessionId);
+      result = await response.wait();
+      assert.ok(utils.findEvent(result.events, 'SubmitterConvicted'), 'Should convict claimant');
     });
 
     it('Timeout verify superblock', async () => {
-      let result;
-      let data;
-      await claimManager.makeDeposit({ value: utils.DEPOSITS.RESPOND_MERKLE_COST, from: challenger });
-      result = await battleManager.queryMerkleRootHashes(proposedSuperblockHash, battleSessionId, { from: challenger });
-      assert.ok(utils.findEvent(result.logs, 'QueryMerkleRootHashes'), 'Query merkle root hashes');
+      await challengerClaimManager.makeDeposit({ value: utils.DEPOSITS.RESPOND_MERKLE_COST });
+      let response = await challengerBattleManager.queryMerkleRootHashes(proposedSuperblockHash, battleSessionId);
+      let result = await response.wait();
+      assert.ok(utils.findEvent(result.events, 'QueryMerkleRootHashes'), 'Query merkle root hashes');
 
-      await claimManager.makeDeposit({ value: utils.DEPOSITS.VERIFY_SUPERBLOCK_COST, from: submitter });
-      result = await battleManager.respondMerkleRootHashes(proposedSuperblockHash, battleSessionId, hashes.slice(0, 2), { from: submitter });
-      assert.ok(utils.findEvent(result.logs, 'RespondMerkleRootHashes'), 'Respond merkle root hashes');
+      await submitterClaimManager.makeDeposit({ value: utils.DEPOSITS.VERIFY_SUPERBLOCK_COST });
+      response = await submitterBattleManager.respondMerkleRootHashes(proposedSuperblockHash, battleSessionId, hashes.slice(0, 2));
+      result = await response.wait();
+      assert.ok(utils.findEvent(result.events, 'RespondMerkleRootHashes'), 'Respond merkle root hashes');
 
-      await claimManager.makeDeposit({ value: utils.DEPOSITS.RESPOND_HEADER_COST, from: challenger });
-      result = await battleManager.queryBlockHeader(proposedSuperblockHash, battleSessionId, hashes[0], { from: challenger });
-      assert.ok(utils.findEvent(result.logs, 'QueryBlockHeader'), 'Query block header');
+      await challengerClaimManager.makeDeposit({ value: utils.DEPOSITS.RESPOND_HEADER_COST });
+      response = await challengerBattleManager.queryBlockHeader(proposedSuperblockHash, battleSessionId, hashes[0]);
+      result = await response.wait();
+      assert.ok(utils.findEvent(result.events, 'QueryBlockHeader'), 'Query block header');
       
       const scryptHash = `0x${utils.calcHeaderPoW(headers[0])}`;
-      await claimManager.makeDeposit({ value: utils.DEPOSITS.VERIFY_SUPERBLOCK_COST, from: submitter });
-      result = await battleManager.respondBlockHeader(proposedSuperblockHash, battleSessionId, scryptHash, `0x${headers[0]}`, { from: submitter });
-      assert.ok(utils.findEvent(result.logs, 'RespondBlockHeader'), 'Respond block header');
+      await submitterClaimManager.makeDeposit({ value: utils.DEPOSITS.VERIFY_SUPERBLOCK_COST });
+      response = await submitterBattleManager.respondBlockHeader(proposedSuperblockHash, battleSessionId, scryptHash, `0x${headers[0]}`);
+      result = await response.wait();
+      assert.ok(utils.findEvent(result.events, 'RespondBlockHeader'), 'Respond block header');
       
-      result = await battleManager.timeout(battleSessionId, { from: submitter });
-      assert.ok(utils.findEvent(result.logs, 'ErrorBattle'), 'Timeout too early');
+      response = await submitterBattleManager.timeout(battleSessionId);
+      result = await response.wait();
+      assert.ok(utils.findEvent(result.events, 'ErrorBattle'), 'Timeout too early');
       
       await utils.blockchainTimeoutSeconds(2*utils.OPTIONS_DOGE_REGTEST.TIMEOUT);
-      result = await battleManager.timeout(battleSessionId, { from: submitter });
-      assert.ok(utils.findEvent(result.logs, 'ChallengerConvicted'), 'Should convict challenger');
+      response = await submitterBattleManager.timeout(battleSessionId);
+      result = await response.wait();
+      assert.ok(utils.findEvent(result.events, 'ChallengerConvicted'), 'Should convict challenger');
     });
 
     it('Verify superblock', async () => {
-      let result;
-      let data;
-      let scryptHash;
-    
-      await claimManager.makeDeposit({ value: utils.DEPOSITS.RESPOND_MERKLE_COST, from: challenger });
-      result = await battleManager.queryMerkleRootHashes(proposedSuperblockHash, battleSessionId, { from: challenger });
-      assert.ok(utils.findEvent(result.logs, 'QueryMerkleRootHashes'), 'Query merkle root hashes');
+      await challengerClaimManager.makeDeposit({ value: utils.DEPOSITS.RESPOND_MERKLE_COST });
+      let response = await challengerBattleManager.queryMerkleRootHashes(proposedSuperblockHash, battleSessionId);
+      let result = await response.wait();
+      assert.ok(utils.findEvent(result.events, 'QueryMerkleRootHashes'), 'Query merkle root hashes');
 
-      await claimManager.makeDeposit({ value: utils.DEPOSITS.VERIFY_SUPERBLOCK_COST, from: submitter });
-      result = await battleManager.respondMerkleRootHashes(proposedSuperblockHash, battleSessionId, hashes.slice(0, 2), { from: submitter });
-      assert.ok(utils.findEvent(result.logs, 'RespondMerkleRootHashes'), 'Respond merkle root hashes');
+      await submitterClaimManager.makeDeposit({ value: utils.DEPOSITS.VERIFY_SUPERBLOCK_COST });
+      response = await submitterBattleManager.respondMerkleRootHashes(proposedSuperblockHash, battleSessionId, hashes.slice(0, 2));
+      result = await response.wait();
+      assert.ok(utils.findEvent(result.events, 'RespondMerkleRootHashes'), 'Respond merkle root hashes');
 
-      await claimManager.makeDeposit({ value: utils.DEPOSITS.RESPOND_HEADER_COST, from: challenger });
-      result = await battleManager.queryBlockHeader(proposedSuperblockHash, battleSessionId, hashes[0], { from: challenger });
-      assert.ok(utils.findEvent(result.logs, 'QueryBlockHeader'), 'Query block header');
+      await challengerClaimManager.makeDeposit({ value: utils.DEPOSITS.RESPOND_HEADER_COST });
+      response = await challengerBattleManager.queryBlockHeader(proposedSuperblockHash, battleSessionId, hashes[0]);
+      result = await response.wait();
+      assert.ok(utils.findEvent(result.events, 'QueryBlockHeader'), 'Query block header');
       
-      scryptHash = `0x${utils.calcHeaderPoW(headers[0])}`;
-      await claimManager.makeDeposit({ value: utils.DEPOSITS.VERIFY_SUPERBLOCK_COST, from: submitter });
-      result = await battleManager.respondBlockHeader(proposedSuperblockHash, battleSessionId, scryptHash, `0x${headers[0]}`, { from: submitter });
-      assert.ok(utils.findEvent(result.logs, 'RespondBlockHeader'), 'Respond block header');
+      let scryptHash = `0x${utils.calcHeaderPoW(headers[0])}`;
+      await submitterClaimManager.makeDeposit({ value: utils.DEPOSITS.VERIFY_SUPERBLOCK_COST });
+      response = await submitterBattleManager.respondBlockHeader(proposedSuperblockHash, battleSessionId, scryptHash, `0x${headers[0]}`);
+      result = await response.wait();
+      assert.ok(utils.findEvent(result.events, 'RespondBlockHeader'), 'Respond block header');
       
-      await claimManager.makeDeposit({ value: utils.DEPOSITS.RESPOND_HEADER_COST, from: challenger });
-      result = await battleManager.queryBlockHeader(proposedSuperblockHash, battleSessionId, hashes[1], { from: challenger });
-      assert.ok(utils.findEvent(result.logs, 'QueryBlockHeader'), 'Query block header');
+      await challengerClaimManager.makeDeposit({ value: utils.DEPOSITS.RESPOND_HEADER_COST });
+      response = await challengerBattleManager.queryBlockHeader(proposedSuperblockHash, battleSessionId, hashes[1]);
+      result = await response.wait();
+      assert.ok(utils.findEvent(result.events, 'QueryBlockHeader'), 'Query block header');
       
       scryptHash = `0x${utils.calcHeaderPoW(headers[1])}`;
-      result = await battleManager.respondBlockHeader(proposedSuperblockHash, battleSessionId, scryptHash, `0x${headers[1]}`, { from: submitter });
-      assert.ok(utils.findEvent(result.logs, 'RespondBlockHeader'), 'Respond block header');
+      response = await submitterBattleManager.respondBlockHeader(proposedSuperblockHash, battleSessionId, scryptHash, `0x${headers[1]}`);
+      result = await response.wait();
+      assert.ok(utils.findEvent(result.events, 'RespondBlockHeader'), 'Respond block header');
       
-      result = await battleManager.verifySuperblock(battleSessionId, { from: challenger });
-      assert.ok(utils.findEvent(result.logs, 'ChallengerConvicted'), 'Should convict challenger');
+      response = await challengerBattleManager.verifySuperblock(battleSessionId);
+      result = await response.wait();
+      assert.ok(utils.findEvent(result.events, 'ChallengerConvicted'), 'Should convict challenger');
     });
   });
 });

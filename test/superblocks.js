@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const keccak256 = require('js-sha3').keccak256;
 const utils = require('./utils');
+const DogeMessageLibrary = artifacts.require('DogeMessageLibrary');
 const DogeSuperblocks = artifacts.require('DogeSuperblocks');
 
 contract('DogeSuperblocks', (accounts) => {
@@ -39,6 +40,8 @@ contract('DogeSuperblocks', (accounts) => {
       "0x38d3dffed604f5a160b327ecde5147eb1aa46e3d154b98644cd2a39f0f9ab915"
     ]
     before(async () => {
+      const dogeMessageLib = await DogeMessageLibrary.new();
+      await DogeSuperblocks.link(dogeMessageLib);
       superblocks = await DogeSuperblocks.new();
       await superblocks.setClaimManager(claimManager);
     });
