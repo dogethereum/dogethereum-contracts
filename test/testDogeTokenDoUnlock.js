@@ -51,8 +51,8 @@ contract('testDogeTokenDoUnlock', function(accounts) {
     assert.equal(unlockIdx, 1, 'unlockIdx is not the expected one');
 
     const operator = await dogeToken.operators(operatorPublicKeyHash);
-    assert.equal(operator[1].toString(10), 0, 'operator dogeAvailableBalance is not the expected one');
-    assert.equal(operator[2].toString(10), 1010000000, 'operator dogePendingBalance is not the expected one');
+    assert.equal(operator[1].toString(), 0, 'operator dogeAvailableBalance is not the expected one');
+    assert.equal(operator[2].toString(), 1010000000, 'operator dogePendingBalance is not the expected one');
     assert.equal(operator[3], 1, 'operator nextUnspentUtxoIndex is not the expected one');
   });
 });

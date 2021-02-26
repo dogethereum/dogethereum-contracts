@@ -48,8 +48,8 @@ contract('testDogeTokenDoUnlock2', function(accounts) {
     let unlockIdx = await dogeToken.unlockIdx();
     assert.equal(unlockIdx, 1, 'unlockIdx is not the expected one');
     let operator = await dogeToken.operators(operatorPublicKeyHash);
-    assert.equal(operator[1].toString(10), 4400000000, 'operator dogeAvailableBalance is not the expected one');
-    assert.equal(operator[2].toString(10),  210000000, 'operator dogePendingBalance is not the expected one');
+    assert.equal(operator[1].toString(), 4400000000, 'operator dogeAvailableBalance is not the expected one');
+    assert.equal(operator[2].toString(),  210000000, 'operator dogePendingBalance is not the expected one');
     assert.equal(operator[3], 3, 'operator nextUnspentUtxoIndex is not the expected one');
 
 
@@ -66,8 +66,8 @@ contract('testDogeTokenDoUnlock2', function(accounts) {
     unlockIdx = await dogeToken.unlockIdx();
     assert.equal(unlockIdx, 2, 'unlockIdx is not the expected one');
     operator = await dogeToken.operators(operatorPublicKeyHash);
-    assert.equal(operator[1].toString(10), 2700000000, 'operator dogeAvailableBalance is not the expected one');
-    assert.equal(operator[2].toString(10),  425000000, 'operator dogePendingBalance is not the expected one');
+    assert.equal(operator[1].toString(), 2700000000, 'operator dogeAvailableBalance is not the expected one');
+    assert.equal(operator[2].toString(),  425000000, 'operator dogePendingBalance is not the expected one');
     assert.equal(operator[3], 5, 'operator nextUnspentUtxoIndex is not the expected one');
 
   });

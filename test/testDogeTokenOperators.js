@@ -130,7 +130,7 @@ contract('DogeToken - Operators', (accounts) => {
       const operator = await dogeToken.operators(operatorPublicKeyHash);
       assert.equal(operator[4], "600000000000000000", 'Deposit not what expected');
       const txCost = withdrawOperatorDepositTxReceipt.cumulativeGasUsed.mul(withdrawOperatorDepositTxResponse.gasPrice);
-      assert.equal(operatorEthAddressBalanceAfterWithdraw.sub(operatorEthAddressBalanceBeforeWithdraw).add(txCost).toString(10), "400000000000000000", 'balance not what expected');
+      assert.equal(operatorEthAddressBalanceAfterWithdraw.sub(operatorEthAddressBalanceBeforeWithdraw).add(txCost).toString(), "400000000000000000", 'balance not what expected');
     });
     it('withdrawOperatorDeposit success - with utxos', async () => {
       await sendAddOperator(dogeToken);
@@ -144,7 +144,7 @@ contract('DogeToken - Operators', (accounts) => {
       const operator = await dogeToken.operators(operatorPublicKeyHash);
       assert.equal(operator[4], 4900, 'Deposit not what expected');
       const txCost = withdrawOperatorDepositTxReceipt.cumulativeGasUsed.mul(withdrawOperatorDepositTxResponse.gasPrice);
-      assert.equal(operatorEthAddressBalanceAfterWithdraw.sub(operatorEthAddressBalanceBeforeWithdraw).add(txCost).toString(10), "100", 'balance not what expected');
+      assert.equal(operatorEthAddressBalanceAfterWithdraw.sub(operatorEthAddressBalanceBeforeWithdraw).add(txCost).toString(), "100", 'balance not what expected');
     });
     it('withdrawOperatorDeposit fail - not enough balance', async () => {
       await sendAddOperator(dogeToken);
