@@ -270,14 +270,9 @@ async function deployContract(
   options: FactoryOptions = {},
   confirmations: number = 0
 ): Promise<ethers.Contract> {
+  // TODO: `getContractFactory` gets a default signer so we may want to remove this.
   if (options.signer === undefined) {
-    if (process.env.WALLET_PRIVATE_KEY === undefined) {
-      throw new Error("No wallet or signer defined for deployment.");
-    }
-    options.signer = new ethers.Wallet(
-      process.env.WALLET_PRIVATE_KEY,
-      ethers.provider
-    );
+    throw new Error("No wallet or signer defined for deployment.");
   }
 
   const factory = await ethers.getContractFactory(contractName, options);
