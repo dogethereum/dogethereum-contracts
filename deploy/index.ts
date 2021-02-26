@@ -41,6 +41,7 @@ const genesisSuperblockLastBlockHash =
   "0x3d2160a3b5dc4a9d62e7e66a295f70313ac808440ef7400d6c0772171ce973a5";
 const genesisSuperblockParentId = "0x0";
 
+// TODO: define as enum?
 const DOGE_MAINNET = 0;
 const DOGE_TESTNET = 1;
 const DOGE_REGTEST = 2;
