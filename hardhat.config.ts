@@ -7,7 +7,21 @@ import type { HardhatUserConfig } from "hardhat/types"
 const config: HardhatUserConfig = {
     networks: {
         development: {
-            url: "http://127.0.0.1:8545"
+            url: "http://127.0.0.1:8545",
+        },
+        integrationDogeMain: {
+            url: "http://127.0.0.1:8545",
+        },
+        integrationDogeRegtest: {
+            url: "http://127.0.0.1:8545",
+        },
+        ropsten: {
+            url: "http://127.0.0.1:8545",
+            chainId: 3,
+        },
+        rinkeby: {
+            url: "http://127.0.0.1:8545",
+            chainId: 4,
         }
     },
     solidity: "0.7.6",
