@@ -1,3 +1,24 @@
+import type ethers from "ethers";
+import type { HardhatRuntimeEnvironment } from "hardhat/types";
+import type { FactoryOptions } from "@nomiclabs/hardhat-ethers/types";
+
+
+
+interface DogethereumCoreSystem {
+  superblocks: ethers.Contract;
+  dogeMessageLibrary: ethers.Contract;
+  scryptChecker: ethers.Contract;
+  battleManager: ethers.Contract;
+  claimManager: ethers.Contract;
+}
+
+interface DogethereumTokenSystem {
+  setLibrary: ethers.Contract;
+  dogeToken: ethers.Contract;
+}
+
+type DogethereumSystem = DogethereumCoreSystem & DogethereumTokenSystem;
+
 const scryptCheckerAddress = "0xfeedbeeffeedbeeffeedbeeffeedbeeffeedbeef";
 //const dogethereumRecipientUnitTest = '0x4d905b4b815d483cdfabcd292c6f86509d0fad82';
 //const dogethereumRecipientIntegrationDogeMain = '0x0000000000000000000000000000000000000003';
@@ -57,11 +78,11 @@ const SUPERBLOCK_OPTIONS_LOCAL = {
 };
 
 async function deployTestToken(
-  hre,
-  deploySigner,
-  trustedDogeEthPriceOracle,
-  { superblocks }
-) {
+  hre: HardhatRuntimeEnvironment,
+  deploySigner: ethers.Signer,
+  trustedDogeEthPriceOracle: string,
+  { superblocks }: DogethereumCoreSystem
+): DogethereumTokenSystem {
   const setLibrary = await deployContract("Set", [], hre, {
     signer: deploySigner,
   });
@@ -80,11 +101,11 @@ async function deployTestToken(
 }
 
 async function deployToken(
-  hre,
-  deploySigner,
-  trustedDogeEthPriceOracle,
-  { superblocks, dogeMessageLibrary }
-) {
+  hre: HardhatRuntimeEnvironment,
+  deploySigner: ethers.Signer,
+  trustedDogeEthPriceOracle: string,
+  { superblocks, dogeMessageLibrary }: DogethereumCoreSystem
+): DogethereumTokenSystem {
   const setLibrary = await deployContract("Set", [], hre, {
     signer: deploySigner,
   });
@@ -104,12 +125,12 @@ async function deployToken(
 }
 
 async function deployMainSystem(
-  hre,
-  network,
-  deploySigner,
-  networkId,
-  superblockOptions
-) {
+  hre: HardhatRuntimeEnvironment,
+  network: string,
+  deploySigner: ethers.Signer,
+  networkId: number,
+  superblockOptions: any
+): Promise<DogethereumCoreSystem> {
   const dogeMessageLibrary = await deployContract(
     "DogeMessageLibrary",
     [],
@@ -179,10 +200,10 @@ async function deployMainSystem(
   };
 }
 
-async function deployDogethereum(hre /*: HardhatRuntimeEnvironment*/) {
+async function deployDogethereum(hre: HardhatRuntimeEnvironment): Promise<DogethereumSystem> {
   const { ethers, network } = hre;
   const accounts = await ethers.getSigners();
-  let trustedDogeEthPriceOracle;
+  let trustedDogeEthPriceOracle: string;
   if (
     network.name === "hardhat" ||
     network.name === "development" ||
@@ -194,6 +215,8 @@ async function deployDogethereum(hre /*: HardhatRuntimeEnvironment*/) {
     trustedDogeEthPriceOracle = trustedDogeEthPriceOracleRopsten;
   } else if (network.name === "rinkeby") {
     trustedDogeEthPriceOracle = trustedDogeEthPriceOracleRinkeby;
+  } else {
+    trustedDogeEthPriceOracle = accounts[0].address
   }
 
   const networkId =
@@ -241,12 +264,12 @@ async function deployDogethereum(hre /*: HardhatRuntimeEnvironment*/) {
 }
 
 async function deployContract(
-  contractName /*: string*/,
-  constructorArguments /*: any[]*/,
-  { ethers } /*: HardhatRuntimeEnvironment*/,
-  options /*: FactoryOptions*/ = {},
-  confirmations /*: number*/ = 0
-) /*: Promise<string>*/ {
+  contractName: string,
+  constructorArguments: any[],
+  { ethers }: HardhatRuntimeEnvironment,
+  options: FactoryOptions = {},
+  confirmations: number = 0
+): Promise<ethers.Contract> {
   if (options.signer === undefined) {
     if (process.env.WALLET_PRIVATE_KEY === undefined) {
       throw new Error("No wallet or signer defined for deployment.");
@@ -264,8 +287,8 @@ async function deployContract(
 }
 
 async function initSuperblockChain(
-  hre /*: HardhatRuntimeEnvironment*/,
-  options
+  hre: HardhatRuntimeEnvironment,
+  options: any
 ) {
   const deploySigner = await hre.ethers.getSigner(options.from);
 
@@ -358,9 +381,14 @@ async function initSuperblockChain(
   };
 }
 
-let dogethereumFixture;
+let dogethereumFixture: DogethereumSystem;
 
-async function deployFixture(hre /*: HardhatRuntimeEnvironment*/) {
+/**
+ * This deploys the Dogethereum system the first time it's called.
+ * Meant to be used in a test suite.
+ * @param hre The Hardhat runtime environment where the deploy takes place.
+ */
+export async function deployFixture(hre: HardhatRuntimeEnvironment): Promise<DogethereumSystem> {
   if (dogethereumFixture === undefined) {
     dogethereumFixture = await deployDogethereum(hre);
   }
