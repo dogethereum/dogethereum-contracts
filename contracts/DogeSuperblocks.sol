@@ -12,7 +12,7 @@ import {TransactionProcessor} from "./TransactionProcessor.sol";
 contract DogeSuperblocks is DogeErrorCodes {
 
     // @dev - Superblock status
-    enum Status { Unitialized, New, InBattle, SemiApproved, Approved, Invalid }
+    enum Status { Uninitialized, New, InBattle, SemiApproved, Approved, Invalid }
 
     struct SuperblockInfo {
         bytes32 blocksMerkleRoot;
@@ -96,7 +96,7 @@ contract DogeSuperblocks is DogeErrorCodes {
         bytes32 superblockHash = calcSuperblockHash(_blocksMerkleRoot, _accumulatedWork, _timestamp, _prevTimestamp, _lastHash, _lastBits, _parentId);
         SuperblockInfo storage superblock = superblocks[superblockHash];
 
-        require(superblock.status == Status.Unitialized);
+        require(superblock.status == Status.Uninitialized);
 
         indexSuperblock[indexNextSuperblock] = superblockHash;
 
@@ -162,7 +162,7 @@ contract DogeSuperblocks is DogeErrorCodes {
         }
 
         SuperblockInfo storage superblock = superblocks[superblockHash];
-        if (superblock.status != Status.Unitialized) {
+        if (superblock.status != Status.Uninitialized) {
             emit ErrorSuperblock(superblockHash, ERR_SUPERBLOCK_EXIST);
             return (ERR_SUPERBLOCK_EXIST, 0);
         }
