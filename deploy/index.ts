@@ -201,7 +201,7 @@ async function deployMainSystem(
   };
 }
 
-async function deployDogethereum(hre: HardhatRuntimeEnvironment): Promise<DogethereumSystem> {
+export async function deployDogethereum(hre: HardhatRuntimeEnvironment): Promise<DogethereumSystem> {
   const { ethers, network } = hre;
   const accounts = await ethers.getSigners();
   let trustedDogeEthPriceOracle: string;
@@ -264,7 +264,7 @@ async function deployDogethereum(hre: HardhatRuntimeEnvironment): Promise<Dogeth
   };
 }
 
-async function deployContract(
+export async function deployContract(
   contractName: string,
   constructorArguments: any[],
   { ethers }: HardhatRuntimeEnvironment,
@@ -282,7 +282,7 @@ async function deployContract(
   return contract;
 }
 
-async function initSuperblockChain(
+export async function initSuperblockChain(
   hre: HardhatRuntimeEnvironment,
   options: any
 ) {
@@ -390,10 +390,3 @@ export async function deployFixture(hre: HardhatRuntimeEnvironment): Promise<Dog
   }
   return dogethereumFixture;
 }
-
-module.exports = {
-  deployDogethereum,
-  deployFixture,
-  initSuperblockChain,
-  deployContract,
-};
