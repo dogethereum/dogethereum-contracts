@@ -1,5 +1,6 @@
 /artifacts
 /cache
+/dist
 /build
 /node_modules
 /output
