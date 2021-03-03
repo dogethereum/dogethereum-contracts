@@ -1,8 +1,11 @@
-#!/bin/sh
+#!/bin/bash
 
-# rm -rf build
-# truffle compile
-# truffle migrate --reset --network integrationDogeRegtest
+set -eu
 
-truffle exec  --network integrationDogeRegtest scripts/init_contracts_local.js
-truffle exec  --network integrationDogeRegtest scripts/debug.js
+if [[ ! -v NETWORK ]]; then
+  NETWORK="integrationDogeRegtest"
+fi
+
+# TODO port this to a Hardhat script
+npx hardhat run --network "$NETWORK" scripts/init_contracts_local.ts
+npx hardhat run --network "$NETWORK" scripts/debug.ts
