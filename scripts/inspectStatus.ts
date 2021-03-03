@@ -39,12 +39,13 @@ export async function printStatus(
     "DogeToken Balance of 0x92ecc1ba4ea10f681dcf35c02f583e59d2b99b4b: " +
       balance1
   );
+
+  const userAddress = "0xd2394f3fad76167e7583a876c292c86ed10305da";
   const balance2 = await dogeToken.callStatic.balanceOf(
-    "0xd2394f3fad76167e7583a876c292c86ed10305da"
+    userAddress
   );
   console.log(
-    "DogeToken Balance of 0xd2394f3fad76167e7583a876c292c86ed10305da: " +
-      balance2
+    `DogeToken Balance of ${userAddress}: ${balance2}`
   );
   const balance3 = await dogeToken.callStatic.balanceOf(
     "0xf5fa014271b7971cb0ae960d445db3cb3802dfd9"

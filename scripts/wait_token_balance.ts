@@ -7,12 +7,9 @@ export async function main() {
   } = await loadDeployment(hre);
   while (true) {
     // TODO: parametrize account?
-    const balance = await dogeToken.callStatic.balanceOf(
-      "0xd2394f3fad76167e7583a876c292c86ed10305da"
-    );
-    console.log(
-      `Token balance of 0xd2394f3fad76167e7583a876c292c86ed10305da: ${balance}`
-    );
+    const userAddress = "0xd2394f3fad76167e7583a876c292c86ed10305da";
+    const balance = await dogeToken.callStatic.balanceOf(userAddress);
+    console.log(`Token balance of ${userAddress}: ${balance}`);
     if (balance > 0) {
       return;
     }
