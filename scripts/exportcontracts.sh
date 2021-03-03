@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -eu
+set -o errexit -o nounset
 
 if [[ ! -v WEB3J ]]; then
   WEB3J="web3j"
