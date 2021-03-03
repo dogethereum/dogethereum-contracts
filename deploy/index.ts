@@ -1,8 +1,10 @@
 import type ethers from "ethers";
 import type { HardhatRuntimeEnvironment } from "hardhat/types";
 import type { FactoryOptions } from "@nomiclabs/hardhat-ethers/types";
+import fs from "fs-extra";
+import path from "path";
 
-interface DogethereumContract {
+export interface DogethereumContract {
   /**
    * This is the name of the contract in this project.
    * @dev The fully qualified name should be used if the contract name is not unique.
@@ -11,7 +13,7 @@ interface DogethereumContract {
   contract: ethers.Contract;
 }
 
-interface DogethereumCoreSystem {
+export interface DogethereumCoreSystem {
   superblocks: DogethereumContract;
   dogeMessageLibrary: DogethereumContract;
   scryptChecker: DogethereumContract;
@@ -19,14 +21,14 @@ interface DogethereumCoreSystem {
   claimManager: DogethereumContract;
 }
 
-interface DogethereumTokenSystem {
+export interface DogethereumTokenSystem {
   setLibrary: DogethereumContract;
   dogeToken: DogethereumContract;
 }
 
-type DogethereumSystem = DogethereumCoreSystem & DogethereumTokenSystem;
+export type DogethereumSystem = DogethereumCoreSystem & DogethereumTokenSystem;
 
-interface DogethereumFixture {
+export interface DogethereumFixture {
   superblocks: ethers.Contract;
   dogeMessageLibrary: ethers.Contract;
   scryptChecker: ethers.Contract;
@@ -36,7 +38,28 @@ interface DogethereumFixture {
   dogeToken: ethers.Contract;
 }
 
+interface ContractInfo {
+  abi: any[];
+  contractName: string;
+  sourceName: string;
+  address: string;
+}
+
+interface DeploymentInfo {
+  chainId: number;
+  contracts: {
+    superblocks: ContractInfo;
+    dogeMessageLibrary: ContractInfo;
+    dogeToken: ContractInfo;
+    scryptChecker: ContractInfo;
+    claimManager: ContractInfo;
+    battleManager: ContractInfo;
+    setLibrary: ContractInfo;
+  };
+}
+
 const scryptCheckerAddress = "0xfeedbeeffeedbeeffeedbeeffeedbeeffeedbeef";
+// TODO: Remove these?
 //const dogethereumRecipientUnitTest = '0x4d905b4b815d483cdfabcd292c6f86509d0fad82';
 //const dogethereumRecipientIntegrationDogeMain = '0x0000000000000000000000000000000000000003';
 //const dogethereumRecipientIntegrationDogeRegtest = '0x03cd041b0139d3240607b9fd1b2d1b691e22b5d6';
@@ -63,6 +86,7 @@ const DOGE_MAINNET = 0;
 const DOGE_TESTNET = 1;
 const DOGE_REGTEST = 2;
 
+// TODO: define an interface for these
 const SUPERBLOCK_OPTIONS_PRODUCTION = {
   DURATION: 3600, // 60 minutes
   DELAY: 3 * 3600, // 3 hours
@@ -95,8 +119,9 @@ const SUPERBLOCK_OPTIONS_LOCAL = {
   REWARD: 10, // Monetary reward for opponent in case a battle is lost
 };
 
-async function deployTestToken(
+async function deployToken(
   hre: HardhatRuntimeEnvironment,
+  tokenContractName: "DogeToken" | "DogeTokenForTests",
   deploySigner: ethers.Signer,
   trustedDogeEthPriceOracle: string,
   { superblocks }: DogethereumCoreSystem
@@ -108,10 +133,9 @@ async function deployTestToken(
     }),
     name: setContractName,
   };
-  const dogeTokenContractName = "DogeTokenForTests";
   const dogeToken = {
     contract: await deployContract(
-      dogeTokenContractName,
+      tokenContractName,
       [
         superblocks.contract.address,
         trustedDogeEthPriceOracle,
@@ -125,43 +149,7 @@ async function deployTestToken(
         },
       }
     ),
-    name: dogeTokenContractName,
-  };
-  return { dogeToken, setLibrary };
-}
-
-async function deployToken(
-  hre: HardhatRuntimeEnvironment,
-  deploySigner: ethers.Signer,
-  trustedDogeEthPriceOracle: string,
-  { superblocks, dogeMessageLibrary }: DogethereumCoreSystem
-): Promise<DogethereumTokenSystem> {
-  const setContractName = "Set";
-  const setLibrary = {
-    contract: await deployContract(setContractName, [], hre, {
-      signer: deploySigner,
-    }),
-    name: setContractName,
-  };
-  const dogeTokenContractName = "DogeToken";
-  const dogeToken = {
-    contract: await deployContract(
-      dogeTokenContractName,
-      [
-        superblocks.contract.address,
-        trustedDogeEthPriceOracle,
-        collateralRatio,
-      ],
-      hre,
-      {
-        signer: deploySigner,
-        libraries: {
-          DogeMessageLibrary: dogeMessageLibrary.contract.address,
-          Set: setLibrary.contract.address,
-        },
-      }
-    ),
-    name: dogeTokenContractName,
+    name: tokenContractName,
   };
   return { dogeToken, setLibrary };
 }
@@ -301,8 +289,9 @@ export async function deployDogethereum(
 
   let dogeTokenContracts;
   if (network.name === "hardhat" || network.name === "development") {
-    dogeTokenContracts = await deployTestToken(
+    dogeTokenContracts = await deployToken(
       hre,
+      "DogeTokenForTests",
       accounts[0],
       trustedDogeEthPriceOracle,
       dogethereumMain
@@ -310,6 +299,7 @@ export async function deployDogethereum(
   } else {
     dogeTokenContracts = await deployToken(
       hre,
+      "DogeToken",
       accounts[0],
       trustedDogeEthPriceOracle,
       dogethereumMain
@@ -319,6 +309,107 @@ export async function deployDogethereum(
   return {
     ...dogethereumMain,
     ...dogeTokenContracts,
+  };
+}
+
+export const DEPLOYMENT_JSON_NAME = "deployment.json";
+
+export function getDefaultDeploymentPath(hre: HardhatRuntimeEnvironment) {
+  return path.join(hre.config.paths.root, "deployment", hre.network.name);
+}
+
+async function getContractDescription(
+  hre: HardhatRuntimeEnvironment,
+  { contract, name }: DogethereumContract
+) {
+  const artifact = await hre.artifacts.readArtifact(name);
+  return {
+    abi: artifact.abi,
+    contractName: artifact.contractName,
+    sourceName: artifact.sourceName,
+    address: contract.address,
+  };
+}
+
+export async function storeDeployment(
+  hre: HardhatRuntimeEnvironment,
+  {
+    superblocks,
+    dogeMessageLibrary,
+    dogeToken,
+    scryptChecker,
+    claimManager,
+    battleManager,
+    setLibrary,
+  }: DogethereumSystem,
+  deploymentDir: string
+): Promise<void> {
+  const deploymentInfo: DeploymentInfo = {
+    chainId: hre.ethers.provider.network.chainId,
+    contracts: {
+      superblocks: await getContractDescription(hre, superblocks),
+      dogeMessageLibrary: await getContractDescription(hre, dogeMessageLibrary),
+      dogeToken: await getContractDescription(hre, dogeToken),
+      scryptChecker: await getContractDescription(hre, scryptChecker),
+      claimManager: await getContractDescription(hre, claimManager),
+      battleManager: await getContractDescription(hre, battleManager),
+      setLibrary: await getContractDescription(hre, setLibrary),
+    },
+  };
+  // TODO: store debugging symbols such as storage layout, contract types, source mappings, etc too.
+
+  await fs.ensureDir(deploymentDir);
+
+  const deploymentJsonPath = path.join(deploymentDir, DEPLOYMENT_JSON_NAME);
+  await fs.writeJson(deploymentJsonPath, deploymentInfo);
+
+  const abiDir = path.join(deploymentDir, "abi");
+  await fs.ensureDir(abiDir);
+
+  // Here we output ABI files to generate wrapper classes in web3j.
+  // Note that we don't support repeated contract names here.
+  for (const info of [
+    deploymentInfo.contracts.superblocks,
+    deploymentInfo.contracts.dogeToken,
+    deploymentInfo.contracts.claimManager,
+    deploymentInfo.contracts.battleManager,
+  ]) {
+    const abiJsonPath = path.join(abiDir, `${info.contractName}.json`);
+    const abi = info.abi;
+    await fs.writeJson(abiJsonPath, abi);
+  }
+}
+
+async function reifyContract(hre: HardhatRuntimeEnvironment, { abi, address, contractName }: ContractInfo) {
+  const contract = await hre.ethers.getContractAt(abi, address);
+  return {
+    name: contractName,
+    contract,
+  };
+}
+
+export async function loadDeployment(
+  hre: HardhatRuntimeEnvironment,
+  deploymentDir: string = getDefaultDeploymentPath(hre)
+): Promise<DogethereumSystem> {
+  const deploymentInfoPath = path.join(deploymentDir, DEPLOYMENT_JSON_NAME);
+  const deploymentInfo: DeploymentInfo = await fs.readJson(deploymentInfoPath);
+
+  const chainId = (await hre.ethers.provider.getNetwork()).chainId;
+  if (chainId !== deploymentInfo.chainId) {
+    throw new Error(
+      `Expected a deployment for network with chainId ${chainId} but found chainId ${deploymentInfo.chainId} instead.`
+    );
+  }
+
+  return {
+    superblocks: await reifyContract(hre, deploymentInfo.contracts.superblocks),
+    dogeMessageLibrary: await reifyContract(hre, deploymentInfo.contracts.dogeMessageLibrary),
+    dogeToken: await reifyContract(hre, deploymentInfo.contracts.dogeToken),
+    scryptChecker: await reifyContract(hre, deploymentInfo.contracts.scryptChecker),
+    claimManager: await reifyContract(hre, deploymentInfo.contracts.claimManager),
+    battleManager: await reifyContract(hre, deploymentInfo.contracts.battleManager),
+    setLibrary: await reifyContract(hre, deploymentInfo.contracts.setLibrary),
   };
 }
 
