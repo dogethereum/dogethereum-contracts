@@ -46,11 +46,11 @@ Display information for the last approved superblocks
     $ npx hardhat --network NETWORK COMMAND [OPTIONS]
 ```
 
-You can find dogethereum commands among Hardhat tasks by invoking `npx hardhat --help`. To see further options you can invoke the help for that particular task. E.g. for the `dogethereum:challenge` task you can invoke `npx hardhat dogethereum:challenge --help`.
+You can find dogethereum commands among Hardhat tasks by invoking `npx hardhat --help`. To see further options you can invoke the help for that particular task. E.g. for the `dogethereum.challenge` task you can invoke `npx hardhat dogethereum.challenge --help`.
 
 Where COMMAND
 
-*   `dogethereum:challenge`: Start a challenge to a superblock
+*   `dogethereum.challenge`: Start a challenge to a superblock
 
     Available OPTIONS are:
 
