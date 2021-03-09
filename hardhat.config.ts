@@ -4,6 +4,8 @@ import "@nomiclabs/hardhat-ethers";
 import "@nomiclabs/hardhat-truffle5";
 import type { HardhatUserConfig } from "hardhat/types"
 
+import "./tasks/superblock-cli";
+
 const config: HardhatUserConfig = {
     networks: {
         hardhat: {
