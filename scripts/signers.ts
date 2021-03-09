@@ -18,7 +18,6 @@ const keyByRole: KeyByRoleMap = {
   [Role.User]: "0xf968fec769bdd389e33755d6b8a704c04e3ab958f99cc6a8b2bcf467807f9634",
 }
 
-// TODO: parametrize role? e.g. getWalletFor(role: Role)
 export async function getWalletFor(role: Role): Promise<Wallet> {
   const privateKey = keyByRole[role];
   const wallet = new hre.ethers.Wallet(privateKey, hre.ethers.provider);
