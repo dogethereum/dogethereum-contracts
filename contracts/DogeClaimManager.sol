@@ -272,7 +272,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
             return false;
         }
 
-        // superblocks marked as invalid do not have to run remaining challengers
+        // superblocks marked as invalid do not have to run remaining challenges
         if (claim.decided || claim.invalid) {
             emit ErrorClaim(superblockHash, ERR_SUPERBLOCK_CLAIM_DECIDED);
             return false;

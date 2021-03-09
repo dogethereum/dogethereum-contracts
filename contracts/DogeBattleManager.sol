@@ -16,7 +16,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
         Unchallenged,             // Unchallenged submission
         Challenged,               // Claims was challenged
         QueryMerkleRootHashes,    // Challenger expecting block hashes
-        RespondMerkleRootHashes,  // Blcok hashes were received and verified
+        RespondMerkleRootHashes,  // Block hashes were received and verified
         QueryBlockHeader,         // Challenger is requesting block headers
         RespondBlockHeader,       // All block headers were received
         VerifyScryptHash,
