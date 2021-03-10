@@ -204,21 +204,23 @@ library DogeMessageLibrary {
         bytes20 output_public_key_hash;
         uint output_value;
         uint16 outputIndex;
+        // "x" axis value of the public key that matches first input's signature
         bytes32 inputPubKey;
+        // Indicates inputPubKey odd bit
         bool inputPubKeyOdd;
     }
 
     // @dev - Parses a doge tx
     //
     // @param txBytes - tx byte array
-    // @param expected_output_public_key_hash - lock address (actually, it's public key hash expected to be on 1st or 2nd output, require() fails otherwise)
+    // @param expected_operator_public_key_hash - public key hash that is expected to be used as output or input
     // Outputs
     // @return output_value - amount sent to the lock address in satoshis
-    // @return inputPubKey - "x" axis value of the public key used to sign the first output
-    // @return inputPubKeyOdd - Indicates inputPubKey odd bit
-    // @return outputIndex - number of output where expected_output_address was found
+    // @return firstInputPublicKeyHash - hash of the public key that matches first input's signature
+    // @return lockDestinationEthAddress - address where tokens should be minted to in case of a lock tx
+    // @return outputIndex - number of output where expected_operator_public_key_hash was found
 
-    function parseTransaction(bytes memory txBytes, bytes20 expected_output_public_key_hash) internal view
+    function parseTransaction(bytes memory txBytes, bytes20 expected_operator_public_key_hash) internal view
              returns (uint, bytes20, address, uint16)
     {
         ParseTransactionVariablesStruct memory variables;
@@ -235,13 +237,13 @@ library DogeMessageLibrary {
 
         uint operator_value;
         uint16 operator_index;
-        (variables.output_public_key_hash, operator_value, operator_index, lockDestinationEthAddress) = findOperatorOutput(expected_output_public_key_hash, txBytes, variables.pos);
+        (variables.output_public_key_hash, operator_value, operator_index, lockDestinationEthAddress) = parseLockTxOuptuts(expected_operator_public_key_hash, txBytes, variables.pos);
 
         // Check tx is sending funds to an operator or spending funds from an operator.
-        require(variables.output_public_key_hash == expected_output_public_key_hash ||
-            firstInputPublicKeyHash == expected_output_public_key_hash);
+        require(variables.output_public_key_hash == expected_operator_public_key_hash ||
+            firstInputPublicKeyHash == expected_operator_public_key_hash);
         // The output we are looking for should be the first or the second output
-        if (variables.output_public_key_hash == expected_output_public_key_hash) {
+        if (variables.output_public_key_hash == expected_operator_public_key_hash) {
             variables.output_value = operator_value;
             variables.outputIndex = operator_index;
         }
@@ -252,9 +254,19 @@ library DogeMessageLibrary {
         return (variables.output_value, firstInputPublicKeyHash, lockDestinationEthAddress, variables.outputIndex);
     }
 
-    // Search output public key hash and embedded ethereum address in transaction outputs at txBytes
+    // Search operator output and embedded ethereum address in transaction outputs in tx
+    //
+    // @param expected_output_public_key_hash - operator public key hash to look for
+    // @param txBytes - tx byte array
+    // @param pos - position to start parsing txBytes
+    // Outputs
+    // @return operator public key hash - Same as input parameter if operator output found, 0 otherwise
+    // @return output value of operator output if operator output found, 0 otherwise
+    // @return output index of operator output if operator output found, 0 otherwise
+    // @return lockDestinationEthAddress - Lock destination address if operator output and OP_RETURN output found, 0 otherwise    
+    // 
     // Returns output amount, index and ethereum address
-    function findOperatorOutput(bytes20 expected_output_public_key_hash, bytes memory txBytes, uint pos)
+    function parseLockTxOuptuts(bytes20 expected_output_public_key_hash, bytes memory txBytes, uint pos)
              private pure returns (bytes20, uint, uint16, address) {
         uint[] memory output_script_lens;
         uint[] memory output_script_starts;
@@ -263,18 +275,18 @@ library DogeMessageLibrary {
 
         bytes20 output_public_key_hash;
         uint operator_index = output_script_starts.length;
-        address eth_address;
+        address lockDestinationEthAddress;
         for (uint i=0; i<output_script_starts.length; ++i) {
             output_public_key_hash = parseP2PKHOutputScript(txBytes, output_script_starts[i], output_script_lens[i]);
             if (expected_output_public_key_hash == output_public_key_hash) {
                 operator_index = i;
             }
             if (isEthereumAddress(txBytes, output_script_starts[i], output_script_lens[i])) {
-                eth_address = readEthereumAddress(txBytes, output_script_starts[i], output_script_lens[i]);
+                lockDestinationEthAddress = readEthereumAddress(txBytes, output_script_starts[i], output_script_lens[i]);
             }
         }
         if (operator_index < output_script_starts.length) {
-            return (expected_output_public_key_hash, output_values[operator_index], uint16(operator_index), eth_address);
+            return (expected_output_public_key_hash, output_values[operator_index], uint16(operator_index), lockDestinationEthAddress);
         }
         // No operator output, it might be an unlock operation
         return (bytes20(0x0), 0, 0, address(0x0));
