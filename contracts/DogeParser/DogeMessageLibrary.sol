@@ -237,6 +237,7 @@ library DogeMessageLibrary {
         uint16 operator_index;
         (variables.output_public_key_hash, operator_value, operator_index, firstInputEthAddress) = findOperatorOutput(expected_output_public_key_hash, txBytes, variables.pos);
 
+        // Check tx is sending funds to an operator or spending funds from an operator.
         require(variables.output_public_key_hash == expected_output_public_key_hash ||
             firstInputPublicKeyHash == expected_output_public_key_hash);
         // The output we are looking for should be the first or the second output
