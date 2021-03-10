@@ -231,11 +231,11 @@ library DogeMessageLibrary {
         (variables.inputPubKey, variables.inputPubKeyOdd) = getInputPubKey(txBytes, input_script_starts[0]);
 
         bytes20 firstInputPublicKeyHash = pub2PubKeyHash(variables.inputPubKey, variables.inputPubKeyOdd);
-        address firstInputEthAddress;
+        address lockDestinationEthAddress;
 
         uint operator_value;
         uint16 operator_index;
-        (variables.output_public_key_hash, operator_value, operator_index, firstInputEthAddress) = findOperatorOutput(expected_output_public_key_hash, txBytes, variables.pos);
+        (variables.output_public_key_hash, operator_value, operator_index, lockDestinationEthAddress) = findOperatorOutput(expected_output_public_key_hash, txBytes, variables.pos);
 
         // Check tx is sending funds to an operator or spending funds from an operator.
         require(variables.output_public_key_hash == expected_output_public_key_hash ||
@@ -246,10 +246,10 @@ library DogeMessageLibrary {
             variables.outputIndex = operator_index;
         }
         // If no embedded ethereum address use address derived from first input public
-        if (firstInputEthAddress == address(0x0)) {
-            firstInputEthAddress = pub2address(uint(variables.inputPubKey), variables.inputPubKeyOdd);
+        if (lockDestinationEthAddress == address(0x0)) {
+            lockDestinationEthAddress = pub2address(uint(variables.inputPubKey), variables.inputPubKeyOdd);
         }
-        return (variables.output_value, firstInputPublicKeyHash, firstInputEthAddress, variables.outputIndex);
+        return (variables.output_value, firstInputPublicKeyHash, lockDestinationEthAddress, variables.outputIndex);
     }
 
     // Search output public key hash and embedded ethereum address in transaction outputs at txBytes
