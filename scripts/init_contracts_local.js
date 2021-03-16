@@ -30,5 +30,5 @@ module.exports = async function(callback) {
   await sb.initialize(blocksMerkleRoot, accumulatedWork, timestamp, prevTimestamp, lastHash, lastBits, parentId);
 
   console.log("init_contracts_local end");
-
+  callback();
 }
