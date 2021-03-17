@@ -58,6 +58,8 @@ interface DeploymentInfo {
   };
 }
 
+export const DEPLOYMENT_JSON_NAME = "deployment.json";
+
 const scryptCheckerAddress = "0xfeedbeeffeedbeeffeedbeeffeedbeeffeedbeef";
 // TODO: Remove these?
 //const dogethereumRecipientUnitTest = '0x4d905b4b815d483cdfabcd292c6f86509d0fad82';
@@ -311,8 +313,6 @@ export async function deployDogethereum(
     ...dogeTokenContracts,
   };
 }
-
-export const DEPLOYMENT_JSON_NAME = "deployment.json";
 
 export function getDefaultDeploymentPath(hre: HardhatRuntimeEnvironment) {
   return path.join(hre.config.paths.root, "deployment", hre.network.name);
