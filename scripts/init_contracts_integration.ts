@@ -8,7 +8,7 @@ import { loadDeployment } from "../deploy";
 async function initContractsIntegration() {
   console.log("init_contracts_integration begin");
 
-  const deployment: any = await loadDeployment(hre);
+  const deployment = await loadDeployment(hre);
   await initContracts(hre, deployment, contractsIntegrationSuperblockInit);
 
   console.log("init_contracts_integration end");

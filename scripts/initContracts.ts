@@ -53,9 +53,7 @@ export async function initContracts(
   await initSuperblocks(superblocks, superblockInit);
 }
 
-async function initDogeToken(
-  dogeToken: ethers.Contract
-) {
+async function initDogeToken(dogeToken: ethers.Contract) {
   if (!(dogeToken.signer instanceof SignerWithAddress)) {
     throw new Error(
       "Expected a SignerWithAddress in the DogeToken contract instance"

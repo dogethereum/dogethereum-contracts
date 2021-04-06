@@ -5,7 +5,7 @@ import { loadDeployment } from "../deploy";
 async function initContractsLocal() {
   console.log("init_contracts_ethganachedogemain begin");
 
-  const deployment: any = await loadDeployment(hre);
+  const deployment = await loadDeployment(hre);
   await initContracts(hre, deployment, contractsLocalSuperblockInit);
 
   console.log("init_contracts_ethganachedogemain end");
