@@ -124,6 +124,7 @@ contract ClaimManager is DepositsManager, IScryptChecker {
       mstore(add(_blockHash, 0x20), _hash)
     }
 
+    // TODO: why is tx.origin used here?
     address _submitter = tx.origin;
     if (msg.value != 0) {
       // only call if eth is included (to save gas)
