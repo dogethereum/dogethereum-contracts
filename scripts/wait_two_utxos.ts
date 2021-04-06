@@ -13,6 +13,7 @@ async function main() {
     if (utxosLength > 1) {
       return;
     }
+    await delay(2000);
   }
 }
 

@@ -13,6 +13,7 @@ export async function main() {
     if (balance > 0) {
       return;
     }
+    await delay(2000);
   }
 }
 

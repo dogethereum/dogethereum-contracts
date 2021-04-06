@@ -15,7 +15,7 @@ async function main() {
     const [fundedSigner] = await hre.ethers.getSigners();
     await fundedSigner.sendTransaction({
       to: wallet.address,
-      value: "1000000000000000000",
+      value: hre.ethers.BigNumber.from("1000000000000000000"),
     });
     userEthBalance = await wallet.getBalance();
     console.log(`sender eth balance: ${userEthBalance}`);
