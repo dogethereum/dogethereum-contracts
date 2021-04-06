@@ -1,14 +1,12 @@
 import hre from "hardhat";
-import { contractsLocalSuperblockInit, initSuperblocks } from "./initContracts";
+import { contractsLocalSuperblockInit, initContracts } from "./initContracts";
 import { loadDeployment } from "../deploy";
 
 async function initContractsLocal() {
   console.log("init_contracts_local begin");
 
-  const {
-    superblocks: { contract: superblocks },
-  } = await loadDeployment(hre);
-  await initSuperblocks(superblocks, contractsLocalSuperblockInit);
+  const deployment = await loadDeployment(hre);
+  await initContracts(hre, deployment, contractsLocalSuperblockInit);
 
   console.log("init_contracts_local end");
 }

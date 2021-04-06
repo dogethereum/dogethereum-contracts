@@ -102,7 +102,7 @@ ${errorEvents}`);
   }
 }
 
-export async function initSuperblocks(
+async function initSuperblocks(
   superblocks: ethers.Contract,
   superblockInit: SuperblockInit
 ) {
