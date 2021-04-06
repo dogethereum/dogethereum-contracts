@@ -74,10 +74,32 @@ async function initDogeToken(dogeToken: ethers.Contract) {
     operatorSigner.address
   );
 
-  await dogeToken.addOperator(operatorPublicKeyCompressedString, signature);
-  await dogeToken.addOperatorDeposit(operatorPublicKeyHash, {
+  let tx: ethers.ContractTransaction = await dogeToken.addOperator(
+    operatorPublicKeyCompressedString,
+    signature
+  );
+  await verifyDogeTokenErrorEvents(tx);
+
+  tx = await dogeToken.addOperatorDeposit(operatorPublicKeyHash, {
     value: "1000000000000000000",
   });
+  await verifyDogeTokenErrorEvents(tx);
+}
+
+async function verifyDogeTokenErrorEvents(tx: ethers.ContractTransaction) {
+  const { events } = await tx.wait();
+  if (events === undefined || events === null) {
+    return;
+  }
+
+  const errorEvents = events.filter((event) => {
+    return event.event === "DogeTokenError";
+  });
+
+  if (errorEvents.length > 0) {
+    throw new Error(`An error occurred in a transaction sent to the dogethereum token contract.
+${errorEvents}`);
+  }
 }
 
 export async function initSuperblocks(
