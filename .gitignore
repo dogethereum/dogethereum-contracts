@@ -11,3 +11,7 @@ test/testTimestamp.js*
 test/parseAuxPoW.js*
 test/testRelayIntegration.js
 superblocknotes
+
+# Used in integration tests (e.g. see scripts/send-back-and-forth-test.sh)
+.dogecoin-data/
+ganachelog.txt
