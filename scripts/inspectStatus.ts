@@ -1,5 +1,8 @@
+import type { Contract } from "ethers";
 import type { HardhatRuntimeEnvironment } from "hardhat/types";
 import type { DogethereumSystem } from "../deploy";
+
+import { getWalletFor, Role } from "./signers";
 
 const utils = require("../test/utils");
 
@@ -32,28 +35,13 @@ export async function printStatus(
   console.log("DogeToken");
   console.log("---------");
   const dogeToken = deployment.dogeToken.contract;
-  const balance1 = await dogeToken.callStatic.balanceOf(
-    "0x92ecc1ba4ea10f681dcf35c02f583e59d2b99b4b"
-  );
-  console.log(
-    "DogeToken Balance of 0x92ecc1ba4ea10f681dcf35c02f583e59d2b99b4b: " +
-      balance1
-  );
 
-  const userAddress = "0xd2394f3fad76167e7583a876c292c86ed10305da";
-  const balance2 = await dogeToken.callStatic.balanceOf(
-    userAddress
-  );
-  console.log(
-    `DogeToken Balance of ${userAddress}: ${balance2}`
-  );
-  const balance3 = await dogeToken.callStatic.balanceOf(
-    "0xf5fa014271b7971cb0ae960d445db3cb3802dfd9"
-  );
-  console.log(
-    "DogeToken Balance of 0xf5fa014271b7971cb0ae960d445db3cb3802dfd9: " +
-      balance3
-  );
+  await showBalance(dogeToken, "0x92ecc1ba4ea10f681dcf35c02f583e59d2b99b4b");
+
+  const userWallet = getWalletFor(Role.User);
+  await showBalance(dogeToken, userWallet.address);
+
+  await showBalance(dogeToken, "0xf5fa014271b7971cb0ae960d445db3cb3802dfd9");
 
   const dogeEthPrice = await dogeToken.callStatic.dogeEthPrice();
   console.log("Doge-Eth price: " + dogeEthPrice);
@@ -68,20 +56,19 @@ export async function printStatus(
       const operatorPublicKeyHash = operatorKey[0];
       const operator = await dogeToken.operators(operatorPublicKeyHash);
       console.log(
-        `operator [${operatorPublicKeyHash}]: eth address: ${operator[0].toString(
-          16
-        )}, dogeAvailableBalance: ${operator[1]}, dogePendingBalance: ${
-          operator[2]
-        }, nextUnspentUtxoIndex: ${
-          operator[3]
-        }, ethBalance: ${hre.web3.utils.fromWei(operator[4])}`
+        `operator [${operatorPublicKeyHash}]:
+  eth address: ${operator[0]},
+  dogeAvailableBalance: ${operator[1]},
+  dogePendingBalance: ${operator[2]},
+  nextUnspentUtxoIndex: ${operator[3]},
+  ethBalance: ${hre.web3.utils.fromWei(operator[4].toString())}`
       );
       const utxosLength = await dogeToken.getUtxosLength(operatorPublicKeyHash);
       console.log("utxosLength: " + utxosLength);
       for (let j = 0; j < utxosLength; j++) {
         const utxo = await dogeToken.getUtxo(operatorPublicKeyHash, j);
         console.log(
-          `utxo [${j}]: ${utils.formatHexUint32(utxo[1].toString(16))}, ${
+          `utxo [${j}]: ${utils.formatHexUint32(utxo[1].toHexString())}, ${
             utxo[2]
           }, ${utxo[0]}`
         );
@@ -123,4 +110,19 @@ export async function printStatus(
   //       console.log("  operatorPublicKeyHash: " + unlock[7]);
   //    }
   // });
+
+  // Error events
+  const dogeTokenErrorFilter = dogeToken.filters.ErrorDogeToken();
+  const dogeTokenErrorEvents = await dogeToken.queryFilter(
+    dogeTokenErrorFilter,
+    0,
+    "latest"
+  );
+  console.log("dogeTokenErrorEvents");
+  console.log(dogeTokenErrorEvents);
+}
+
+async function showBalance(dogeToken: Contract, address: string) {
+  const balance = await dogeToken.callStatic.balanceOf(address);
+  console.log(`DogeToken Balance of ${address}: ${balance}`);
 }
