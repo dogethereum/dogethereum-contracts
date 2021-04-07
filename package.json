@@ -35,7 +35,6 @@
   },
   "scripts": {
     "test": "TS_NODE_TRANSPILE_ONLY=true hardhat test",
-    "export": "scripts/exportAndInit.sh",
     "ganache": "ganache-cli --gasLimit 4000000000000",
     "hh-network": "hardhat node"
   },
