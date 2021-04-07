@@ -36,6 +36,7 @@
   "scripts": {
     "test": "TS_NODE_TRANSPILE_ONLY=true hardhat test",
     "ganache": "ganache-cli --gasLimit 4000000000000",
+    "integration-tests": "scripts/send-back-and-forth-test.sh",
     "hh-network": "hardhat node"
   },
   "repository": {
