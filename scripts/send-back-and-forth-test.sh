@@ -12,11 +12,14 @@ dogecoinQtRpcuser=aaa
 dogecoinQtRpcpassword=bbb
 
 # TODO: we probably want to store all temporary data in a single directory so cleanup is straightforward.
-if [[ ! -v agentCodeDir ]]; then
-	agentCodeDir=/path/agentCodeDir
+if [[ ! -v agentRootDir ]]; then
+	agentRootDir=/path/agentCodeDir
 fi
 if [[ ! -v agentDataDir ]]; then
 	agentDataDir=/path/agentDataDir
+fi
+if [[ ! -v toolsRootDir ]]; then
+	toolsRootDir=/path/toolsRootDir
 fi
 dogethereumDeploymentJson="deployment/$NETWORK/deployment.json"
 
@@ -33,7 +36,7 @@ if [[ $DOGECOIN_PROCESSES ]]; then
 fi
 # Replace dogecoin-qt regtest datadir with the prepared db
 rm -rf "$dogecoinQtDatadir/regtest/"
-unzip "$agentCodeDir/data/doge-qt-regtest-datadir.zip" -d "$dogecoinQtDatadir" > /dev/null 2>&1
+unzip "$agentRootDir/data/doge-qt-regtest-datadir.zip" -d "$dogecoinQtDatadir" > /dev/null 2>&1
 # Start dogecoin-qt
 $dogecoinQtExecutable -datadir="$dogecoinQtDatadir" -regtest -debug -server -listen -rpcuser=$dogecoinQtRpcuser -rpcpassword=$dogecoinQtRpcpassword -rpcport=41200 &
 dogecoinNode=$!
@@ -69,7 +72,7 @@ npx hardhat run --network $NETWORK scripts/wait_token_balance.ts
 npx hardhat run --network $NETWORK scripts/prepare_sender.ts
 for i in {1..2}; do
 	# Send eth unlock tx
-	node ../dogethereum-tools/user/unlock.js --deployment $dogethereumDeploymentJson --privateKey 0xf968fec769bdd389e33755d6b8a704c04e3ab958f99cc6a8b2bcf467807f9634 --receiver ncbC7ZY1K9EcMVjvwbgSBWKQ4bwDWS4d5P --value 300000000
+	node "$toolsRootDir/user/unlock.js" --deployment $dogethereumDeploymentJson --privateKey 0xf968fec769bdd389e33755d6b8a704c04e3ab958f99cc6a8b2bcf467807f9634 --receiver ncbC7ZY1K9EcMVjvwbgSBWKQ4bwDWS4d5P --value 300000000
 	# Print debug.js status
 	npx hardhat run --network $NETWORK scripts/debug.ts
 	# Mine 5 eth blocks so unlock eth tx has enough confirmations
