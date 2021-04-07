@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # Test sending doge to eth and back
-# Tested on Mac OSX only
 
 # Declare variables
 NETWORK="integrationDogeRegtest"
@@ -13,8 +12,12 @@ dogecoinQtRpcuser=aaa
 dogecoinQtRpcpassword=bbb
 
 # TODO: we probably want to store all temporary data in a single directory so cleanup is straightforward.
-agentCodeDir=/path/agentCodeDir
-agentDataDir=/path/agentDataDir
+if [[ ! -v agentCodeDir ]]; then
+	agentCodeDir=/path/agentCodeDir
+fi
+if [[ ! -v agentDataDir ]]; then
+	agentDataDir=/path/agentDataDir
+fi
 dogethereumDeploymentJson="deployment/$NETWORK/deployment.json"
 
 # We avoid typechecking to speed up execution
