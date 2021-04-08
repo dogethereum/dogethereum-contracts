@@ -362,22 +362,6 @@ export async function storeDeployment(
 
   const deploymentJsonPath = path.join(deploymentDir, DEPLOYMENT_JSON_NAME);
   await fs.writeJson(deploymentJsonPath, deploymentInfo);
-
-  const abiDir = path.join(deploymentDir, "abi");
-  await fs.ensureDir(abiDir);
-
-  // Here we output ABI files to generate wrapper classes in web3j.
-  // Note that we don't support repeated contract names here.
-  for (const info of [
-    deploymentInfo.contracts.superblocks,
-    deploymentInfo.contracts.dogeToken,
-    deploymentInfo.contracts.claimManager,
-    deploymentInfo.contracts.battleManager,
-  ]) {
-    const abiJsonPath = path.join(abiDir, `${info.contractName}.json`);
-    const abi = info.abi;
-    await fs.writeJson(abiJsonPath, abi);
-  }
 }
 
 async function reifyContract(hre: HardhatRuntimeEnvironment, { abi, address, contractName }: ContractInfo) {
