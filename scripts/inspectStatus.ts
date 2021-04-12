@@ -1,4 +1,4 @@
-import type { Contract } from "ethers";
+import type { Contract, Event } from "ethers";
 import type { HardhatRuntimeEnvironment } from "hardhat/types";
 import type { DogethereumSystem } from "../deploy";
 
@@ -87,29 +87,16 @@ export async function printStatus(
     0,
     "latest"
   );
-  console.log("unlockRequestEvents");
-  console.log(unlockRequestEvents);
-  // TODO: remove once the event output is tested and determined to be satisfactory
-  // const myResults = unlockRequestEvent.get(async function(error, unlockRequestEvents){
-  //    if (error) console.log("error: " + error);
-  //    console.log("unlockRequestEvents length: " + unlockRequestEvents.length);
-  //    for (let i = 0; i < unlockRequestEvents.length; i++) {
-  //       console.log("unlockRequestEvent [" + unlockRequestEvents[i].args.id + "]: ");
-  //       console.log("  tx block number: " + unlockRequestEvents[i].blockNumber);
-  //       const unlock = await dogeToken.getUnlockPendingInvestorProof(unlockRequestEvents[i].args.id);
-  //       console.log("  from: " + unlock[0]);
-  //       console.log("  dogeAddress: " + unlock[1]);
-  //       console.log("  value: " + unlock[2].toNumber());
-  //       console.log("  operator fee: " + unlock[3].toNumber());
-  //       console.log("  timestamp: " + unlock[4].toNumber());
-  //       console.log("  selectedUtxos: ");
-  //       for (let j = 0; j <  unlock[5].length; j++) {
-  //         console.log("    " + unlock[5][j]);
-  //       }
-  //       console.log("  doge tx fee: " + unlock[6].toNumber());
-  //       console.log("  operatorPublicKeyHash: " + unlock[7]);
-  //    }
-  // });
+  await printUnlockEvent(unlockRequestEvents, dogeToken);
+
+  // Lock events
+  const dogeTokenLockFilter = dogeToken.filters.NewToken();
+  const dogeTokenLockEvents = await dogeToken.queryFilter(
+    dogeTokenLockFilter,
+    0,
+    "latest"
+  );
+  await printLockEvent(dogeTokenLockEvents, dogeToken);
 
   // Error events
   const dogeTokenErrorFilter = dogeToken.filters.ErrorDogeToken();
@@ -120,6 +107,70 @@ export async function printStatus(
   );
   console.log("dogeTokenErrorEvents");
   console.log(dogeTokenErrorEvents);
+}
+
+async function printUnlockEvent(events: Event[], dogeToken: Contract) {
+  if (events.length === 0) {
+    console.log("No unlock events.");
+    return;
+  }
+
+  console.log("Unlock events");
+
+  for (const event of events) {
+    if (event.args === undefined) {
+      throw new Error("Arguments missing in unlock event.");
+    }
+    const [
+      from,
+      dogeAddress,
+      value,
+      operatorFee,
+      timestamp,
+      selectedUtxos,
+      dogeTxFee,
+      operatorPublicKeyHash,
+    ] = await dogeToken.getUnlockPendingInvestorProof(event.args.id, {
+      blockTag: event.blockNumber,
+    });
+    let args = "";
+    for (const [key, value] of event.args.entries()) {
+      args += `${key}: ${value}  `;
+    }
+    console.log(`tx hash: ${event.transactionHash} log index: ${event.logIndex}
+  block number: ${event.blockNumber}
+  args: ${args}
+  from: ${from}
+  dogecoin address: ${dogeAddress}
+  value: ${value}
+  operator fee: ${operatorFee}
+  timestamp: ${timestamp}
+  selectedUtxos: ${selectedUtxos}
+  doge tx fee: ${dogeTxFee}
+  operator public key hash: ${operatorPublicKeyHash}`);
+  }
+}
+
+async function printLockEvent(events: Event[], dogeToken: Contract) {
+  if (events.length === 0) {
+    console.log("No lock events.");
+    return;
+  }
+
+  console.log("Lock events");
+
+  for (const event of events) {
+    if (event.args === undefined) {
+      throw new Error("Arguments missing in lock event.");
+    }
+    let args = "";
+    for (const [key, value] of event.args.entries()) {
+      args += `${key}: ${value}  `;
+    }
+    console.log(`tx hash: ${event.transactionHash} log index: ${event.logIndex}
+  block number: ${event.blockNumber}
+  args: ${args}`);
+  }
 }
 
 async function showBalance(dogeToken: Contract, address: string) {
