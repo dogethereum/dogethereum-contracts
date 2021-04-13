@@ -114,9 +114,9 @@ const SUPERBLOCK_OPTIONS_INTEGRATION_FAST_SYNC = {
 };
 
 const SUPERBLOCK_OPTIONS_LOCAL = {
-  DURATION: 60, // 1 minute
-  DELAY: 60, // 1 minute
-  TIMEOUT: 30, // 30 seconds
+  DURATION: 10, // 1 minute
+  DELAY: 10, // 1 minute
+  TIMEOUT: 7, // 30 seconds
   CONFIRMATIONS: 1, // Superblocks required to confirm semi approved superblock
   REWARD: 10, // Monetary reward for opponent in case a battle is lost
 };
