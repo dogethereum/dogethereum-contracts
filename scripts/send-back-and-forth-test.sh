@@ -83,6 +83,8 @@ for i in {1..2}; do
 	sleep 30s
 	# Mine 10 doge blocks so doge unlock tx has enough confirmations
 	curl --user $dogecoinQtRpcuser:$dogecoinQtRpcpassword  --data-binary '{"jsonrpc": "1.0", "id":"curltest", "method": "generate", "params": [10] }' -H 'content-type: text/plain;' http://127.0.0.1:41200/
+	# TODO: This should actually wait until there are three utxos the second time.
+	# This should be turned into a task so parameters can be added.
 	# Wait for agent to relay doge unlock tx to eth and utxo length updated
 	npx hardhat run --network $NETWORK scripts/wait_two_utxos.ts
 done
