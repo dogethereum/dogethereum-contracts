@@ -266,13 +266,36 @@ function findEvent(logs, name) {
 }
 
 const DOGECOIN = {
+  /**
+   * Message prefix used in dogecoin `signmessage` node API
+   */
   messagePrefix: '\x19Dogecoin Signed Message:\n',
+  /**
+   * BIP32 version bytes for dogecoin mainnet
+   * See https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki
+   */
   bip32: {
+    /**
+     * BIP32 version bytes for extended non-hardened keys
+     */
     public: 0x02facafd,
+    /**
+     * BIP32 version bytes for extended hardened keys
+     */
     private: 0x02fac398
   },
+  /**
+   * First byte of public key addresses for dogecoin
+   */
   pubKeyHash: 0x1e,
+  /**
+   * First byte of script addresses for dogecoin
+   */
   scriptHash: 0x16,
+  /**
+   * Network prefix
+   * See https://en.bitcoin.it/wiki/Wallet_import_format
+   */
   wif: 0x9e
 };
 
@@ -293,6 +316,11 @@ function ethAddressFromKeyPair(keyPair) {
   return `0x${Buffer.from(keccak256.arrayBuffer(uncompressedPublicKey.publicKey.slice(1))).slice(12).toString('hex')}`;
 }
 
+/**
+ * @param signer private key in WIF
+ * @param inputs [[txid, index]] list of utxos where utxo = txid + index of output
+ * @param outputs [[address, amount, data]] list of tx data
+ */
 function buildDogeTransaction({ signer, inputs, outputs }) {
   const txBuilder = new bitcoin.TransactionBuilder(DOGECOIN);
   txBuilder.setVersion(1);
