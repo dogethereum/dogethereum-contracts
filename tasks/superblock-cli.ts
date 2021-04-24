@@ -140,11 +140,17 @@ interface StatusTaskArguments {
   toBlock?: number;
 }
 
+interface WaitUtxoTaskArguments {
+  operatorPublicKeyHash: string;
+  utxoLength: number;
+}
+
 const STATUS_UNINITIALIZED = 0;
 
 const DOGETHEREUM_SUPERCLI = "dogethereum";
 const STATUS_TASK = `${DOGETHEREUM_SUPERCLI}.status`;
 const CHALLENGE_TASK = `${DOGETHEREUM_SUPERCLI}.challenge`;
+const WAIT_UTXO_TASK = `${DOGETHEREUM_SUPERCLI}.waitUtxo`;
 
 async function challengeNextSuperblock(
   superblocks: Contract,
@@ -554,3 +560,48 @@ task(STATUS_TASK, "Show the status of a paritcular superblock or the status of s
     types.string
   )
   .setAction(statusCommand);
+
+const waitUtxoCommand: ActionType<WaitUtxoTaskArguments> = async function (
+  { operatorPublicKeyHash, utxoLength: expectedUtxoLength },
+  hre
+) {
+  const {
+    dogeToken: { contract: dogeToken },
+  } = await loadDeployment(hre);
+  let utxosLength = await dogeToken.getUtxosLength(operatorPublicKeyHash);
+  console.log(
+    `Utxo length of operator ${operatorPublicKeyHash} : ${utxosLength}`
+  );
+  while (true) {
+    // TODO: parametrize length check
+    if (utxosLength >= expectedUtxoLength) {
+      return;
+    }
+    await delay(2000);
+    utxosLength = await dogeToken.getUtxosLength(operatorPublicKeyHash);
+  }
+  console.log(
+    `Utxo length of operator ${operatorPublicKeyHash} : ${utxosLength}`
+  );
+};
+
+function delay(milliseconds: number) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, milliseconds);
+  });
+}
+
+task(WAIT_UTXO_TASK, "Wait until a particular operator has a specific amount of UTXOs.")
+  .addParam(
+    "operatorPublicKeyHash",
+    "Hash of the public key of the operator that should be monitored",
+    undefined,
+    types.string
+  )
+  .addParam(
+    "utxoLength",
+    "Minimum amount of UTXOs expected.",
+    undefined,
+    types.int
+  )
+  .setAction(waitUtxoCommand);
