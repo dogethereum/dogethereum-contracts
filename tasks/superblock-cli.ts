@@ -309,7 +309,7 @@ function statusToText(status: Status) {
 }
 
 function challengeStateToText(state: ChallengeState) {
-  const challengeStates: {[s in ChallengeState]: string} = {
+  const challengeStates: { [s in ChallengeState]: string } = {
     [ChallengeState.Unchallenged]: "Unchallenged",
     [ChallengeState.Challenged]: "Challenged",
     [ChallengeState.QueryMerkleRootHashes]: "Merkle root hashes queried",
@@ -317,8 +317,10 @@ function challengeStateToText(state: ChallengeState) {
     [ChallengeState.QueryBlockHeader]: "Block header queried",
     [ChallengeState.RespondBlockHeader]: "Block header replied",
     [ChallengeState.VerifyScryptHash]: "Waiting scrypt hash request",
-    [ChallengeState.RequestScryptVerification]: "Scrypt hash verification requested",
-    [ChallengeState.PendingScryptVerification]: "Scrypt hash Verification pending",
+    [ChallengeState.RequestScryptVerification]:
+      "Scrypt hash verification requested",
+    [ChallengeState.PendingScryptVerification]:
+      "Scrypt hash Verification pending",
     [ChallengeState.PendingVerification]: "Superblock verification pending",
     [ChallengeState.SuperblockVerified]: "Superblock verified",
     [ChallengeState.SuperblockFailed]: "Superblock failed",
@@ -540,7 +542,10 @@ const statusCommand: ActionType<StatusTaskArguments> = async function (
   console.log("status superblocks complete");
 };
 
-task(STATUS_TASK, "Show the status of a paritcular superblock or the status of superblocks in a given range of ethereum blocks.")
+task(
+  STATUS_TASK,
+  "Show the status of a paritcular superblock or the status of superblocks in a given range of ethereum blocks."
+)
   .addOptionalParam(
     "superblockId",
     "Id (i.e. hash) of the superblock that should be queried. Specifying this option overrides fromBlock and toBlock parameters.",
@@ -591,7 +596,10 @@ function delay(milliseconds: number) {
   });
 }
 
-task(WAIT_UTXO_TASK, "Wait until a particular operator has a specific amount of UTXOs.")
+task(
+  WAIT_UTXO_TASK,
+  "Wait until a particular operator has a specific amount of UTXOs."
+)
   .addParam(
     "operatorPublicKeyHash",
     "Hash of the public key of the operator that should be monitored",
