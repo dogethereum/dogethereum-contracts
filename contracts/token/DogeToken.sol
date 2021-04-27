@@ -219,12 +219,6 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
             return 0;
         }
 
-        uint value;
-        bytes20 firstInputPublicKeyHash;
-        address lockDestinationEthAddress;
-        uint16 outputIndex;
-        (value, firstInputPublicKeyHash, lockDestinationEthAddress, outputIndex) = DogeMessageLibrary.parseTransaction(dogeTx, operatorPublicKeyHash);
-
         // Add tx to the dogeTxHashesAlreadyProcessed
         bool inserted = Set.insert(dogeTxHashesAlreadyProcessed, txHash);
         // Check tx was not already processed
@@ -232,6 +226,12 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
             emit ErrorDogeToken(ERR_PROCESS_TX_ALREADY_PROCESSED);
             return 0;
         }
+
+        uint value;
+        bytes20 firstInputPublicKeyHash;
+        address lockDestinationEthAddress;
+        uint16 outputIndex;
+        (value, firstInputPublicKeyHash, lockDestinationEthAddress, outputIndex) = DogeMessageLibrary.parseTransaction(dogeTx, operatorPublicKeyHash);
 
         // Add utxo
         if (value > 0) {
