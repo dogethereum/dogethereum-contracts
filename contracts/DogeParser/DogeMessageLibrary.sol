@@ -263,8 +263,8 @@ library DogeMessageLibrary {
     // @return operator public key hash - Same as input parameter if operator output found, 0 otherwise
     // @return output value of operator output if operator output found, 0 otherwise
     // @return output index of operator output if operator output found, 0 otherwise
-    // @return lockDestinationEthAddress - Lock destination address if operator output and OP_RETURN output found, 0 otherwise    
-    // 
+    // @return lockDestinationEthAddress - Lock destination address if operator output and OP_RETURN output found, 0 otherwise
+    //
     // Returns output amount, index and ethereum address
     function parseLockTxOuptuts(bytes20 expected_output_public_key_hash, bytes memory txBytes, uint pos)
              private pure returns (bytes20, uint, uint16, address) {
@@ -276,7 +276,7 @@ library DogeMessageLibrary {
         bytes20 output_public_key_hash;
         uint operator_index = output_script_starts.length;
         address lockDestinationEthAddress;
-        for (uint i=0; i<output_script_starts.length; ++i) {
+        for (uint i = 0; i < output_script_starts.length; ++i) {
             output_public_key_hash = parseP2PKHOutputScript(txBytes, output_script_starts[i], output_script_lens[i]);
             if (expected_output_public_key_hash == output_public_key_hash) {
                 operator_index = i;
@@ -341,6 +341,7 @@ library DogeMessageLibrary {
         return (pubKey, odd);
     }
 
+    // TODO: is this necessary? It is dead code.
     // Check whether `btcAddress` is in the transaction outputs *and*
     // whether *at least* `value` has been sent to it.
     function checkValueSent(bytes memory txBytes, bytes20 btcAddress, uint value) private pure
@@ -364,6 +365,7 @@ library DogeMessageLibrary {
         }
         return false;
     }
+
     // scan the inputs and find the script lengths.
     // return an array of script lengths and the end position
     // of the inputs.
@@ -712,7 +714,7 @@ library DogeMessageLibrary {
           y = p - y;
         }
         require(yy == mulmod(y, y, p));
-        // Now, with uncompressed x and y, create the address         
+        // Now, with uncompressed x and y, create the address
         return address(uint160(uint256(keccak256(abi.encodePacked(x, y)))));
     }
 

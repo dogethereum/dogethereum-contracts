@@ -36,7 +36,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
     uint constant ERR_UNLOCK_MIN_UNLOCK_VALUE = 60080;
     uint constant ERR_UNLOCK_USER_BALANCE = 60090;
     uint constant ERR_UNLOCK_OPERATOR_NOT_CREATED = 60100;
-    uint constant ERR_UNLOCK_OPERATOR_BALANCE = 60110;    
+    uint constant ERR_UNLOCK_OPERATOR_BALANCE = 60110;
     uint constant ERR_UNLOCK_NO_AVAILABLE_UTXOS = 60120;
     uint constant ERR_UNLOCK_UTXOS_VALUE_LESS_THAN_VALUE_TO_SEND = 60130;
     uint constant ERR_UNLOCK_VALUE_TO_SEND_LESS_THAN_FEE = 60140;
@@ -52,7 +52,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
     address public trustedRelayerContract;
     // Doge-Eth price oracle to trust.
     address public trustedDogeEthPriceOracle;
-    // Number of times the eth collateral operator should cover her doge holdings 
+    // Number of times the eth collateral operator should cover her doge holdings
     uint8 public collateralRatio;
 
 
@@ -102,8 +102,8 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         uint24 operatorKeyIndex;
     }
 
-    struct OperatorKey { 
-        bytes20 key; 
+    struct OperatorKey {
+        bytes20 key;
         bool deleted;
     }
 
@@ -114,7 +114,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
     }
 
     // Adds an operator
-    // @param operatorPublicKeyCompressed operator compressed public key (33 bytes). 
+    // @param operatorPublicKeyCompressed operator compressed public key (33 bytes).
     //                          operatorPublicKeyCompressed[0] = odd (0x02 or 0x03)
     //                          operatorPublicKeyCompressed[1-32] = x
     // @param signature doubleSha256(msg.sender) signed by operator (65 bytes).
@@ -139,7 +139,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         //log1(bytes20(msg.sender), signedMessage);
         address recoveredAddress = ECRecovery.recover(signedMessage, signature);
         //log1(bytes32(recoveredAddress),
-        //     bytes32(DogeMessageLibrary.pub2address(uint(operatorPublicKeyX), operatorPublicKeyOdd)));                
+        //     bytes32(DogeMessageLibrary.pub2address(uint(operatorPublicKeyX), operatorPublicKeyOdd)));
         if (recoveredAddress != DogeMessageLibrary.pub2address(uint(operatorPublicKeyX), operatorPublicKeyOdd)) {
             emit ErrorDogeToken(ERR_OPERATOR_SIGNATURE);
             return;
@@ -157,7 +157,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         operator.ethAddress = msg.sender;
         operator.operatorKeyIndex = uint24(operatorKeys.length);
         operatorKeys.push(OperatorKey(operatorPublicKeyHash, false));
-        
+
     }
 
     function deleteOperator(bytes20 operatorPublicKeyHash) public {
@@ -171,7 +171,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
             return;
         }
 
-        OperatorKey storage operatorKey = operatorKeys[operator.operatorKeyIndex]; 
+        OperatorKey storage operatorKey = operatorKeys[operator.operatorKeyIndex];
         operatorKey.deleted = true;
         delete operators[operatorPublicKeyHash];
     }
@@ -202,7 +202,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         if ((operator.ethBalance.sub(value)).div(dogeEthPrice) <
             (operator.dogeAvailableBalance.add(operator.dogePendingBalance)).mul(collateralRatio)) {
             emit ErrorDogeToken(ERR_OPERATOR_WITHDRAWAL_COLLATERAL_WOULD_BE_TOO_LOW);
-            return;        
+            return;
         }
         operator.ethBalance = operator.ethBalance.sub(value);
         msg.sender.transfer(value);
@@ -213,7 +213,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         require(msg.sender == trustedRelayerContract);
 
         Operator storage operator = operators[operatorPublicKeyHash];
-        // Check operator exists 
+        // Check operator exists
         if (operator.ethAddress == address(0)) {
             emit ErrorDogeToken(ERR_PROCESS_OPERATOR_NOT_CREATED);
             return 0;
@@ -230,7 +230,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         // Check tx was not already processed
         if (!inserted) {
             emit ErrorDogeToken(ERR_PROCESS_TX_ALREADY_PROCESSED);
-            return 0;        
+            return 0;
         }
 
         // Add utxo
@@ -284,7 +284,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         balances[destinationAddress] = balances[destinationAddress].add(userValue);
         emit NewToken(destinationAddress, userValue);
         // Hack to make etherscan show the event
-        emit Transfer(address(0), destinationAddress, userValue);    
+        emit Transfer(address(0), destinationAddress, userValue);
     }
 
 
@@ -302,7 +302,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         }
 
         Operator storage operator = operators[operatorPublicKeyHash];
-        // Check that operator exists 
+        // Check that operator exists
         if (operator.ethAddress == address(0)) {
             emit ErrorDogeToken(ERR_UNLOCK_OPERATOR_NOT_CREATED);
             return false;
@@ -334,7 +334,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         emit Transfer(msg.sender, address(0), unlockValue);
 
         emit UnlockRequest(unlockIdx, operatorPublicKeyHash);
-        unlocksPendingInvestorProof[unlockIdx] = Unlock(msg.sender, dogeAddress, value, 
+        unlocksPendingInvestorProof[unlockIdx] = Unlock(msg.sender, dogeAddress, value,
                                                         operatorFee,
                                                         block.timestamp, selectedUtxos, dogeTxFee,
                                                         operatorPublicKeyHash);
