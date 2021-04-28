@@ -169,11 +169,8 @@ library DogeMessageLibrary {
             return (getBytesLE(txBytes, pos, 16), pos + 2);
         } else if (ibit == 0xfe) {
             return (getBytesLE(txBytes, pos, 32), pos + 4);
-        } else if (ibit == 0xff) {
+        } else /*if (ibit == 0xff)*/ {
             return (getBytesLE(txBytes, pos, 64), pos + 8);
-        } else {
-            // Unreachable code, adding to avoid compiler warnings.
-            return (0, 0);
         }
     }
 
@@ -199,8 +196,7 @@ library DogeMessageLibrary {
                  + uint64(uint8(data[pos + 6])) * 2 ** 48
                  + uint64(uint8(data[pos + 7])) * 2 ** 56;
         } else {
-            // Invalid value in bits parameter. Should revert() instead?
-            return 0;
+            revert("Invalid bits parameter in getBytesLE");
         }
     }
 
