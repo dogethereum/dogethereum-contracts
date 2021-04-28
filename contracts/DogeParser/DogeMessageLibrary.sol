@@ -152,8 +152,12 @@ library DogeMessageLibrary {
         uint merkleRoot;
     }
 
-    // Convert a variable integer into something useful and return it and
-    // the index to after it.
+    /**
+     * Convert a variable integer into a Solidity numeric type.
+     *
+     * @return the integer as a uint256
+     * @return the byte index after the var integer
+     */
     function parseVarInt(bytes memory txBytes, uint pos) private pure returns (uint, uint) {
         // the first byte tells us how big the integer is
         uint8 ibit = uint8(txBytes[pos]);
@@ -172,7 +176,8 @@ library DogeMessageLibrary {
             return (0, 0);
         }
     }
-    // convert little endian bytes to uint
+
+    // Convert little endian bytes to uint
     function getBytesLE(bytes memory data, uint pos, uint bits) internal pure returns (uint) {
         if (bits == 8) {
             return uint8(data[pos]);
@@ -373,6 +378,7 @@ library DogeMessageLibrary {
 
         return (script_starts, script_lens, pos);
     }
+
     // similar to scanInputs, but consumes less gas since it doesn't store the inputs
     // also returns position of coinbase tx for later use
     function skipInputsAndGetScriptPos(bytes memory txBytes, uint pos, uint stop) private pure
