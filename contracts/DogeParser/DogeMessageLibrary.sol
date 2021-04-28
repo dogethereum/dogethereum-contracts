@@ -219,7 +219,6 @@ library DogeMessageLibrary {
     // @return firstInputPublicKeyHash - hash of the public key that matches first input's signature
     // @return lockDestinationEthAddress - address where tokens should be minted to in case of a lock tx
     // @return outputIndex - number of output where expected_operator_public_key_hash was found
-
     function parseTransaction(bytes memory txBytes, bytes20 expected_operator_public_key_hash) internal view
              returns (uint, bytes20, address, uint16)
     {
@@ -339,31 +338,6 @@ library DogeMessageLibrary {
         bool odd;
         (, pubKey, odd, pos) = parseScriptSig(txBytes, pos);
         return (pubKey, odd);
-    }
-
-    // TODO: is this necessary? It is dead code.
-    // Check whether `btcAddress` is in the transaction outputs *and*
-    // whether *at least* `value` has been sent to it.
-    function checkValueSent(bytes memory txBytes, bytes20 btcAddress, uint value) private pure
-             returns (bool)
-    {
-        uint pos = 4;  // skip version
-        (,, pos) = scanInputs(txBytes, pos, 0);  // find end of inputs
-
-        // scan *all* the outputs and find where they are
-        uint[] memory output_values;
-        uint[] memory script_starts;
-        uint[] memory output_script_lens;
-        (output_values, script_starts, output_script_lens,) = scanOutputs(txBytes, pos, 0);
-
-        // look at each output and check whether it at least value to btcAddress
-        for (uint i = 0; i < output_values.length; i++) {
-            bytes20 pkhash = parseOutputScript(txBytes, script_starts[i], output_script_lens[i]);
-            if (pkhash == btcAddress && output_values[i] >= value) {
-                return true;
-            }
-        }
-        return false;
     }
 
     // scan the inputs and find the script lengths.
@@ -574,28 +548,6 @@ library DogeMessageLibrary {
             && (txBytes[pos + 2] == 0x14)   // bytes to push
             && (txBytes[pos + 23] == 0x88)  // OP_EQUALVERIFY
             && (txBytes[pos + 24] == 0xac); // OP_CHECKSIG
-    }
-    // returns true if the bytes located in txBytes by pos and
-    // script_len represent a P2SH script
-    function isP2SH(bytes memory txBytes, uint pos, uint script_len) private pure returns (bool) {
-        return (script_len == 23)           // 20 byte scripthash + 3 bytes of script
-            && (txBytes[pos + 0] == 0xa9)   // OP_HASH160
-            && (txBytes[pos + 1] == 0x14)   // bytes to push
-            && (txBytes[pos + 22] == 0x87); // OP_EQUAL
-    }
-    // Get the pubkeyhash / scripthash from an output script. Assumes
-    // pay-to-pubkey-hash (P2PKH) or pay-to-script-hash (P2SH) outputs.
-    // Returns the pubkeyhash/ scripthash, or zero if unknown output.
-    function parseOutputScript(bytes memory txBytes, uint pos, uint script_len) private pure
-             returns (bytes20)
-    {
-        if (isP2PKH(txBytes, pos, script_len)) {
-            return sliceBytes20(txBytes, pos + 3);
-        } else if (isP2SH(txBytes, pos, script_len)) {
-            return sliceBytes20(txBytes, pos + 2);
-        } else {
-            return bytes20(0);
-        }
     }
 
     // Get the pubkeyhash from an output script. Assumes
@@ -1259,5 +1211,60 @@ library DogeMessageLibrary {
         }
 
         return compact | uint32(shiftLeft(nbytes, 24));
+    }
+
+
+
+    /**
+     * Dead code.
+     * This is currently unused code. This should be deleted once it is deemed no longer useful.
+     */
+
+    // Check whether `btcAddress` is in the transaction outputs *and*
+    // whether *at least* `value` has been sent to it.
+    function checkValueSent(bytes memory txBytes, bytes20 btcAddress, uint value) private pure
+             returns (bool)
+    {
+        uint pos = 4;  // skip version
+        (,, pos) = scanInputs(txBytes, pos, 0);  // find end of inputs
+
+        // scan *all* the outputs and find where they are
+        uint[] memory output_values;
+        uint[] memory script_starts;
+        uint[] memory output_script_lens;
+        (output_values, script_starts, output_script_lens,) = scanOutputs(txBytes, pos, 0);
+
+        // look at each output and check whether it at least value to btcAddress
+        for (uint i = 0; i < output_values.length; i++) {
+            bytes20 pkhash = parseOutputScript(txBytes, script_starts[i], output_script_lens[i]);
+            if (pkhash == btcAddress && output_values[i] >= value) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Get the pubkeyhash / scripthash from an output script. Assumes
+    // pay-to-pubkey-hash (P2PKH) or pay-to-script-hash (P2SH) outputs.
+    // Returns the pubkeyhash/ scripthash, or zero if unknown output.
+    function parseOutputScript(bytes memory txBytes, uint pos, uint script_len) private pure
+             returns (bytes20)
+    {
+        if (isP2PKH(txBytes, pos, script_len)) {
+            return sliceBytes20(txBytes, pos + 3);
+        } else if (isP2SH(txBytes, pos, script_len)) {
+            return sliceBytes20(txBytes, pos + 2);
+        } else {
+            return bytes20(0);
+        }
+    }
+
+    // returns true if the bytes located in txBytes by pos and
+    // script_len represent a P2SH script
+    function isP2SH(bytes memory txBytes, uint pos, uint script_len) private pure returns (bool) {
+        return (script_len == 23)           // 20 byte scripthash + 3 bytes of script
+            && (txBytes[pos + 0] == 0xa9)   // OP_HASH160
+            && (txBytes[pos + 1] == 0x14)   // bytes to push
+            && (txBytes[pos + 22] == 0x87); // OP_EQUAL
     }
 }
