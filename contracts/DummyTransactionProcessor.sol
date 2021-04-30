@@ -9,6 +9,7 @@ can get an indication that the storage was indeed updated).
 pragma solidity ^0.7.6;
 
 import "./TransactionProcessor.sol";
+import "hardhat/console.sol";
 
 contract DummyTransactionProcessor is TransactionProcessor {
     uint256 public lastTxHash;
@@ -20,22 +21,21 @@ contract DummyTransactionProcessor is TransactionProcessor {
         _trustedRelayerContract = trustedRelayerContract;
     }
 
-    // processTransaction should avoid returning the same
+    // processLockTransaction should avoid returning the same
     // value as ERR_RELAY_VERIFY (in constants.se) to avoid confusing callers
     //
-    // this exact function signature is required as it has to match
-    // the signature specified in DogeSuperblocks (otherwise DogeSuperblocks will not call it)
     // @param bytes - doge tx
     // @param txHash - doge tx hash
     // @param bytes20 - public key hash of the operator
     // @param address - superblock submitter address
     // @return uint - number of satoshidoges locked in case of a valid lock tx, 0 in any other case.
-    function processTransaction(bytes calldata, uint256 txHash, bytes20, address) override public returns (uint) {
-        log0("processTransaction called");
+    function processLockTransaction(bytes calldata, uint256 txHash, bytes20, address) override public returns (uint) {
+        console.log("processLockTransaction called");
 
         // only allow trustedRelayerContract, otherwise anyone can provide a fake dogeTx
         if (msg.sender == _trustedRelayerContract) {
-            log1("processTransaction txHash, ", bytes32(txHash));
+            console.log("processLockTransaction txHash, ");
+            console.logBytes32(bytes32(txHash));
             ethBlock = block.number;
             lastTxHash = txHash;
             // parse & do whatever with dogeTx
@@ -44,7 +44,34 @@ contract DummyTransactionProcessor is TransactionProcessor {
             return 1;
         }
 
-        log0("processTransaction failed");
+        console.log("processLockTransaction failed");
+        return 0;
+    }
+
+    // processUnlockTransaction should avoid returning the same
+    // value as ERR_RELAY_VERIFY (in constants.se) to avoid confusing callers
+    //
+    // @param bytes - doge tx
+    // @param txHash - doge tx hash
+    // @param bytes20 - public key hash of the operator
+    // @param address - superblock submitter address
+    // @return uint - number of satoshidoges locked in case of a valid lock tx, 0 in any other case.
+    function processUnlockTransaction(bytes calldata, uint256 txHash, bytes20, address) override public returns (uint) {
+        console.log("processUnlockTransaction called");
+
+        // only allow trustedRelayerContract, otherwise anyone can provide a fake dogeTx
+        if (msg.sender == _trustedRelayerContract) {
+            console.log("processUnlockTransaction txHash, ");
+            console.logBytes32(bytes32(txHash));
+            ethBlock = block.number;
+            lastTxHash = txHash;
+            // parse & do whatever with dogeTx
+            // For example, you should probably check if txHash has already
+            // been processed, to prevent replay attacks.
+            return 1;
+        }
+
+        console.log("processUnlockTransaction failed");
         return 0;
     }
 }

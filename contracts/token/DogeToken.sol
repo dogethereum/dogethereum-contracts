@@ -86,6 +86,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         bytes20 operatorPublicKeyHash;
     }
 
+    // TODO: value can fit in uint64 while index technically fits in uint64 too
     struct Utxo {
         uint value;
         uint txHash;
@@ -208,8 +209,12 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         msg.sender.transfer(value);
     }
 
-    function processTransaction(bytes calldata dogeTx, uint txHash, bytes20 operatorPublicKeyHash, address superblockSubmitterAddress)
-        override public returns (uint) {
+    function processLockTransaction(
+        bytes calldata dogeTx,
+        uint txHash,
+        bytes20 operatorPublicKeyHash,
+        address superblockSubmitterAddress
+    ) override public returns (uint) {
         require(msg.sender == trustedRelayerContract);
 
         Operator storage operator = operators[operatorPublicKeyHash];
@@ -228,10 +233,9 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         }
 
         uint value;
-        bytes20 firstInputPublicKeyHash;
         address lockDestinationEthAddress;
         uint16 outputIndex;
-        (value, firstInputPublicKeyHash, lockDestinationEthAddress, outputIndex) = DogeMessageLibrary.parseTransaction(dogeTx, operatorPublicKeyHash);
+        (value, lockDestinationEthAddress, outputIndex) = DogeMessageLibrary.parseLockTransaction(dogeTx, operatorPublicKeyHash);
 
         // Add utxo
         if (value > 0) {
@@ -241,50 +245,82 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         // Update operator's doge balance
         operator.dogeAvailableBalance = operator.dogeAvailableBalance.add(value);
 
-        // See if the first input was signed by the operator
-        if (operatorPublicKeyHash != firstInputPublicKeyHash) {
-            // this is a lock tx
-
-            if (value < MIN_LOCK_VALUE) {
-                emit ErrorDogeToken(ERR_LOCK_MIN_LOCK_VALUE);
-                return 0;
-            }
-
-            processLockTransaction(lockDestinationEthAddress, value,
-                                   operator.ethAddress, superblockSubmitterAddress);
-            return value;
-        } else {
-            // this is an unlock tx
-            // Update operator's doge balance
-            operator.dogePendingBalance = operator.dogePendingBalance.sub(value);
+        if (value < MIN_LOCK_VALUE) {
+            emit ErrorDogeToken(ERR_LOCK_MIN_LOCK_VALUE);
             return 0;
         }
+
+        distributeTokensAfterLock(lockDestinationEthAddress, value,
+                               operator.ethAddress, superblockSubmitterAddress);
+        return value;
+    }
+
+    function processUnlockTransaction(
+        bytes calldata dogeTx,
+        uint txHash,
+        bytes20 operatorPublicKeyHash,
+        address /*superblockSubmitterAddress*/
+    ) override public returns (uint) {
+        require(msg.sender == trustedRelayerContract);
+
+        Operator storage operator = operators[operatorPublicKeyHash];
+        // Check operator exists
+        if (operator.ethAddress == address(0)) {
+            emit ErrorDogeToken(ERR_PROCESS_OPERATOR_NOT_CREATED);
+            return 0;
+        }
+
+        // Add tx to the dogeTxHashesAlreadyProcessed
+        bool inserted = Set.insert(dogeTxHashesAlreadyProcessed, txHash);
+        // Check tx was not already processed
+        if (!inserted) {
+            emit ErrorDogeToken(ERR_PROCESS_TX_ALREADY_PROCESSED);
+            return 0;
+        }
+
+        uint userValue;
+        uint operatorValue;
+        uint16 outputIndex;
+        (userValue, operatorValue, outputIndex) = DogeMessageLibrary.parseUnlockTransaction(dogeTx, operatorPublicKeyHash);
+
+        // Add utxo
+        if (operatorValue > 0) {
+            operator.utxos.push(Utxo(operatorValue, txHash, outputIndex));
+
+            // Update operator's doge balance
+            // This is only correct as long as the tx format is the one we expect.
+            // See `parseUnlockTransaction` in `DogeMessageLibrary` for details on the tx format for unlocks.
+            operator.dogePendingBalance = operator.dogePendingBalance.sub(userValue);
+        }
+
+        return 0;
     }
 
     function wasDogeTxProcessed(uint txHash) public view returns (bool) {
         return Set.contains(dogeTxHashesAlreadyProcessed, txHash);
     }
 
-    function processLockTransaction(address destinationAddress,
-                                    uint value, address operatorEthAddress,
-                                    address superblockSubmitterAddress) private {
+    function distributeTokensAfterLock(
+        address destinationAddress,
+        uint value,
+        address operatorEthAddress,
+        address superblockSubmitterAddress
+    ) private {
         uint operatorFee = value.mul(OPERATOR_LOCK_FEE) / 1000;
-        balances[operatorEthAddress] = balances[operatorEthAddress].add(operatorFee);
-        emit NewToken(operatorEthAddress, operatorFee);
-        // Hack to make etherscan show the event
-        emit Transfer(address(0), operatorEthAddress, operatorFee);
+        mintTokens(operatorEthAddress, operatorFee);
 
         uint superblockSubmitterFee = value.mul(SUPERBLOCK_SUBMITTER_LOCK_FEE) / 1000;
-        balances[superblockSubmitterAddress] = balances[superblockSubmitterAddress].add(superblockSubmitterFee);
-        emit NewToken(superblockSubmitterAddress, superblockSubmitterFee);
-        // Hack to make etherscan show the event
-        emit Transfer(address(0), superblockSubmitterAddress, superblockSubmitterFee);
+        mintTokens(superblockSubmitterAddress, superblockSubmitterFee);
 
         uint userValue = value.sub(operatorFee).sub(superblockSubmitterFee);
-        balances[destinationAddress] = balances[destinationAddress].add(userValue);
-        emit NewToken(destinationAddress, userValue);
+        mintTokens(destinationAddress, userValue);
+    }
+
+    function mintTokens(address destination, uint amount) private {
+        balances[destination] = balances[destination].add(amount);
+        emit NewToken(destination, amount);
         // Hack to make etherscan show the event
-        emit Transfer(address(0), destinationAddress, userValue);
+        emit Transfer(address(0), destination, amount);
     }
 
 

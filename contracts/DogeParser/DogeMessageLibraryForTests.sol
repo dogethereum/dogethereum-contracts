@@ -85,10 +85,16 @@ contract DogeMessageLibraryForTests {
         return out;
     }
 
-    function parseTransaction(bytes calldata txBytes, bytes20 expected_output_public_key_hash) public view
-             returns (uint, bytes20, address, uint16) {
-        return DogeMessageLibrary.parseTransaction(txBytes, expected_output_public_key_hash);
-     }
+    function parseLockTransaction(bytes calldata txBytes, bytes20 expected_output_public_key_hash) public pure
+             returns (uint, address, uint16) {
+        return DogeMessageLibrary.parseLockTransaction(txBytes, expected_output_public_key_hash);
+    }
+
+    // Placeholder until parseUnlockTransaction is implemented
+    // function parseUnlockTransaction(bytes calldata txBytes, bytes20 expected_output_public_key_hash) public view
+    //          returns (uint, address, uint16) {
+    //     return DogeMessageLibrary.parseUnlockTransaction(txBytes, expected_output_public_key_hash);
+    // }
 
     //
     // Error / failure codes

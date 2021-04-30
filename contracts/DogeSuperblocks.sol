@@ -14,6 +14,7 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @dev - Superblock status
     enum Status { Uninitialized, New, InBattle, SemiApproved, Approved, Invalid }
 
+    // TODO: timestamps in dogecoin fit in 64 bits
     struct SuperblockInfo {
         bytes32 blocksMerkleRoot;
         uint accumulatedWork;
@@ -295,8 +296,8 @@ contract DogeSuperblocks is DogeErrorCodes {
         return (ERR_SUPERBLOCK_OK, _superblockHash);
     }
 
-    // @dev - relays transaction `_txBytes` to `_untrustedTargetContract`'s processTransaction() method.
-    // Also logs the value of processTransaction.
+    // @dev - relays transaction `_txBytes` to `_untrustedMethod`.
+    // Also logs the value returned by the method.
     // Note: callers cannot be 100% certain when an ERR_RELAY_VERIFY occurs because
     // it may also have been returned by processTransaction(). Callers should be
     // aware of the contract that they are relaying transactions to and
@@ -310,9 +311,9 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @param _dogeBlockIndex - block's index withing superblock
     // @param _dogeBlockSiblings - block's merkle siblings
     // @param _superblockHash - superblock containing block header
-    // @param _untrustedTargetContract - the contract that is going to process the transaction
+    // @param _untrustedMethod - the external method that will process the transaction
     function relayTx(
-        bytes memory _txBytes,
+        bytes calldata _txBytes,
         bytes20 _operatorPublicKeyHash,
         uint _txIndex,
         uint[] memory _txSiblings,
@@ -320,7 +321,7 @@ contract DogeSuperblocks is DogeErrorCodes {
         uint _dogeBlockIndex,
         uint[] memory _dogeBlockSiblings,
         bytes32 _superblockHash,
-        TransactionProcessor _untrustedTargetContract
+        function (bytes memory, uint, bytes20, address) external returns (uint) _untrustedMethod
     ) public returns (uint) {
         uint dogeBlockHash = DogeMessageLibrary.dblShaFlip(_dogeBlockHeader);
 
@@ -334,14 +335,99 @@ contract DogeSuperblocks is DogeErrorCodes {
 
         uint txHash = verifyTx(_txBytes, _txIndex, _txSiblings, _dogeBlockHeader, _superblockHash);
         if (txHash != 0) {
-            // TODO: potential revert here
-            uint returnCode = _untrustedTargetContract.processTransaction(_txBytes, txHash, _operatorPublicKeyHash, superblocks[_superblockHash].submitter);
-            emit RelayTransaction(bytes32(txHash), returnCode);
-            return (returnCode);
+            return notifyTx(_txBytes, _operatorPublicKeyHash, _superblockHash, txHash, _untrustedMethod);
         }
 
         emit RelayTransaction(bytes32(0), ERR_RELAY_VERIFY);
         return(ERR_RELAY_VERIFY);
+    }
+
+    // @dev - relays transaction `_txBytes` to `_untrustedTargetContract`'s processLockTransaction() method.
+    // This function exists solely to offer a compatibility layer for libraries that don't support function
+    // types in parameters.
+    //
+    // @param _txBytes - transaction bytes
+    // @param _operatorPublicKeyHash
+    // @param _txIndex - transaction's index within the block
+    // @param _txSiblings - transaction's Merkle siblings
+    // @param _dogeBlockHeader - block header containing transaction
+    // @param _dogeBlockIndex - block's index withing superblock
+    // @param _dogeBlockSiblings - block's merkle siblings
+    // @param _superblockHash - superblock containing block header
+    // @param _untrustedTargetContract - the contract that is going to process the lock transaction
+    function relayLockTx(
+        bytes calldata _txBytes,
+        bytes20 _operatorPublicKeyHash,
+        uint _txIndex,
+        uint[] memory _txSiblings,
+        bytes memory _dogeBlockHeader,
+        uint _dogeBlockIndex,
+        uint[] memory _dogeBlockSiblings,
+        bytes32 _superblockHash,
+        TransactionProcessor _untrustedTargetContract
+    ) public returns (uint) {
+        return relayTx(
+            _txBytes,
+            _operatorPublicKeyHash,
+            _txIndex,
+            _txSiblings,
+            _dogeBlockHeader,
+            _dogeBlockIndex,
+            _dogeBlockSiblings,
+            _superblockHash,
+            _untrustedTargetContract.processLockTransaction
+        );
+    }
+
+    // @dev - relays transaction `_txBytes` to `_untrustedTargetContract`'s processUnlockTransaction() method.
+    // This function exists solely to offer a compatibility layer for libraries that don't support function
+    // types in parameters.
+    //
+    // @param _txBytes - transaction bytes
+    // @param _operatorPublicKeyHash
+    // @param _txIndex - transaction's index within the block
+    // @param _txSiblings - transaction's Merkle siblings
+    // @param _dogeBlockHeader - block header containing transaction
+    // @param _dogeBlockIndex - block's index withing superblock
+    // @param _dogeBlockSiblings - block's merkle siblings
+    // @param _superblockHash - superblock containing block header
+    // @param _untrustedTargetContract - the contract that is going to process the lock transaction
+    function relayUnlockTx(
+        bytes calldata _txBytes,
+        bytes20 _operatorPublicKeyHash,
+        uint _txIndex,
+        uint[] memory _txSiblings,
+        bytes memory _dogeBlockHeader,
+        uint _dogeBlockIndex,
+        uint[] memory _dogeBlockSiblings,
+        bytes32 _superblockHash,
+        TransactionProcessor _untrustedTargetContract
+    ) public returns (uint) {
+        return relayTx(
+            _txBytes,
+            _operatorPublicKeyHash,
+            _txIndex,
+            _txSiblings,
+            _dogeBlockHeader,
+            _dogeBlockIndex,
+            _dogeBlockSiblings,
+            _superblockHash,
+            _untrustedTargetContract.processUnlockTransaction
+        );
+    }
+
+    // @dev This function guards against hitting "stack too deep" compiler error in the parent, `relayTx`, function.
+    function notifyTx(
+        bytes calldata _txBytes,
+        bytes20 _operatorPublicKeyHash,
+        bytes32 _superblockHash,
+        uint txHash,
+        function (bytes memory, uint, bytes20, address) external returns (uint) _untrustedMethod
+    ) private returns (uint) {
+        // TODO: potential revert here
+        uint returnCode = _untrustedMethod(_txBytes, txHash, _operatorPublicKeyHash, superblocks[_superblockHash].submitter);
+        emit RelayTransaction(bytes32(txHash), returnCode);
+        return returnCode;
     }
 
     // @dev - Checks whether the transaction given by `_txBytes` is in the block identified by `_txBlockHash`.

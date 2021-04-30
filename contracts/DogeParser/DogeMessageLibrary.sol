@@ -152,6 +152,15 @@ library DogeMessageLibrary {
         uint merkleRoot;
     }
 
+    struct InputDescriptor {
+        // Byte offset where the input is located in the tx
+        uint offset;
+        // Byte offset where the signature script is located in the tx
+        uint sigScriptOffset;
+        // Length of the signature script
+        uint sigScriptLength;
+    }
+
     /**
      * Convert a variable integer into a Solidity numeric type.
      *
@@ -200,179 +209,316 @@ library DogeMessageLibrary {
         }
     }
 
-    struct ParseTransactionVariablesStruct {
-        uint pos;
-        bytes20 output_public_key_hash;
-        uint output_value;
-        uint16 outputIndex;
-        // "x" axis value of the public key that matches first input's signature
-        bytes32 inputPubKey;
-        // Indicates inputPubKey odd bit
-        bool inputPubKeyOdd;
-    }
-
     // @dev - Parses a doge tx
     //
     // @param txBytes - tx byte array
-    // @param expected_operator_public_key_hash - public key hash that is expected to be used as output or input
+    // @param expectedOperatorPKH - public key hash that is expected to be used as output or input
     // Outputs
-    // @return output_value - amount sent to the lock address in satoshis
-    // @return firstInputPublicKeyHash - hash of the public key that matches first input's signature
-    // @return lockDestinationEthAddress - address where tokens should be minted to in case of a lock tx
-    // @return outputIndex - number of output where expected_operator_public_key_hash was found
-    function parseTransaction(bytes memory txBytes, bytes20 expected_operator_public_key_hash) internal view
-             returns (uint, bytes20, address, uint16)
-    {
-        ParseTransactionVariablesStruct memory variables;
-        uint[] memory input_script_lens;
-        uint[] memory input_script_starts;
+    // @return userOutputValue - amount sent to the unlock address in satoshis
+    // @return operatorChangePresent - if true, indicates that the operator sent some change to his address.
+    // @return operatorOutputValue - amount of the operator change output
+    // @return operatorOutputIndex - number of the operator change output in the tx
+    function parseUnlockTransaction(
+        bytes memory txBytes,
+        bytes20 expectedOperatorPKH
+    ) internal pure returns (uint, uint, uint16) {
+        uint pos;
 
-        variables.pos = 4;  // skip version
-        (input_script_starts, input_script_lens, variables.pos) = scanInputs(txBytes, variables.pos, 0);
+        // skip version
+        pos = 4;
 
-        (variables.inputPubKey, variables.inputPubKeyOdd) = getInputPubKey(txBytes, input_script_starts[0]);
+        /*
+            Inputs
+            One or more inputs signed by the operator.
 
-        bytes20 firstInputPublicKeyHash = pub2PubKeyHash(variables.inputPubKey, variables.inputPubKeyOdd);
-        address lockDestinationEthAddress;
+            Ouputs
+            0. Output for the user. This is ignored.
+            1. Optional. Operator change.
+        */
 
-        uint operator_value;
-        uint16 operator_index;
-        (variables.output_public_key_hash, operator_value, operator_index, lockDestinationEthAddress) = parseLockTxOuptuts(expected_operator_public_key_hash, txBytes, variables.pos);
+        pos = checkUnlockInputs(txBytes, pos, expectedOperatorPKH);
 
-        // Check tx is sending funds to an operator or spending funds from an operator.
-        require(variables.output_public_key_hash == expected_operator_public_key_hash ||
-            firstInputPublicKeyHash == expected_operator_public_key_hash);
-        // The output we are looking for should be the first or the second output
-        if (variables.output_public_key_hash == expected_operator_public_key_hash) {
-            variables.output_value = operator_value;
-            variables.outputIndex = operator_index;
-        }
-        // If no embedded ethereum address use address derived from first input public
-        if (lockDestinationEthAddress == address(0x0)) {
-            lockDestinationEthAddress = pub2address(uint(variables.inputPubKey), variables.inputPubKeyOdd);
-        }
-        return (variables.output_value, firstInputPublicKeyHash, lockDestinationEthAddress, variables.outputIndex);
+        return parseUnlockTxOutputs(expectedOperatorPKH, txBytes, pos);
     }
 
-    // Search operator output and embedded ethereum address in transaction outputs in tx
+    function checkUnlockInputs(
+        bytes memory txBytes,
+        uint pos,
+        bytes20 expectedOperatorPKH
+    ) private pure returns (uint) {
+        InputDescriptor[] memory inputScripts;
+
+        (inputScripts, pos) = scanInputs(txBytes, pos, 0);
+
+        for (uint i = 0; i < inputScripts.length; i++) {
+            (bytes32 inputPubKey, bool inputPubKeyOdd) = getInputPubKey(txBytes, inputScripts[i]);
+            require(
+                expectedOperatorPKH == pub2PubKeyHash(inputPubKey, inputPubKeyOdd),
+                "Invalid unlock tx. One of the inputs is not signed by the operator."
+            );
+        }
+
+        return pos;
+    }
+
+    // Determine the operator output, if any, and the value of the user output
     //
-    // @param expected_output_public_key_hash - operator public key hash to look for
+    // @param expectedOperatorPKH - operator public key hash
     // @param txBytes - tx byte array
     // @param pos - position to start parsing txBytes
     // Outputs
-    // @return operator public key hash - Same as input parameter if operator output found, 0 otherwise
-    // @return output value of operator output if operator output found, 0 otherwise
-    // @return output index of operator output if operator output found, 0 otherwise
+    // @return output value of operator output
+    // @return output index of operator output
     // @return lockDestinationEthAddress - Lock destination address if operator output and OP_RETURN output found, 0 otherwise
     //
     // Returns output amount, index and ethereum address
-    function parseLockTxOuptuts(bytes20 expected_output_public_key_hash, bytes memory txBytes, uint pos)
-             private pure returns (bytes20, uint, uint16, address) {
-        uint[] memory output_script_lens;
-        uint[] memory output_script_starts;
-        uint[] memory output_values;
-        (output_values, output_script_starts, output_script_lens, pos) = scanOutputs(txBytes, pos, 3);
+    function parseUnlockTxOutputs(
+        bytes20 expectedOperatorPKH,
+        bytes memory txBytes,
+        uint pos
+    ) private pure returns (uint, uint, uint16) {
+        /*
+            Ouputs
+            0. Output for the user. This output is ignored.
+            1. Optional. Operator change.
+        */
+        (uint userOutputValue,
+        uint operatorChangeScriptStart,
+        uint operatorChangeScriptLength,
+        uint operatorChangeValue) = scanUnlockOutputs(txBytes, pos);
 
-        bytes20 output_public_key_hash;
-        uint operator_index = output_script_starts.length;
+        // TODO: abstract this check into a function?
+        // Check if the change output exists
+        if (operatorChangeScriptStart < txBytes.length) {
+            // Check tx is sending funds to an operator.
+            bytes20 outputPublicKeyHash = parseP2PKHOutputScript(txBytes, operatorChangeScriptStart, operatorChangeScriptLength);
+            require(
+                outputPublicKeyHash == expectedOperatorPKH,
+                "Invalid unlock tx. The second tx output does not have a P2PKH output script for an operator."
+            );
+
+            return (userOutputValue, operatorChangeValue, 1);
+        }
+
+        return (userOutputValue, 0, 0);
+    }
+
+    // Scan the outputs of an unlock transaction.
+    // The first output in an unlock transaction transfers value to a user.
+    // The second output in an unlock transaction may be change for the operator.
+    // Returns the value unlocked for the user output and the value, offset and length of scripts
+    // for the operator change output, if any.
+    function scanUnlockOutputs(
+        bytes memory txBytes,
+        uint pos
+    ) private pure returns (uint, uint, uint, uint) {
+        uint nOutputs;
+
+        (nOutputs, pos) = parseVarInt(txBytes, pos);
+        require(nOutputs == 1 || nOutputs == 2, "Unlock transactions only have one or two outputs.");
+
+        // Tx output 0 is for the user
+        // read value of the output for the user
+        uint firstOutputValue = getBytesLE(txBytes, pos, 64);
+        pos += 8;
+
+        // read the script length
+        uint firstOutputScriptLength;
+        (firstOutputScriptLength, pos) = parseVarInt(txBytes, pos);
+        // uint firstOutputScriptStart = pos;
+        pos += firstOutputScriptLength;
+
+        uint secondOutputScriptLength;
+        uint secondOutputScriptStart = txBytes.length;
+        uint secondOutputValue;
+        if (nOutputs == 2) {
+            // Tx output 1 is the change for the operator
+            // read value of operator change
+            secondOutputValue = getBytesLE(txBytes, pos, 64);
+            pos += 8;
+
+            (secondOutputScriptLength, secondOutputScriptStart) = parseVarInt(txBytes, pos);
+        }
+
+        return (firstOutputValue, secondOutputScriptStart, secondOutputScriptLength, secondOutputValue);
+    }
+
+    // @dev - Parses a doge tx assuming it is a lock operation
+    //
+    // @param txBytes - tx byte array
+    // @param expectedOperatorPKH - public key hash that is expected to be used as output or input
+    // Outputs
+    // @return outputValue - amount sent to the lock address in satoshis
+    // @return lockDestinationEthAddress - address where tokens should be minted to
+    // @return outputIndex - number of output where expectedOperatorPKH was found
+    function parseLockTransaction(
+        bytes memory txBytes,
+        bytes20 expectedOperatorPKH
+    ) internal pure returns (uint, address, uint16) {
+        uint pos;
+
+        // skip version
+        pos = 4;
+
+        // Ignore inputs
+        pos = skipInputs(txBytes, pos);
+
         address lockDestinationEthAddress;
-        for (uint i = 0; i < output_script_starts.length; ++i) {
-            output_public_key_hash = parseP2PKHOutputScript(txBytes, output_script_starts[i], output_script_lens[i]);
-            if (expected_output_public_key_hash == output_public_key_hash) {
-                operator_index = i;
-            }
-            if (isEthereumAddress(txBytes, output_script_starts[i], output_script_lens[i])) {
-                lockDestinationEthAddress = readEthereumAddress(txBytes, output_script_starts[i], output_script_lens[i]);
-            }
-        }
-        if (operator_index < output_script_starts.length) {
-            return (expected_output_public_key_hash, output_values[operator_index], uint16(operator_index), lockDestinationEthAddress);
-        }
-        // No operator output, it might be an unlock operation
-        return (bytes20(0x0), 0, 0, address(0x0));
+        uint operatorTxOutputValue;
+        (operatorTxOutputValue, lockDestinationEthAddress) = parseLockTxOutputs(expectedOperatorPKH, txBytes, pos);
+        require(lockDestinationEthAddress != address(0x0));
+
+        return (operatorTxOutputValue, lockDestinationEthAddress, 0);
     }
 
-    // scan the full transaction bytes and return the first two output
-    // values (in satoshis) and addresses (in binary)
-    function getFirstTwoOutputs(bytes memory txBytes) internal pure
-             returns (uint, bytes20, uint, bytes20)
+    // Parse operator output and embedded ethereum address in transaction outputs in tx
+    //
+    // @param expectedOperatorPKH - operator public key hash to look for
+    // @param txBytes - tx byte array
+    // @param pos - position to start parsing txBytes
+    // Outputs
+    // @return output value of operator output
+    // @return output index of operator output
+    // @return lockDestinationEthAddress - Lock destination address if operator output and OP_RETURN output found, 0 otherwise
+    //
+    // Returns output amount, index and ethereum address
+    function parseLockTxOutputs(
+        bytes20 expectedOperatorPKH,
+        bytes memory txBytes,
+        uint pos
+    ) private pure returns (uint, address) {
+
+        /*
+            Outputs
+            0. Operator
+            1. OP_RETURN with the ethereum address of the user
+            2. Optional. Change output for the user. This output is ignored.
+        */
+        uint operatorOutputValue;
+        uint operatorScriptStart;
+        uint operatorScriptLength;
+        uint ethAddressScriptStart;
+        uint ethAddressScriptLength;
+        (operatorOutputValue,
+            operatorScriptStart,
+            operatorScriptLength,
+            ethAddressScriptStart,
+            ethAddressScriptLength) = scanLockOutputs(txBytes, pos);
+
+        // Check tx is sending funds to an operator.
+        bytes20 outputPublicKeyHash = parseP2PKHOutputScript(txBytes, operatorScriptStart, operatorScriptLength);
+        require(outputPublicKeyHash == expectedOperatorPKH, "The first tx output does not have a P2PKH output script for an operator.");
+
+        // Read the destination Ethereum address
+        require(isEthereumAddress(txBytes, ethAddressScriptStart, ethAddressScriptLength), "The second tx output does not describe an ethereum address.");
+        address lockDestinationEthAddress = readEthereumAddress(txBytes, ethAddressScriptStart, ethAddressScriptLength);
+
+        return (operatorOutputValue, lockDestinationEthAddress);
+    }
+
+    // Scan the outputs of a lock transaction.
+    // The first output in a lock transaction transfers value to an operator.
+    // The second output in a lock transaction is an unspendable output with an ethereum address.
+    // Returns the offsets and lengths of scripts for the first and second outputs and
+    // the value of the first output.
+    function scanLockOutputs(bytes memory txBytes, uint pos) private pure
+             returns (uint, uint, uint, uint, uint)
     {
-        uint pos;
-        uint[] memory input_script_lens;
-        uint[] memory output_script_lens;
-        uint[] memory script_starts;
-        uint[] memory output_values;
-        bytes20[] memory output_public_key_hashes = new bytes20[](2);
+        uint nOutputs;
 
-        pos = 4;  // skip version
+        (nOutputs, pos) = parseVarInt(txBytes, pos);
+        require(nOutputs == 2 || nOutputs == 3, "Lock transactions only have two or three outputs.");
 
-        (, input_script_lens, pos) = scanInputs(txBytes, pos, 0);
+        // Tx output 0 is for the operator
+        // read value of the output for the operator
+        uint operatorOutputValue = getBytesLE(txBytes, pos, 64);
+        pos += 8;
 
-        (output_values, script_starts, output_script_lens, pos) = scanOutputs(txBytes, pos, 2);
+        // read the script length
+        uint operatorScriptLength;
+        (operatorScriptLength, pos) = parseVarInt(txBytes, pos);
+        uint operatorScriptStart = pos;
+        pos += operatorScriptLength;
 
-        for (uint i = 0; i < 2; i++) {
-            bytes20 pkhash = parseP2PKHOutputScript(txBytes, script_starts[i], output_script_lens[i]);
-            output_public_key_hashes[i] = pkhash;
-        }
+        // Tx output 1 describes the ethereum address that should receive the dogecoin tokens
+        // skip value
+        pos += 8;
 
-        return (output_values[0], output_public_key_hashes[0],
-                output_values[1], output_public_key_hashes[1]);
+        uint ethAddressScriptLength;
+        uint ethAddressScriptStart;
+        (ethAddressScriptLength, ethAddressScriptStart) = parseVarInt(txBytes, pos);
+
+        return (operatorOutputValue, operatorScriptStart, operatorScriptLength, ethAddressScriptStart, ethAddressScriptLength);
     }
 
-    function getFirstInputPubKey(bytes memory txBytes) private pure
+    function getInputPubKey(bytes memory txBytes, InputDescriptor memory input) private pure
              returns (bytes32, bool)
     {
-        uint pos;
-
-        pos = 4;  // skip version
-
-        (, pos) = parseVarInt(txBytes, pos);
-        return getInputPubKey(txBytes, pos);
-    }
-
-    function getInputPubKey(bytes memory txBytes, uint pos) private pure
-             returns (bytes32, bool)
-    {
-        pos += 36;  // skip outpoint
-        (, pos) = parseVarInt(txBytes, pos);
         bytes32 pubKey;
         bool odd;
-        (, pubKey, odd, pos) = parseScriptSig(txBytes, pos);
+        (, pubKey, odd,) = parseScriptSig(txBytes, input.sigScriptOffset);
         return (pubKey, odd);
     }
 
-    // scan the inputs and find the script lengths.
-    // return an array of script lengths and the end position
-    // of the inputs.
+    // Scan the inputs and find the script lengths.
+    // @return an array of script descriptors. Each one describes the length and the start position
+    // of the script.
     // takes a 'stop' argument which sets the maximum number of
     // outputs to scan through. stop=0 => scan all.
     function scanInputs(bytes memory txBytes, uint pos, uint stop) private pure
-             returns (uint[] memory, uint[] memory, uint)
+             returns (InputDescriptor[] memory, uint)
     {
-        uint n_inputs;
+        uint nInputs;
         uint halt;
-        uint script_len;
 
-        (n_inputs, pos) = parseVarInt(txBytes, pos);
+        (nInputs, pos) = parseVarInt(txBytes, pos);
 
-        if (stop == 0 || stop > n_inputs) {
-            halt = n_inputs;
+        if (stop == 0 || stop > nInputs) {
+            halt = nInputs;
         } else {
             halt = stop;
         }
 
-        uint[] memory script_starts = new uint[](halt);
-        uint[] memory script_lens = new uint[](halt);
+        InputDescriptor[] memory inputs = new InputDescriptor[](halt);
 
         for (uint256 i = 0; i < halt; i++) {
-            script_starts[i] = pos;
-            pos += 36;  // skip outpoint
-            (script_len, pos) = parseVarInt(txBytes, pos);
-            script_lens[i] = script_len;
-            pos += script_len + 4;  // skip sig_script, seq
+            inputs[i].offset = pos;
+            // skip outpoint
+            pos += 36;
+            uint scriptLength;
+            (scriptLength, pos) = parseVarInt(txBytes, pos);
+            inputs[i].sigScriptOffset = pos;
+            inputs[i].sigScriptLength = scriptLength;
+            // skip sig_script, seq
+            pos += scriptLength + 4;
         }
 
-        return (script_starts, script_lens, pos);
+        return (inputs, pos);
+    }
+
+    /**
+     * Consumes all inputs in a transaction without storing anything in memory
+     * @return index to tx output quantity var integer
+     */
+    function skipInputs(bytes memory txBytes, uint pos) private pure
+             returns (uint)
+    {
+        uint n_inputs;
+
+        (n_inputs, pos) = parseVarInt(txBytes, pos);
+
+        for (uint256 i = 0; i < n_inputs; i++) {
+            // skip outpoint
+            pos += 36;
+
+            uint script_len;
+            (script_len, pos) = parseVarInt(txBytes, pos);
+
+            // skip sig_script and seq
+            pos += script_len + 4;
+        }
+
+        return pos;
     }
 
     // similar to scanInputs, but consumes less gas since it doesn't store the inputs
@@ -405,6 +551,7 @@ library DogeMessageLibrary {
 
         return (pos, script_pos);
     }
+
     // scan the outputs and find the values and script lengths.
     // return array of values, array of script lengths and the
     // end position of the outputs.
@@ -441,6 +588,7 @@ library DogeMessageLibrary {
 
         return (output_values, script_starts, script_lens, pos);
     }
+
     // similar to scanOutputs, but consumes less gas since it doesn't store the outputs
     function skipOutputs(bytes memory txBytes, uint pos, uint stop) private pure
              returns (uint)
@@ -466,6 +614,7 @@ library DogeMessageLibrary {
 
         return pos;
     }
+
     // get final position of inputs, outputs and lock time
     // this is a helper function to slice a byte array and hash the inputs, outputs and lock time
     function getSlicePosAndScriptPos(bytes memory txBytes, uint pos) private pure
@@ -567,12 +716,14 @@ library DogeMessageLibrary {
 
 
     // Parse a P2PKH scriptSig
+    // TODO: add script length as a parameter?
     function parseScriptSig(bytes memory txBytes, uint pos) private pure
              returns (bytes memory, bytes32, bool, uint)
     {
         bytes memory sig;
         bytes32 pubKey;
         bool odd;
+        // TODO: do we want the signature?
         (sig, pos) = parseSignature(txBytes, pos);
         (pubKey, odd, pos) = parsePubKey(txBytes, pos);
         return (sig, pubKey, odd, pos);
@@ -599,7 +750,7 @@ library DogeMessageLibrary {
         uint8 op;
         (op, pos) = getOpcode(txBytes, pos);
         //FIXME: Add support for uncompressed public keys
-        require(op == 33);
+        require(op == 33, "Expected a compressed public key");
         bytes32 pubKey;
         bool odd = txBytes[pos] == 0x03;
         pos += 1;
@@ -694,12 +845,6 @@ library DogeMessageLibrary {
     // helpers for flip32Bytes
     struct UintWrapper {
         uint value;
-    }
-
-    function ptr(UintWrapper memory uw) private pure returns (uint addr) {
-        assembly {
-            addr := uw
-        }
     }
 
     // @dev - Parses AuxPow part of block header
@@ -1228,7 +1373,7 @@ library DogeMessageLibrary {
              returns (bool)
     {
         uint pos = 4;  // skip version
-        (,, pos) = scanInputs(txBytes, pos, 0);  // find end of inputs
+        pos = skipInputs(txBytes, pos);  // find end of inputs
 
         // scan *all* the outputs and find where they are
         uint[] memory output_values;
@@ -1268,5 +1413,37 @@ library DogeMessageLibrary {
             && (txBytes[pos + 0] == 0xa9)   // OP_HASH160
             && (txBytes[pos + 1] == 0x14)   // bytes to push
             && (txBytes[pos + 22] == 0x87); // OP_EQUAL
+    }
+
+    // scan the full transaction bytes and return the first two output
+    // values (in satoshis) and addresses (in binary)
+    function getFirstTwoOutputs(bytes memory txBytes) internal pure
+             returns (uint, bytes20, uint, bytes20)
+    {
+        uint pos;
+        uint[] memory output_script_lens;
+        uint[] memory script_starts;
+        uint[] memory output_values;
+        bytes20[] memory output_public_key_hashes = new bytes20[](2);
+
+        pos = 4;  // skip version
+
+        pos = skipInputs(txBytes, pos);
+
+        (output_values, script_starts, output_script_lens, pos) = scanOutputs(txBytes, pos, 2);
+
+        for (uint i = 0; i < 2; i++) {
+            bytes20 pkhash = parseP2PKHOutputScript(txBytes, script_starts[i], output_script_lens[i]);
+            output_public_key_hashes[i] = pkhash;
+        }
+
+        return (output_values[0], output_public_key_hashes[0],
+                output_values[1], output_public_key_hashes[1]);
+    }
+
+    function ptr(UintWrapper memory uw) private pure returns (uint addr) {
+        assembly {
+            addr := uw
+        }
     }
 }
