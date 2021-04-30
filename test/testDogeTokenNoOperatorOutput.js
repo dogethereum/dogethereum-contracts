@@ -42,7 +42,7 @@ contract("testDogeTokenNoOperatorOutput", function (accounts) {
     );
 
     const superblockSubmitterAddress = accounts[4];
-    await dogeToken.processTransaction(
+    await dogeToken.processUnlockTransaction(
       txData,
       txHash,
       operatorPublicKeyHash,
