@@ -37,7 +37,7 @@ contract('testRelayToDogeToken', function(accounts) {
       blockIndex,
     ).map(sibling => `0x${sibling}`);
 
-    const result = await superblocks.relayTx(
+    const result = await superblocks.relayLockTx(
       txData,
       operatorPublicKeyHash,
       txIndex,
