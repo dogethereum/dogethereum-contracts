@@ -38,23 +38,25 @@ const DEPOSITS = {
 };
 
 // Parse a data file returns a struct with headers and hashes
-async function parseDataFile(filename) {
-  const headers = [];
-  const hashes = [];
+async function parseDataFile(
+  filename: fs.PathLike
+): Promise<{ hashes: string[]; headers: string[] }> {
+  const headers: string[] = [];
+  const hashes: string[] = [];
   return new Promise((resolve, reject) => {
     const lineReader = readline.createInterface({
-      input: fs.createReadStream(filename)
+      input: fs.createReadStream(filename),
     });
-    lineReader.on('line', function (line) {
+    lineReader.on("line", function (line) {
       const [header, hash] = line.split("|");
       headers.push(header);
       hashes.push(hash);
     });
-    lineReader.on('close', function () {
+    lineReader.on("close", function () {
       resolve({ headers, hashes });
     });
   });
-};
+}
 
 // Calculates the merkle root from an array of hashes
 // The hashes are expected to be 32 bytes in hexadecimal
