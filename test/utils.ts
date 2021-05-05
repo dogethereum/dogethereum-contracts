@@ -1,15 +1,15 @@
-const fs = require('fs');
-const readline = require('readline');
-const btcProof = require('bitcoin-proof');
-const scryptsy = require('scryptsy');
-const sha256 = require('js-sha256').sha256;
-const keccak256 = require('js-sha3').keccak256;
-const bitcoreLib = require('bitcore-lib');
-const ECDSA = bitcoreLib.crypto.ECDSA;
-const bitcoreMessage = require('bitcore-message');
-const bitcoin = require('bitcoinjs-lib');
-const BN = require('bn.js');
+import fs from "fs";
+import hre from "hardhat";
+import readline from "readline";
+import scryptsy from "scryptsy";
+import { sha256 } from "js-sha256";
+import { keccak256 } from "js-sha3";
+import BN from "bn.js";
 
+const bitcoin = require("bitcoinjs-lib");
+const bitcoreLib = require("bitcore-lib");
+const btcProof = require("bitcoin-proof");
+const ECDSA = bitcoreLib.crypto.ECDSA;
 
 const OPTIONS_DOGE_REGTEST = {
   DURATION: 600,           // 10 minute
