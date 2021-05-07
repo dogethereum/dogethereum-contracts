@@ -309,7 +309,7 @@ export function buildDogeTransaction({
   return txBuilder.build();
 }
 
-function remove0x(str) {
+function remove0x(str: string) {
   return str.startsWith("0x") ? str.substring(2) : str;
 }
 
@@ -493,4 +493,25 @@ export function operatorSignItsEthAddress(
   const ecdsaSig = ecdsa.sig;
   const signature = "0x" + ecdsaSig.toCompact().toString("hex");
   return [operatorPublicKeyCompressedString, signature];
+}
+
+export function isolateTests() {
+  let snapshot: any;
+
+  before(async function () {
+    snapshot = await hre.network.provider.request({
+      method: "evm_snapshot",
+      params: [],
+    });
+  });
+
+  // TODO: allow defining test suites here?
+  // It would ensure proper nesting of other `before` and `after` mocha directives
+
+  after(async function () {
+    await hre.network.provider.request({
+      method: "evm_revert",
+      params: [snapshot],
+    });
+  });
 }
