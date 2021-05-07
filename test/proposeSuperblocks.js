@@ -64,9 +64,9 @@ contract('proposeSuperblocks', (accounts) => {
         it('Superblock 1', async() => {
             dogeSuperblocksClaimManager = await dogeSuperblocks.claimManager;
 
-            await utils.mineBlocks(web3, 5);
+            await utils.mineBlocks(5);
             await claimManager.checkClaimFinished(superblock1Id);
-            await utils.mineBlocks(web3, 5);
+            await utils.mineBlocks(5);
 
             merkleRoot = await dogeSuperblocks.getSuperblockMerkleRoot(superblock1Id);
             chainWork = await dogeSuperblocks.getSuperblockAccumulatedWork(superblock1Id);
@@ -84,9 +84,9 @@ contract('proposeSuperblocks', (accounts) => {
         it('Superblock 2', async() => {
             dogeSuperblocksClaimManager = await dogeSuperblocks.claimManager;
 
-            await utils.mineBlocks(web3, 5);
+            await utils.mineBlocks(5);
             await claimManager.checkClaimFinished(superblock2Id);
-            await utils.mineBlocks(web3, 5);
+            await utils.mineBlocks(5);
 
             merkleRoot = await dogeSuperblocks.getSuperblockMerkleRoot(superblock2Id);
             chainWork = await dogeSuperblocks.getSuperblockAccumulatedWork(superblock2Id);
@@ -104,9 +104,9 @@ contract('proposeSuperblocks', (accounts) => {
         // it('Superblock 3', async() => {
         //     dogeSuperblocksClaimManager = await dogeSuperblocks.claimManager;
 
-        //     await utils.mineBlocks(web3, 5);
+        //     await utils.mineBlocks(5);
         //     await claimManager.checkClaimFinished(superblock3Id);
-        //     await utils.mineBlocks(web3, 5);
+        //     await utils.mineBlocks(5);
 
         //     merkleRoot = await dogeSuperblocks.getSuperblockMerkleRoot(superblock3Id);
         //     chainWork = await dogeSuperblocks.getSuperblockAccumulatedWork(superblock3Id);

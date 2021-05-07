@@ -785,7 +785,7 @@ contract("verifyScryptHash", (accounts) => {
       });
 
       it("Validate scrypt hash no challengers", async () => {
-        await utils.mineBlocks(web3, 5);
+        await utils.mineBlocks(5);
         const result = await submitterScryptChecker.checkClaimSuccessful(claimID);
         const receipt = await result.wait();
         assert.ok(
