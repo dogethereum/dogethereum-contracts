@@ -10,6 +10,12 @@ const bitcoreLib = require("bitcore-lib");
 const btcProof = require("bitcoin-proof");
 const ECDSA = bitcoreLib.crypto.ECDSA;
 
+interface MerkleProof {
+  txId: string;
+  txIndex: number;
+  sibling: string[];
+}
+
 export const OPTIONS_DOGE_REGTEST = {
   DURATION: 600, // 10 minute
   DELAY: 60, // 1 minute
@@ -238,25 +244,63 @@ const DOGECOIN = {
    * See https://en.bitcoin.it/wiki/Wallet_import_format
    */
   wif: 0x9e,
+  bech32: "not a prefix",
 };
 
-export function dogeKeyPairFromWIF(wif: string) {
+export function dogeKeyPairFromWIF(wif: string): bitcoin.ECPairInterface {
   return bitcoin.ECPair.fromWIF(wif, DOGECOIN);
 }
 
 // keyPair should be the output of dogeKeyPairFromWIF
-export function dogeAddressFromKeyPair(keyPair: any) {
-  return bitcoin.payments.p2pkh({
+export function dogeAddressFromKeyPair(
+  keyPair: bitcoin.ECPairInterface
+): string {
+  const { address } = bitcoin.payments.p2pkh({
     pubkey: keyPair.publicKey,
     network: DOGECOIN,
-  }).address;
+  });
+  if (address === undefined) {
+    throw new Error("Could not retrieve address.");
+  }
+  return address;
 }
 
 // keyPair should be the output of dogeKeyPairFromWIF
-export function publicKeyHashFromKeyPair(keyPair: any) {
+export function publicKeyHashFromKeyPair(
+  keyPair: bitcoin.ECPairInterface
+): string {
   return `0x${bitcoin.crypto
     .ripemd160(bitcoin.crypto.sha256(keyPair.publicKey))
     .toString("hex")}`;
+}
+
+interface TxInput {
+  txId: string;
+  index: number;
+}
+
+type TxOutput = PaymentTxOutput | DataTxOutput;
+
+interface PaymentTxOutput {
+  type: "payment";
+  address: string;
+  value: number;
+}
+
+/* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+function isPaymentTxOutput(txOut: any): txOut is PaymentTxOutput {
+  return typeof txOut === "object" && txOut.type === "payment";
+}
+
+interface DataTxOutput {
+  type: "data embed";
+  value: 0;
+  data: Buffer;
+}
+
+/* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+function isDataTxOutput(txOut: any): txOut is DataTxOutput {
+  return typeof txOut === "object" && txOut.type === "data embed";
 }
 
 /**
