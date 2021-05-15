@@ -728,11 +728,13 @@ contract DogeSuperblocks is DogeErrorCodes {
         bytes32 superblockHash = bestSuperblock;
         uint index = NUM_ANCESTOR_DEPTHS - 1;
 
-        while (getSuperblockHeight(superblockHash) > _height) {
-            while (getSuperblockHeight(superblockHash) - _height < getAncDepth(index) && index > 0) {
+        uint currentHeight = getSuperblockHeight(superblockHash);
+        while (currentHeight > _height) {
+            while (currentHeight - _height < getAncDepth(index) && index > 0) {
                 index -= 1;
             }
             superblockHash = getSuperblockAncestor(superblockHash, index);
+            currentHeight = getSuperblockHeight(superblockHash);
         }
 
         return superblockHash;
