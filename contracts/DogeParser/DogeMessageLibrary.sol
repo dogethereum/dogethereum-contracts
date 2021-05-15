@@ -946,26 +946,23 @@ library DogeMessageLibrary {
     // garbage if it's invalid
     function computeMerkle(uint _txHash, uint _txIndex, uint[] memory _siblings) internal pure returns (uint) {
         uint resultHash = _txHash;
-        uint i = 0;
-        while (i < _siblings.length) {
-            uint proofHex = _siblings[i];
-
-            uint sideOfSiblings = _txIndex % 2;  // 0 means _siblings is on the right; 1 means left
+        for (uint i = 0; i < _siblings.length; i++) {
+            uint proofStep = _siblings[i];
 
             uint left;
             uint right;
-            if (sideOfSiblings == 1) {
-                left = proofHex;
+            // 0 means _siblings is on the right; 1 means left
+            if (_txIndex % 2 == 1) {
+                left = proofStep;
                 right = resultHash;
-            } else if (sideOfSiblings == 0) {
+            } else {
                 left = resultHash;
-                right = proofHex;
+                right = proofStep;
             }
 
             resultHash = concatHash(left, right);
 
             _txIndex /= 2;
-            i += 1;
         }
 
         return resultHash;
