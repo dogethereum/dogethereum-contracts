@@ -31,25 +31,35 @@ describe("testDogeTokenProcessTransaction", function () {
     "QULAK58teBn1Xi4eGo4fKea5oQDPMK4vcnmnivqzgvCPagsWHiyf",
   ].map(dogeKeyPairFromWIF);
 
-  const tx = buildDogeTransaction({
+  const operatorAddress = dogeAddressFromKeyPair(keypairs[0]);
+
+  const lockTx = buildDogeTransaction({
     signer: keypairs[1],
     inputs: [
-      ["edbbd164551c8961cf5f7f4b22d7a299dd418758b611b84c23770219e427df67", 0],
+      {
+        txId:
+          "edbbd164551c8961cf5f7f4b22d7a299dd418758b611b84c23770219e427df67",
+        index: 0,
+      },
     ],
     outputs: [
-      [dogeAddressFromKeyPair(keypairs[0]), value],
-      ["OP_RETURN", 0, Buffer.from(userEthAddress.slice(2), "hex")],
+      { type: "payment", address: operatorAddress, value },
+      {
+        type: "data embed",
+        value: 0,
+        data: Buffer.from(userEthAddress.slice(2), "hex"),
+      },
     ],
   });
   const operatorPublicKeyHash = publicKeyHashFromKeyPair(keypairs[0]);
-  const txData = `0x${tx.toHex()}`;
-  const txHash = `0x${tx.getId()}`;
+  const txData = `0x${lockTx.toHex()}`;
+  const txHash = `0x${lockTx.getId()}`;
 
   let dogeToken: Contract;
 
   isolateTests();
 
-  before(async function() {
+  before(async function () {
     signers = await hre.ethers.getSigners();
     // Tell DogeToken to trust signers[0] as if it were the relayer contract
     trustedRelayerContract = signers[0].address;
