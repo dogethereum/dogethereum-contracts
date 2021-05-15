@@ -1,14 +1,23 @@
-import { assert } from "chai";
-import hre from "hardhat";
-import type { Contract } from "ethers";
 import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import { assert } from "chai";
+import type { Contract, ContractTransaction } from "ethers";
+import hre from "hardhat";
 
 import { deployFixture } from "../deploy";
 
 import {
-  isolateTests,
+  blockchainTimeoutSeconds,
+  buildDogeTransaction,
+  DEPOSITS,
+  dogeAddressFromKeyPair,
+  dogeKeyPairFromWIF,
+  makeMerkle,
   makeMerkleProof,
-  storeSuperblockFrom974401,
+  makeSuperblock,
+  isolateTests,
+  OPTIONS_DOGE_REGTEST,
+  publicKeyHashFromKeyPair,
+  remove0x,
 } from "./utils";
 
 describe("testRelayToDogeToken", function () {
@@ -17,6 +26,44 @@ describe("testRelayToDogeToken", function () {
   let claimManager: Contract;
   let signers: SignerWithAddress[];
 
+  const userEthAddress = "0x30d90d1dbf03aa127d58e6af83ca1da9e748c98d";
+  const value = 905853205327;
+  const operatorFee = 9058532053;
+  const superblockSubmitterFee = 9058532053;
+  const userValue = value - operatorFee - superblockSubmitterFee;
+
+  const keypairs = [
+    "QSRUX7i1WVzFW6vx3i4Qj8iPPQ1tRcuPanMun8BKf8ySc8LsUuKx",
+    "QULAK58teBn1Xi4eGo4fKea5oQDPMK4vcnmnivqzgvCPagsWHiyf",
+  ].map(dogeKeyPairFromWIF);
+
+  const operatorDogeAddress = dogeAddressFromKeyPair(keypairs[0]);
+
+  const lockTx = buildDogeTransaction({
+    signer: keypairs[1],
+    inputs: [
+      {
+        txId:
+          "edbbd164551c8961cf5f7f4b22d7a299dd418758b611b84c23770219e427df67",
+        index: 0,
+      },
+    ],
+    outputs: [
+      { type: "payment", address: operatorDogeAddress, value },
+      {
+        type: "data embed",
+        value: 0,
+        data: Buffer.from(userEthAddress.slice(2), "hex"),
+      },
+    ],
+  });
+  const operatorPublicKeyHash = publicKeyHashFromKeyPair(keypairs[0]);
+  const txData = `0x${lockTx.toHex()}`;
+  const txHash = `0x${lockTx.getId()}`;
+  const numberOfTxs = 14;
+  const txIndex = 5;
+  const allTxIdsInBlock = createFakeTxIds(numberOfTxs, txHash, txIndex);
+
   isolateTests();
 
   before(async () => {
@@ -24,8 +71,7 @@ describe("testRelayToDogeToken", function () {
     signers = await hre.ethers.getSigners();
   });
 
-  it("Relay lock tx to token", async () => {
-    const operatorPublicKeyHash = `0x4d905b4b815d483cdfabcd292c6f86509d0fad82`;
+  it("Relay lock tx to token", async function () {
     const operatorEthAddress = signers[3].address;
     await dogeToken.addOperatorSimple(
       operatorPublicKeyHash,
@@ -38,57 +84,139 @@ describe("testRelayToDogeToken", function () {
       superblockSubmitterSigner
     );
 
-    const headerAndHashes = await storeSuperblockFrom974401(
-      submitterSuperblocks,
-      submitterClaimManager
-    );
-    const txIndex = 2; // Third tx in the block
-    const txHash =
-      "718add98dca8f54288b244dde3b0e797e8fe541477a08ef4b570ea2b07dccd3f";
-    const txData = `0x01000000063bdae6e5c8f64d72ebe4003eafe6d91249cab1c1bee36314d537e11adc3f141d000000006b483045022100e4c4f3d36eac2f4a517298cf76f759f01d153c2e5aa87ad3a209cb24b752663b02202a3b55d99d81718a84f204017698b31a59bd00a86ab32c4ce8df76004f52ae51012102a301f6ade783ed61d626f1621b85500a9edbc0cae8060c2a95899ae839e2c13dffffffff483126afc42fbeb4983fd27b77b8748c78798d8563323f48053a92b313716056000000006a47304402207b367dd68c6f6f8b354b010471d241762e03dc640ca07804f31fafd57d4cafd302200e377decdaf301cd04784d1ebd349ff0d1783522a425b8fcd442560fd15e9531012102a301f6ade783ed61d626f1621b85500a9edbc0cae8060c2a95899ae839e2c13dffffffff1418d9fcd1eb3444b1b8465b883dc9415aa7da615f6cc34b2e11b5a7d4fd3066000000006a47304402204d9079ca627a98dcccd1b10f0b3d0d9a709298930241b477440b9506f6fc54f302201a9b3477d9b1e3524a7f81d0aa719bd87a35e30eec6c899e7325688b6cd14390012102a301f6ade783ed61d626f1621b85500a9edbc0cae8060c2a95899ae839e2c13dffffffffeca8cc769cc3fa69f09b9037526838c7dddf6b0a8ced1f75459d4cfb8e48d550010000006a47304402201efdc9d5075205e1a178a0e0aaf8361e652a54c1f439df171eeb4b0e707ab63f022056421c5a89363f8cb55906b2e718352bf5ced9bfaca637c3e00eea6c8ac2038a012102a301f6ade783ed61d626f1621b85500a9edbc0cae8060c2a95899ae839e2c13dffffffffa9b4da7de89b6223eb750ffbcc89bda025493f3f3fb5c3f975215b74d6809932000000006a473044022028ecf6dbfc9d6ffc16684ecb8ae57855cccc2becf6e7b29bf066534f557f3155022003ec603c3b55eb377f3d13f0aaefd96e9edc918084f46e5ca1b5aad66d509994012102a301f6ade783ed61d626f1621b85500a9edbc0cae8060c2a95899ae839e2c13dffffffff72a248edd78124a59a7b86c8ba769f0ac87d7c80fcf330afdce3a4c55adc1239010000006a473044022044a1df03aed5bbec8e6f9fe4f9dadcd50ba3acd0f9ae059862096d6984c6d5430220185d7517e6adedb67dbd04fc12fb1f6dd12ee49739b730537d91a1c2363e41ac012102a301f6ade783ed61d626f1621b85500a9edbc0cae8060c2a95899ae839e2c13dffffffff024ffb0ee9d20000001976a9144d905b4b815d483cdfabcd292c6f86509d0fad8288acb18eb768020000001976a914b4c03c57520462083b8c19d676b8fdc3d374c8c088ac00000000`;
-
-    const siblings = makeMerkleProof(headerAndHashes.hashes, txIndex).map(
-      (sibling: any) => `0x${sibling}`
+    const totalBlocks = 10;
+    const blockIndex = 4;
+    const headers = createFakeBlockHeaders(
+      totalBlocks,
+      allTxIdsInBlock,
+      blockIndex + 1
     );
 
-    const blockIndex = 0;
-    const blockData = `0x${headerAndHashes.proposedSuperblock.blockHeaders[0].slice(
+    const genesisHeaders = headers.slice(0, 1);
+    const genesisSuperblock = makeSuperblock(
+      genesisHeaders,
+      "0x0000000000000000000000000000000000000000000000000000000000000000",
       0,
-      160
-    )}`;
-    const blockSiblings = makeMerkleProof(
-      headerAndHashes.proposedSuperblock.blockHashes,
-      blockIndex
-    ).map((sibling: any) => `0x${sibling}`);
+      1448429041 // timestamp block 974400
+    );
 
-    const result = await superblocks.relayLockTx(
+    await submitterSuperblocks.initialize(
+      genesisSuperblock.merkleRoot,
+      genesisSuperblock.accumulatedWork,
+      genesisSuperblock.timestamp,
+      genesisSuperblock.prevTimestamp,
+      genesisSuperblock.lastHash,
+      genesisSuperblock.lastBits,
+      genesisSuperblock.parentId
+    );
+
+    const newHeaders = headers.slice(1);
+    const proposedSuperblock = makeSuperblock(
+      newHeaders,
+      genesisSuperblock.superblockHash,
+      genesisSuperblock.accumulatedWork
+    );
+
+    await submitterClaimManager.makeDeposit({
+      value: DEPOSITS.MIN_PROPOSAL_DEPOSIT,
+    });
+
+    let result: ContractTransaction = await submitterClaimManager.proposeSuperblock(
+      proposedSuperblock.merkleRoot,
+      proposedSuperblock.accumulatedWork,
+      proposedSuperblock.timestamp,
+      proposedSuperblock.prevTimestamp,
+      proposedSuperblock.lastHash,
+      proposedSuperblock.lastBits,
+      proposedSuperblock.parentId
+    );
+    let receipt = await result.wait();
+
+    const superblockClaimCreatedEvents = receipt.events!.filter(
+      (event) => event.event === "SuperblockClaimCreated"
+    );
+    assert.lengthOf(
+      superblockClaimCreatedEvents,
+      1,
+      "New superblock should be proposed"
+    );
+    const superblockHash = receipt.events![1].args!.superblockHash;
+
+    await blockchainTimeoutSeconds(3 * OPTIONS_DOGE_REGTEST.TIMEOUT);
+
+    result = await submitterClaimManager.checkClaimFinished(superblockHash);
+    receipt = await result.wait();
+    const superblockClaimSuccessfulEvents = receipt.events!.filter(
+      (event) => event.event === "SuperblockClaimSuccessful"
+    );
+    assert.lengthOf(
+      superblockClaimSuccessfulEvents,
+      1,
+      "Superblock claim should be successful"
+    );
+
+    const txMerkleProof = makeMerkleProof(
+      allTxIdsInBlock.map(remove0x),
+      txIndex
+    );
+    const txSiblingsProof = txMerkleProof.sibling.map(
+      (sibling) => `0x${sibling}`
+    );
+
+    const blockHeader = `0x${newHeaders[blockIndex]}`;
+    const blockMerkleProof = makeMerkleProof(
+      proposedSuperblock.blockHashes,
+      blockIndex
+    );
+    const blockSiblings = blockMerkleProof.sibling.map(
+      (sibling) => `0x${sibling}`
+    );
+
+    result = await submitterSuperblocks.relayLockTx(
       txData,
       operatorPublicKeyHash,
       txIndex,
-      siblings,
-      blockData,
+      txSiblingsProof,
+      blockHeader,
       blockIndex,
       blockSiblings,
-      headerAndHashes.proposedSuperblock.superblockHash,
+      proposedSuperblock.superblockHash,
       dogeToken.address
     );
+    receipt = await result.wait();
 
-    const address = "0x30d90d1dbf03aa127d58e6af83ca1da9e748c98d";
-    const value = 905853205327;
-    const balance = await dogeToken.balanceOf(address);
-    const operatorFee = 9058532053;
-    const superblockSubmitterFee = 9058532053;
-    const userValue = value - operatorFee - superblockSubmitterFee;
+    const verifyTxEvents = receipt.events!.filter(
+      (log) => log.event === "VerifyTransaction"
+    );
+    assert.lengthOf(verifyTxEvents, 1);
+    assert.equal(
+      verifyTxEvents[0].args!.returnCode.toNumber(),
+      1,
+      "VerifyTransaction failed"
+    );
+
+    const relayTxEvents = receipt.events!.filter(
+      (log) => log.event === "RelayTransaction"
+    );
+    assert.lengthOf(relayTxEvents, 1);
+    const ERR_RELAY_VERIFY = 30010;
+    assert.notEqual(
+      relayTxEvents[0].args!.returnCode.toNumber(),
+      ERR_RELAY_VERIFY,
+      "RelayTransaction failed"
+    );
+
+    const balance = await dogeToken.balanceOf(userEthAddress);
     assert.equal(
       balance.toString(),
       userValue,
-      `DogeToken's ${address} balance is not the expected one`
+      `DogeToken user (${userEthAddress}) balance is not the expected one`
     );
     const operatorTokenBalance = await dogeToken.balanceOf(operatorEthAddress);
     assert.equal(
       operatorTokenBalance.toNumber(),
       operatorFee,
-      `DogeToken's operator balance is not the expected one`
+      `DogeToken operator (${operatorEthAddress}) balance is not the expected one`
     );
     const superblockSubmitterTokenBalance = await dogeToken.balanceOf(
       superblockSubmitterSigner.address
@@ -96,7 +224,7 @@ describe("testRelayToDogeToken", function () {
     assert.equal(
       superblockSubmitterTokenBalance.toNumber(),
       superblockSubmitterFee,
-      `DogeToken's superblock submitter balance is not the expected one`
+      `DogeToken superblock submitter (${superblockSubmitterSigner.address}) balance is not the expected one`
     );
 
     const operator = await dogeToken.operators(operatorPublicKeyHash);
@@ -107,3 +235,95 @@ describe("testRelayToDogeToken", function () {
     );
   });
 });
+
+// Creates fake "pure" headers. These lack the AuxPOW bits used for merged mining.
+// See https://github.com/dogecoin/dogecoin/blob/master/src/primitives/pureheader.h
+function createFakeTxIds(
+  numberOfTxs: number,
+  realTxId: string,
+  realTxIndex = numberOfTxs - 1
+) {
+  if (realTxIndex < 0 || realTxIndex >= numberOfTxs) {
+    throw new Error(
+      "The selected tx index should be in range of the number of txs to be created."
+    );
+  }
+
+  const txIds = [];
+  for (let i = 0; i < numberOfTxs; i++) {
+    const txId = i === realTxIndex ? realTxId : fakeUint256LE(i);
+    txIds.push(txId);
+  }
+
+  return txIds;
+}
+
+// Creates fake "pure" headers. These lack the AuxPOW bits used for merged mining.
+// See https://github.com/dogecoin/dogecoin/blob/master/src/primitives/pureheader.h
+function createFakeBlockHeaders(
+  numberOfHeaders: number,
+  txIds: string[],
+  txBlockIndex = numberOfHeaders - 1
+) {
+  if (txBlockIndex < 0 || txBlockIndex >= numberOfHeaders) {
+    throw new Error(
+      "The selected block index should be in range of the number of block headers to be created."
+    );
+  }
+
+  const headers = [];
+  const baseDifficulty = 0x0b041a48;
+  for (let i = 0; i < numberOfHeaders; i++) {
+    const fakeField = fakeUint256LE(i);
+    const merkleRoot: string =
+      i === txBlockIndex ? makeMerkle(txIds) : fakeField;
+    const difficultyBits = fakeUint32LE(baseDifficulty + i);
+    const header = craftFakeHeader(fakeField, merkleRoot, difficultyBits);
+    headers.push(header);
+  }
+
+  return headers;
+}
+
+/**
+ * @param previousBlockHash Hexadecimal encoded hash
+ * @param merkleRoot Hexadecimal encoded merkle root
+ * @param difficultyBits Hexadecimal encoded bits
+ */
+function craftFakeHeader(
+  previousBlockHash: string,
+  merkleRoot: string,
+  difficultyBits: string
+): string {
+  // This version field has the AuxPOW flag off
+  const version = Buffer.from("00620003", "hex").reverse().toString("hex");
+  const time = Buffer.from("609c19ea", "hex").reverse().toString("hex");
+  const nonce = "7e57577e";
+  return `${version}${remove0x(previousBlockHash)}${reverseDataBytes(
+    merkleRoot
+  )}${time}${remove0x(difficultyBits)}${nonce}`;
+}
+
+function fakeUint256LE(seed: number): string {
+  const uint256Size = 32;
+  const testString = Buffer.from("test header").toString("hex");
+  const seedString = remove0x(hre.ethers.utils.hexlify(seed));
+  const payload = hre.ethers.utils.hexZeroPad(
+    `0x${testString}${seedString}`,
+    uint256Size
+  );
+  return payload;
+}
+
+function fakeUint32LE(seed: number): string {
+  const uint32Size = 4;
+  const payload = Buffer.from(
+    remove0x(hre.ethers.utils.hexlify(seed)),
+    "hex"
+  ).reverse();
+  return hre.ethers.utils.hexZeroPad(payload, uint32Size);
+}
+
+function reverseDataBytes(data: string) {
+  return Buffer.from(remove0x(data), "hex").reverse().toString("hex");
+}
