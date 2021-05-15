@@ -38,15 +38,27 @@ describe("testParseTransaction", () => {
     );
   });
 
-  it("Parse simple transation", async () => {
+  it("Attempt to parse invalid transaction", async function () {
     const tx = buildDogeTransaction({
       signer: keys[1],
       inputs: [
-        ["edbbd164551c8961cf5f7f4b22d7a299dd418758b611b84c23770219e427df67", 0],
+        {
+          txId:
+            "edbbd164551c8961cf5f7f4b22d7a299dd418758b611b84c23770219e427df67",
+          index: 0,
+        },
       ],
       outputs: [
-        [dogeAddressFromKeyPair(keys[1]), 1000001],
-        [dogeAddressFromKeyPair(keys[0]), 1000002],
+        {
+          type: "payment",
+          address: dogeAddressFromKeyPair(keys[1]),
+          value: 1000001,
+        },
+        {
+          type: "payment",
+          address: dogeAddressFromKeyPair(keys[0]),
+          value: 1000002,
+        },
       ],
     });
     const operatorPublicKeyHash = publicKeyHashFromKeyPair(keys[0]);
@@ -69,13 +81,24 @@ describe("testParseTransaction", () => {
     }
     assert.fail("The lock transaction is invalid and should be rejected.");
   });
-  it("Parse transation without operator output", async () => {
+
+  it("Attempt to parse transaction without operator output", async function () {
     const tx = buildDogeTransaction({
       signer: keys[1],
       inputs: [
-        ["edbbd164551c8961cf5f7f4b22d7a299dd418758b611b84c23770219e427df67", 0],
+        {
+          txId:
+            "edbbd164551c8961cf5f7f4b22d7a299dd418758b611b84c23770219e427df67",
+          index: 0,
+        },
       ],
-      outputs: [[dogeAddressFromKeyPair(keys[0]), 1000002]],
+      outputs: [
+        {
+          type: "payment",
+          address: dogeAddressFromKeyPair(keys[0]),
+          value: 100000,
+        },
+      ],
     });
     const operatorPublicKeyHash = publicKeyHashFromKeyPair(keys[1]);
     const txData = `0x${tx.toHex()}`;
@@ -95,22 +118,36 @@ describe("testParseTransaction", () => {
     }
     assert.fail("The lock transaction is invalid and should be rejected.");
   });
-  it("Parse transaction with OP_RETURN", async () => {
+
+  it("Parse lock transaction", async function () {
     const operatorKeyPair = keys[0];
     const destinationEthereumAddress = signers[3].address;
     const decodedDestination = Buffer.from(
       destinationEthereumAddress.slice(2),
       "hex"
     );
+    const lockAmount = 1000002;
     const tx = buildDogeTransaction({
       signer: keys[1],
       inputs: [
-        ["edbbd164551c8961cf5f7f4b22d7a299dd418758b611b84c23770219e427df67", 0],
+        {
+          txId:
+            "edbbd164551c8961cf5f7f4b22d7a299dd418758b611b84c23770219e427df67",
+          index: 0,
+        },
       ],
       outputs: [
-        [dogeAddressFromKeyPair(operatorKeyPair), 1000002],
-        ["OP_RETURN", 0, decodedDestination],
-        [dogeAddressFromKeyPair(keys[1]), 1000001],
+        {
+          type: "payment",
+          address: dogeAddressFromKeyPair(operatorKeyPair),
+          value: lockAmount,
+        },
+        { type: "data embed", value: 0, data: decodedDestination },
+        {
+          type: "payment",
+          address: dogeAddressFromKeyPair(keys[1]),
+          value: 1000001,
+        },
       ],
     });
     const operatorPublicKeyHash = publicKeyHashFromKeyPair(operatorKeyPair);
@@ -121,12 +158,12 @@ describe("testParseTransaction", () => {
       txData,
       operatorPublicKeyHash
     );
-    assert.equal(parseResult[0], 1000002, "Amount deposited to operator");
+    assert.equal(parseResult[0], lockAmount, "Amount deposited to operator is incorrect");
     assert.equal(
       parseResult[1],
       destinationEthereumAddress,
-      "User lock ethereum address"
+      "User ethereum address is incorrect"
     );
-    assert.equal(parseResult[2], 0, "Operator is first output");
+    assert.equal(parseResult[2], 0, "The operator output should be the first one");
   });
 });
