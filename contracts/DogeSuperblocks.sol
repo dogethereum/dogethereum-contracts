@@ -326,12 +326,11 @@ contract DogeSuperblocks is DogeErrorCodes {
         uint dogeBlockHash = DogeMessageLibrary.dblShaFlip(_dogeBlockHeader);
 
         // Check if Doge block belongs to given superblock
-        if (bytes32(DogeMessageLibrary.computeMerkle(dogeBlockHash, _dogeBlockIndex, _dogeBlockSiblings))
-            != getSuperblockMerkleRoot(_superblockHash)) {
-            // Doge block is not in superblock
-            emit VerifyTransaction(bytes32(DogeMessageLibrary.dblShaFlip(_txBytes)), ERR_SUPERBLOCK);
-            return ERR_SUPERBLOCK;
-        }
+        require(
+            bytes32(DogeMessageLibrary.computeMerkle(dogeBlockHash, _dogeBlockIndex, _dogeBlockSiblings))
+            == getSuperblockMerkleRoot(_superblockHash),
+            "Doge block does not belong to superblock"
+        );
 
         uint txHash = verifyTx(_txBytes, _txIndex, _txSiblings, _dogeBlockHeader, _superblockHash);
         if (txHash != 0) {
@@ -475,8 +474,6 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @param _blockHeaderBytes - block header containing transaction
     // @param _txsuperblockHash - superblock containing block header
     // @return - 1 if the transaction is in the block and the block is in the main chain,
-    // 20020 (ERR_CONFIRMATIONS) if the block is not in the main chain,
-    // 20050 (ERR_MERKLE_ROOT) if the block is in the main chain but the Merkle proof fails.
     function helperVerifyHash(
         uint256 _txHash,
         uint _txIndex,
@@ -491,17 +488,13 @@ contract DogeSuperblocks is DogeErrorCodes {
         // }
 
         //TODO: Verify superblock is in superblock's main chain
-        if (!isApproved(_txsuperblockHash) || !inMainChain(_txsuperblockHash)) {
-            emit VerifyTransaction(bytes32(_txHash), ERR_CHAIN);
-            return (ERR_CHAIN);
-        }
+        require(isApproved(_txsuperblockHash), "Superblock is not approved");
+        require(inMainChain(_txsuperblockHash), "Superblock is not part of the main chain");
 
         // Verify tx Merkle root
         uint merkle = DogeMessageLibrary.getHeaderMerkleRoot(_blockHeaderBytes, 0);
-        if (DogeMessageLibrary.computeMerkle(_txHash, _txIndex, _siblings) != merkle) {
-            emit VerifyTransaction(bytes32(_txHash), ERR_MERKLE_ROOT);
-            return (ERR_MERKLE_ROOT);
-        }
+        uint computedMerkle = DogeMessageLibrary.computeMerkle(_txHash, _txIndex, _siblings);
+        require(computedMerkle == merkle, "Tx merkle proof is invalid");
 
         emit VerifyTransaction(bytes32(_txHash), 1);
         return (1);
