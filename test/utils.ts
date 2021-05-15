@@ -1,14 +1,11 @@
-import fs from "fs";
+import BN from "bn.js";
+import type { ContractReceipt, Event } from "ethers";
 import hre from "hardhat";
-import readline from "readline";
-import scryptsy from "scryptsy";
 import { sha256 } from "js-sha256";
 import { keccak256 } from "js-sha3";
-import BN from "bn.js";
-import { assert } from "chai";
-import type { Contract, ContractTransaction, ContractReceipt } from "ethers";
+import scryptsy from "scryptsy";
 
-const bitcoin = require("bitcoinjs-lib");
+import bitcoin = require("bitcoinjs-lib");
 const bitcoreLib = require("bitcore-lib");
 const btcProof = require("bitcoin-proof");
 const ECDSA = bitcoreLib.crypto.ECDSA;
@@ -39,31 +36,10 @@ export const DEPOSITS = {
   VERIFY_SUPERBLOCK_COST: 220000,
 };
 
-// Parse a data file returns a struct with headers and hashes
-async function parseDataFile(
-  filename: fs.PathLike
-): Promise<{ hashes: string[]; headers: string[] }> {
-  const headers: string[] = [];
-  const hashes: string[] = [];
-  return new Promise((resolve, reject) => {
-    const lineReader = readline.createInterface({
-      input: fs.createReadStream(filename),
-    });
-    lineReader.on("line", function (line) {
-      const [header, hash] = line.split("|");
-      headers.push(header);
-      hashes.push(hash);
-    });
-    lineReader.on("close", function () {
-      resolve({ headers, hashes });
-    });
-  });
-}
-
 // Calculates the merkle root from an array of hashes
 // The hashes are expected to be 32 bytes in hexadecimal
-export function makeMerkle(hashes: string[]) {
-  if (hashes.length == 0) {
+export function makeMerkle(hashes: string[]): string {
+  if (hashes.length === 0) {
     throw new Error("Cannot compute merkle tree of an empty array");
   }
 
@@ -72,7 +48,7 @@ export function makeMerkle(hashes: string[]) {
 
 // Calculates the double sha256 of a block header
 // Block header is expected to be in hexadecimal
-export function calcBlockSha256Hash(blockHeader: string) {
+export function calcBlockSha256Hash(blockHeader: string): string {
   const headerBin = fromHex(blockHeader).slice(0, 80);
   return `0x${Buffer.from(sha256.array(sha256.arrayBuffer(headerBin)))
     .reverse()
@@ -111,17 +87,17 @@ function getBlockDifficulty(blockHeader: string) {
   const target = mant.mul(new BN(256).pow(exp.subn(3)));
   const difficulty1 = new BN(0x00fffff).mul(new BN(256).pow(new BN(0x1e - 3)));
   const difficulty = difficulty1.div(target);
-  return difficulty1.div(target);
+  return difficulty;
 }
 
-export function blockchainTimeoutSeconds(seconds: number) {
+export function blockchainTimeoutSeconds(seconds: number): Promise<string> {
   return hre.network.provider.request({
     method: "evm_increaseTime",
     params: [seconds],
-  });
+  }) as Promise<string>;
 }
 
-export async function mineBlocks(n: number) {
+export async function mineBlocks(n: number): Promise<void> {
   for (let i = 0; i < n; i++) {
     await hre.network.provider.request({
       method: "evm_mine",
@@ -153,7 +129,7 @@ export function calcSuperblockHash(
   lastHash: string,
   lastBits: string,
   parentId: string
-) {
+): string {
   return `0x${Buffer.from(
     keccak256.arrayBuffer(
       Buffer.concat([
@@ -174,7 +150,7 @@ export function makeSuperblock(
   headers: string[],
   parentId: string,
   parentAccumulatedWork: number | string,
-  parentTimestamp: number = 0
+  parentTimestamp = 0
 ) {
   if (headers.length < 1) {
     throw new Error("Requires at least one header to build a superblock");
@@ -214,17 +190,20 @@ export function makeSuperblock(
   };
 }
 
-export function base58ToBytes20(str: string) {
+export function base58ToBytes20(str: string): string {
   const decoded = bitcoreLib.encoding.Base58Check.decode(str);
-  return "0x" + decoded.toString("hex").slice(2, 42);
+  return `0x${decoded.toString("hex").slice(2, 42)}`;
 }
 
-export function findEvent(events: ContractReceipt["events"], name: string) {
+export function findEvent(
+  events: ContractReceipt["events"],
+  name: string
+): Event | undefined {
   if (events === undefined) {
+    // TODO: return undefined instead?
     throw new Error("No events found on receipt!");
   }
-  const index = events.findIndex((log) => log.event === name);
-  return index >= 0 ? events[index] : undefined;
+  return events.find((log) => log.event === name);
 }
 
 const DOGECOIN = {
@@ -290,146 +269,35 @@ export function buildDogeTransaction({
   inputs,
   outputs,
 }: {
-  signer: string;
-  inputs: Array<any>;
-  outputs: Array<any>;
-}) {
+  signer: bitcoin.ECPair.Signer;
+  inputs: TxInput[];
+  outputs: TxOutput[];
+}): bitcoin.Transaction {
   const txBuilder = new bitcoin.TransactionBuilder(DOGECOIN);
   txBuilder.setVersion(1);
-  inputs.forEach(([txid, index]) => txBuilder.addInput(txid, index));
-  outputs.forEach(([address, amount, data]) => {
-    if (address === "OP_RETURN") {
-      const embed = bitcoin.payments.embed({ data: [data] });
-      txBuilder.addOutput(embed.output, amount);
+  inputs.forEach(({ txId, index }) => txBuilder.addInput(txId, index));
+  outputs.forEach((txOut) => {
+    if (isDataTxOutput(txOut)) {
+      const embed = bitcoin.payments.embed({ data: [txOut.data] });
+      txBuilder.addOutput(embed.output!, txOut.value);
     } else {
-      txBuilder.addOutput(address, amount);
+      txBuilder.addOutput(txOut.address, txOut.value);
     }
   });
   txBuilder.sign(0, signer);
   return txBuilder.build();
 }
 
-function remove0x(str: string) {
+export function remove0x(str: string) {
   return str.startsWith("0x") ? str.substring(2) : str;
-}
-
-export async function storeSuperblockFrom974401(
-  superblocks: Contract,
-  claimManager: Contract
-) {
-  const { headers, hashes } = await parseDataFile(
-    "test/headers/11from974401DogeMain.txt"
-  );
-
-  const genesisSuperblock = makeSuperblock(
-    headers.slice(0, 1), // header 974401
-    "0x0000000000000000000000000000000000000000000000000000000000000000",
-    0, // accumulated work block 974400
-    1448429041 // timestamp block 974400
-  );
-
-  await superblocks.initialize(
-    genesisSuperblock.merkleRoot,
-    genesisSuperblock.accumulatedWork,
-    genesisSuperblock.timestamp,
-    genesisSuperblock.prevTimestamp,
-    genesisSuperblock.lastHash,
-    genesisSuperblock.lastBits,
-    genesisSuperblock.parentId
-  );
-
-  const proposedSuperblock = makeSuperblock(
-    headers.slice(1),
-    genesisSuperblock.superblockHash,
-    genesisSuperblock.accumulatedWork
-  );
-
-  await claimManager.makeDeposit({ value: DEPOSITS.MIN_PROPOSAL_DEPOSIT });
-
-  let result: ContractTransaction = await claimManager.proposeSuperblock(
-    proposedSuperblock.merkleRoot,
-    proposedSuperblock.accumulatedWork,
-    proposedSuperblock.timestamp,
-    proposedSuperblock.prevTimestamp,
-    proposedSuperblock.lastHash,
-    proposedSuperblock.lastBits,
-    proposedSuperblock.parentId
-  );
-  let receipt = await result.wait();
-
-  const superblockClaimCreatedEvents = receipt.events!.filter(
-    (event) => event.event === "SuperblockClaimCreated"
-  );
-  assert.lengthOf(
-    superblockClaimCreatedEvents,
-    1,
-    "New superblock should be proposed"
-  );
-  const superblockHash = receipt.events![1].args!.superblockHash;
-
-  await blockchainTimeoutSeconds(3 * OPTIONS_DOGE_REGTEST.TIMEOUT);
-
-  result = await claimManager.checkClaimFinished(superblockHash);
-  receipt = await result.wait();
-  const superblockClaimSuccessfulEvents = receipt.events!.filter(
-    (event) => event.event === "SuperblockClaimSuccessful"
-  );
-  assert.lengthOf(
-    superblockClaimSuccessfulEvents,
-    1,
-    "Superblock claim should be successful"
-  );
-
-  const headerAndHashes = {
-    header: {
-      nonce: 0,
-      hash: "b26fc6c25e9097aa7ced3610b45b2f018c5e4730822c9809d5ffb2a860b21b24",
-      timestamp: 1448429204,
-      merkle_root:
-        "ee7440781b99647989f3c254c3f3ac477feeed4f50ba265ab6c45bb045d29466",
-      version: 6422787,
-      prevhash:
-        "a10377b456caa4d7a57623ddbcdb4c81e20b4ddaece77396b717fe49488975a4",
-      bits: 453226816,
-      auxpow: "realValueShouldBePutHere",
-    },
-    hashes: [
-      "5c090206d5ccc1827ca7cb723b9f706a1ed8c9bb17d9dc0c7188c2ee10a7501c",
-      "af12afe762daf75815db0097e16445dbba45ce9140f3da37b86f00b45bd627b2",
-      "718add98dca8f54288b244dde3b0e797e8fe541477a08ef4b570ea2b07dccd3f",
-      "0c1c11cc899dfa6f01477e82969c5b2c07f934445bbf116c15f6d06541bc52da",
-      "0c6fcfd484ff722d3c512bf38c38904fb75fefdd16d187827887259573d4da6d",
-      "d85837d895dc1f38104366a7c2dfe6290f7175d2a69240ebe8bb36ffc52ed4d3",
-      "755b9f137575fe9a8dfc984673f62e80b2eba3b3b8f8000a799a3f14730dbe72",
-      "42cf9e7db40d99edd323d786d56f6be8159a7e7be458418917b02b2b3be51684",
-      "cc8c0f43a1e2100c5b9841495ed1f123f2e3b0a2411c43234526347609034588",
-      "89d95e9f1d627bb810ea6799b6f7bd79776bc60a3d61cb40f537c3cba9d53865",
-      "271f317be9122894e6aef9491a877418ebb82f8de53615d3de8e8403bdbbe38b",
-      "3aaed4666225d73f4fd40ccf0602cbc3555c0969ba5f909e56e11da14ddb44b9",
-      "2f28d3ff74af7e5621ba8947dc20792cc5e082283f00cd4fb8475b18f0531c3c",
-      "6c9065e5f18e498806e3a483af4a0cb928886f6ba0a97b1134dade772351ff46",
-      "73307cd2527f6fbc736bfc7a6eb692a283bc647aab650863a8ca8ea7a60c4fa0",
-      "649ca5456c1cca1c5cf2c17a527208957a75e42b22e651c5e8f43e8647e01b2f",
-      "25a51303b4b9e648bb1fb66b4aff5e2c46e4cd99646bda975f2347e709acabdb",
-      "f88050416d4efbd9940d582f67f5cda3db4414dd35db269ab72d8a7981a74605",
-      "ff96cf9beaed0c31a633c3c0c87f4e040bd4f042998c787ace9c07245ad7dee7",
-      "b625dc14e0c402f6d6e3c9beac35fb5aaa5db83c04ef7dfdd508d29e49aacf64",
-      "f8b195ba046226b4ca040a482e7a823bfcb2d61d9733f5689d0d99c8d6795076",
-      "877973b213eb921161777b96fdd50f9bc4701b13de8842e7c940b9daa3e91baa",
-      "076a27faec1d71499c7946c974073e3a9d27fbdaf2a491df960669a122090b29",
-    ],
-    genesisSuperblock,
-    proposedSuperblock,
-  };
-  return headerAndHashes;
 }
 
 // the inputs to makeMerkleProof can be computed by using pybitcointools:
 // header = get_block_header_data(blocknum)
 // hashes = get_txs_in_block(blocknum)
-export function makeMerkleProof(hashes: string[], txIndex: number) {
-  const proofOfFirstTx = btcProof.getProof(hashes, txIndex);
-  return proofOfFirstTx.sibling;
+export function makeMerkleProof(hashes: string[], txIndex: number): MerkleProof {
+  const proofOfFirstTx: MerkleProof = btcProof.getProof(hashes, txIndex);
+  return proofOfFirstTx;
 }
 
 // Convert an hexadecimal string to buffer
@@ -445,7 +313,7 @@ function scryptHash(data: Buffer, start = 0, length = 80) {
 }
 
 // Calculate PoW hash from dogecoin header
-export function calcHeaderPoW(header: string) {
+export function calcHeaderPoW(header: string): string {
   const headerBin = fromHex(header);
   if (isHeaderAuxPoW(headerBin)) {
     const length = headerBin.length;
@@ -462,7 +330,7 @@ function isHeaderAuxPoW(headerBin: Buffer) {
 export function operatorSignItsEthAddress(
   operatorPrivateKey: string,
   operatorEthAddress: string
-) {
+): string[] {
   // bitcoreLib.PrivateKey marks the private key as compressed if it receives a String as a parameter.
   // bitcoreLib.PrivateKey marks the private key as uncompressed if it receives a Buffer as a parameter.
   // In fact, private keys are not compressed/uncompressed. The compressed/uncompressed attribute
@@ -495,7 +363,7 @@ export function operatorSignItsEthAddress(
   return [operatorPublicKeyCompressedString, signature];
 }
 
-export function isolateTests() {
+export function isolateTests(): void {
   let snapshot: any;
 
   before(async function () {
