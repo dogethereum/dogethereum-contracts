@@ -18,9 +18,19 @@ contract("testDogeTokenNoOperatorOutput", function (accounts) {
     const tx = utils.buildDogeTransaction({
       signer: keys[0],
       inputs: [
-        ["edbbd164551c8961cf5f7f4b22d7a299dd418758b611b84c23770219e427df67", 0],
+        {
+          txId:
+            "edbbd164551c8961cf5f7f4b22d7a299dd418758b611b84c23770219e427df67",
+          index: 0,
+        },
       ],
-      outputs: [[utils.dogeAddressFromKeyPair(keys[1]), 1000000]],
+      outputs: [
+        {
+          type: "payment",
+          address: utils.dogeAddressFromKeyPair(keys[1]),
+          value: 1000000,
+        },
+      ],
     });
     const operatorPublicKeyHash = utils.publicKeyHashFromKeyPair(keys[0]);
     const txData = `0x${tx.toHex()}`;
