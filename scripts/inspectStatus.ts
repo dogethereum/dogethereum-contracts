@@ -4,8 +4,6 @@ import type { DogethereumSystem } from "../deploy";
 
 import { getWalletFor, Role } from "./signers";
 
-const utils = require("../test/utils");
-
 export async function printStatus(
   hre: HardhatRuntimeEnvironment,
   deployment: DogethereumSystem
@@ -68,7 +66,7 @@ export async function printStatus(
       for (let j = 0; j < utxosLength; j++) {
         const utxo = await dogeToken.getUtxo(operatorPublicKeyHash, j);
         console.log(
-          `utxo [${j}]: ${utils.formatHexUint32(utxo[1].toHexString())}, ${
+          `utxo [${j}]: ${utxo[1].toHexString()}, ${
             utxo[2]
           }, ${utxo[0]}`
         );
