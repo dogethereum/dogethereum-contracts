@@ -288,6 +288,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
             operator.utxos.push(Utxo(operatorValue, txHash, outputIndex));
 
             // Update operator's doge balance
+            operator.dogeAvailableBalance = operator.dogeAvailableBalance.add(operatorValue);
             operator.dogePendingBalance = operator.dogePendingBalance.sub(userValue);
         }
 

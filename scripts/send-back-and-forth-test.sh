@@ -92,8 +92,7 @@ npx hardhat run --network $NETWORK scripts/debug.ts
 
 # Prepare sender address to do unlocks
 npx hardhat run --network $NETWORK scripts/prepare_sender.ts
-# FIXME: this test cannot be written to unlock more than once until spent transaction outputs are removed from the contract
-for i in {1..1}; do
+for i in {1..2}; do
 	# Print debug.js status
 	npx hardhat run --network $NETWORK scripts/debug.ts
 
@@ -111,7 +110,6 @@ for i in {1..1}; do
 	# Mine 10 doge blocks so doge unlock tx has enough confirmations
 	curl --user $dogecoinQtRpcuser:$dogecoinQtRpcpassword  --data-binary '{"jsonrpc": "1.0", "id":"curltest", "method": "generate", "params": [10] }' -H 'content-type: text/plain;' http://127.0.0.1:41200/
 
-	# TODO: the actual length should be constant in this test
 	# Wait for agent to relay doge unlock tx to eth and utxo length updated
 	npx hardhat dogethereum.waitUtxo --network $NETWORK --operator-public-key-hash 0x03cd041b0139d3240607b9fd1b2d1b691e22b5d6 --utxo-length $(($i + 1))
 done
