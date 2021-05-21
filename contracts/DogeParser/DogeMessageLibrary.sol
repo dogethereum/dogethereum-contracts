@@ -761,10 +761,15 @@ library DogeMessageLibrary {
         return (pubKey, odd, pos);
     }
 
-    // Returns true if the tx output is an embedded ethereum address
+    /**
+     * Returns true if the tx output is an embedded ethereum address
+     * @param txBytes Buffer where the entire transaction is stored.
+     * @param pos Index into the tx buffer where the script is stored.
+     * @param len Size of the script in terms of bytes.
+     */
     function isEthereumAddress(bytes memory txBytes, uint pos, uint len) private pure
              returns (bool) {
-        // scriptPub format is
+        // scriptPub format for the ethereum address is
         // 0x6a OP_RETURN
         // 0x14 PUSH20
         // []   20 bytes of the ethereum address
