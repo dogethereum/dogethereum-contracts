@@ -92,7 +92,8 @@ npx hardhat run --network $NETWORK scripts/debug.ts
 
 # Prepare sender address to do unlocks
 npx hardhat run --network $NETWORK scripts/prepare_sender.ts
-for i in {1..2}; do
+# FIXME: this test cannot be written to unlock more than once until spent transaction outputs are removed from the contract
+for i in {1..1}; do
 	# Print debug.js status
 	npx hardhat run --network $NETWORK scripts/debug.ts
 
@@ -112,7 +113,7 @@ for i in {1..2}; do
 
 	# TODO: the actual length should be constant in this test
 	# Wait for agent to relay doge unlock tx to eth and utxo length updated
-	npx hardhat dogethereum.waitUtxo --network $NETWORK --operator-public-key-hash 0x03cd041b0139d3240607b9fd1b2d1b691e22b5d6 --utxo-length $(($i))
+	npx hardhat dogethereum.waitUtxo --network $NETWORK --operator-public-key-hash 0x03cd041b0139d3240607b9fd1b2d1b691e22b5d6 --utxo-length $(($i + 1))
 done
 
 # Print status after the unlocks were processed
