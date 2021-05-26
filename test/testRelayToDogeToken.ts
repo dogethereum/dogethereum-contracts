@@ -234,6 +234,15 @@ describe("testRelayToDogeToken", function () {
       "operator dogeAvailableBalance is not the expected one"
     );
   });
+
+  // TODO: implement these tests
+  it.skip("Relay unlock tx to token", function () {
+    assert.fail("Test not implemented.");
+  });
+
+  it.skip("Relay two unlock txs to token", function () {
+    assert.fail("Test not implemented.");
+  });
 });
 
 // Creates fake "pure" headers. These lack the AuxPOW bits used for merged mining.
