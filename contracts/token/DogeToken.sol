@@ -289,7 +289,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
 
             // Update operator's doge balance
             operator.dogeAvailableBalance = operator.dogeAvailableBalance.add(operatorValue);
-            operator.dogePendingBalance = operator.dogePendingBalance.sub(userValue);
+            operator.dogePendingBalance = operator.dogePendingBalance.sub(operatorValue);
         }
 
         return 0;
