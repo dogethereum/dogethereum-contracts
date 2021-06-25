@@ -41,6 +41,8 @@ There are two kinds of tests:
 - [Contract tests](#contract-tests)
 - [Integration tests](#integration-tests)
 
+Some contracts are copies from the [scrypt-interactive](https://github.com/bridge2100/scrypt-interactive) repository. These can be found in `contracts/scrypt-interactive`. You may need to update them to test with the latest version.
+
 ### Contract tests
 
 These are unit tests for all contract funcionality.
