@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: MIT
-
 pragma solidity ^0.7.6;
 
 import {ScryptFramework} from "./ScryptFramework.sol";
@@ -17,10 +16,12 @@ contract ScryptVerifier is ScryptFramework, Verifier {
     }
 
     function isInitiallyValid(VerificationSession storage session)
-        override internal view
+        view
+        internal
+        override
         returns (bool)
     {
-        return session.output.length == 32 && session.highStep == 2049;
+        return session.output.length == 32 && session.highStep == 2050;
     }
 
     function performStepVerificationSpecific(
@@ -30,7 +31,9 @@ contract ScryptVerifier is ScryptFramework, Verifier {
         bytes memory postState,
         bytes memory proof
     )
-        override internal pure
+        pure
+        internal
+        override
         returns (bool)
     {
         return verifyStep(step, preState, postState, proof);
@@ -44,7 +47,7 @@ contract ScryptVerifier is ScryptFramework, Verifier {
     * @param postState the next step's state's serialized State struct instance
     * @param proof the merkle proof
     *
-    * @return success true on success
+    * @return success True on success
     */
     function verifyStep(uint step, bytes memory preState, bytes memory postState, bytes memory proof)
         pure
@@ -80,8 +83,8 @@ contract ScryptVerifier is ScryptFramework, Verifier {
     }
 
     function initMemory(State memory)
-        override
         pure
+        override
         internal
     {
     }
@@ -93,18 +96,18 @@ contract ScryptVerifier is ScryptFramework, Verifier {
     * @param index the offset
     * @param proofs the proofs
     *
-    * @return a part 1 of the read result
-    * @return b part 2 of the read result
-    * @return c part 3 of the read result
-    * @return d part 4 of the read result
+    * @return a First word of the result
+    * @return b Second word of the result
+    * @return c Third word of the result
+    * @return d Fourth word of the result
     */
     function readMemory(State memory state, uint index, Proofs memory proofs)
-        override
         pure
         internal
+        override
         returns (uint a, uint b, uint c, uint d)
     {
-        require(index < 1024);
+        require(index < 1024, "Memory index over 1024 bytes.");
 
         preCheckProof(state, index, proofs);
 
@@ -125,9 +128,9 @@ contract ScryptVerifier is ScryptFramework, Verifier {
     *
     */
     function writeMemory(State memory state, uint index, uint[4] memory values, Proofs memory proofs)
-        override
         pure
         internal
+        override
     {
         preCheckProof(state, index, proofs);
 
@@ -147,14 +150,14 @@ contract ScryptVerifier is ScryptFramework, Verifier {
     * @param index the index of fullMemory
     * @param proofs the merkle proofs
     *
-    * @return whether the verification passed.
+    * @return return whether the verification passed.
     */
     function preCheckProof(State memory state, uint index, Proofs memory proofs)
         pure
         internal
         returns (bool)
     {
-        require(index < 1024);
+        require(index < 1024, "Memory index over 1024 bytes.");
 
         if (proofs.proof.length != 14) {
             proofs.verificationError = true;

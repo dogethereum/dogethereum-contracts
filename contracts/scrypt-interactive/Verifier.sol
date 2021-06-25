@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: MIT
-
 pragma solidity ^0.7.6;
 import {ClaimManager} from "./ClaimManager.sol";
 // Simple generic challenge-response computation verifier.
@@ -19,7 +18,10 @@ abstract contract Verifier {
     event ChallengerConvicted(uint sessionId, address challenger);
     event ClaimantConvicted(uint sessionId, address claimant);
 
-    uint constant responseTime = 1 hours;
+    // TODO: undo this? Perhaps it should be an immutable value in the constructor
+    // so it can be set for test environments.
+    //uint constant responseTime = 1 hours;
+    uint constant responseTime = 10 seconds;
 
     struct VerificationSession {
         uint id;
@@ -45,8 +47,8 @@ abstract contract Verifier {
         uint claimId,
         address challenger,
         address claimant,
-        bytes calldata _input,
-        bytes calldata _output,
+        bytes memory _input,
+        bytes memory _output,
         uint steps
     )
         public
@@ -81,7 +83,7 @@ abstract contract Verifier {
     }
 
     modifier onlyClaimant(uint sessionId) {
-        require(msg.sender == sessions[sessionId].claimant);
+        require(msg.sender == sessions[sessionId].claimant, "Only the claimant may call this function.");
         _;
     }
 
@@ -89,7 +91,7 @@ abstract contract Verifier {
     //  is this what we want?
     modifier onlyChallenger(uint sessionId) {
         VerificationSession storage session = sessions[sessionId];
-        require(msg.sender == session.challenger);
+        require(msg.sender == session.challenger, "Only the challenger may call this function.");
         _;
     }
 
@@ -101,7 +103,8 @@ abstract contract Verifier {
 
         bool isFirstStep = s.medStep == 0;
         bool haveMedHash = s.medHash != bytes32(0);
-        require(isFirstStep || haveMedHash);
+
+        require(isFirstStep || haveMedHash, "Defender hasn't provided the hash for this step yet");
         // ^ invariant if the step has been set but we don't have a hash for it
 
         if (step == s.lowStep && step + 1 == s.medStep) {
@@ -115,7 +118,7 @@ abstract contract Verifier {
         } else {
             // this next step must be in the correct range
             //can only query between 0...2049
-            require(step > s.lowStep && step < s.highStep);
+            require(s.lowStep < step && step < s.highStep, "Step requested is out of bounds");
 
             // if this is NOT the first query, update the steps and assign the correct hash
             // (if this IS the first query, we just want to initialize medStep and medHash)
@@ -131,10 +134,10 @@ abstract contract Verifier {
                     s.lowStep = s.medStep;
                     s.lowHash = s.medHash;
                 } else {
-                    // and if we're requesting the midStep that we've already requested,
+                    // and if we're requesting the medStep that we've already requested,
                     //   there's nothing to do.
                     // @TODO(shrugs) - should this revert?
-                    revert();
+                    revert("Challenger requested for a medStep that was already queried");
                 }
             }
 
@@ -151,13 +154,13 @@ abstract contract Verifier {
     {
         VerificationSession storage s = sessions[sessionId];
         // Require step to avoid replay problems
-        require(step == s.medStep);
+        require(step == s.medStep, "Incorrect medStep");
 
         // provided hash cannot be zero; as that is a special flag.
-        require(hash != 0);
+        require(hash != 0, "Reserved hash value. Hash cannot be 0.");
 
         // record the claimed hash
-        require(s.medHash == bytes32(0));
+        require(s.medHash == bytes32(0), "This step was computed already");
         s.medHash = hash;
         s.lastClaimantMessage = block.timestamp;
 
@@ -167,29 +170,29 @@ abstract contract Verifier {
 
     function performStepVerification(
         uint sessionId,
-        uint claimID,
-        bytes calldata preValue,
-        bytes calldata postValue,
-        bytes calldata proofs,
+        uint claimId,
+        bytes memory preValue,
+        bytes memory postValue,
+        bytes memory proofs,
         ClaimManager claimManager
     )
-        //onlyClaimant(sessionId)
+        onlyClaimant(sessionId)
         public
     {
         VerificationSession storage s = sessions[sessionId];
         require(s.lowStep + 1 == s.highStep);
         // ^ must be at the end of the binary search according to the smart contract
-        
-        require(claimID == sessionsClaimId[sessionId]);
+
+        require(claimId == sessionsClaimId[sessionId]);
 
         //prove game ended
         require(keccak256(preValue) == s.lowHash);
         require(keccak256(postValue) == s.highHash);
 
         if (performStepVerificationSpecific(s, s.lowStep, preValue, postValue, proofs)) {
-            challengerConvicted(sessionId, s.challenger, claimID, claimManager);
+            challengerConvicted(sessionId, s.challenger, claimId, claimManager);
         } else {
-            claimantConvicted(sessionId, s.claimant, claimID, claimManager);
+            claimantConvicted(sessionId, s.claimant, claimId, claimManager);
         }
     }
 
@@ -200,15 +203,17 @@ abstract contract Verifier {
         bytes memory postState,
         bytes memory proof
     )
-        virtual internal
+        virtual
+        internal
         returns (bool);
 
     function isInitiallyValid(VerificationSession storage session)
-        virtual internal
+        virtual
+        internal
         returns (bool);
 
     //Able to trigger conviction if time of response is too high
-    function timeout(uint sessionId, uint claimID, ClaimManager claimManager)
+    function timeout(uint sessionId, uint claimId, ClaimManager claimManager)
         public
     {
         VerificationSession storage session = sessions[sessionId];
@@ -217,31 +222,31 @@ abstract contract Verifier {
             session.lastChallengerMessage > session.lastClaimantMessage &&
             block.timestamp > session.lastChallengerMessage + responseTime
         ) {
-            claimantConvicted(sessionId, session.claimant, claimID, claimManager);
+            claimantConvicted(sessionId, session.claimant, claimId, claimManager);
         } else if (
             session.lastClaimantMessage > session.lastChallengerMessage &&
             block.timestamp > session.lastClaimantMessage + responseTime
         ) {
-            challengerConvicted(sessionId, session.challenger, claimID, claimManager);
+            challengerConvicted(sessionId, session.challenger, claimId, claimManager);
         } else {
             require(false);
         }
     }
 
-    function challengerConvicted(uint sessionId, address challenger, uint claimID, ClaimManager claimManager)
+    function challengerConvicted(uint sessionId, address challenger, uint claimId, ClaimManager claimManager)
         internal
     {
         VerificationSession storage s = sessions[sessionId];
-        claimManager.sessionDecided(sessionId, claimID, s.claimant, s.challenger);
+        claimManager.sessionDecided(sessionId, claimId, s.claimant, s.challenger);
         disable(sessionId);
         emit ChallengerConvicted(sessionId, challenger);
     }
 
-    function claimantConvicted(uint sessionId, address claimant, uint claimID,  ClaimManager claimManager)
+    function claimantConvicted(uint sessionId, address claimant, uint claimId,  ClaimManager claimManager)
         internal
     {
         VerificationSession storage s = sessions[sessionId];
-        claimManager.sessionDecided(sessionId, claimID, s.challenger, s.claimant);
+        claimManager.sessionDecided(sessionId, claimId, s.challenger, s.claimant);
         disable(sessionId);
         emit ClaimantConvicted(sessionId, claimant);
     }
@@ -255,7 +260,7 @@ abstract contract Verifier {
     function getSession(uint sessionId)
         public
         view
-        returns (uint, uint, uint, bytes memory, bytes32)
+        returns (uint lowStep, uint medStep, uint highStep, bytes memory input, bytes32 medHash)
     {
         VerificationSession storage session = sessions[sessionId];
         return (
@@ -270,7 +275,7 @@ abstract contract Verifier {
     function getLastSteps(uint sessionId)
         public
         view
-        returns (uint, uint)
+        returns (uint lastClaimantMessage, uint lastChallengerMessage)
     {
         VerificationSession storage session = sessions[sessionId];
         return (session.lastClaimantMessage, session.lastChallengerMessage);

@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: MIT
-
 pragma solidity ^0.7.6;
 
 import {ScryptFramework} from "./ScryptFramework.sol";
@@ -15,9 +14,9 @@ contract ScryptRunner is ScryptFramework {
     * @param state the State struct instance
     */
     function initMemory(State memory state)
-        override
         pure
         internal
+        override
     {
         state.fullMemory = new uint[](4 * 1024);
     }
@@ -28,13 +27,13 @@ contract ScryptRunner is ScryptFramework {
     * @param input the input
     * @param upToStep which step to stop running at
     *
-    * @return stateHash the state hash
-    * @return vars the state variables
-    * @return memoryHash the memoryHash
-    * @return proof the merkle proof
-    * @return output the output byte array
+    * @return stateHash The state hash
+    * @return vars The state variables
+    * @return memoryHash The memoryHash
+    * @return proof The merkle proof
+    * @return output The output byte array
     */
-    function run(bytes calldata input, uint upToStep)
+    function run(bytes memory input, uint upToStep)
         pure
         public
         returns (bytes32 stateHash, uint[4] memory vars, bytes32 memoryHash, bytes32[] memory proof, bytes memory output)
@@ -61,12 +60,12 @@ contract ScryptRunner is ScryptFramework {
     * @dev run scrypt up to a certain step and return the state and proof,
     *      The proof being the one required to get from the previous step to the given one.
     */
-    function getStateAndProof(bytes calldata input, uint step)
+    function getStateAndProof(bytes memory input, uint step)
         pure
         public
         returns (bytes memory state, bytes memory proof)
     {
-        require(step <= 2050);
+        require(step <= 2050, "Step can't be higher than 2050");
         if (step == 0) {
             return (input, proof);
         }
@@ -90,7 +89,7 @@ contract ScryptRunner is ScryptFramework {
         return (finalStateToOutput(s, input), input);
     }
 
-    function getStateProofAndHash(bytes calldata input, uint step)
+    function getStateProofAndHash(bytes memory input, uint step)
         pure
         public
         returns (bytes memory state, bytes memory proof, bytes32 stateHash)
@@ -102,7 +101,7 @@ contract ScryptRunner is ScryptFramework {
     /**
     * @dev get the state hash of a specific step.
     */
-    function getStateHash(bytes calldata input, uint step)
+    function getStateHash(bytes memory input, uint step)
         pure
         public
         returns (bytes32 stateHash)
@@ -122,15 +121,15 @@ contract ScryptRunner is ScryptFramework {
     * @param index the index at which to read from fullMemory
     * @param proofs the merkle proofs for the read
     *
-    * @return a value a read from fullMem
-    * @return b value b read from fullMem
-    * @return c value c read from fullMem
-    * @return d value d read from fullMem
+    * @return a The first word from fullMem
+    * @return b The second word from fullMem
+    * @return c The third word from fullMem
+    * @return d The fourth word from fullMem
     */
     function readMemory(State memory state, uint index, Proofs memory proofs)
-        override
         pure
         internal
+        override
         returns (uint a, uint b, uint c, uint d)
     {
         require(index < 1024);
@@ -166,9 +165,9 @@ contract ScryptRunner is ScryptFramework {
     * @param proofs the proofs to be updated
     */
     function writeMemory(State memory state, uint index, uint[4] memory values, Proofs memory proofs)
-        override
         pure
         internal
+        override
     {
         require(index < 1024);
         uint pos = 0x20 * 4 * index;
@@ -213,13 +212,13 @@ contract ScryptRunner is ScryptFramework {
     * @param fullMem full memory
     * @param index the index of the value to be retunred
     *
-    * @return proof the merkle proof 
-    * @return bytes32 the value stored at index
+    * @return proof The merkle proof
+    * @return value The value stored at index
     */
     function generateMemoryProof(uint[] memory fullMem, uint index)
         pure
         internal
-        returns (bytes32[] memory proof, bytes32)
+        returns (bytes32[] memory proof, bytes32 value)
     {
         uint access = index;
         proof = new bytes32[](14);

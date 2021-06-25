@@ -2,8 +2,8 @@
 
 pragma solidity ^0.7.6;
 
-import {IScryptCheckerListener} from "./IScryptCheckerListener.sol";
-import {IScryptChecker} from "./IScryptChecker.sol";
+import {IScryptCheckerListener} from "./scrypt-interactive/IScryptCheckerListener.sol";
+import {IScryptChecker} from "./scrypt-interactive/IScryptChecker.sol";
 
 contract ScryptCheckerDummy is IScryptChecker {
     // Accept all checks

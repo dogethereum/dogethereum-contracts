@@ -7,7 +7,7 @@ import "./Set.sol";
 import "./../TransactionProcessor.sol";
 import "../DogeParser/DogeMessageLibrary.sol";
 import "./../ECRecovery.sol";
-import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
 
 contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), TransactionProcessor {
 

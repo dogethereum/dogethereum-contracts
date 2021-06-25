@@ -250,7 +250,7 @@ contract("verifyScryptHash", (accounts) => {
     let plaintext;
     let scryptHash;
     let proposalId;
-    let claimID;
+    let claimId;
     let sessionId;
     let step;
     let computeStep;
@@ -300,8 +300,8 @@ contract("verifyScryptHash", (accounts) => {
         assert.ok(claimCreated, "Create scrypt hash claim");
 
         // Make a challenge
-        claimID = claimCreated.args.claimID;
-        result = await challengerScryptChecker.challengeClaim(claimID);
+        claimId = claimCreated.args.claimId;
+        result = await challengerScryptChecker.challengeClaim(claimId);
         receipt = await result.wait();
         assert.ok(
           utils.findEvent(receipt.events, "ClaimChallenged"),
@@ -309,7 +309,7 @@ contract("verifyScryptHash", (accounts) => {
         );
 
         // Start verification game
-        result = await challengerScryptChecker.runNextVerificationGame(claimID);
+        result = await challengerScryptChecker.runNextVerificationGame(claimId);
         receipt = await result.wait();
         assert.ok(
           utils.findEvent(receipt.events, "VerificationGameStarted"),
@@ -319,11 +319,11 @@ contract("verifyScryptHash", (accounts) => {
 
       it("Query step 1030", async () => {
         // Start session
-        sessionId = await challengerScryptChecker.callStatic.getSession(claimID, challenger);
+        sessionId = await challengerScryptChecker.callStatic.getSession(claimId, challenger);
         let session = toSession(await challengerScryptVerifier.callStatic.getSession(sessionId));
         assert.equal(session.lowStep.toNumber(), 0);
         assert.equal(session.medStep.toNumber(), 0);
-        assert.equal(session.highStep.toNumber(), 2049);
+        assert.equal(session.highStep.toNumber(), 2050);
         assert.equal(
           session.medHash,
           "0x0000000000000000000000000000000000000000000000000000000000000000"
@@ -336,7 +336,7 @@ contract("verifyScryptHash", (accounts) => {
         session = toSession(await challengerScryptVerifier.callStatic.getSession(sessionId));
         assert.equal(session.lowStep.toNumber(), 0);
         assert.equal(session.medStep.toNumber(), 1030);
-        assert.equal(session.highStep.toNumber(), 2049);
+        assert.equal(session.highStep.toNumber(), 2050);
         assert.equal(
           session.medHash,
           "0x0000000000000000000000000000000000000000000000000000000000000000"
@@ -365,7 +365,7 @@ contract("verifyScryptHash", (accounts) => {
         const session = toSession(await submitterScryptVerifier.callStatic.getSession(sessionId));
         assert.equal(session.lowStep.toNumber(), 0);
         assert.equal(session.medStep.toNumber(), 1030);
-        assert.equal(session.highStep.toNumber(), 2049);
+        assert.equal(session.highStep.toNumber(), 2050);
         assert.equal(session.medHash, computeStep1030.stateHash);
       });
 
@@ -376,7 +376,7 @@ contract("verifyScryptHash", (accounts) => {
         const session = toSession(await challengerScryptVerifier.callStatic.getSession(sessionId));
         assert.equal(session.lowStep.toNumber(), 1030);
         assert.equal(session.medStep.toNumber(), 1031);
-        assert.equal(session.highStep.toNumber(), 2049);
+        assert.equal(session.highStep.toNumber(), 2050);
         assert.equal(
           session.medHash,
           "0x0000000000000000000000000000000000000000000000000000000000000000"
@@ -404,7 +404,7 @@ contract("verifyScryptHash", (accounts) => {
         const session = toSession(await submitterScryptVerifier.callStatic.getSession(sessionId));
         assert.equal(session.lowStep.toNumber(), 1030);
         assert.equal(session.medStep.toNumber(), 1031);
-        assert.equal(session.highStep.toNumber(), 2049);
+        assert.equal(session.highStep.toNumber(), 2050);
         assert.equal(session.medHash, computeStep1031.stateHash);
       });
 
@@ -424,7 +424,7 @@ contract("verifyScryptHash", (accounts) => {
         // Final step can be executed by either submitter or challenger
         const result = await submitterScryptVerifier.performStepVerification(
           sessionId,
-          claimID,
+          claimId,
           computeStep1030.state,
           computeStep1031.state,
           computeStep1031.proof,
@@ -438,7 +438,7 @@ contract("verifyScryptHash", (accounts) => {
       });
 
       it("Validate scrypt hash calculation", async () => {
-        const result = await submitterScryptChecker.checkClaimSuccessful(claimID);
+        const result = await submitterScryptChecker.checkClaimSuccessful(claimId);
         const receipt = await result.wait();
         assert.ok(
           utils.findEvent(receipt.events, "ClaimSuccessful"),
@@ -512,8 +512,8 @@ contract("verifyScryptHash", (accounts) => {
         assert.ok(claimCreated, "Create scrypt hash claim");
 
         // Make a challenge
-        claimID = claimCreated.args.claimID;
-        result = await challengerScryptChecker.challengeClaim(claimID);
+        claimId = claimCreated.args.claimId;
+        result = await challengerScryptChecker.challengeClaim(claimId);
         receipt = await result.wait();
         assert.ok(
           utils.findEvent(receipt.events, "ClaimChallenged"),
@@ -521,7 +521,7 @@ contract("verifyScryptHash", (accounts) => {
         );
 
         // Start verification game
-        result = await challengerScryptChecker.runNextVerificationGame(claimID);
+        result = await challengerScryptChecker.runNextVerificationGame(claimId);
         receipt = await result.wait();
         assert.ok(
           utils.findEvent(receipt.events, "VerificationGameStarted"),
@@ -530,13 +530,13 @@ contract("verifyScryptHash", (accounts) => {
       });
 
       it("Query step 1030", async () => {
-        sessionId = await challengerScryptChecker.callStatic.getSession(claimID, challenger);
+        sessionId = await challengerScryptChecker.callStatic.getSession(claimId, challenger);
 
         // Start session
         let session = toSession(await challengerScryptVerifier.callStatic.getSession(sessionId));
         assert.equal(session.lowStep.toNumber(), 0);
         assert.equal(session.medStep.toNumber(), 0);
-        assert.equal(session.highStep.toNumber(), 2049);
+        assert.equal(session.highStep.toNumber(), 2050);
         assert.equal(
           session.medHash,
           "0x0000000000000000000000000000000000000000000000000000000000000000"
@@ -549,7 +549,7 @@ contract("verifyScryptHash", (accounts) => {
         session = toSession(await challengerScryptVerifier.callStatic.getSession(sessionId));
         assert.equal(session.lowStep.toNumber(), 0);
         assert.equal(session.medStep.toNumber(), 1030);
-        assert.equal(session.highStep.toNumber(), 2049);
+        assert.equal(session.highStep.toNumber(), 2050);
         assert.equal(
           session.medHash,
           "0x0000000000000000000000000000000000000000000000000000000000000000"
@@ -578,7 +578,7 @@ contract("verifyScryptHash", (accounts) => {
         const session = toSession(await challengerScryptVerifier.callStatic.getSession(sessionId));
         assert.equal(session.lowStep.toNumber(), 0);
         assert.equal(session.medStep.toNumber(), 1030);
-        assert.equal(session.highStep.toNumber(), 2049);
+        assert.equal(session.highStep.toNumber(), 2050);
         assert.equal(session.medHash, computeStep1030.stateHash);
       });
 
@@ -589,7 +589,7 @@ contract("verifyScryptHash", (accounts) => {
         const session = toSession(await challengerScryptVerifier.callStatic.getSession(sessionId));
         assert.equal(session.lowStep.toNumber(), 1030);
         assert.equal(session.medStep.toNumber(), 1031);
-        assert.equal(session.highStep.toNumber(), 2049);
+        assert.equal(session.highStep.toNumber(), 2050);
         assert.equal(
           session.medHash,
           "0x0000000000000000000000000000000000000000000000000000000000000000"
@@ -606,7 +606,7 @@ contract("verifyScryptHash", (accounts) => {
         const session = toSession(await submitterScryptVerifier.callStatic.getSession(sessionId));
         assert.equal(session.lowStep.toNumber(), 1030);
         assert.equal(session.medStep.toNumber(), 1031);
-        assert.equal(session.highStep.toNumber(), 2049);
+        assert.equal(session.highStep.toNumber(), 2050);
         assert.equal(session.medHash, computeStep1030.stateHash);
       });
 
@@ -623,10 +623,13 @@ contract("verifyScryptHash", (accounts) => {
       });
 
       it("Evaluate step 1030", async () => {
+        // TODO: this requires additional work in the scrypt verifier contracts
         // Final step can be executed by either submitter or challenger
-        const result = await challengerScryptVerifier.performStepVerification(
+
+        // TODO: increase timestamp and timeout the claimant here instead?
+        const result = await submitterScryptVerifier.performStepVerification(
           sessionId,
-          claimID,
+          claimId,
           computeStep1030.state,
           computeStep1030.state,
           computeStep1030.proof,
@@ -645,7 +648,7 @@ contract("verifyScryptHash", (accounts) => {
         await utils.blockchainTimeoutSeconds(
           2 * utils.OPTIONS_DOGE_REGTEST.TIMEOUT
         );
-        const result = await challengerScryptChecker.checkClaimSuccessful(claimID);
+        const result = await challengerScryptChecker.checkClaimSuccessful(claimId);
         const receipt = await result.wait();
         assert.ok(
           utils.findEvent(receipt.events, "ClaimFailed"),
@@ -781,12 +784,12 @@ contract("verifyScryptHash", (accounts) => {
         receipt = await result.wait();
         const claimCreated = utils.findEvent(receipt.events, "ClaimCreated");
         assert.ok(claimCreated, "Create scrypt hash claim");
-        claimID = claimCreated.args.claimID;
+        claimId = claimCreated.args.claimId;
       });
 
       it("Validate scrypt hash no challengers", async () => {
         await utils.mineBlocks(5);
-        const result = await submitterScryptChecker.checkClaimSuccessful(claimID);
+        const result = await submitterScryptChecker.checkClaimSuccessful(claimId);
         const receipt = await result.wait();
         assert.ok(
           utils.findEvent(receipt.events, "ClaimSuccessful"),

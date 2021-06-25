@@ -6,8 +6,8 @@ import {DogeClaimManager} from "./DogeClaimManager.sol";
 import {DogeErrorCodes} from "./DogeErrorCodes.sol";
 import {DogeSuperblocks} from "./DogeSuperblocks.sol";
 import {DogeMessageLibrary} from "./DogeParser/DogeMessageLibrary.sol";
-import {IScryptChecker} from "./IScryptChecker.sol";
-import {IScryptCheckerListener} from "./IScryptCheckerListener.sol";
+import {IScryptChecker} from "./scrypt-interactive/IScryptChecker.sol";
+import {IScryptCheckerListener} from "./scrypt-interactive/IScryptCheckerListener.sol";
 
 // @dev - Manages a battle session between superblock submitter and challenger
 contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {

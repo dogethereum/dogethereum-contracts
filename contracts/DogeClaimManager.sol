@@ -7,7 +7,7 @@ import {DogeSuperblocks} from "./DogeSuperblocks.sol";
 import {DogeBattleManager} from "./DogeBattleManager.sol";
 import {DogeMessageLibrary} from "./DogeParser/DogeMessageLibrary.sol";
 import {DogeErrorCodes} from "./DogeErrorCodes.sol";
-import "openzeppelin-solidity/contracts/math/SafeMath.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
 
 // @dev - Manager of superblock claims
 //
