@@ -416,14 +416,13 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
     ) public onlyClaimant(sessionId) {
         BattleSession storage session = sessions[sessionId];
         (uint err, bytes memory powBlockHeader) = doVerifyBlockHeader(session, sessionId, blockScryptHash, blockHeader);
-        if (err != 0) {
-            emit ErrorBattle(sessionId, err);
-        } else {
-            session.actionsCounter += 1;
-            session.lastActionTimestamp = block.timestamp;
-            session.lastActionClaimant = session.actionsCounter;
-            emit RespondBlockHeader(superblockHash, sessionId, session.challenger, blockScryptHash, blockHeader, powBlockHeader);
-        }
+        // TODO: add error code with custom errors in Solidity v0.8
+        require(err == 0, "Failed while verifying block header.");
+
+        session.actionsCounter += 1;
+        session.lastActionTimestamp = block.timestamp;
+        session.lastActionClaimant = session.actionsCounter;
+        emit RespondBlockHeader(superblockHash, sessionId, session.challenger, blockScryptHash, blockHeader, powBlockHeader);
     }
 
     // @dev - Notify submitter to start scrypt hash verification
