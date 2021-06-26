@@ -10,6 +10,8 @@ const bitcoreLib = require("bitcore-lib");
 const btcProof = require("bitcoin-proof");
 const ECDSA = bitcoreLib.crypto.ECDSA;
 
+import { Superblock } from "../deploy";
+
 interface MerkleProof {
   txId: string;
   txIndex: number;
@@ -157,7 +159,7 @@ export function makeSuperblock(
   parentId: string,
   parentAccumulatedWork: number | string,
   parentTimestamp = 0
-) {
+): Superblock {
   if (headers.length < 1) {
     throw new Error("Requires at least one header to build a superblock");
   }
@@ -339,7 +341,10 @@ export function remove0x(str: string) {
 // the inputs to makeMerkleProof can be computed by using pybitcointools:
 // header = get_block_header_data(blocknum)
 // hashes = get_txs_in_block(blocknum)
-export function makeMerkleProof(hashes: string[], txIndex: number): MerkleProof {
+export function makeMerkleProof(
+  hashes: string[],
+  txIndex: number
+): MerkleProof {
   const proofOfFirstTx: MerkleProof = btcProof.getProof(hashes, txIndex);
   return proofOfFirstTx;
 }

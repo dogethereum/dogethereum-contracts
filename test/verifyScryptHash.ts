@@ -1,10 +1,27 @@
-const hre = require("hardhat");
+import hre from "hardhat";
+import { assert } from "chai";
+import type { Contract } from "ethers";
+import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
-const deploy = require("../deploy");
+import {
+  initSuperblockChain,
+  DogecoinNetworkId,
+  Superblock,
+  SUPERBLOCK_OPTIONS_CLAIM_TESTS,
+} from "../deploy";
 
-const utils = require("./utils");
+import {
+  blockchainTimeoutSeconds,
+  calcBlockSha256Hash,
+  calcHeaderPoW,
+  DEPOSITS,
+  findEvent,
+  isolateTests,
+  makeSuperblock,
+  mineBlocks,
+} from "./utils";
 
-const toSession = (data) => ({
+const toSession = (data: any) => ({
   lowStep: data[0],
   medStep: data[1],
   highStep: data[2],
@@ -12,42 +29,49 @@ const toSession = (data) => ({
   medHash: data[4],
 });
 
-const toResult = (data) => ({
-  state: data[0],
-  proof: data[1],
-  stateHash: data[2],
-});
+describe("verifyScryptHash", function () {
+  let owner: SignerWithAddress;
+  let submitter: SignerWithAddress;
+  let challenger: SignerWithAddress;
 
-contract("verifyScryptHash", (accounts) => {
-  const owner = accounts[0];
-  const submitter = accounts[1];
-  const challenger = accounts[2];
-
-  let superblocks;
-  let submitterClaimManager;
-  let challengerClaimManager;
-  let submitterBattleManager;
-  let challengerBattleManager;
-  let submitterScryptVerifier;
-  let challengerScryptVerifier;
-  let submitterScryptChecker;
-  let challengerScryptChecker;
+  let superblocks: Contract;
+  let submitterClaimManager: Contract;
+  let challengerClaimManager: Contract;
+  let submitterBattleManager: Contract;
+  let challengerBattleManager: Contract;
+  let submitterScryptVerifier: Contract;
+  let challengerScryptVerifier: Contract;
+  let submitterScryptChecker: Contract;
+  let challengerScryptChecker: Contract;
 
   let proposedSuperblock;
-  let proposedSuperblockHash;
-  let battleSessionId;
+  let proposedSuperblockHash: string;
+  let battleSessionId: any;
+
+  isolateTests();
+
+  before(async function () {
+    const signers = await hre.ethers.getSigners();
+    owner = signers[0];
+    submitter = signers[1];
+    challenger = signers[2];
+  });
 
   async function initSuperblockChainAndChallenge({
     genesisSuperblock,
     headers,
     hashes,
+  }: {
+    genesisSuperblock: Superblock;
+    headers: string[];
+    hashes: string[];
   }) {
-    const superBlockchain = await deploy.initSuperblockChain(hre, {
-      network: utils.DOGE_REGTEST,
+    const superBlockchain = await initSuperblockChain(hre, {
+      network: DogecoinNetworkId.Regtest,
       dummyChecker: false,
       genesisSuperblock,
-      params: utils.OPTIONS_DOGE_REGTEST,
-      from: owner,
+      params: SUPERBLOCK_OPTIONS_CLAIM_TESTS,
+      from: owner.address,
     });
 
     superblocks = superBlockchain.superblocks;
@@ -56,45 +80,30 @@ contract("verifyScryptHash", (accounts) => {
     const genesisSuperblockHash = genesisSuperblock.superblockHash;
     assert.equal(genesisSuperblockHash, best, "Best superblock should match");
 
-    const submitterSigner = await hre.ethers.getSigner(submitter);
-    const challengerSigner = await hre.ethers.getSigner(challenger);
-
-    submitterClaimManager = superBlockchain.claimManager.connect(
-      submitterSigner
+    submitterClaimManager = superBlockchain.claimManager.connect(submitter);
+    challengerClaimManager = superBlockchain.claimManager.connect(challenger);
+    submitterBattleManager = superBlockchain.battleManager.connect(submitter);
+    challengerBattleManager = superBlockchain.battleManager.connect(challenger);
+    submitterScryptVerifier = superBlockchain.scryptVerifier!.connect(
+      submitter
     );
-    challengerClaimManager = superBlockchain.claimManager.connect(
-      challengerSigner
+    challengerScryptVerifier = superBlockchain.scryptVerifier!.connect(
+      challenger
     );
-    submitterBattleManager = superBlockchain.battleManager.connect(
-      submitterSigner
-    );
-    challengerBattleManager = superBlockchain.battleManager.connect(
-      challengerSigner
-    );
-    submitterScryptVerifier = superBlockchain.scryptVerifier.connect(
-      submitterSigner
-    );
-    challengerScryptVerifier = superBlockchain.scryptVerifier.connect(
-      challengerSigner
-    );
-    submitterScryptChecker = superBlockchain.scryptChecker.connect(
-      submitterSigner
-    );
-    challengerScryptChecker = superBlockchain.scryptChecker.connect(
-      challengerSigner
-    );
+    submitterScryptChecker = superBlockchain.scryptChecker.connect(submitter);
+    challengerScryptChecker = superBlockchain.scryptChecker.connect(challenger);
 
     await submitterClaimManager.makeDeposit({
-      value: utils.DEPOSITS.MIN_PROPOSAL_DEPOSIT,
+      value: DEPOSITS.MIN_PROPOSAL_DEPOSIT,
     });
     await challengerClaimManager.makeDeposit({
-      value: utils.DEPOSITS.MIN_CHALLENGE_DEPOSIT,
+      value: DEPOSITS.MIN_CHALLENGE_DEPOSIT,
     });
 
     await submitterScryptChecker.makeDeposit({ value: 10 });
     await challengerScryptChecker.makeDeposit({ value: 11 });
 
-    proposedSuperblock = utils.makeSuperblock(
+    proposedSuperblock = makeSuperblock(
       headers,
       genesisSuperblock.superblockHash,
       genesisSuperblock.accumulatedWork
@@ -111,37 +120,37 @@ contract("verifyScryptHash", (accounts) => {
     );
     let receipt = await result.wait();
 
-    const superblockClaimCreated = utils.findEvent(
+    const superblockClaimCreated = findEvent(
       receipt.events,
       "SuperblockClaimCreated"
     );
     assert.ok(superblockClaimCreated, "New superblock proposed");
-    proposedSuperblockHash = superblockClaimCreated.args.superblockHash;
+    proposedSuperblockHash = superblockClaimCreated!.args?.superblockHash;
 
-    // await challengerClaimManager.makeDeposit({ value: utils.DEPOSITS.MIN_CHALLENGE_DEPOSIT });
+    // await challengerClaimManager.makeDeposit({ value: DEPOSITS.MIN_CHALLENGE_DEPOSIT });
 
     result = await challengerClaimManager.challengeSuperblock(
       proposedSuperblockHash
     );
     receipt = await result.wait();
-    const superblockClaimChallenged = utils.findEvent(
+    const superblockClaimChallenged = findEvent(
       receipt.events,
       "SuperblockClaimChallenged"
     );
     assert.ok(superblockClaimChallenged, "Superblock challenged");
     assert.equal(
       proposedSuperblockHash,
-      superblockClaimChallenged.args.superblockHash
+      superblockClaimChallenged!.args?.superblockHash
     );
-    const verificationGameStarted = utils.findEvent(
+    const verificationGameStarted = findEvent(
       receipt.events,
       "VerificationGameStarted"
     );
     assert.ok(verificationGameStarted, "Battle started");
-    battleSessionId = verificationGameStarted.args.sessionId;
+    battleSessionId = verificationGameStarted!.args?.sessionId;
 
     await challengerClaimManager.makeDeposit({
-      value: utils.DEPOSITS.RESPOND_MERKLE_COST,
+      value: DEPOSITS.RESPOND_MERKLE_COST,
     });
     result = await challengerBattleManager.queryMerkleRootHashes(
       proposedSuperblockHash,
@@ -149,12 +158,12 @@ contract("verifyScryptHash", (accounts) => {
     );
     receipt = await result.wait();
     assert.ok(
-      utils.findEvent(receipt.events, "QueryMerkleRootHashes"),
+      findEvent(receipt.events, "QueryMerkleRootHashes"),
       "Query merkle root hashes"
     );
 
     await submitterClaimManager.makeDeposit({
-      value: utils.DEPOSITS.VERIFY_SUPERBLOCK_COST,
+      value: DEPOSITS.VERIFY_SUPERBLOCK_COST,
     });
     result = await submitterBattleManager.respondMerkleRootHashes(
       proposedSuperblockHash,
@@ -163,12 +172,12 @@ contract("verifyScryptHash", (accounts) => {
     );
     receipt = await result.wait();
     assert.ok(
-      utils.findEvent(receipt.events, "RespondMerkleRootHashes"),
+      findEvent(receipt.events, "RespondMerkleRootHashes"),
       "Respond merkle root hashes"
     );
 
     await challengerClaimManager.makeDeposit({
-      value: utils.DEPOSITS.RESPOND_HEADER_COST,
+      value: DEPOSITS.RESPOND_HEADER_COST,
     });
     result = await challengerBattleManager.queryBlockHeader(
       proposedSuperblockHash,
@@ -177,13 +186,13 @@ contract("verifyScryptHash", (accounts) => {
     );
     receipt = await result.wait();
     assert.ok(
-      utils.findEvent(receipt.events, "QueryBlockHeader"),
+      findEvent(receipt.events, "QueryBlockHeader"),
       "Query block header"
     );
 
-    let scryptHash = `0x${utils.calcHeaderPoW(headers[1])}`;
+    let scryptHash = `0x${calcHeaderPoW(headers[1])}`;
     await challengerClaimManager.makeDeposit({
-      value: utils.DEPOSITS.VERIFY_SUPERBLOCK_COST,
+      value: DEPOSITS.VERIFY_SUPERBLOCK_COST,
     });
     result = await submitterBattleManager.respondBlockHeader(
       proposedSuperblockHash,
@@ -193,12 +202,12 @@ contract("verifyScryptHash", (accounts) => {
     );
     receipt = await result.wait();
     assert.ok(
-      utils.findEvent(receipt.events, "RespondBlockHeader"),
+      findEvent(receipt.events, "RespondBlockHeader"),
       "Respond block header"
     );
 
     await challengerClaimManager.makeDeposit({
-      value: utils.DEPOSITS.RESPOND_HEADER_COST,
+      value: DEPOSITS.RESPOND_HEADER_COST,
     });
     result = await challengerBattleManager.queryBlockHeader(
       proposedSuperblockHash,
@@ -207,13 +216,13 @@ contract("verifyScryptHash", (accounts) => {
     );
     receipt = await result.wait();
     assert.ok(
-      utils.findEvent(receipt.events, "QueryBlockHeader"),
+      findEvent(receipt.events, "QueryBlockHeader"),
       "Query block header"
     );
 
-    scryptHash = `0x${utils.calcHeaderPoW(headers[0])}`;
+    scryptHash = `0x${calcHeaderPoW(headers[0])}`;
     await challengerClaimManager.makeDeposit({
-      value: utils.DEPOSITS.VERIFY_SUPERBLOCK_COST,
+      value: DEPOSITS.VERIFY_SUPERBLOCK_COST,
     });
     result = await submitterBattleManager.respondBlockHeader(
       proposedSuperblockHash,
@@ -223,7 +232,7 @@ contract("verifyScryptHash", (accounts) => {
     );
     receipt = await result.wait();
     assert.ok(
-      utils.findEvent(receipt.events, "RespondBlockHeader"),
+      findEvent(receipt.events, "RespondBlockHeader"),
       "Respond block header"
     );
   }
@@ -236,7 +245,7 @@ contract("verifyScryptHash", (accounts) => {
     const initAccumulatedWork = 0;
     const initParentHash =
       "0x0000000000000000000000000000000000000000000000000000000000000000";
-    const genesisSuperblock = utils.makeSuperblock(
+    const genesisSuperblock = makeSuperblock(
       genesisHeaders,
       initParentHash,
       initAccumulatedWork
@@ -245,17 +254,17 @@ contract("verifyScryptHash", (accounts) => {
       `0301620016b7300e237895979caad3d04123b0641240dcac7ee01758456be8f51b68f4e2b456112e2083f097e1a1f3b3e0617e107f1de109ed53ac957c2819930006c2efd4b95856c406051b0000000001000000010000000000000000000000000000000000000000000000000000000000000000ffffffff64034fa30de4b883e5bda9e7a59ee4bb99e9b1bcfabe6d6d5dd639b701320efea34651298f0a4cced16fa7cb9a9a0453a063aa8ac23c571640000000f09f909f4d696e65642062792061733139363430323033380000000000000000000000000000000000010000000100f90295000000001976a914aa3750aa18b8a0f3f0590731e1fab934856680cf88ac6a96e9361841a88789b9dd87ab35fdc191fd625400fcc745a33d87f733280100000000000000000000062900000000000000000000000000000000000000000000000000000000000000463ceed131958d98aee29089d1cf38b9728b224512e51ca3a8b1189d5ed03d0709b68fd6e328528f2a29ec7fb077c834fbf0f14c371fafcfb27444017fbf5b26fdb884bed8ad6a4bded36fc89ed8b05a6c6c0ae1cfd5fe37eb3021b32a1e29042b7a2e142329e7d0d0bffcb5cc338621a576b49d4d32991000b8d4ac793bc1f57d4796a803f909e354b2d08060e2c5fc590f8416351619f2ea57a05ab486307428000000030000001b78253b80f240a768a9d74b17bb9e98abd82df96dc42370d14a28a7e1c1bfe2e4f6aacd1b1897e9887a39f6bc4f839794cf2e75235f83b91883d7c74fe3518ad4b9585651a3011b3947b274`,
       `03016200bff4360d94ea7624df49ec8f1ecd2c5bee9374a277d2c028078597a30331116f23e08af3eb7ccf1cd9b51f0ff58b8e650a135cb03b69f71fcb8a6e22003dda64e4b95856dfdb041b0000000001000000010000000000000000000000000000000000000000000000000000000000000000ffffffff4c0350a30d04e6b958560803c6ab5924230000fabe6d6d64e9f965a067a65f6a9b33dc2e4185dba3354e9c18422b5fe022e7e61f93ade140000000000000000d2f6e6f64655374726174756d2f0000000001317df395000000001976a9145da2560b857f5ba7874de4a1173e67b4d509c46688ac00000000a775b379e1595dc4a6cd4d1af61675c0f774b3402cd40e3144ffe7b461e56890030a38444acf4349d6f7b4503d49d720d56c4fc8866d9bd8c42f010d6d59a66fea71079e7cb78500b821c75d52cd5425e43cc30d7c4be864262b6e31dc4ccbb8c93fc0dd81bec3570585aa3077560d5b0ecc6d195bba587450a52b96cbc419346f00000000060000000000000000000000000000000000000000000000000000000000000000e2f61c3f71d1defd3fa999dfa36953755c690689799962b48bebd836974e8cf97d24db2bfa41474bfb2f877d688fac5faa5e10a2808cf9de307370b93352e54894857d3e08918f70395d9206410fbfa942f1a889aa5ab8188ec33c2f6e207dc7e2e8f54c11979e19d88494d76ec021cd03d0f51075c4bd49179db1ec099d2c37a1dd9584e8e20d8d03bb0490cffb8d64eaed6e46ea8b4f7f4652c6a225e4a3113800000003000000d5f3c7e4e889b24c9f949578b51c9d8b86182d2dc6e14948fadaecca3e521c7e315411eef7e7a67c02e95f9f3d0c1b7defa545665e6abd945634a27c623c68ebe5b9585651a3011bae439905`,
     ];
-    const hashes = headers.map((header) => utils.calcBlockSha256Hash(header));
+    const hashes = headers.map((header) => calcBlockSha256Hash(header));
 
-    let plaintext;
-    let scryptHash;
-    let proposalId;
-    let claimId;
-    let sessionId;
-    let step;
-    let computeStep;
-    let computeStep1030;
-    let computeStep1031;
+    let plaintext: string;
+    let scryptHash: string;
+    let proposalId: string;
+    let claimId: string;
+    let sessionId: string;
+    let step: number;
+    let computeStep: any;
+    let computeStep1030: any;
+    let computeStep1031: any;
 
     describe("Confirm valid block scrypt hash", () => {
       before(async () => {
@@ -274,7 +283,7 @@ contract("verifyScryptHash", (accounts) => {
           hashes[0]
         );
         const receipt = await result.wait();
-        const requestScryptHashValidation = utils.findEvent(
+        const requestScryptHashValidation = findEvent(
           receipt.events,
           "RequestScryptHashValidation"
         );
@@ -283,9 +292,9 @@ contract("verifyScryptHash", (accounts) => {
           "Request scrypt hash validation"
         );
 
-        plaintext = requestScryptHashValidation.args.blockHeader;
-        scryptHash = requestScryptHashValidation.args.blockScryptHash;
-        proposalId = requestScryptHashValidation.args.proposalId;
+        plaintext = requestScryptHashValidation!.args!.blockHeader;
+        scryptHash = requestScryptHashValidation!.args!.blockScryptHash;
+        proposalId = requestScryptHashValidation!.args!.proposalId;
       });
 
       it("Start scrypt hash validation", async () => {
@@ -296,15 +305,15 @@ contract("verifyScryptHash", (accounts) => {
           submitterBattleManager.address
         );
         let receipt = await result.wait();
-        const claimCreated = utils.findEvent(receipt.events, "ClaimCreated");
+        const claimCreated = findEvent(receipt.events, "ClaimCreated");
         assert.ok(claimCreated, "Create scrypt hash claim");
 
         // Make a challenge
-        claimId = claimCreated.args.claimId;
+        claimId = claimCreated!.args!.claimId;
         result = await challengerScryptChecker.challengeClaim(claimId);
         receipt = await result.wait();
         assert.ok(
-          utils.findEvent(receipt.events, "ClaimChallenged"),
+          findEvent(receipt.events, "ClaimChallenged"),
           "Make challenge to scrypt hash"
         );
 
@@ -312,15 +321,20 @@ contract("verifyScryptHash", (accounts) => {
         result = await challengerScryptChecker.runNextVerificationGame(claimId);
         receipt = await result.wait();
         assert.ok(
-          utils.findEvent(receipt.events, "VerificationGameStarted"),
+          findEvent(receipt.events, "VerificationGameStarted"),
           "Start challenge scrypt hash game"
         );
       });
 
       it("Query step 1030", async () => {
         // Start session
-        sessionId = await challengerScryptChecker.callStatic.getSession(claimId, challenger);
-        let session = toSession(await challengerScryptVerifier.callStatic.getSession(sessionId));
+        sessionId = await challengerScryptChecker.callStatic.getSession(
+          claimId,
+          challenger.address
+        );
+        let session = toSession(
+          await challengerScryptVerifier.callStatic.getSession(sessionId)
+        );
         assert.equal(session.lowStep.toNumber(), 0);
         assert.equal(session.medStep.toNumber(), 0);
         assert.equal(session.highStep.toNumber(), 2050);
@@ -333,7 +347,9 @@ contract("verifyScryptHash", (accounts) => {
         step = 1030;
         await challengerScryptVerifier.query(sessionId, step);
 
-        session = toSession(await challengerScryptVerifier.callStatic.getSession(sessionId));
+        session = toSession(
+          await challengerScryptVerifier.callStatic.getSession(sessionId)
+        );
         assert.equal(session.lowStep.toNumber(), 0);
         assert.equal(session.medStep.toNumber(), 1030);
         assert.equal(session.highStep.toNumber(), 2050);
@@ -346,7 +362,6 @@ contract("verifyScryptHash", (accounts) => {
       it("Respond step 1030", async () => {
         // A step can be calculated calling getStateProofAndHash from ScryptRunner
         //result = await scryptRunner.getStateProofAndHash.call(plaintext, step);
-        //computeStep = toResult(result);
         computeStep1030 = computeStep = {
           state:
             "0xd67a648119be37acddcafdc07c191fff94cda065bceae2d7d95e8d82633f1cd3486a34344d327122c2577c6e6469b555a93e3b9181b235945b8f225f0ffde33effc732e315a3d03650993b6b904c02fdbdb54c57b26c7ef9440f45b5d54ad1c4f67c954b740ac7a772a9254d98a5b87d573e98a598cd89f83008fb142ffd2292e0223421711df57c3e47692b39e9a05f365cfec556386253dc77daf86628f1d6425dee66456c88063b94fb1d91a753a51ce4ee98d1bdc0035322350462ddda0d",
@@ -362,7 +377,9 @@ contract("verifyScryptHash", (accounts) => {
           computeStep.stateHash
         );
 
-        const session = toSession(await submitterScryptVerifier.callStatic.getSession(sessionId));
+        const session = toSession(
+          await submitterScryptVerifier.callStatic.getSession(sessionId)
+        );
         assert.equal(session.lowStep.toNumber(), 0);
         assert.equal(session.medStep.toNumber(), 1030);
         assert.equal(session.highStep.toNumber(), 2050);
@@ -373,7 +390,9 @@ contract("verifyScryptHash", (accounts) => {
         step = 1031;
         await challengerScryptVerifier.query(sessionId, step);
 
-        const session = toSession(await challengerScryptVerifier.callStatic.getSession(sessionId));
+        const session = toSession(
+          await challengerScryptVerifier.callStatic.getSession(sessionId)
+        );
         assert.equal(session.lowStep.toNumber(), 1030);
         assert.equal(session.medStep.toNumber(), 1031);
         assert.equal(session.highStep.toNumber(), 2050);
@@ -385,7 +404,6 @@ contract("verifyScryptHash", (accounts) => {
 
       it("Respond step 1031", async () => {
         //result = await scryptRunner.getStateProofAndHash.call(plaintext, step);
-        //computeStep = toResult(result);
         computeStep1031 = computeStep = {
           state:
             "0x57ad9479f7975496daa567db9f52781bab1082dbbc0f90d21eaac0521b4e6bb3dd2f9f434f4f92cd489488011ac4f3aa4d942a02bd8f1e8ff7ec7c15d8f92389a1829b6b93331dfafd50de97a4189473e6d4224612fc695a166c97835edd41229ff2ac12a3c7b9d4e875ff0a20e222c03bc704d90e8c8041ac7bd59be1652fe7e0223421711df57c3e47692b39e9a05f365cfec556386253dc77daf86628f1d6425dee66456c88063b94fb1d91a753a51ce4ee98d1bdc0035322350462ddda0d",
@@ -401,7 +419,9 @@ contract("verifyScryptHash", (accounts) => {
           computeStep.stateHash
         );
 
-        const session = toSession(await submitterScryptVerifier.callStatic.getSession(sessionId));
+        const session = toSession(
+          await submitterScryptVerifier.callStatic.getSession(sessionId)
+        );
         assert.equal(session.lowStep.toNumber(), 1030);
         assert.equal(session.medStep.toNumber(), 1031);
         assert.equal(session.highStep.toNumber(), 2050);
@@ -413,7 +433,9 @@ contract("verifyScryptHash", (accounts) => {
         step = 1030;
         await challengerScryptVerifier.query(sessionId, step);
 
-        const session = toSession(await challengerScryptVerifier.callStatic.getSession(sessionId));
+        const session = toSession(
+          await challengerScryptVerifier.callStatic.getSession(sessionId)
+        );
         assert.equal(session.lowStep.toNumber(), 1030);
         assert.equal(session.medStep.toNumber(), 1031);
         assert.equal(session.highStep.toNumber(), 1031);
@@ -432,39 +454,41 @@ contract("verifyScryptHash", (accounts) => {
         );
         const receipt = await result.wait();
         assert.ok(
-          utils.findEvent(receipt.events, "ChallengerConvicted"),
+          findEvent(receipt.events, "ChallengerConvicted"),
           "Challenger convicted"
         );
       });
 
       it("Validate scrypt hash calculation", async () => {
-        const result = await submitterScryptChecker.checkClaimSuccessful(claimId);
+        const result = await submitterScryptChecker.checkClaimSuccessful(
+          claimId
+        );
         const receipt = await result.wait();
         assert.ok(
-          utils.findEvent(receipt.events, "ClaimSuccessful"),
+          findEvent(receipt.events, "ClaimSuccessful"),
           "Scrypt hash verified"
         );
       });
 
       it("Verify superblock", async () => {
         // Verify superblock
-        let result = await submitterBattleManager.verifySuperblock(battleSessionId);
+        let result = await submitterBattleManager.verifySuperblock(
+          battleSessionId
+        );
         let receipt = await result.wait();
         assert.ok(
-          utils.findEvent(receipt.events, "ChallengerConvicted"),
+          findEvent(receipt.events, "ChallengerConvicted"),
           "Challenger failed"
         );
 
         // Confirm superblock
-        await utils.blockchainTimeoutSeconds(
-          2 * utils.OPTIONS_DOGE_REGTEST.TIMEOUT
-        );
+        await blockchainTimeoutSeconds(2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout);
         result = await submitterClaimManager.checkClaimFinished(
           proposedSuperblockHash
         );
         receipt = await result.wait();
         assert.ok(
-          utils.findEvent(receipt.events, "SuperblockClaimPending"),
+          findEvent(receipt.events, "SuperblockClaimPending"),
           "Superblock challenged"
         );
       });
@@ -487,7 +511,7 @@ contract("verifyScryptHash", (accounts) => {
           hashes[0]
         );
         const receipt = await result.wait();
-        const requestScryptHashValidation = utils.findEvent(
+        const requestScryptHashValidation = findEvent(
           receipt.events,
           "RequestScryptHashValidation"
         );
@@ -495,9 +519,9 @@ contract("verifyScryptHash", (accounts) => {
           requestScryptHashValidation,
           "Request scrypt hash validation"
         );
-        plaintext = requestScryptHashValidation.args.blockHeader;
-        scryptHash = requestScryptHashValidation.args.blockScryptHash;
-        proposalId = requestScryptHashValidation.args.proposalId;
+        plaintext = requestScryptHashValidation!.args!.blockHeader;
+        scryptHash = requestScryptHashValidation!.args!.blockScryptHash;
+        proposalId = requestScryptHashValidation!.args!.proposalId;
       });
 
       it("Start scrypt hash validation", async () => {
@@ -508,15 +532,15 @@ contract("verifyScryptHash", (accounts) => {
           submitterBattleManager.address
         );
         let receipt = await result.wait();
-        const claimCreated = utils.findEvent(receipt.events, "ClaimCreated");
+        const claimCreated = findEvent(receipt.events, "ClaimCreated");
         assert.ok(claimCreated, "Create scrypt hash claim");
 
         // Make a challenge
-        claimId = claimCreated.args.claimId;
+        claimId = claimCreated!.args!.claimId;
         result = await challengerScryptChecker.challengeClaim(claimId);
         receipt = await result.wait();
         assert.ok(
-          utils.findEvent(receipt.events, "ClaimChallenged"),
+          findEvent(receipt.events, "ClaimChallenged"),
           "Make challenge to scrypt hash"
         );
 
@@ -524,16 +548,21 @@ contract("verifyScryptHash", (accounts) => {
         result = await challengerScryptChecker.runNextVerificationGame(claimId);
         receipt = await result.wait();
         assert.ok(
-          utils.findEvent(receipt.events, "VerificationGameStarted"),
+          findEvent(receipt.events, "VerificationGameStarted"),
           "Start challenge scrypt hash game"
         );
       });
 
       it("Query step 1030", async () => {
-        sessionId = await challengerScryptChecker.callStatic.getSession(claimId, challenger);
+        sessionId = await challengerScryptChecker.callStatic.getSession(
+          claimId,
+          challenger.address
+        );
 
         // Start session
-        let session = toSession(await challengerScryptVerifier.callStatic.getSession(sessionId));
+        let session = toSession(
+          await challengerScryptVerifier.callStatic.getSession(sessionId)
+        );
         assert.equal(session.lowStep.toNumber(), 0);
         assert.equal(session.medStep.toNumber(), 0);
         assert.equal(session.highStep.toNumber(), 2050);
@@ -546,7 +575,9 @@ contract("verifyScryptHash", (accounts) => {
         step = 1030;
         await challengerScryptVerifier.query(sessionId, step);
 
-        session = toSession(await challengerScryptVerifier.callStatic.getSession(sessionId));
+        session = toSession(
+          await challengerScryptVerifier.callStatic.getSession(sessionId)
+        );
         assert.equal(session.lowStep.toNumber(), 0);
         assert.equal(session.medStep.toNumber(), 1030);
         assert.equal(session.highStep.toNumber(), 2050);
@@ -559,7 +590,6 @@ contract("verifyScryptHash", (accounts) => {
       it("Respond step 1030", async () => {
         // A step can be calculated calling getStateProofAndHash from ScryptRunner
         //result = await scryptRunner.getStateProofAndHash.call(plaintext, step);
-        //computeStep = toResult(result);
         computeStep1030 = computeStep = {
           state:
             "0xd67a648119be37acddcafdc07c191fff94cda065bceae2d7d95e8d82633f1cd3486a34344d327122c2577c6e6469b555a93e3b9181b235945b8f225f0ffde33effc732e315a3d03650993b6b904c02fdbdb54c57b26c7ef9440f45b5d54ad1c4f67c954b740ac7a772a9254d98a5b87d573e98a598cd89f83008fb142ffd2292e0223421711df57c3e47692b39e9a05f365cfec556386253dc77daf86628f1d6425dee66456c88063b94fb1d91a753a51ce4ee98d1bdc0035322350462ddda0d",
@@ -575,7 +605,9 @@ contract("verifyScryptHash", (accounts) => {
           computeStep.stateHash
         );
 
-        const session = toSession(await challengerScryptVerifier.callStatic.getSession(sessionId));
+        const session = toSession(
+          await challengerScryptVerifier.callStatic.getSession(sessionId)
+        );
         assert.equal(session.lowStep.toNumber(), 0);
         assert.equal(session.medStep.toNumber(), 1030);
         assert.equal(session.highStep.toNumber(), 2050);
@@ -586,7 +618,9 @@ contract("verifyScryptHash", (accounts) => {
         step = 1031;
         await challengerScryptVerifier.query(sessionId, step);
 
-        const session = toSession(await challengerScryptVerifier.callStatic.getSession(sessionId));
+        const session = toSession(
+          await challengerScryptVerifier.callStatic.getSession(sessionId)
+        );
         assert.equal(session.lowStep.toNumber(), 1030);
         assert.equal(session.medStep.toNumber(), 1031);
         assert.equal(session.highStep.toNumber(), 2050);
@@ -603,7 +637,9 @@ contract("verifyScryptHash", (accounts) => {
           computeStep.stateHash
         );
 
-        const session = toSession(await submitterScryptVerifier.callStatic.getSession(sessionId));
+        const session = toSession(
+          await submitterScryptVerifier.callStatic.getSession(sessionId)
+        );
         assert.equal(session.lowStep.toNumber(), 1030);
         assert.equal(session.medStep.toNumber(), 1031);
         assert.equal(session.highStep.toNumber(), 2050);
@@ -615,7 +651,9 @@ contract("verifyScryptHash", (accounts) => {
         step = 1030;
         await challengerScryptVerifier.query(sessionId, step);
 
-        const session = toSession(await challengerScryptVerifier.callStatic.getSession(sessionId));
+        const session = toSession(
+          await challengerScryptVerifier.callStatic.getSession(sessionId)
+        );
         assert.equal(session.lowStep.toNumber(), 1030);
         assert.equal(session.medStep.toNumber(), 1031);
         assert.equal(session.highStep.toNumber(), 1031);
@@ -638,20 +676,20 @@ contract("verifyScryptHash", (accounts) => {
         const receipt = await result.wait();
 
         assert.ok(
-          utils.findEvent(receipt.events, "ClaimantConvicted"),
+          findEvent(receipt.events, "ClaimantConvicted"),
           "Claimant convicted"
         );
       });
 
       it("Reject scrypt hash claim", async () => {
         // Reject scrypt hash
-        await utils.blockchainTimeoutSeconds(
-          2 * utils.OPTIONS_DOGE_REGTEST.TIMEOUT
+        await blockchainTimeoutSeconds(2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout);
+        const result = await challengerScryptChecker.checkClaimSuccessful(
+          claimId
         );
-        const result = await challengerScryptChecker.checkClaimSuccessful(claimId);
         const receipt = await result.wait();
         assert.ok(
-          utils.findEvent(receipt.events, "ClaimFailed"),
+          findEvent(receipt.events, "ClaimFailed"),
           "Scrypt hash failed"
         );
       });
@@ -663,19 +701,17 @@ contract("verifyScryptHash", (accounts) => {
         );
         let receipt = await result.wait();
         assert.ok(
-          utils.findEvent(receipt.events, "SubmitterConvicted"),
+          findEvent(receipt.events, "SubmitterConvicted"),
           "Superblock failed"
         );
         // Confirm superblock
-        await utils.blockchainTimeoutSeconds(
-          2 * utils.OPTIONS_DOGE_REGTEST.TIMEOUT
-        );
+        await blockchainTimeoutSeconds(2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout);
         result = await challengerClaimManager.checkClaimFinished(
           proposedSuperblockHash
         );
         receipt = await result.wait();
         assert.ok(
-          utils.findEvent(receipt.events, "SuperblockClaimFailed"),
+          findEvent(receipt.events, "SuperblockClaimFailed"),
           "Superblock failed"
         );
       });
@@ -698,7 +734,7 @@ contract("verifyScryptHash", (accounts) => {
           hashes[0]
         );
         const receipt = await result.wait();
-        const requestScryptHashValidation = utils.findEvent(
+        const requestScryptHashValidation = findEvent(
           receipt.events,
           "RequestScryptHashValidation"
         );
@@ -706,40 +742,36 @@ contract("verifyScryptHash", (accounts) => {
           requestScryptHashValidation,
           "Request scrypt hash validation"
         );
-        plaintext = requestScryptHashValidation.args.blockHeader;
-        scryptHash = requestScryptHashValidation.args.blockScryptHash;
-        proposalId = requestScryptHashValidation.args.proposalId;
+        plaintext = requestScryptHashValidation!.args!.blockHeader;
+        scryptHash = requestScryptHashValidation!.args!.blockScryptHash;
+        proposalId = requestScryptHashValidation!.args!.proposalId;
       });
 
       it("Timeout without sumitting to scrypt checker", async () => {
         let result = await challengerBattleManager.timeout(battleSessionId);
         let receipt = await result.wait();
         assert.ok(
-          utils.findEvent(receipt.events, "ErrorBattle"),
+          findEvent(receipt.events, "ErrorBattle"),
           "Timeout did not elapse"
         );
 
-        await utils.blockchainTimeoutSeconds(
-          2 * utils.OPTIONS_DOGE_REGTEST.TIMEOUT
-        );
+        await blockchainTimeoutSeconds(2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout);
         result = await challengerBattleManager.timeout(battleSessionId);
         receipt = await result.wait();
         assert.ok(
-          utils.findEvent(receipt.events, "SubmitterConvicted"),
+          findEvent(receipt.events, "SubmitterConvicted"),
           "Scrypt hash failed"
         );
       });
 
       it("Confirm superblock", async () => {
-        await utils.blockchainTimeoutSeconds(
-          2 * utils.OPTIONS_DOGE_REGTEST.TIMEOUT
-        );
+        await blockchainTimeoutSeconds(2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout);
         const result = await challengerClaimManager.checkClaimFinished(
           proposedSuperblockHash
         );
         const receipt = await result.wait();
         assert.ok(
-          utils.findEvent(receipt.events, "SuperblockClaimFailed"),
+          findEvent(receipt.events, "SuperblockClaimFailed"),
           "Superblock failed"
         );
       });
@@ -762,7 +794,7 @@ contract("verifyScryptHash", (accounts) => {
           hashes[0]
         );
         let receipt = await result.wait();
-        const requestScryptHashValidation = utils.findEvent(
+        const requestScryptHashValidation = findEvent(
           receipt.events,
           "RequestScryptHashValidation"
         );
@@ -770,9 +802,9 @@ contract("verifyScryptHash", (accounts) => {
           requestScryptHashValidation,
           "Request scrypt hash validation"
         );
-        plaintext = requestScryptHashValidation.args.blockHeader;
-        scryptHash = requestScryptHashValidation.args.blockScryptHash;
-        proposalId = requestScryptHashValidation.args.proposalId;
+        plaintext = requestScryptHashValidation!.args!.blockHeader;
+        scryptHash = requestScryptHashValidation!.args!.blockScryptHash;
+        proposalId = requestScryptHashValidation!.args!.proposalId;
 
         // Start scrypt hash validation
         result = await submitterScryptChecker.checkScrypt(
@@ -782,17 +814,19 @@ contract("verifyScryptHash", (accounts) => {
           submitterBattleManager.address
         );
         receipt = await result.wait();
-        const claimCreated = utils.findEvent(receipt.events, "ClaimCreated");
+        const claimCreated = findEvent(receipt.events, "ClaimCreated");
         assert.ok(claimCreated, "Create scrypt hash claim");
-        claimId = claimCreated.args.claimId;
+        claimId = claimCreated!.args!.claimId;
       });
 
       it("Validate scrypt hash no challengers", async () => {
-        await utils.mineBlocks(5);
-        const result = await submitterScryptChecker.checkClaimSuccessful(claimId);
+        await mineBlocks(5);
+        const result = await submitterScryptChecker.checkClaimSuccessful(
+          claimId
+        );
         const receipt = await result.wait();
         assert.ok(
-          utils.findEvent(receipt.events, "ClaimSuccessful"),
+          findEvent(receipt.events, "ClaimSuccessful"),
           "Scrypt hash unchallenged"
         );
       });
@@ -801,31 +835,27 @@ contract("verifyScryptHash", (accounts) => {
         let result = await submitterBattleManager.timeout(battleSessionId);
         let receipt = await result.wait();
         assert.ok(
-          utils.findEvent(receipt.events, "ErrorBattle"),
+          findEvent(receipt.events, "ErrorBattle"),
           "Timeout did not elapse"
         );
 
-        await utils.blockchainTimeoutSeconds(
-          2 * utils.OPTIONS_DOGE_REGTEST.TIMEOUT
-        );
+        await blockchainTimeoutSeconds(2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout);
         result = await submitterBattleManager.timeout(battleSessionId);
         receipt = await result.wait();
         assert.ok(
-          utils.findEvent(receipt.events, "ChallengerConvicted"),
+          findEvent(receipt.events, "ChallengerConvicted"),
           "Challenger abandoned"
         );
       });
 
       it("Confirm superblock", async () => {
-        await utils.blockchainTimeoutSeconds(
-          2 * utils.OPTIONS_DOGE_REGTEST.TIMEOUT
-        );
+        await blockchainTimeoutSeconds(2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout);
         const result = await challengerClaimManager.checkClaimFinished(
           proposedSuperblockHash
         );
         const receipt = await result.wait();
         assert.ok(
-          utils.findEvent(receipt.events, "SuperblockClaimPending"),
+          findEvent(receipt.events, "SuperblockClaimPending"),
           "Superblock semi confirmed"
         );
       });
