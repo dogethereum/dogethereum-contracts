@@ -314,6 +314,7 @@ async function deployMainSystem(
   };
 }
 
+// TODO: refactor conditional properties based on network name out of this function
 export async function deployDogethereum(
   hre: HardhatRuntimeEnvironment,
   dogecoinNetworkId: DogecoinNetworkId = DogecoinNetworkId.Regtest,
