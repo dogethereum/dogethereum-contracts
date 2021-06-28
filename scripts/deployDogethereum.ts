@@ -5,13 +5,14 @@ import path from "path";
 import {
   deployDogethereum,
   DEPLOYMENT_JSON_NAME,
+  DogecoinNetworkId,
   getDefaultDeploymentPath,
   storeDeployment,
   SuperblockOptions,
   SUPERBLOCK_OPTIONS_LOCAL,
   SUPERBLOCK_OPTIONS_INTEGRATION_FAST_SYNC,
-  SUPERBLOCK_OPTIONS_INTEGRATION_SLOW_SYNC,
-  SUPERBLOCK_OPTIONS_PRODUCTION,
+  // SUPERBLOCK_OPTIONS_INTEGRATION_SLOW_SYNC,
+  // SUPERBLOCK_OPTIONS_PRODUCTION,
 } from "../deploy";
 
 async function main() {
@@ -25,15 +26,31 @@ async function main() {
     throw new Error(`A deployment for ${hre.network.name} already exists.`);
   }
 
-  const deployment = await deployDogethereum(hre);
+  // TODO: parametrize these when we write this as a Hardhat task.
+  const dogeNetworkId = DogecoinNetworkId.Regtest;
+  const superblockOptions = getSuperblockOptions(hre.network.name);
+
+  const deployment = await deployDogethereum(
+    hre,
+    dogeNetworkId,
+    superblockOptions
+  );
   return storeDeployment(hre, deployment, deploymentDir);
 }
 
 function getSuperblockOptions(ethereumNetworkName: string): SuperblockOptions {
-  if (ethereumNetworkName === "hardhat" || ethereumNetworkName === "development") {
+  if (
+    ethereumNetworkName === "hardhat" ||
+    ethereumNetworkName === "development" ||
+    ethereumNetworkName === "integrationDogeRegtest"
+  ) {
     return SUPERBLOCK_OPTIONS_LOCAL;
   }
-  if (ethereumNetworkName === "rinkeby" || ethereumNetworkName === "ropsten" || ethereumNetworkName === "integrationDogeMain") {
+  if (
+    ethereumNetworkName === "rinkeby" ||
+    ethereumNetworkName === "ropsten" ||
+    ethereumNetworkName === "integrationDogeMain"
+  ) {
     return SUPERBLOCK_OPTIONS_INTEGRATION_FAST_SYNC;
   }
 

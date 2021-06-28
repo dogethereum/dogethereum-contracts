@@ -3,7 +3,7 @@
 # Test sending doge to eth and back
 
 # Declare variables
-NETWORK="integrationDogeRegtest"
+export NETWORK="integrationDogeRegtest"
 
 dogecoinQtProcessName=dogecoin-qt
 dogecoinQtDatadir=.dogecoin-data
@@ -66,10 +66,9 @@ npx hardhat compile --quiet
 
 # Deploy dogethereum to Ethereum network
 rm -rf "deployment/$NETWORK"
-npx hardhat run --network $NETWORK scripts/deployDogethereum.ts
 
-# Init contracts: initial doge header and operator
-npx hardhat run --network $NETWORK scripts/init_contracts_local.ts
+# Setup contracts in blockchain
+scripts/initialiseForAgent.sh
 
 # Lock dogecoins with an operator
 # All of these are fixed according to what the regtest datadir has
@@ -81,8 +80,6 @@ utxoValue=$((450000 * 10 ** 8))
 node "$toolsRootDir/user/lock.js" --deployment $dogethereumDeploymentJson --ethereumAddress 0xa3a744d64f5136aC38E2DE221e750f7B0A6b45Ef --value 5000000000 --dogenetwork regtest --dogeport 41200 --dogeuser $dogecoinQtRpcuser --dogepassword $dogecoinQtRpcpassword --dogePrivateKey $dogePrivateKey --utxoTxid "$utxoTxid" --utxoIndex $utxoIndex --utxoValue $utxoValue
 curl --user $dogecoinQtRpcuser:$dogecoinQtRpcpassword  --data-binary '{"jsonrpc": "1.0", "id":"curltest", "method": "generate", "params": [10] }' -H 'content-type: text/plain;' http://127.0.0.1:41200/
 
-# Print debug.js status
-npx hardhat run --network $NETWORK scripts/debug.ts
 echo "Please, start the agent..."
 
 # Wait for agent to relay doge lock tx to eth and dogetokens minted
