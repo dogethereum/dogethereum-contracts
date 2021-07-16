@@ -176,6 +176,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
         uint32 _lastBits,
         bytes32 _parentHash
     ) public returns (uint, bytes32) {
+        // TODO: this address validity check looks out of place here
         require(address(trustedSuperblocks) != address(0));
 
         if (deposits[msg.sender] < minProposalDeposit) {
@@ -224,6 +225,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
     // @param superblockHash – Id of the superblock to challenge.
     // @return - Error code and claim Id
     function challengeSuperblock(bytes32 superblockHash) public returns (uint, bytes32) {
+        // TODO: this address validity check looks out of place here
         require(address(trustedSuperblocks) != address(0));
 
         SuperblockClaim storage claim = claims[superblockHash];
@@ -319,7 +321,8 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
             return false;
         }
 
-        // an invalid superblock can be rejected immediately
+        // TODO: this invalid -> decided transition looks like it shouldn't even exist.
+        // There should be no way to salvage an invalidated superblock.
         if (claim.invalid) {
             // The superblock is invalid, submitter abandoned
             // or superblock data is inconsistent
@@ -378,6 +381,8 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
         bool confirmDescendants = true;
         bytes32 id = descendantId;
         SuperblockClaim storage claim = claims[id];
+        // TODO: we probably want to refactor this loop into its own function.
+        // Does this loop have an upper bound to its iterations at all?
         while (id != superblockHash) {
             if (!claimExists(claim)) {
                 emit ErrorClaim(superblockHash, ERR_SUPERBLOCK_BAD_CLAIM);
@@ -419,6 +424,8 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
         doPaySubmitter(superblockHash, claim);
         unbondDeposit(superblockHash, claim.submitter);
 
+        // TODO: The same concern about unbounded loops apply here.
+        // And it looks like this could use a refactor too.
         if (confirmDescendants) {
             bytes32[] memory descendants = new bytes32[](numSuperblocks);
             id = descendantId;
@@ -443,13 +450,17 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
         return true;
     }
 
-    // @dev – Reject a semi approved superblock.
-    //
-    // Superblocks that are not in the main chain can be marked as
-    // invalid.
-    //
-    // @param superblockHash – the claim ID.
+    /**
+     * @dev – Reject a semi approved superblock.
+     *
+     * Superblocks that are not in the main chain can be marked as
+     * invalid.
+     *
+     * @param superblockHash – the claim ID.
+     */
     function rejectClaim(bytes32 superblockHash) public returns (bool) {
+        // TODO: the logic for determining if this block is in the canonical superblockchain or not
+        // should be in the DogeSuperblocks contract.
         SuperblockClaim storage claim = claims[superblockHash];
         if (!claimExists(claim)) {
             emit ErrorClaim(superblockHash, ERR_SUPERBLOCK_BAD_CLAIM);
@@ -504,6 +515,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
         if (claim.submitter == loser) {
             // the claim is over.
             // Trigger end of verification game
+            // TODO: the claim should be considered "decided" at this point
             claim.invalid = true;
         } else if (claim.submitter == winner) {
             // the claim continues.
@@ -516,9 +528,12 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
         emit SuperblockBattleDecided(sessionId, winner, loser);
     }
 
-    // @dev - Pay challengers than ran their battles with submitter deposits
-    // Challengers that did not run will be returned their deposits
+    /**
+     * @dev - Pay challengers than ran their battles with submitter deposits
+     * Challengers that did not run will be returned their deposits
+     */
     function doPayChallengers(bytes32 superblockHash, SuperblockClaim storage claim) internal {
+        //TODO: This function has unbounded loops. This payment mechanism should be changed into a pull rather than push.
         uint rewards = claim.bondedDeposits[claim.submitter];
         claim.bondedDeposits[claim.submitter] = 0;
         uint totalDeposits = 0;

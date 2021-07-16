@@ -13,18 +13,60 @@ import {IScryptCheckerListener} from "./scrypt-interactive/IScryptCheckerListene
 contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
 
     enum ChallengeState {
-        Unchallenged,             // Unchallenged submission
-        Challenged,               // Claims was challenged
-        QueryMerkleRootHashes,    // Challenger expecting block hashes
-        RespondMerkleRootHashes,  // Block hashes were received and verified
-        QueryBlockHeader,         // Challenger is requesting block headers
-        RespondBlockHeader,       // All block headers were received
+        /**
+         * Unchallenged submission
+         * This is not in use. TODO: remove?
+         */
+        Unchallenged,
+        /**
+         * Claim was challenged
+         */
+        Challenged,
+        /**
+         * Challenger is expecting block hashes
+         */
+        QueryMerkleRootHashes,
+        /**
+         * Block hashes were received and verified
+         */
+        RespondMerkleRootHashes,
+        /**
+         * Challenger is requesting block headers
+         */
+        QueryBlockHeader,
+        /**
+         * All block headers were received
+         */
+        RespondBlockHeader,
+        /**
+         * The block header scrypt hash validation can be requested now.
+         */
         VerifyScryptHash,
+        /**
+         * The block header scrypt hash validation was requested.
+         * This means that the superblock submitter is expected to submit the scrypt hash claim
+         * and defend it in the ScryptVerifier contract.
+         */
         RequestScryptVerification,
+        /**
+         * Pending scrypt hash verification
+         * The scrypt hash claim was submitted and is in the process of being defended.
+         * Here, the session is paused while the battle continues in the ScryptVerifier contract.
+         */
         PendingScryptVerification,
-        PendingVerification,      // Pending superblock verification
-        SuperblockVerified,       // Superblock verified
-        SuperblockFailed          // Superblock not valid
+        /**
+         * Pending final superblock verification
+         */
+        PendingVerification,
+        /**
+         * Superblock is verified.
+         * This is not in use. TODO: remove?
+         */
+        // SuperblockVerified,
+        /**
+         * Superblock verification failed.
+         */
+        SuperblockFailed
     }
 
     enum BlockInfoStatus {
@@ -356,7 +398,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
         return (ERR_SUPERBLOCK_OK, powBlockHeader);
     }
 
-    // @dev - Verify block header sent by challenger
+    // @dev - Verify block header sent by superblock submitter
     function doVerifyBlockHeader(
         BattleSession storage session,
         bytes32 sessionId,
@@ -511,6 +553,8 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
         (, parentWork, parentTimestamp, gpTimestamp, prevBlock, prevBits, , , ) = getSuperblockInfo(parentId);
         uint idx = 0;
         uint work;
+        // TODO: ensure this doesn't result in excessive gas costs
+        // We may need to allow partial computation of this verification.
         while (idx < session.blockHashes.length) {
             bytes32 blockSha256Hash = session.blockHashes[idx];
             uint32 bits = session.blocksInfo[blockSha256Hash].bits;
@@ -542,7 +586,8 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
     }
 
     // @dev - Verify whether a superblock's data is consistent
-    // Only should be called when all block headers were submitted
+    // Should only be called when all block headers were submitted
+    // @return 0 when we can't verify it yet. 1 when the challenger loses. 2 when the submitter loses.
     function doVerifySuperblock(BattleSession storage session, bytes32 sessionId) internal returns (uint) {
         if (session.challengeState == ChallengeState.VerifyScryptHash) {
             skipScryptHashVerification(session);
@@ -600,6 +645,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
 
     // @dev - To be called when a challenger is convicted
     function convictChallenger(bytes32 sessionId, address challenger, bytes32 superblockHash) internal {
+        // TODO: session should be a parameter
         BattleSession storage session = sessions[sessionId];
         sessionDecided(sessionId, superblockHash, session.submitter, session.challenger);
         disable(sessionId);
@@ -608,6 +654,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
 
     // @dev - To be called when a submitter is convicted
     function convictSubmitter(bytes32 sessionId, address submitter, bytes32 superblockHash) internal {
+        // TODO: session should be a parameter
         BattleSession storage session = sessions[sessionId];
         sessionDecided(sessionId, superblockHash, session.challenger, session.submitter);
         disable(sessionId);
@@ -617,6 +664,10 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
     // @dev - Disable session
     // It should be called only when either the submitter or the challenger were convicted.
     function disable(bytes32 sessionId) internal {
+        // TODO: Careful!! A `BattleSession` has a field that is an array type.
+        // If this implies its deletion, then it could have an unexpected gas cost.
+        // The blockHashes array size is currently bounded by what fits in a single transaction,
+        // but this might not be enough to ensure that the gas cost does not go over the block gas limit.
         delete sessions[sessionId];
     }
 
