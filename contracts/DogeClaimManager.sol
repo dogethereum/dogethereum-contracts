@@ -214,7 +214,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
         claim.challengeTimeout = block.timestamp + superblockTimeout;
 
         (err, ) = this.bondDeposit(superblockHash, msg.sender, battleReward);
-        assert(err == ERR_SUPERBLOCK_OK);
+        require(err == ERR_SUPERBLOCK_OK, "Not enough funds available to stake in this superblock proposal.");
 
         emit SuperblockClaimCreated(superblockHash, msg.sender);
 
@@ -509,6 +509,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
         SuperblockClaim storage claim = claims[superblockHash];
 
         require(claimExists(claim));
+        require(claim.verificationOngoing, "There is no ongoing battle for this claim.");
 
         claim.verificationOngoing = false;
 
@@ -522,7 +523,7 @@ contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
             // It should not fail when called from sessionDecided
             runNextBattleSession(superblockHash);
         } else {
-            revert();
+            revert("Invalid session decision");
         }
 
         emit SuperblockBattleDecided(sessionId, winner, loser);
