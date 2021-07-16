@@ -57,12 +57,12 @@ contract ClaimManager is DepositsManager, IScryptChecker {
     _;
   }
 
-    // @dev – the constructor
-    constructor(ScryptVerifier _scryptVerifier) {
-        scryptVerifier = _scryptVerifier;
-    }
+  // @dev – the constructor
+  constructor(ScryptVerifier _scryptVerifier) {
+    scryptVerifier = _scryptVerifier;
+  }
 
-  // @dev – locks up part of the a user's deposit into a claim.
+  // @dev – locks up part of the user's deposit into a claim.
   // @param claimId – the claim id.
   // @param account – the user's address.
   // @param amount – the amount of deposit to lock up.
@@ -179,7 +179,7 @@ contract ClaimManager is DepositsManager, IScryptChecker {
 
     require(!claim.decided, "The claim is already decided.");
 
-    require(claim.verificationOngoing == false, "The claim has an ongoing verification.");
+    require(!claim.verificationOngoing, "The claim has an ongoing verification.");
 
     // check if there is a challenger who has not the played verification game yet.
     if (claim.numChallengers > claim.currentChallenger) {
@@ -203,7 +203,7 @@ contract ClaimManager is DepositsManager, IScryptChecker {
   function sessionDecided(uint sessionId, uint claimId, address winner, address loser) onlyScryptVerifier public {
     ScryptClaim storage claim = getValidClaim(claimId);
 
-    //require(claim.verificationOngoing == true, "The claim has no verification ongoing.");
+    require(claim.verificationOngoing, "The claim has no verification ongoing.");
     claim.verificationOngoing = false;
 
     // reward the winner, with the loser's bonded deposit.
@@ -236,11 +236,15 @@ contract ClaimManager is DepositsManager, IScryptChecker {
   // notifying it that the Scrypt blockhash was correctly calculated.
   //
   // @param claimId – the claim ID.
+  // @todo There are a couple of problems here:
+  //       First, the challenger never gets his deposits released.
+  //       Second, this function can be called multiple times, so releasing the deposit here seems like a bad idea.
+  //       We could make this function callable only once if successful though.
   function checkClaimSuccessful(uint claimId) public {
     ScryptClaim storage claim = getValidClaim(claimId);
 
     // check that there is no ongoing verification game.
-    require(claim.verificationOngoing == false, "The claim has an ongoing verification.");
+    require(!claim.verificationOngoing, "The claim has an ongoing verification.");
 
     // TODO: do we really want two separate timeouts? A default value should be just a default.
     // check that the claim has exceeded the default challenge timeout.
@@ -258,15 +262,15 @@ contract ClaimManager is DepositsManager, IScryptChecker {
     claim.decided = true;
 
     if (!claim.invalid) {
-        claim.scryptCheckerListener.scryptVerified(claim.proposalId);
+      claim.scryptCheckerListener.scryptVerified(claim.proposalId);
 
-        unbondDeposit(claimId, claim.claimant);
+      unbondDeposit(claimId, claim.claimant);
 
-        emit ClaimSuccessful(claimId, claim.claimant, claim.plaintext, claim.blockHash);
+      emit ClaimSuccessful(claimId, claim.claimant, claim.plaintext, claim.blockHash);
     } else {
-        claim.scryptCheckerListener.scryptFailed(claim.proposalId);
+      claim.scryptCheckerListener.scryptFailed(claim.proposalId);
 
-        emit ClaimFailed(claimId, claim.claimant, claim.plaintext, claim.blockHash);
+      emit ClaimFailed(claimId, claim.claimant, claim.plaintext, claim.blockHash);
     }
   }
 
@@ -275,29 +279,33 @@ contract ClaimManager is DepositsManager, IScryptChecker {
   }
 
   function firstChallenger(uint claimId) public view returns(address) {
-    require(claimId < numClaims);
-    return claims[claimId].challengers[0];
+    ScryptClaim storage claim = getValidClaim(claimId);
+    return claim.challengers[0];
   }
 
   function createdAt(uint claimId) public view returns(uint) {
-    //require(claimId < numClaims);
-    return claims[claimId].createdAt;
+    ScryptClaim storage claim = getValidClaim(claimId);
+    return claim.createdAt;
   }
 
   function getSession(uint claimId, address challenger) public view returns(uint) {
-    return claims[claimId].sessions[challenger];
+    ScryptClaim storage claim = getValidClaim(claimId);
+    return claim.sessions[challenger];
   }
 
   function getChallengers(uint claimId) public view returns(address[] memory) {
-    return claims[claimId].challengers;
+    ScryptClaim storage claim = getValidClaim(claimId);
+    return claim.challengers;
   }
 
   function getCurrentChallenger(uint claimId) public view returns(address) {
-    return claims[claimId].challengers[claims[claimId].currentChallenger];
+    ScryptClaim storage claim = getValidClaim(claimId);
+    return claim.challengers[claim.currentChallenger];
   }
 
   function getVerificationOngoing(uint claimId) public view returns(bool) {
-    return claims[claimId].verificationOngoing;
+    ScryptClaim storage claim = getValidClaim(claimId);
+    return claim.verificationOngoing;
   }
 
   function getClaim(uint claimId)
@@ -315,6 +323,11 @@ contract ClaimManager is DepositsManager, IScryptChecker {
     );
   }
 
+  /**
+   * This function allows the caller to know if a claim is ready to be closed out.
+   *
+   * @dev This function avoids reverting to allow easy query outside of the contract.
+   */
   function getClaimReady(uint claimId) public view returns(bool) {
     ScryptClaim storage claim = claims[claimId];
 
@@ -328,7 +341,7 @@ contract ClaimManager is DepositsManager, IScryptChecker {
     bool pastClaimTimeout = block.number > claim.challengeTimeoutBlockNumber;
 
     // check that there is no ongoing verification game.
-    bool noOngoingGames = claim.verificationOngoing == false;
+    bool noOngoingGames = !claim.verificationOngoing;
 
     // check that all verification games have been played.
     bool noPendingGames = claim.numChallengers == claim.currentChallenger;

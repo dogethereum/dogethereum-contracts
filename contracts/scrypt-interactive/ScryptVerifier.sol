@@ -10,17 +10,13 @@ import {Verifier} from "./Verifier.sol";
 */
 contract ScryptVerifier is ScryptFramework, Verifier {
 
-    modifier onlyBy(address _account) {
-        require(msg.sender == _account);
-        _;
-    }
-
     function isInitiallyValid(VerificationSession storage session)
         view
         internal
         override
         returns (bool)
     {
+        // TODO: verify that the sender is the ClaimManager contract.
         return session.output.length == 32 && session.highStep == 2050;
     }
 

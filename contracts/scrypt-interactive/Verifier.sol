@@ -54,7 +54,7 @@ abstract contract Verifier {
         public
         returns (uint)
     {
-        require(steps > 2);
+        require(steps > 2, "The computation should have at least two steps.");
 
         //ClaimManager constraints don't allow for sessionId 0
         // check if there can be a replay attack with sessionId
@@ -180,14 +180,17 @@ abstract contract Verifier {
         public
     {
         VerificationSession storage s = sessions[sessionId];
-        require(s.lowStep + 1 == s.highStep);
+        require(s.lowStep + 1 == s.highStep, "The step interval must be narrowed down to one step.");
         // ^ must be at the end of the binary search according to the smart contract
 
-        require(claimId == sessionsClaimId[sessionId]);
+        // TODO: Is this necessary? Why is the claimId a parameter in this function?
+        require(claimId == sessionsClaimId[sessionId], "The claim ID must be the one associated with this session.");
 
+        // TODO: in several places we use the term pre-state or post-state;
+        // these should be explained in more detail in documentation
         //prove game ended
-        require(keccak256(preValue) == s.lowHash);
-        require(keccak256(postValue) == s.highHash);
+        require(keccak256(preValue) == s.lowHash, "The preimage is not consistent with the claimed hash for the pre-state.");
+        require(keccak256(postValue) == s.highHash, "The preimage is not consistent with the claimed hash for the post-state.");
 
         if (performStepVerificationSpecific(s, s.lowStep, preValue, postValue, proofs)) {
             challengerConvicted(sessionId, s.challenger, claimId, claimManager);
@@ -217,7 +220,9 @@ abstract contract Verifier {
         public
     {
         VerificationSession storage session = sessions[sessionId];
+        // TODO: we may want a way to determine if a session is valid here
         require(session.claimant != address(0));
+
         if (
             session.lastChallengerMessage > session.lastClaimantMessage &&
             block.timestamp > session.lastChallengerMessage + responseTime
@@ -229,7 +234,7 @@ abstract contract Verifier {
         ) {
             challengerConvicted(sessionId, session.challenger, claimId, claimManager);
         } else {
-            require(false);
+            revert("Neither the claimant nor the challenger timed out yet.");
         }
     }
 
