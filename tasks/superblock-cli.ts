@@ -302,7 +302,7 @@ task(CHALLENGE_TASK, "Submit a challenge to a superblock")
   .setAction(challengeCommand);
 
 function statusToText(status: Status) {
-  if (typeof Status[status] === "undefined") {
+  if (typeof Status[status] !== "undefined") {
     return Status[status];
   }
   throw new Error("Unknown superblock status");
