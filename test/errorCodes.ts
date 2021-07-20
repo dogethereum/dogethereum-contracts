@@ -1,12 +1,21 @@
-const DogeMessageLibraryForTests = artifacts.require('DogeMessageLibraryForTests');
-const utils = require('./utils');
+import hre from "hardhat";
+import { assert } from "chai";
+import type { Contract } from "ethers";
+
+import {
+  isolateTests,
+} from "./utils";
 
 
-contract('errorCodes', (accounts) => {
-  let dogeMessageLibraryForTests;
+describe('errorCodes', function() {
+  let dogeMessageLibraryForTests: Contract;
+  isolateTests();
+
   before(async () => {
-    dogeMessageLibraryForTests = await DogeMessageLibraryForTests.new();
+    const dogeMessageLibraryFactory = await hre.ethers.getContractFactory("DogeMessageLibraryForTests");
+    dogeMessageLibraryForTests = await dogeMessageLibraryFactory.deploy();
   });
+
   it("errorCodes", async () => {
     const block974400Hash = "0xa84956d6535a1be26b77379509594bdb8f186b29c3b00143dcb468015bdd16da";
     const block974401Hash = "a10377b456caa4d7a57623ddbcdb4c81e20b4ddaece77396b717fe49488975a4"
