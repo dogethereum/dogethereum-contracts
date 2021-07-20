@@ -163,7 +163,7 @@ contract('DogeSuperblocks', (accounts) => {
       assert.equal(result.logs[0].event, 'ErrorSuperblock', 'Superblock cannot approve');
     });
   });
-  describe('Only ClaimManager can modify', () => {
+  describe('Only DogeClaimManager can modify', () => {
     let id0;
     let id1;
     let id2;
@@ -188,7 +188,7 @@ contract('DogeSuperblocks', (accounts) => {
       let result = await superblocks.propose(merkleRoot, accumulatedWork, timestamp, prevTimestamp, lastHash, lastBits, id0, claimManager);
       assert.equal(result.logs[0].event, 'ErrorSuperblock', 'Only claimManager can propose');
       result = await superblocks.propose(merkleRoot, accumulatedWork, timestamp, prevTimestamp, lastHash, lastBits, id0, claimManager, { from: claimManager });
-      assert.equal(result.logs[0].event, 'NewSuperblock', 'ClaimManager can propose');
+      assert.equal(result.logs[0].event, 'NewSuperblock', 'DogeClaimManager can propose');
       id1 = result.logs[0].args.superblockHash;
     });
     it('Approve', async () => {
@@ -199,7 +199,7 @@ contract('DogeSuperblocks', (accounts) => {
     });
     it('Challenge', async () => {
       let result = await superblocks.propose(merkleRoot, accumulatedWork, timestamp, prevTimestamp, lastHash, lastBits, id1, claimManager, { from: claimManager });
-      assert.equal(result.logs[0].event, 'NewSuperblock', 'ClaimManager can propose');
+      assert.equal(result.logs[0].event, 'NewSuperblock', 'DogeClaimManager can propose');
       id2 = result.logs[0].args.superblockHash;
       result = await superblocks.challenge(id2, claimManager);
       assert.equal(result.logs[0].event, 'ErrorSuperblock', 'Only claimManager can propose');
@@ -259,7 +259,7 @@ contract('DogeSuperblocks', (accounts) => {
       sblocks[0] = id0;
       for(let work = 1; work < 30; ++work) {
         result = await superblocks.propose(merkleRoot, work, 0, 0, lastHash, lastBits, parentId, claimManager, { from: claimManager });
-        assert.equal(result.logs[0].event, 'NewSuperblock', 'ClaimManager can propose');
+        assert.equal(result.logs[0].event, 'NewSuperblock', 'DogeClaimManager can propose');
         superblockHash = result.logs[0].args.superblockHash;
         result = await superblocks.confirm(superblockHash, claimManager, { from: claimManager });
         assert.equal(result.logs[0].event, 'ApprovedSuperblock', 'Only claimManager can propose');

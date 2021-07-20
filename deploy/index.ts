@@ -115,7 +115,7 @@ export interface SuperblockOptions {
   delay: number;
 
   /**
-   * Battle timeout used in the superblock DogeBattleManager and scrypt hash ClaimManager.
+   * Battle timeout used in the superblock DogeBattleManager and ScryptClaims.
    * This timeout is used in the challenge response protocols for both superblocks and scrypt hash verification.
    */
   timeout: number;
@@ -550,7 +550,7 @@ export async function initSuperblockChain(
       signer: deploySigner,
     });
     scryptChecker = await deployContract(
-      "ClaimManager",
+      "ScryptClaims",
       [scryptVerifier.address],
       hre,
       {

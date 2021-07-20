@@ -8,9 +8,9 @@ import {IScryptChecker} from "./IScryptChecker.sol";
 
 import '@openzeppelin/contracts/math/SafeMath.sol';
 
-// ClaimManager: queues a sequence of challengers to play with a claimant.
+// ScryptClaims: queues a sequence of challengers to play with a claimant.
 
-contract ClaimManager is DepositsManager, IScryptChecker {
+contract ScryptClaims is DepositsManager, IScryptChecker {
   using SafeMath for uint;
 
   uint private numClaims = 1;     // index as key for the claims mapping.

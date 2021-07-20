@@ -62,9 +62,9 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @dev – the constructor
     constructor() {}
 
-    // @dev - sets ClaimManager instance associated with managing superblocks.
+    // @dev - sets DogeClaimManager instance associated with managing superblocks.
     // Once trustedClaimManager has been set, it cannot be changed.
-    // @param _claimManager - address of the ClaimManager contract to be associated with
+    // @param _claimManager - address of the DogeClaimManager contract to be associated with
     function setClaimManager(address _claimManager) public {
         require(address(trustedClaimManager) == address(0x0) && _claimManager != address(0x0));
         trustedClaimManager = _claimManager;

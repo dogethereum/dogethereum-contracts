@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.7.6;
-import {ClaimManager} from "./ClaimManager.sol";
+import {ScryptClaims} from "./ScryptClaims.sol";
 // Simple generic challenge-response computation verifier.
 //
 // @TODO:
@@ -56,7 +56,7 @@ abstract contract Verifier {
     {
         require(steps > 2, "The computation should have at least two steps.");
 
-        //ClaimManager constraints don't allow for sessionId 0
+        //ScryptClaims constraints don't allow for sessionId 0
         // check if there can be a replay attack with sessionId
         uint sessionId = sessionsCount+1;
         VerificationSession storage s = sessions[sessionId];
@@ -174,7 +174,7 @@ abstract contract Verifier {
         bytes memory preValue,
         bytes memory postValue,
         bytes memory proofs,
-        ClaimManager claimManager
+        ScryptClaims scryptClaims
     )
         onlyClaimant(sessionId)
         public
@@ -193,9 +193,9 @@ abstract contract Verifier {
         require(keccak256(postValue) == s.highHash, "The preimage is not consistent with the claimed hash for the post-state.");
 
         if (performStepVerificationSpecific(s, s.lowStep, preValue, postValue, proofs)) {
-            challengerConvicted(sessionId, s.challenger, claimId, claimManager);
+            challengerConvicted(sessionId, s.challenger, claimId, scryptClaims);
         } else {
-            claimantConvicted(sessionId, s.claimant, claimId, claimManager);
+            claimantConvicted(sessionId, s.claimant, claimId, scryptClaims);
         }
     }
 
@@ -216,7 +216,7 @@ abstract contract Verifier {
         returns (bool);
 
     //Able to trigger conviction if time of response is too high
-    function timeout(uint sessionId, uint claimId, ClaimManager claimManager)
+    function timeout(uint sessionId, uint claimId, ScryptClaims scryptClaims)
         public
     {
         VerificationSession storage session = sessions[sessionId];
@@ -227,31 +227,31 @@ abstract contract Verifier {
             session.lastChallengerMessage > session.lastClaimantMessage &&
             block.timestamp > session.lastChallengerMessage + responseTime
         ) {
-            claimantConvicted(sessionId, session.claimant, claimId, claimManager);
+            claimantConvicted(sessionId, session.claimant, claimId, scryptClaims);
         } else if (
             session.lastClaimantMessage > session.lastChallengerMessage &&
             block.timestamp > session.lastClaimantMessage + responseTime
         ) {
-            challengerConvicted(sessionId, session.challenger, claimId, claimManager);
+            challengerConvicted(sessionId, session.challenger, claimId, scryptClaims);
         } else {
             revert("Neither the claimant nor the challenger timed out yet.");
         }
     }
 
-    function challengerConvicted(uint sessionId, address challenger, uint claimId, ClaimManager claimManager)
+    function challengerConvicted(uint sessionId, address challenger, uint claimId, ScryptClaims scryptClaims)
         internal
     {
         VerificationSession storage s = sessions[sessionId];
-        claimManager.sessionDecided(sessionId, claimId, s.claimant, s.challenger);
+        scryptClaims.sessionDecided(sessionId, claimId, s.claimant, s.challenger);
         disable(sessionId);
         emit ChallengerConvicted(sessionId, challenger);
     }
 
-    function claimantConvicted(uint sessionId, address claimant, uint claimId,  ClaimManager claimManager)
+    function claimantConvicted(uint sessionId, address claimant, uint claimId,  ScryptClaims scryptClaims)
         internal
     {
         VerificationSession storage s = sessions[sessionId];
-        claimManager.sessionDecided(sessionId, claimId, s.challenger, s.claimant);
+        scryptClaims.sessionDecided(sessionId, claimId, s.challenger, s.claimant);
         disable(sessionId);
         emit ClaimantConvicted(sessionId, claimant);
     }

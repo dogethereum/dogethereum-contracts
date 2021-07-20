@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.7.6;
-import './ClaimManager.sol';
+import './ScryptClaims.sol';
 import './IScryptCheckerListener.sol';
 
 contract DogeRelayDummy is IScryptCheckerListener {
 
-    ClaimManager claimManager;
+    ScryptClaims scryptClaims;
 
     event ScryptSubmitted(bytes32 proposalId, bytes32 scryptHash, bytes data, address submitter);
     event ScryptVerified(bytes32 proposalId);
     event ScryptFailed(bytes32 proposalId);
 
-    constructor(ClaimManager _claimManager) {
-        claimManager = _claimManager;
+    constructor(ScryptClaims _scryptClaims) {
+        scryptClaims = _scryptClaims;
     }
 
     function scryptVerified(bytes32 proposalId) external override {

@@ -16,7 +16,7 @@ contract ScryptVerifier is ScryptFramework, Verifier {
         override
         returns (bool)
     {
-        // TODO: verify that the sender is the ClaimManager contract.
+        // TODO: verify that the sender is the ScryptClaims contract.
         return session.output.length == 32 && session.highStep == 2050;
     }
 

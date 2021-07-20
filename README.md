@@ -17,7 +17,7 @@ If you are new to the Dogecoin <-> Ethereum bridge, please check the [docs](http
   - Tokens are destroyed when coins should go back to the Dogecoin blockchain.
 - [DogeClaimManager contract](contracts/DogeClaimManager.sol)
   - Manages the interactive (challenge/response) validation of Superblocks.
-  - Inspired on Truebit's Scrypt interactive [ClaimManager](https://github.com/TrueBitFoundation/scrypt-interactive/blob/master/contracts/ClaimManager.sol)
+  - Inspired on Truebit's Scrypt interactive [ScryptClaims](https://github.com/TrueBitFoundation/scrypt-interactive/blob/master/contracts/ScryptClaims.sol)
 - [DogeMessageLibrary](contracts/DogeParser/DogeMessageLibrary.sol)
   - Library for parsing/working with Dogecoin blocks, txs and merkle trees
 
