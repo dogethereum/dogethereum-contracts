@@ -30,11 +30,12 @@ contract('proposeSuperblocks', (accounts) => {
         let dogeSuperblocks;
         let claimManager;
 
-        let dogeSuperblocksJSON = fs.readFileSync('./build/contracts/DogeSuperblocks.json', 'utf8');
-        let dogeSuperblocksParsedJSON = JSON.parse(dogeSuperblocksJSON);
-        let networks = dogeSuperblocksParsedJSON['networks'];
-        let networkKey = Object.keys(networks)[0];
-        let dogeSuperblocksAddress = typeof networks[networkKey] !== 'undefined' ? networks[networkKey].address : '0x0';
+        // TODO: rewrite this test suite to use artifacts
+        // let dogeSuperblocksJSON = fs.readFileSync('./build/contracts/DogeSuperblocks.json', 'utf8');
+        // let dogeSuperblocksParsedJSON = JSON.parse(dogeSuperblocksJSON);
+        // let networks = dogeSuperblocksParsedJSON['networks'];
+        // let networkKey = Object.keys(networks)[0];
+        // let dogeSuperblocksAddress = typeof networks[networkKey] !== 'undefined' ? networks[networkKey].address : '0x0';
 
         // let dogeClaimManagerJSON = fs.readFileSync('./build/contracts/DogeClaimManager.json', 'utf8');
         // let dogeClaimManagerParsedJSON = JSON.parse(dogeClaimManagerJSON);
