@@ -6,7 +6,7 @@ const DogeSuperblocks = artifacts.require('DogeSuperblocks');
 
 contract('DogeSuperblocks', (accounts) => {
   let superblocks;
-  const claimManager = accounts[1];
+  const superblockClaims = accounts[1];
   const user = accounts[2];
   describe('Utils', () => {
     let hash;
@@ -43,7 +43,7 @@ contract('DogeSuperblocks', (accounts) => {
       const dogeMessageLib = await DogeMessageLibrary.new();
       await DogeSuperblocks.link(dogeMessageLib);
       superblocks = await DogeSuperblocks.new();
-      await superblocks.setClaimManager(claimManager);
+      await superblocks.setSuperblockClaims(superblockClaims);
     });
     it('Merkle javascript', async () => {
       hash = utils.makeMerkle(oneHash);
@@ -100,70 +100,70 @@ contract('DogeSuperblocks', (accounts) => {
     const parentHash = '0x0000000000000000000000000000000000000000000000000000000000000000';
     before(async () => {
       superblocks = await DogeSuperblocks.new();
-      await superblocks.setClaimManager(claimManager);
+      await superblocks.setSuperblockClaims(superblockClaims);
     });
     it('Initialized', async () => {
-      const result = await superblocks.initialize(merkleRoot, accumulatedWork, timestamp, prevTimestamp, lastHash, lastBits, parentHash, { from: claimManager });
+      const result = await superblocks.initialize(merkleRoot, accumulatedWork, timestamp, prevTimestamp, lastHash, lastBits, parentHash, { from: superblockClaims });
       assert.equal(result.logs[0].event, 'NewSuperblock', 'New superblock proposed');
       id0 = result.logs[0].args.superblockHash;
     });
     it('Propose', async () => {
-      const result = await superblocks.propose(merkleRoot, accumulatedWork, timestamp, prevTimestamp, lastHash, lastBits, id0, claimManager, { from: claimManager });
+      const result = await superblocks.propose(merkleRoot, accumulatedWork, timestamp, prevTimestamp, lastHash, lastBits, id0, superblockClaims, { from: superblockClaims });
       assert.equal(result.logs[0].event, 'NewSuperblock', 'New superblock proposed');
       id1 = result.logs[0].args.superblockHash;
     });
     it('Bad propose', async () => {
-      const result = await superblocks.propose(merkleRoot, accumulatedWork, timestamp, prevTimestamp, lastHash, lastBits, id0, claimManager, { from: claimManager });
+      const result = await superblocks.propose(merkleRoot, accumulatedWork, timestamp, prevTimestamp, lastHash, lastBits, id0, superblockClaims, { from: superblockClaims });
       assert.equal(result.logs[0].event, 'ErrorSuperblock', 'Superblock already exist');
     });
     it('Bad parent', async () => {
-      const result = await superblocks.propose(merkleRoot, accumulatedWork, timestamp, prevTimestamp, lastHash, lastBits, "0x0", claimManager, { from: claimManager });
+      const result = await superblocks.propose(merkleRoot, accumulatedWork, timestamp, prevTimestamp, lastHash, lastBits, "0x0", superblockClaims, { from: superblockClaims });
       assert.equal(result.logs[0].event, 'ErrorSuperblock', 'Superblock parent does not exist');
     });
     it('Approve', async () => {
-      const result = await superblocks.confirm(id1, claimManager, { from: claimManager });
+      const result = await superblocks.confirm(id1, superblockClaims, { from: superblockClaims });
       assert.equal(result.logs[0].event, 'ApprovedSuperblock', 'Superblock confirmed');
     });
     it('Propose bis', async () => {
-      const result = await superblocks.propose(merkleRoot, accumulatedWork, timestamp, prevTimestamp, lastHash, lastBits, id1, claimManager, { from: claimManager });
+      const result = await superblocks.propose(merkleRoot, accumulatedWork, timestamp, prevTimestamp, lastHash, lastBits, id1, superblockClaims, { from: superblockClaims });
       assert.equal(result.logs[0].event, 'NewSuperblock', 'New superblock proposed');
       id2 = result.logs[0].args.superblockHash;
     });
     it('Challenge', async () => {
-      const result = await superblocks.challenge(id2, claimManager, { from: claimManager });
+      const result = await superblocks.challenge(id2, superblockClaims, { from: superblockClaims });
       assert.equal(result.logs[0].event, 'ChallengeSuperblock', 'Superblock challenged');
     });
     it('Semi-Approve', async () => {
-      const result = await superblocks.semiApprove(id2, claimManager, { from: claimManager });
+      const result = await superblocks.semiApprove(id2, superblockClaims, { from: superblockClaims });
       assert.equal(result.logs[0].event, 'SemiApprovedSuperblock', 'Superblock semi-approved');
     });
     it('Approve bis', async () => {
-      const result = await superblocks.confirm(id2, claimManager, { from: claimManager });
+      const result = await superblocks.confirm(id2, superblockClaims, { from: superblockClaims });
       assert.equal(result.logs[0].event, 'ApprovedSuperblock', 'Superblock confirmed');
     });
     it('Invalidate bad', async () => {
-      const result = await superblocks.invalidate(id2, claimManager, { from: claimManager });
+      const result = await superblocks.invalidate(id2, superblockClaims, { from: superblockClaims });
       assert.equal(result.logs[0].event, 'ErrorSuperblock', 'Superblock cannot invalidate');
     });
     it('Propose tris', async () => {
-      const result = await superblocks.propose(merkleRoot, accumulatedWork, timestamp, prevTimestamp, lastHash, lastBits, id2, claimManager, { from: claimManager });
+      const result = await superblocks.propose(merkleRoot, accumulatedWork, timestamp, prevTimestamp, lastHash, lastBits, id2, superblockClaims, { from: superblockClaims });
       assert.equal(result.logs[0].event, 'NewSuperblock', 'New superblock proposed');
       id3 = result.logs[0].args.superblockHash;
     });
     it('Challenge bis', async () => {
-      const result = await superblocks.challenge(id3, claimManager, { from: claimManager });
+      const result = await superblocks.challenge(id3, superblockClaims, { from: superblockClaims });
       assert.equal(result.logs[0].event, 'ChallengeSuperblock', 'Superblock challenged');
     });
     it('Invalidate', async () => {
-      const result = await superblocks.invalidate(id3, claimManager, { from: claimManager });
+      const result = await superblocks.invalidate(id3, superblockClaims, { from: superblockClaims });
       assert.equal(result.logs[0].event, 'InvalidSuperblock', 'Superblock invalidated');
     });
     it('Approve bad', async () => {
-      const result = await superblocks.confirm(id3, claimManager, { from: claimManager });
+      const result = await superblocks.confirm(id3, superblockClaims, { from: superblockClaims });
       assert.equal(result.logs[0].event, 'ErrorSuperblock', 'Superblock cannot approve');
     });
   });
-  describe('Only DogeClaimManager can modify', () => {
+  describe('Only SuperblockClaims can modify', () => {
     let id0;
     let id1;
     let id2;
@@ -177,7 +177,7 @@ contract('DogeSuperblocks', (accounts) => {
     const parentHash = '0x00';
     before(async () => {
       superblocks = await DogeSuperblocks.new();
-      await superblocks.setClaimManager(claimManager);
+      await superblocks.setSuperblockClaims(superblockClaims);
     });
     it('Initialized', async () => {
       const result = await superblocks.initialize(merkleRoot, accumulatedWork, timestamp, prevTimestamp, lastHash, lastBits, parentHash);
@@ -185,44 +185,44 @@ contract('DogeSuperblocks', (accounts) => {
       id0 = result.logs[0].args.superblockHash;
     });
     it('Propose', async () => {
-      let result = await superblocks.propose(merkleRoot, accumulatedWork, timestamp, prevTimestamp, lastHash, lastBits, id0, claimManager);
-      assert.equal(result.logs[0].event, 'ErrorSuperblock', 'Only claimManager can propose');
-      result = await superblocks.propose(merkleRoot, accumulatedWork, timestamp, prevTimestamp, lastHash, lastBits, id0, claimManager, { from: claimManager });
-      assert.equal(result.logs[0].event, 'NewSuperblock', 'DogeClaimManager can propose');
+      let result = await superblocks.propose(merkleRoot, accumulatedWork, timestamp, prevTimestamp, lastHash, lastBits, id0, superblockClaims);
+      assert.equal(result.logs[0].event, 'ErrorSuperblock', 'Only superblockClaims can propose');
+      result = await superblocks.propose(merkleRoot, accumulatedWork, timestamp, prevTimestamp, lastHash, lastBits, id0, superblockClaims, { from: superblockClaims });
+      assert.equal(result.logs[0].event, 'NewSuperblock', 'SuperblockClaims can propose');
       id1 = result.logs[0].args.superblockHash;
     });
     it('Approve', async () => {
-      let result = await superblocks.confirm(id1, claimManager);
-      assert.equal(result.logs[0].event, 'ErrorSuperblock', 'Only claimManager can propose');
-      result = await superblocks.confirm(id1, claimManager, { from: claimManager });
-      assert.equal(result.logs[0].event, 'ApprovedSuperblock', 'Only claimManager can propose');
+      let result = await superblocks.confirm(id1, superblockClaims);
+      assert.equal(result.logs[0].event, 'ErrorSuperblock', 'Only superblockClaims can propose');
+      result = await superblocks.confirm(id1, superblockClaims, { from: superblockClaims });
+      assert.equal(result.logs[0].event, 'ApprovedSuperblock', 'Only superblockClaims can propose');
     });
     it('Challenge', async () => {
-      let result = await superblocks.propose(merkleRoot, accumulatedWork, timestamp, prevTimestamp, lastHash, lastBits, id1, claimManager, { from: claimManager });
-      assert.equal(result.logs[0].event, 'NewSuperblock', 'DogeClaimManager can propose');
+      let result = await superblocks.propose(merkleRoot, accumulatedWork, timestamp, prevTimestamp, lastHash, lastBits, id1, superblockClaims, { from: superblockClaims });
+      assert.equal(result.logs[0].event, 'NewSuperblock', 'SuperblockClaims can propose');
       id2 = result.logs[0].args.superblockHash;
-      result = await superblocks.challenge(id2, claimManager);
-      assert.equal(result.logs[0].event, 'ErrorSuperblock', 'Only claimManager can propose');
-      result = await superblocks.challenge(id2, claimManager, { from: claimManager });
+      result = await superblocks.challenge(id2, superblockClaims);
+      assert.equal(result.logs[0].event, 'ErrorSuperblock', 'Only superblockClaims can propose');
+      result = await superblocks.challenge(id2, superblockClaims, { from: superblockClaims });
       assert.equal(result.logs[0].event, 'ChallengeSuperblock', 'Superblock challenged');
     });
     it('Semi-Approve', async () => {
-      let result = await superblocks.semiApprove(id2, claimManager);
-      assert.equal(result.logs[0].event, 'ErrorSuperblock', 'Only claimManager can semi-approve');
-      result = await superblocks.semiApprove(id2, claimManager, { from: claimManager });
+      let result = await superblocks.semiApprove(id2, superblockClaims);
+      assert.equal(result.logs[0].event, 'ErrorSuperblock', 'Only superblockClaims can semi-approve');
+      result = await superblocks.semiApprove(id2, superblockClaims, { from: superblockClaims });
       assert.equal(result.logs[0].event, 'SemiApprovedSuperblock', 'Superblock semi-approved');
-      result = await superblocks.confirm(id2, claimManager, { from: claimManager });
+      result = await superblocks.confirm(id2, superblockClaims, { from: superblockClaims });
       assert.equal(result.logs[0].event, 'ApprovedSuperblock', 'Superblock confirmed');
     });
     it('Invalidate', async () => {
-      let result = await superblocks.propose(merkleRoot, accumulatedWork, timestamp, prevTimestamp, lastHash, lastBits, id2, claimManager, { from: claimManager });
+      let result = await superblocks.propose(merkleRoot, accumulatedWork, timestamp, prevTimestamp, lastHash, lastBits, id2, superblockClaims, { from: superblockClaims });
       assert.equal(result.logs[0].event, 'NewSuperblock', 'New superblock proposed');
       id3 = result.logs[0].args.superblockHash;
-      result = await superblocks.challenge(id3, claimManager, { from: claimManager });
+      result = await superblocks.challenge(id3, superblockClaims, { from: superblockClaims });
       assert.equal(result.logs[0].event, 'ChallengeSuperblock', 'Superblock challenged');
-      result = await superblocks.invalidate(id3, claimManager);
-      assert.equal(result.logs[0].event, 'ErrorSuperblock', 'Only claimManager can invalidate');
-      result = await superblocks.invalidate(id3, claimManager, { from: claimManager });
+      result = await superblocks.invalidate(id3, superblockClaims);
+      assert.equal(result.logs[0].event, 'ErrorSuperblock', 'Only superblockClaims can invalidate');
+      result = await superblocks.invalidate(id3, superblockClaims, { from: superblockClaims });
       assert.equal(result.logs[0].event, 'InvalidSuperblock', 'Superblock invalidated');
     });
   });
@@ -240,7 +240,7 @@ contract('DogeSuperblocks', (accounts) => {
     const parentHash = '0x0000000000000000000000000000000000000000000000000000000000000000';
     before(async () => {
       superblocks = await DogeSuperblocks.new();
-      await superblocks.setClaimManager(claimManager);
+      await superblocks.setSuperblockClaims(superblockClaims);
     });
     it('Initialized', async () => {
       const result = await superblocks.initialize(merkleRoot, accumulatedWork, timestamp, prevTimestamp, lastHash, lastBits, parentHash);
@@ -258,11 +258,11 @@ contract('DogeSuperblocks', (accounts) => {
       const sblocks = {};
       sblocks[0] = id0;
       for(let work = 1; work < 30; ++work) {
-        result = await superblocks.propose(merkleRoot, work, 0, 0, lastHash, lastBits, parentId, claimManager, { from: claimManager });
-        assert.equal(result.logs[0].event, 'NewSuperblock', 'DogeClaimManager can propose');
+        result = await superblocks.propose(merkleRoot, work, 0, 0, lastHash, lastBits, parentId, superblockClaims, { from: superblockClaims });
+        assert.equal(result.logs[0].event, 'NewSuperblock', 'SuperblockClaims can propose');
         superblockHash = result.logs[0].args.superblockHash;
-        result = await superblocks.confirm(superblockHash, claimManager, { from: claimManager });
-        assert.equal(result.logs[0].event, 'ApprovedSuperblock', 'Only claimManager can propose');
+        result = await superblocks.confirm(superblockHash, superblockClaims, { from: superblockClaims });
+        assert.equal(result.logs[0].event, 'ApprovedSuperblock', 'Only superblockClaims can propose');
         locator = await superblocks.getSuperblockLocator();
         assert.equal(locator[0], superblockHash, 'Position 0 current best superblock');
         assert.equal(locator[1], parentId, 'Position 1 parent best superblock');

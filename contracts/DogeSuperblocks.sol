@@ -51,23 +51,23 @@ contract DogeSuperblocks is DogeErrorCodes {
     event VerifyTransaction(bytes32 txHash, uint returnCode);
     event RelayTransaction(bytes32 txHash, uint returnCode);
 
-    // DogeClaimManager
-    address public trustedClaimManager;
+    // SuperblockClaims
+    address public trustedSuperblockClaims;
 
-    modifier onlyClaimManager() {
-        require(msg.sender == trustedClaimManager);
+    modifier onlySuperblockClaims() {
+        require(msg.sender == trustedSuperblockClaims);
         _;
     }
 
     // @dev – the constructor
     constructor() {}
 
-    // @dev - sets DogeClaimManager instance associated with managing superblocks.
-    // Once trustedClaimManager has been set, it cannot be changed.
-    // @param _claimManager - address of the DogeClaimManager contract to be associated with
-    function setClaimManager(address _claimManager) public {
-        require(address(trustedClaimManager) == address(0x0) && _claimManager != address(0x0));
-        trustedClaimManager = _claimManager;
+    // @dev - sets SuperblockClaims instance associated with managing superblocks.
+    // Once trustedSuperblockClaims has been set, it cannot be changed.
+    // @param _superblockClaims - address of the SuperblockClaims contract to be associated with
+    function setSuperblockClaims(address _superblockClaims) public {
+        require(address(trustedSuperblockClaims) == address(0x0) && _superblockClaims != address(0x0));
+        trustedSuperblockClaims = _superblockClaims;
     }
 
     // @dev - Initializes superblocks contract
@@ -149,7 +149,7 @@ contract DogeSuperblocks is DogeErrorCodes {
         bytes32 _parentId,
         address submitter
     ) public returns (uint, bytes32) {
-        if (msg.sender != trustedClaimManager) {
+        if (msg.sender != trustedSuperblockClaims) {
             emit ErrorSuperblock(0, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
             return (ERR_SUPERBLOCK_NOT_CLAIMMANAGER, 0);
         }
@@ -200,7 +200,7 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @param _validator Address requesting superblock confirmation
     // @return Error code and superblockHash
     function confirm(bytes32 _superblockHash, address _validator) public returns (uint, bytes32) {
-        if (msg.sender != trustedClaimManager) {
+        if (msg.sender != trustedSuperblockClaims) {
             emit ErrorSuperblock(_superblockHash, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
             return (ERR_SUPERBLOCK_NOT_CLAIMMANAGER, 0);
         }
@@ -232,7 +232,7 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @param _challenger Address requesting a challenge
     // @return Error code and superblockHash
     function challenge(bytes32 _superblockHash, address _challenger) public returns (uint, bytes32) {
-        if (msg.sender != trustedClaimManager) {
+        if (msg.sender != trustedSuperblockClaims) {
             emit ErrorSuperblock(_superblockHash, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
             return (ERR_SUPERBLOCK_NOT_CLAIMMANAGER, 0);
         }
@@ -256,7 +256,7 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @param _validator Address requesting semi approval
     // @return Error code and superblockHash
     function semiApprove(bytes32 _superblockHash, address _validator) public returns (uint, bytes32) {
-        if (msg.sender != trustedClaimManager) {
+        if (msg.sender != trustedSuperblockClaims) {
             emit ErrorSuperblock(_superblockHash, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
             return (ERR_SUPERBLOCK_NOT_CLAIMMANAGER, 0);
         }
@@ -282,7 +282,7 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @param _validator Address requesting superblock invalidation
     // @return Error code and superblockHash
     function invalidate(bytes32 _superblockHash, address _validator) public returns (uint, bytes32) {
-        if (msg.sender != trustedClaimManager) {
+        if (msg.sender != trustedSuperblockClaims) {
             emit ErrorSuperblock(_superblockHash, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
             return (ERR_SUPERBLOCK_NOT_CLAIMMANAGER, 0);
         }

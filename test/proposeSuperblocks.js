@@ -2,7 +2,7 @@
 const fs = require('fs');
 const utils = require('./utils');
 const DogeSuperblocks = artifacts.require('DogeSuperblocks');
-const DogeClaimManager = artifacts.require('DogeClaimManager');
+const SuperblockClaims = artifacts.require('SuperblockClaims');
 
 let superblock1MerkleRoot = "0xdb7aea0bb3c1c5eef58997bf75de93173fb914b807b85df50671790627471e99";
 let superblock1ChainWork = "0x7c";
@@ -25,31 +25,31 @@ let superblock3LastDogeBlockHash = "0x49c9fee33f814e654979094f3694ebe109993c2f99
 let superblock3ParentId = superblock2Id;
 let superblock3Id = "0xd2a92b0e691fddd3413d4c07e548b629a5655572a27337c0994728969ba1e086";
 
+// TODO: rewrite this test suite to use artifacts and remove redundant code
 contract('proposeSuperblocks', (accounts) => {
     describe.skip('Superblock proposal integration test', function() {
         let dogeSuperblocks;
-        let claimManager;
+        let superblockClaims;
 
-        // TODO: rewrite this test suite to use artifacts
         // let dogeSuperblocksJSON = fs.readFileSync('./build/contracts/DogeSuperblocks.json', 'utf8');
         // let dogeSuperblocksParsedJSON = JSON.parse(dogeSuperblocksJSON);
         // let networks = dogeSuperblocksParsedJSON['networks'];
         // let networkKey = Object.keys(networks)[0];
         // let dogeSuperblocksAddress = typeof networks[networkKey] !== 'undefined' ? networks[networkKey].address : '0x0';
 
-        // let dogeClaimManagerJSON = fs.readFileSync('./build/contracts/DogeClaimManager.json', 'utf8');
-        // let dogeClaimManagerParsedJSON = JSON.parse(dogeClaimManagerJSON);
-        // networks = dogeClaimManagerParsedJSON['networks'];
-        // let claimManagerAddress = networks[networkKey].address;
-        let claimManagerAddress;
+        // let superblockClaimsJSON = fs.readFileSync('./build/contracts/SuperblockClaims.json', 'utf8');
+        // let superblockClaimsParsedJSON = JSON.parse(superblockClaimsJSON);
+        // networks = superblockClaimsParsedJSON['networks'];
+        // let superblockClaimsAddress = networks[networkKey].address;
+        let superblockClaimsAddress;
 
         before(async() => {
             dogeSuperblocks = await DogeSuperblocks.at(dogeSuperblocksAddress);
-            claimManagerAddress = await dogeSuperblocks.claimManager.call();
-            claimManager = await DogeClaimManager.at(claimManagerAddress);
+            superblockClaimsAddress = await dogeSuperblocks.superblockClaims.call();
+            superblockClaims = await SuperblockClaims.at(superblockClaimsAddress);
 
-            // console.log(dogeSuperblocksAddress, claimManagerAddress);
-            // await dogeSuperblocks.setClaimManager(claimManagerAddress);
+            // console.log(dogeSuperblocksAddress, superblockClaimsAddress);
+            // await dogeSuperblocks.setSuperblockClaims(superblockClaimsAddress);
         });
 
         let merkleRoot;
@@ -60,13 +60,12 @@ contract('proposeSuperblocks', (accounts) => {
         let superblockHash;
 
         let bestSuperblock;
-        let dogeSuperblocksClaimManager;
 
         it('Superblock 1', async() => {
-            dogeSuperblocksClaimManager = await dogeSuperblocks.claimManager;
+            superblockClaims = await dogeSuperblocks.superblockClaims;
 
             await utils.mineBlocks(5);
-            await claimManager.checkClaimFinished(superblock1Id);
+            await superblockClaims.checkClaimFinished(superblock1Id);
             await utils.mineBlocks(5);
 
             merkleRoot = await dogeSuperblocks.getSuperblockMerkleRoot(superblock1Id);
@@ -83,10 +82,10 @@ contract('proposeSuperblocks', (accounts) => {
         });
 
         it('Superblock 2', async() => {
-            dogeSuperblocksClaimManager = await dogeSuperblocks.claimManager;
+            superblockClaims = await dogeSuperblocks.superblockClaims;
 
             await utils.mineBlocks(5);
-            await claimManager.checkClaimFinished(superblock2Id);
+            await superblockClaims.checkClaimFinished(superblock2Id);
             await utils.mineBlocks(5);
 
             merkleRoot = await dogeSuperblocks.getSuperblockMerkleRoot(superblock2Id);
@@ -103,10 +102,10 @@ contract('proposeSuperblocks', (accounts) => {
         });
 
         // it('Superblock 3', async() => {
-        //     dogeSuperblocksClaimManager = await dogeSuperblocks.claimManager;
+        //     superblockClaims = await dogeSuperblocks.superblockClaims;
 
         //     await utils.mineBlocks(5);
-        //     await claimManager.checkClaimFinished(superblock3Id);
+        //     await superblockClaims.checkClaimFinished(superblock3Id);
         //     await utils.mineBlocks(5);
 
         //     merkleRoot = await dogeSuperblocks.getSuperblockMerkleRoot(superblock3Id);

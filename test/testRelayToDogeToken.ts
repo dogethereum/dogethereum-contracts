@@ -23,7 +23,7 @@ import {
 describe("testRelayToDogeToken", function () {
   let dogeToken: Contract;
   let superblocks: Contract;
-  let claimManager: Contract;
+  let superblockClaims: Contract;
   let signers: SignerWithAddress[];
 
   const userEthAddress = "0x30d90d1dbf03aa127d58e6af83ca1da9e748c98d";
@@ -67,7 +67,7 @@ describe("testRelayToDogeToken", function () {
   isolateTests();
 
   before(async () => {
-    ({ claimManager, superblocks, dogeToken } = await deployFixture(hre));
+    ({ superblockClaims, superblocks, dogeToken } = await deployFixture(hre));
     signers = await hre.ethers.getSigners();
   });
 
@@ -80,7 +80,7 @@ describe("testRelayToDogeToken", function () {
 
     const superblockSubmitterSigner = signers[4];
     const submitterSuperblocks = superblocks.connect(superblockSubmitterSigner);
-    const submitterClaimManager = claimManager.connect(
+    const submitterSuperblockClaims = superblockClaims.connect(
       superblockSubmitterSigner
     );
 
@@ -117,11 +117,11 @@ describe("testRelayToDogeToken", function () {
       genesisSuperblock.accumulatedWork
     );
 
-    await submitterClaimManager.makeDeposit({
+    await submitterSuperblockClaims.makeDeposit({
       value: DEPOSITS.MIN_PROPOSAL_DEPOSIT,
     });
 
-    let result: ContractTransaction = await submitterClaimManager.proposeSuperblock(
+    let result: ContractTransaction = await submitterSuperblockClaims.proposeSuperblock(
       proposedSuperblock.merkleRoot,
       proposedSuperblock.accumulatedWork,
       proposedSuperblock.timestamp,
@@ -144,7 +144,7 @@ describe("testRelayToDogeToken", function () {
 
     await blockchainTimeoutSeconds(3 * OPTIONS_DOGE_REGTEST.TIMEOUT);
 
-    result = await submitterClaimManager.checkClaimFinished(superblockHash);
+    result = await submitterSuperblockClaims.checkClaimFinished(superblockHash);
     receipt = await result.wait();
     const superblockClaimSuccessfulEvents = receipt.events!.filter(
       (event) => event.event === "SuperblockClaimSuccessful"

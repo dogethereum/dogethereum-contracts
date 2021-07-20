@@ -19,12 +19,12 @@ import {
   makeSuperblock,
 } from "./utils";
 
-describe("DogeClaimManager", () => {
+describe("SuperblockClaims", () => {
   let owner: SignerWithAddress;
   let submitter: SignerWithAddress;
   let challenger: SignerWithAddress;
-  let submitterClaimManager: Contract;
-  let challengerClaimManager: Contract;
+  let submitterSuperblockClaims: Contract;
+  let challengerSuperblockClaims: Contract;
   let submitterBattleManager: Contract;
   let challengerBattleManager: Contract;
   let superblocks: Contract;
@@ -49,15 +49,15 @@ describe("DogeClaimManager", () => {
 
     superblocks = superBlockchain.superblocks;
 
-    submitterClaimManager = superBlockchain.claimManager.connect(submitter);
-    challengerClaimManager = superBlockchain.claimManager.connect(challenger);
+    submitterSuperblockClaims = superBlockchain.superblockClaims.connect(submitter);
+    challengerSuperblockClaims = superBlockchain.superblockClaims.connect(challenger);
     submitterBattleManager = superBlockchain.battleManager.connect(submitter);
     challengerBattleManager = superBlockchain.battleManager.connect(challenger);
 
-    await submitterClaimManager.makeDeposit({
+    await submitterSuperblockClaims.makeDeposit({
       value: DEPOSITS.MIN_PROPOSAL_DEPOSIT,
     });
-    await challengerClaimManager.makeDeposit({
+    await challengerSuperblockClaims.makeDeposit({
       value: DEPOSITS.MIN_CHALLENGE_DEPOSIT,
     });
   }
@@ -102,7 +102,7 @@ describe("DogeClaimManager", () => {
         genesisSuperblock.accumulatedWork
       );
 
-      const response = await submitterClaimManager.proposeSuperblock(
+      const response = await submitterSuperblockClaims.proposeSuperblock(
         proposedSuperblock.merkleRoot,
         proposedSuperblock.accumulatedWork,
         proposedSuperblock.timestamp,
@@ -123,12 +123,12 @@ describe("DogeClaimManager", () => {
     });
 
     it("Try to confirm whitout waiting", async () => {
-      let response = await challengerClaimManager.checkClaimFinished(
+      let response = await challengerSuperblockClaims.checkClaimFinished(
         "0x0000000000000000000000000000000000000000000000000000000000000002"
       );
       let result = await response.wait();
       assert.ok(findEvent(result.events, "ErrorClaim"), "Invalid claim");
-      response = await challengerClaimManager.checkClaimFinished(
+      response = await challengerSuperblockClaims.checkClaimFinished(
         proposedSuperblockHash
       );
       result = await response.wait();
@@ -137,7 +137,7 @@ describe("DogeClaimManager", () => {
 
     it("Confirm", async () => {
       await blockchainTimeoutSeconds(2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout);
-      const response = await challengerClaimManager.checkClaimFinished(
+      const response = await challengerSuperblockClaims.checkClaimFinished(
         proposedSuperblockHash
       );
       const result = await response.wait();
@@ -160,7 +160,7 @@ describe("DogeClaimManager", () => {
         genesisSuperblock.accumulatedWork
       );
 
-      const response = await submitterClaimManager.proposeSuperblock(
+      const response = await submitterSuperblockClaims.proposeSuperblock(
         proposedSuperblock.merkleRoot,
         proposedSuperblock.accumulatedWork,
         proposedSuperblock.timestamp,
@@ -182,7 +182,7 @@ describe("DogeClaimManager", () => {
 
     it("Confirm fork", async () => {
       await blockchainTimeoutSeconds(2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout);
-      const response = await challengerClaimManager.checkClaimFinished(
+      const response = await challengerSuperblockClaims.checkClaimFinished(
         proposedForkSuperblockHash
       );
       const result = await response.wait();
@@ -217,7 +217,7 @@ describe("DogeClaimManager", () => {
         genesisSuperblock.superblockHash,
         genesisSuperblock.accumulatedWork
       );
-      const response = await submitterClaimManager.proposeSuperblock(
+      const response = await submitterSuperblockClaims.proposeSuperblock(
         proposedSuperblock.merkleRoot,
         proposedSuperblock.accumulatedWork,
         proposedSuperblock.timestamp,
@@ -238,10 +238,10 @@ describe("DogeClaimManager", () => {
     });
 
     it("Challenge", async () => {
-      await challengerClaimManager.makeDeposit({
+      await challengerSuperblockClaims.makeDeposit({
         value: DEPOSITS.SUPERBLOCK_COST,
       });
-      const response = await challengerClaimManager.challengeSuperblock(
+      const response = await challengerSuperblockClaims.challengeSuperblock(
         proposedSuperblockHash
       );
       const result = await response.wait();
@@ -263,7 +263,7 @@ describe("DogeClaimManager", () => {
     });
 
     it("Query and verify hashes", async () => {
-      await challengerClaimManager.makeDeposit({
+      await challengerSuperblockClaims.makeDeposit({
         value: DEPOSITS.RESPOND_MERKLE_COST,
       });
       let response = await challengerBattleManager.queryMerkleRootHashes(
@@ -276,7 +276,7 @@ describe("DogeClaimManager", () => {
         "Query merkle root hashes"
       );
 
-      await submitterClaimManager.makeDeposit({
+      await submitterSuperblockClaims.makeDeposit({
         value: DEPOSITS.VERIFY_SUPERBLOCK_COST,
       });
       response = await submitterBattleManager.respondMerkleRootHashes(
@@ -292,7 +292,7 @@ describe("DogeClaimManager", () => {
     });
 
     it("Query and reply block header", async () => {
-      await challengerClaimManager.makeDeposit({
+      await challengerSuperblockClaims.makeDeposit({
         value: DEPOSITS.RESPOND_HEADER_COST,
       });
       let response: ContractTransaction = await challengerBattleManager.queryBlockHeader(
@@ -307,7 +307,7 @@ describe("DogeClaimManager", () => {
       );
 
       const scryptHash = `0x${calcHeaderPoW(headers[0])}`;
-      await submitterClaimManager.makeDeposit({
+      await submitterSuperblockClaims.makeDeposit({
         value: DEPOSITS.VERIFY_SUPERBLOCK_COST,
       });
       response = await submitterBattleManager.respondBlockHeader(
@@ -322,7 +322,7 @@ describe("DogeClaimManager", () => {
         "Respond block header"
       );
 
-      await challengerClaimManager.makeDeposit({
+      await challengerSuperblockClaims.makeDeposit({
         value: DEPOSITS.RESPOND_HEADER_COST,
       });
       response = await challengerBattleManager.queryBlockHeader(
@@ -337,7 +337,7 @@ describe("DogeClaimManager", () => {
       );
 
       const scryptHash2 = `0x${calcHeaderPoW(headers[1])}`;
-      await submitterClaimManager.makeDeposit({
+      await submitterSuperblockClaims.makeDeposit({
         value: DEPOSITS.VERIFY_SUPERBLOCK_COST,
       });
       response = await submitterBattleManager.respondBlockHeader(
@@ -366,7 +366,7 @@ describe("DogeClaimManager", () => {
 
     it("Confirm", async () => {
       await blockchainTimeoutSeconds(2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout);
-      const response = await challengerClaimManager.checkClaimFinished(
+      const response = await challengerSuperblockClaims.checkClaimFinished(
         proposedSuperblockHash
       );
       const result = await response.wait();
@@ -396,7 +396,7 @@ describe("DogeClaimManager", () => {
         genesisSuperblock.accumulatedWork
       );
 
-      const response = await submitterClaimManager.proposeSuperblock(
+      const response = await submitterSuperblockClaims.proposeSuperblock(
         proposeSuperblock.merkleRoot,
         proposeSuperblock.accumulatedWork,
         proposeSuperblock.timestamp,
@@ -417,7 +417,7 @@ describe("DogeClaimManager", () => {
     });
 
     it("Challenge", async () => {
-      const response = await challengerClaimManager.challengeSuperblock(
+      const response = await challengerSuperblockClaims.challengeSuperblock(
         proposedSuperblockHash
       );
       const result = await response.wait();
@@ -439,7 +439,7 @@ describe("DogeClaimManager", () => {
     });
 
     it("Query hashes", async () => {
-      const session = await challengerClaimManager.getSession(
+      const session = await challengerSuperblockClaims.getSession(
         proposedSuperblockHash,
         challenger.address
       );
@@ -456,7 +456,7 @@ describe("DogeClaimManager", () => {
     });
 
     it("Verify hashes", async () => {
-      await submitterClaimManager.makeDeposit({
+      await submitterSuperblockClaims.makeDeposit({
         value: DEPOSITS.VERIFY_SUPERBLOCK_COST,
       });
       const response = await submitterBattleManager.respondMerkleRootHashes(
@@ -487,7 +487,7 @@ describe("DogeClaimManager", () => {
 
       it(`Answer block header ${hash.slice(0, 20)}..`, async () => {
         const scryptHash = `0x${calcHeaderPoW(headers[idx])}`;
-        await submitterClaimManager.makeDeposit({
+        await submitterSuperblockClaims.makeDeposit({
           value: DEPOSITS.VERIFY_SUPERBLOCK_COST,
         });
         const response = await submitterBattleManager.respondBlockHeader(
@@ -517,7 +517,7 @@ describe("DogeClaimManager", () => {
 
     it("Accept superblock", async () => {
       await blockchainTimeoutSeconds(2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout);
-      const response = await submitterClaimManager.checkClaimFinished(
+      const response = await submitterSuperblockClaims.checkClaimFinished(
         proposedSuperblockHash
       );
       const result = await response.wait();
@@ -544,17 +544,17 @@ describe("DogeClaimManager", () => {
 
       superblocks = superBlockchain.superblocks;
 
-      submitterClaimManager = superBlockchain.claimManager.connect(submitter);
-      challengerClaimManager = superBlockchain.claimManager.connect(challenger);
+      submitterSuperblockClaims = superBlockchain.superblockClaims.connect(submitter);
+      challengerSuperblockClaims = superBlockchain.superblockClaims.connect(challenger);
       submitterBattleManager = superBlockchain.battleManager.connect(submitter);
       challengerBattleManager = superBlockchain.battleManager.connect(
         challenger
       );
 
-      await submitterClaimManager.makeDeposit({
+      await submitterSuperblockClaims.makeDeposit({
         value: DEPOSITS.MIN_PROPOSAL_DEPOSIT,
       });
-      await challengerClaimManager.makeDeposit({
+      await challengerSuperblockClaims.makeDeposit({
         value: DEPOSITS.MIN_CHALLENGE_DEPOSIT,
       });
 
@@ -564,7 +564,7 @@ describe("DogeClaimManager", () => {
         genesisSuperblock.superblockHash,
         genesisSuperblock.accumulatedWork
       );
-      let response = await submitterClaimManager.proposeSuperblock(
+      let response = await submitterSuperblockClaims.proposeSuperblock(
         proposeSuperblock.merkleRoot,
         proposeSuperblock.accumulatedWork,
         proposeSuperblock.timestamp,
@@ -582,10 +582,10 @@ describe("DogeClaimManager", () => {
         .superblockHash;
 
       // Challenge
-      await challengerClaimManager.makeDeposit({
+      await challengerSuperblockClaims.makeDeposit({
         value: DEPOSITS.MIN_CHALLENGE_DEPOSIT,
       });
-      response = await challengerClaimManager.challengeSuperblock(
+      response = await challengerSuperblockClaims.challengeSuperblock(
         proposedSuperblockHash
       );
       result = await response.wait();
@@ -637,7 +637,7 @@ describe("DogeClaimManager", () => {
     });
 
     it("Timeout query block headers", async () => {
-      await challengerClaimManager.makeDeposit({
+      await challengerSuperblockClaims.makeDeposit({
         value: DEPOSITS.RESPOND_MERKLE_COST,
       });
       let response = await challengerBattleManager.queryMerkleRootHashes(
@@ -650,7 +650,7 @@ describe("DogeClaimManager", () => {
         "Query merkle root hashes"
       );
 
-      await submitterClaimManager.makeDeposit({
+      await submitterSuperblockClaims.makeDeposit({
         value: DEPOSITS.VERIFY_SUPERBLOCK_COST,
       });
       response = await submitterBattleManager.respondMerkleRootHashes(
@@ -678,7 +678,7 @@ describe("DogeClaimManager", () => {
     });
 
     it("Timeout reply block headers", async () => {
-      await challengerClaimManager.makeDeposit({
+      await challengerSuperblockClaims.makeDeposit({
         value: DEPOSITS.RESPOND_MERKLE_COST,
       });
       let response = await challengerBattleManager.queryMerkleRootHashes(
@@ -691,7 +691,7 @@ describe("DogeClaimManager", () => {
         "Query merkle root hashes"
       );
 
-      await submitterClaimManager.makeDeposit({
+      await submitterSuperblockClaims.makeDeposit({
         value: DEPOSITS.VERIFY_SUPERBLOCK_COST,
       });
       response = await submitterBattleManager.respondMerkleRootHashes(
@@ -705,7 +705,7 @@ describe("DogeClaimManager", () => {
         "Respond merkle root hashes"
       );
 
-      await challengerClaimManager.makeDeposit({
+      await challengerSuperblockClaims.makeDeposit({
         value: DEPOSITS.RESPOND_HEADER_COST,
       });
       response = await challengerBattleManager.queryBlockHeader(
@@ -732,7 +732,7 @@ describe("DogeClaimManager", () => {
     });
 
     it("Timeout verify superblock", async () => {
-      await challengerClaimManager.makeDeposit({
+      await challengerSuperblockClaims.makeDeposit({
         value: DEPOSITS.RESPOND_MERKLE_COST,
       });
       let response = await challengerBattleManager.queryMerkleRootHashes(
@@ -745,7 +745,7 @@ describe("DogeClaimManager", () => {
         "Query merkle root hashes"
       );
 
-      await submitterClaimManager.makeDeposit({
+      await submitterSuperblockClaims.makeDeposit({
         value: DEPOSITS.VERIFY_SUPERBLOCK_COST,
       });
       response = await submitterBattleManager.respondMerkleRootHashes(
@@ -759,7 +759,7 @@ describe("DogeClaimManager", () => {
         "Respond merkle root hashes"
       );
 
-      await challengerClaimManager.makeDeposit({
+      await challengerSuperblockClaims.makeDeposit({
         value: DEPOSITS.RESPOND_HEADER_COST,
       });
       response = await challengerBattleManager.queryBlockHeader(
@@ -774,7 +774,7 @@ describe("DogeClaimManager", () => {
       );
 
       const scryptHash = `0x${calcHeaderPoW(headers[0])}`;
-      await submitterClaimManager.makeDeposit({
+      await submitterSuperblockClaims.makeDeposit({
         value: DEPOSITS.VERIFY_SUPERBLOCK_COST,
       });
       response = await submitterBattleManager.respondBlockHeader(
@@ -803,7 +803,7 @@ describe("DogeClaimManager", () => {
     });
 
     it("Verify superblock", async () => {
-      await challengerClaimManager.makeDeposit({
+      await challengerSuperblockClaims.makeDeposit({
         value: DEPOSITS.RESPOND_MERKLE_COST,
       });
       let response = await challengerBattleManager.queryMerkleRootHashes(
@@ -816,7 +816,7 @@ describe("DogeClaimManager", () => {
         "Query merkle root hashes"
       );
 
-      await submitterClaimManager.makeDeposit({
+      await submitterSuperblockClaims.makeDeposit({
         value: DEPOSITS.VERIFY_SUPERBLOCK_COST,
       });
       response = await submitterBattleManager.respondMerkleRootHashes(
@@ -830,7 +830,7 @@ describe("DogeClaimManager", () => {
         "Respond merkle root hashes"
       );
 
-      await challengerClaimManager.makeDeposit({
+      await challengerSuperblockClaims.makeDeposit({
         value: DEPOSITS.RESPOND_HEADER_COST,
       });
       response = await challengerBattleManager.queryBlockHeader(
@@ -845,7 +845,7 @@ describe("DogeClaimManager", () => {
       );
 
       let scryptHash = `0x${calcHeaderPoW(headers[0])}`;
-      await submitterClaimManager.makeDeposit({
+      await submitterSuperblockClaims.makeDeposit({
         value: DEPOSITS.VERIFY_SUPERBLOCK_COST,
       });
       response = await submitterBattleManager.respondBlockHeader(
@@ -860,7 +860,7 @@ describe("DogeClaimManager", () => {
         "Respond block header"
       );
 
-      await challengerClaimManager.makeDeposit({
+      await challengerSuperblockClaims.makeDeposit({
         value: DEPOSITS.RESPOND_HEADER_COST,
       });
       response = await challengerBattleManager.queryBlockHeader(

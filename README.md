@@ -15,7 +15,7 @@ If you are new to the Dogecoin <-> Ethereum bridge, please check the [docs](http
   - An ERC20 contract where 1 token is worth 1 Dogecoin.
   - Tokens are minted when coins are locked on the Dogecoin blockchain.
   - Tokens are destroyed when coins should go back to the Dogecoin blockchain.
-- [DogeClaimManager contract](contracts/DogeClaimManager.sol)
+- [SuperblockClaims contract](contracts/SuperblockClaims.sol)
   - Manages the interactive (challenge/response) validation of Superblocks.
   - Inspired on Truebit's Scrypt interactive [ScryptClaims](https://github.com/TrueBitFoundation/scrypt-interactive/blob/master/contracts/ScryptClaims.sol)
 - [DogeMessageLibrary](contracts/DogeParser/DogeMessageLibrary.sol)

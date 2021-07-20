@@ -18,7 +18,7 @@ export interface DogethereumCoreSystem {
   dogeMessageLibrary: DogethereumContract;
   scryptChecker: DogethereumContract;
   battleManager: DogethereumContract;
-  claimManager: DogethereumContract;
+  superblockClaims: DogethereumContract;
 }
 
 export interface DogethereumTokenSystem {
@@ -33,7 +33,7 @@ export interface DogethereumFixture {
   dogeMessageLibrary: ethers.Contract;
   scryptChecker: ethers.Contract;
   battleManager: ethers.Contract;
-  claimManager: ethers.Contract;
+  superblockClaims: ethers.Contract;
   setLibrary: ethers.Contract;
   dogeToken: ethers.Contract;
 }
@@ -52,7 +52,7 @@ interface DeploymentInfo {
     dogeMessageLibrary: ContractInfo;
     dogeToken: ContractInfo;
     scryptChecker: ContractInfo;
-    claimManager: ContractInfo;
+    superblockClaims: ContractInfo;
     battleManager: ContractInfo;
     setLibrary: ContractInfo;
   };
@@ -278,10 +278,10 @@ async function deployMainSystem(
     name: battleManagerContractName,
   };
 
-  const claimManagerContractName = "DogeClaimManager";
-  const claimManager = {
+  const superblockClaimsContractName = "SuperblockClaims";
+  const superblockClaims = {
     contract: await deployContract(
-      claimManagerContractName,
+      superblockClaimsContractName,
       [
         superblocks.contract.address,
         battleManager.contract.address,
@@ -295,13 +295,13 @@ async function deployMainSystem(
         signer: deploySigner,
       }
     ),
-    name: claimManagerContractName,
+    name: superblockClaimsContractName,
   };
 
-  await superblocks.contract.setClaimManager(claimManager.contract.address);
+  await superblocks.contract.setSuperblockClaims(superblockClaims.contract.address);
 
-  await battleManager.contract.setDogeClaimManager(
-    claimManager.contract.address
+  await battleManager.contract.setSuperblockClaims(
+    superblockClaims.contract.address
   );
   await battleManager.contract.setScryptChecker(scryptChecker.contract.address);
 
@@ -310,7 +310,7 @@ async function deployMainSystem(
     dogeMessageLibrary,
     scryptChecker,
     battleManager,
-    claimManager,
+    superblockClaims,
   };
 }
 
@@ -388,7 +388,7 @@ export async function storeDeployment(
     dogeMessageLibrary,
     dogeToken,
     scryptChecker,
-    claimManager,
+    superblockClaims,
     battleManager,
     setLibrary,
   }: DogethereumSystem,
@@ -401,7 +401,7 @@ export async function storeDeployment(
       dogeMessageLibrary: await getContractDescription(hre, dogeMessageLibrary),
       dogeToken: await getContractDescription(hre, dogeToken),
       scryptChecker: await getContractDescription(hre, scryptChecker),
-      claimManager: await getContractDescription(hre, claimManager),
+      superblockClaims: await getContractDescription(hre, superblockClaims),
       battleManager: await getContractDescription(hre, battleManager),
       setLibrary: await getContractDescription(hre, setLibrary),
     },
@@ -450,9 +450,9 @@ export async function loadDeployment(
       hre,
       deploymentInfo.contracts.scryptChecker
     ),
-    claimManager: await reifyContract(
+    superblockClaims: await reifyContract(
       hre,
-      deploymentInfo.contracts.claimManager
+      deploymentInfo.contracts.superblockClaims
     ),
     battleManager: await reifyContract(
       hre,
@@ -523,8 +523,8 @@ export async function initSuperblockChain(
       },
     }
   );
-  const claimManager = await deployContract(
-    "DogeClaimManager",
+  const superblockClaims = await deployContract(
+    "SuperblockClaims",
     [
       superblocks.address,
       battleManager.address,
@@ -559,8 +559,8 @@ export async function initSuperblockChain(
     );
   }
 
-  await superblocks.setClaimManager(claimManager.address);
-  await battleManager.setDogeClaimManager(claimManager.address);
+  await superblocks.setSuperblockClaims(superblockClaims.address);
+  await battleManager.setSuperblockClaims(superblockClaims.address);
   await battleManager.setScryptChecker(scryptChecker.address);
 
   await superblocks.initialize(
@@ -574,7 +574,7 @@ export async function initSuperblockChain(
   );
   return {
     superblocks,
-    claimManager,
+    superblockClaims,
     battleManager,
     scryptChecker,
     scryptVerifier,
@@ -595,7 +595,7 @@ export async function deployFixture(
     const dogethereum = await deployDogethereum(hre);
     dogethereumFixture = {
       superblocks: dogethereum.superblocks.contract,
-      claimManager: dogethereum.claimManager.contract,
+      superblockClaims: dogethereum.superblockClaims.contract,
       battleManager: dogethereum.battleManager.contract,
       dogeToken: dogethereum.dogeToken.contract,
       setLibrary: dogethereum.setLibrary.contract,

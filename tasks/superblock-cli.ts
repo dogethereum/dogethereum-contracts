@@ -154,19 +154,19 @@ const WAIT_UTXO_TASK = `${DOGETHEREUM_SUPERCLI}.waitUtxo`;
 
 async function challengeNextSuperblock(
   superblocks: Contract,
-  claimManager: Contract,
+  superblockClaims: Contract,
   challenger: string,
   superblockId?: string,
   deposit?: number | string
 ) {
   console.log(`Making a challenge from: ${challenger}`);
-  let balance = await claimManager.getDeposit(challenger);
+  let balance = await superblockClaims.getDeposit(challenger);
   if (balance.eq(0)) {
     deposit = deposit ?? 1000;
   }
   if (deposit !== undefined) {
-    await claimManager.makeDeposit({ value: deposit });
-    balance = await claimManager.getDeposit(challenger);
+    await superblockClaims.makeDeposit({ value: deposit });
+    balance = await superblockClaims.getDeposit(challenger);
   }
   console.log(`Deposits: ${balance.toString()}`);
 
@@ -190,7 +190,7 @@ async function challengeNextSuperblock(
     });
   };
 
-  const response: ContractTransaction = await claimManager.challengeSuperblock(
+  const response: ContractTransaction = await superblockClaims.challengeSuperblock(
     superblockId
   );
   const receipt = await response.wait();
@@ -268,11 +268,11 @@ const challengeCommand: ActionType<ChallengeTaskArguments> = async function (
 
   const deployment = await loadDeployment(hre);
   const superblocks = deployment.superblocks.contract;
-  const claimManager = deployment.claimManager.contract.connect(signer);
+  const superblockClaims = deployment.superblockClaims.contract.connect(signer);
 
   await challengeNextSuperblock(
     superblocks,
-    claimManager,
+    superblockClaims,
     signer.address,
     superblockId,
     deposit
@@ -357,12 +357,12 @@ async function displaySuperblocksStatus(
 async function getBattleStatus(
   {
     battleManager: { contract: battleManager },
-    claimManager: { contract: claimManager },
+    superblockClaims: { contract: superblockClaims },
   }: DogethereumSystem,
   superblockHash: string,
   challenger: string
 ): Promise<BattleStatus> {
-  const sessionId = await claimManager.getSession(superblockHash, challenger);
+  const sessionId = await superblockClaims.getSession(superblockHash, challenger);
   const [
     id,
     ,
@@ -409,7 +409,7 @@ function getBattles(
 }
 
 async function getClaimInfo(
-  { claimManager: { contract: claimManager } }: DogethereumSystem,
+  { superblockClaims: { contract: superblockClaims } }: DogethereumSystem,
   superblockHash: string
 ): Promise<SuperblockClaim> {
   const [
@@ -421,7 +421,7 @@ async function getClaimInfo(
     verificationOngoing,
     decided,
     invalid,
-  ] = await claimManager.claims(superblockHash);
+  ] = await superblockClaims.claims(superblockHash);
   return {
     superblockHash,
     submitter,
@@ -465,7 +465,7 @@ async function displaySuperblock(
     submitter,
     status,
   ] = await dogethereum.superblocks.contract.getSuperblock(superblockHash);
-  const challengers: string[] = await dogethereum.claimManager.contract.getClaimChallengers(
+  const challengers: string[] = await dogethereum.superblockClaims.contract.getClaimChallengers(
     superblockHash
   );
   const claim = await getClaimInfo(dogethereum, superblockHash);

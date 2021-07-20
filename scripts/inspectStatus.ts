@@ -9,7 +9,7 @@ export async function printStatus(
   deployment: DogethereumSystem
 ) {
   const superblocks = deployment.superblocks.contract;
-  const claimManager = deployment.claimManager.contract;
+  const superblockClaims = deployment.superblockClaims.contract;
   console.log("Superblocks");
   console.log("---------");
   const bestSuperblockHash = await superblocks.callStatic.getBestSuperblock();
@@ -24,7 +24,7 @@ export async function printStatus(
   console.log("lastHash: " + lastHash);
   const indexNextSuperblock = await superblocks.callStatic.getIndexNextSuperblock();
   console.log("indexNextSuperblock: " + indexNextSuperblock);
-  const newSuperblockEventTimestamp = await claimManager.callStatic.getNewSuperblockEventTimestamp(
+  const newSuperblockEventTimestamp = await superblockClaims.callStatic.getNewSuperblockEventTimestamp(
     bestSuperblockHash
   );
   console.log("newSuperblockEventTimestamp: " + newSuperblockEventTimestamp);

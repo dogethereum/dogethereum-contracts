@@ -2,7 +2,7 @@
 
 pragma solidity ^0.7.6;
 
-import {DogeClaimManager} from "./DogeClaimManager.sol";
+import {SuperblockClaims} from "./SuperblockClaims.sol";
 import {DogeErrorCodes} from "./DogeErrorCodes.sol";
 import {DogeSuperblocks} from "./DogeSuperblocks.sol";
 import {DogeMessageLibrary} from "./DogeParser/DogeMessageLibrary.sol";
@@ -132,7 +132,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
     IScryptChecker public trustedScryptChecker;
 
     // Doge claim manager
-    DogeClaimManager trustedDogeClaimManager;
+    SuperblockClaims trustedSuperblockClaims;
 
     // Superblocks contract
     DogeSuperblocks trustedSuperblocks;
@@ -188,24 +188,24 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
         superblockTimeout = _superblockTimeout;
     }
 
-    // @dev - sets ScryptChecker instance associated with this DogeClaimManager contract.
+    // @dev - sets ScryptChecker instance associated with this SuperblockClaims contract.
     // Once trustedScryptChecker has been set, it cannot be changed.
     // An address of 0x0 means trustedScryptChecker hasn't been set yet.
     //
-    // @param _scryptChecker - address of the ScryptChecker contract to be associated with DogeClaimManager
+    // @param _scryptChecker - address of the ScryptChecker contract to be associated with SuperblockClaims
     function setScryptChecker(IScryptChecker _scryptChecker) public {
         require(address(trustedScryptChecker) == address(0x0) && address(_scryptChecker) != address(0x0));
         trustedScryptChecker = _scryptChecker;
     }
 
-    function setDogeClaimManager(DogeClaimManager _dogeClaimManager) public {
-        require(address(trustedDogeClaimManager) == address(0x0) && address(_dogeClaimManager) != address(0x0));
-        trustedDogeClaimManager = _dogeClaimManager;
+    function setSuperblockClaims(SuperblockClaims _superblockClaims) public {
+        require(address(trustedSuperblockClaims) == address(0x0) && address(_superblockClaims) != address(0x0));
+        trustedSuperblockClaims = _superblockClaims;
     }
 
     // @dev - Start a battle session
     function beginBattleSession(bytes32 superblockHash, address submitter, address challenger)
-    public onlyFrom(address(trustedDogeClaimManager)) returns (bytes32) {
+    public onlyFrom(address(trustedSuperblockClaims)) returns (bytes32) {
         bytes32 sessionId = keccak256(abi.encode(superblockHash, msg.sender, sessionsCount));
         BattleSession storage session = sessions[sessionId];
         session.id = sessionId;
@@ -827,7 +827,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
 
     // @dev - To be called when a battle sessions  was decided
     function sessionDecided(bytes32 sessionId, bytes32 superblockHash, address winner, address loser) internal {
-        trustedDogeClaimManager.sessionDecided(sessionId, superblockHash, winner, loser);
+        trustedSuperblockClaims.sessionDecided(sessionId, superblockHash, winner, loser);
     }
 
     // @dev - Retrieve superblock information
@@ -847,11 +847,11 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
 
     // @dev - Verify whether a user has a certain amount of deposits or more
     function hasDeposit(address who, uint amount) internal view returns (bool) {
-        return trustedDogeClaimManager.getDeposit(who) >= amount;
+        return trustedSuperblockClaims.getDeposit(who) >= amount;
     }
 
     // @dev – locks up part of a user's deposit into a claim.
     function bondDeposit(bytes32 superblockHash, address account, uint amount) internal returns (uint, uint) {
-        return trustedDogeClaimManager.bondDeposit(superblockHash, account, amount);
+        return trustedSuperblockClaims.bondDeposit(superblockHash, account, amount);
     }
 }

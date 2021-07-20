@@ -25,8 +25,8 @@ describe("validateSuperblocks", function () {
   let challenger: SignerWithAddress;
 
   let superblocks: Contract;
-  let submitterClaimManager: Contract;
-  let challengerClaimManager: Contract;
+  let submitterSuperblockClaims: Contract;
+  let challengerSuperblockClaims: Contract;
   let submitterBattleManager: Contract;
   let challengerBattleManager: Contract;
 
@@ -83,26 +83,26 @@ describe("validateSuperblocks", function () {
       const genesisSuperblockHash = genesisSuperblock.superblockHash;
       assert.equal(genesisSuperblockHash, best, "Best superblock should match");
 
-      submitterClaimManager = superBlockchain.claimManager.connect(submitter);
-      challengerClaimManager = superBlockchain.claimManager.connect(challenger);
+      submitterSuperblockClaims = superBlockchain.superblockClaims.connect(submitter);
+      challengerSuperblockClaims = superBlockchain.superblockClaims.connect(challenger);
       submitterBattleManager = superBlockchain.battleManager.connect(submitter);
       challengerBattleManager = superBlockchain.battleManager.connect(
         challenger
       );
 
-      await submitterClaimManager.makeDeposit({
+      await submitterSuperblockClaims.makeDeposit({
         value: DEPOSITS.MIN_PROPOSAL_DEPOSIT,
       });
-      await challengerClaimManager.makeDeposit({
+      await challengerSuperblockClaims.makeDeposit({
         value: DEPOSITS.MIN_CHALLENGE_DEPOSIT,
       });
     });
 
     it("Confirm superblock with one header", async () => {
-      await submitterClaimManager.makeDeposit({
+      await submitterSuperblockClaims.makeDeposit({
         value: DEPOSITS.MIN_PROPOSAL_DEPOSIT,
       });
-      let result = await submitterClaimManager.proposeSuperblock(
+      let result = await submitterSuperblockClaims.proposeSuperblock(
         proposedSuperblock.merkleRoot,
         proposedSuperblock.accumulatedWork,
         proposedSuperblock.timestamp,
@@ -122,10 +122,10 @@ describe("validateSuperblocks", function () {
         .superblockHash;
 
       const claim1 = proposesSuperblockHash;
-      await challengerClaimManager.makeDeposit({
+      await challengerSuperblockClaims.makeDeposit({
         value: DEPOSITS.MIN_CHALLENGE_DEPOSIT,
       });
-      result = await challengerClaimManager.challengeSuperblock(
+      result = await challengerSuperblockClaims.challengeSuperblock(
         proposesSuperblockHash
       );
       receipt = await result.wait();
@@ -146,7 +146,7 @@ describe("validateSuperblocks", function () {
       assert.ok(verificationGameStartedEvent, "Battle started");
 
       battleSessionId = verificationGameStartedEvent!.args!.sessionId;
-      await challengerClaimManager.makeDeposit({
+      await challengerSuperblockClaims.makeDeposit({
         value: DEPOSITS.RESPOND_MERKLE_COST,
       });
       result = await challengerBattleManager.queryMerkleRootHashes(
@@ -159,7 +159,7 @@ describe("validateSuperblocks", function () {
         "Query merkle root hashes"
       );
 
-      await submitterClaimManager.makeDeposit({
+      await submitterSuperblockClaims.makeDeposit({
         value: DEPOSITS.VERIFY_SUPERBLOCK_COST,
       });
       result = await submitterBattleManager.respondMerkleRootHashes(
@@ -173,7 +173,7 @@ describe("validateSuperblocks", function () {
         "Respond merkle root hashes"
       );
 
-      await challengerClaimManager.makeDeposit({
+      await challengerSuperblockClaims.makeDeposit({
         value: DEPOSITS.RESPOND_HEADER_COST,
       });
       result = await challengerBattleManager.queryBlockHeader(
@@ -188,7 +188,7 @@ describe("validateSuperblocks", function () {
       );
 
       const scryptHash = `0x${calcHeaderPoW(headers[0])}`;
-      await submitterClaimManager.makeDeposit({
+      await submitterSuperblockClaims.makeDeposit({
         value: DEPOSITS.VERIFY_SUPERBLOCK_COST,
       });
       result = await submitterBattleManager.respondBlockHeader(
@@ -213,7 +213,7 @@ describe("validateSuperblocks", function () {
 
       // Confirm superblock
       await blockchainTimeoutSeconds(2 * SUPERBLOCK_OPTIONS_LOCAL.timeout);
-      result = await submitterClaimManager.checkClaimFinished(
+      result = await submitterSuperblockClaims.checkClaimFinished(
         proposesSuperblockHash
       );
       receipt = await result.wait();
@@ -224,7 +224,7 @@ describe("validateSuperblocks", function () {
     });
 
     it("Reject invalid block bits", async () => {
-      let result = await submitterClaimManager.proposeSuperblock(
+      let result = await submitterSuperblockClaims.proposeSuperblock(
         proposedSuperblock.merkleRoot,
         proposedSuperblock.accumulatedWork,
         proposedSuperblock.timestamp,
@@ -244,10 +244,10 @@ describe("validateSuperblocks", function () {
         .superblockHash;
       const claim1 = proposesSuperblockHash;
 
-      await challengerClaimManager.makeDeposit({
+      await challengerSuperblockClaims.makeDeposit({
         value: DEPOSITS.MIN_CHALLENGE_DEPOSIT,
       });
-      result = await challengerClaimManager.challengeSuperblock(
+      result = await challengerSuperblockClaims.challengeSuperblock(
         proposesSuperblockHash
       );
       receipt = await result.wait();
@@ -268,7 +268,7 @@ describe("validateSuperblocks", function () {
       assert.ok(verificationGameStartedEvent, "Battle started");
 
       battleSessionId = verificationGameStartedEvent!.args!.sessionId;
-      await challengerClaimManager.makeDeposit({
+      await challengerSuperblockClaims.makeDeposit({
         value: DEPOSITS.RESPOND_MERKLE_COST,
       });
       result = await challengerBattleManager.queryMerkleRootHashes(
@@ -281,7 +281,7 @@ describe("validateSuperblocks", function () {
         "Query merkle root hashes"
       );
 
-      await submitterClaimManager.makeDeposit({
+      await submitterSuperblockClaims.makeDeposit({
         value: DEPOSITS.VERIFY_SUPERBLOCK_COST,
       });
       result = await submitterBattleManager.respondMerkleRootHashes(
@@ -295,7 +295,7 @@ describe("validateSuperblocks", function () {
         "Respond merkle root hashes"
       );
 
-      await challengerClaimManager.makeDeposit({
+      await challengerSuperblockClaims.makeDeposit({
         value: DEPOSITS.RESPOND_HEADER_COST,
       });
       result = await challengerBattleManager.queryBlockHeader(
@@ -310,7 +310,7 @@ describe("validateSuperblocks", function () {
       );
 
       const scryptHash = `0x${calcHeaderPoW(headers[0])}`;
-      await submitterClaimManager.makeDeposit({
+      await submitterSuperblockClaims.makeDeposit({
         value: DEPOSITS.VERIFY_SUPERBLOCK_COST,
       });
       result = await submitterBattleManager.respondBlockHeader(
@@ -338,7 +338,7 @@ describe("validateSuperblocks", function () {
 
       // Confirm superblock
       await blockchainTimeoutSeconds(2 * SUPERBLOCK_OPTIONS_LOCAL.timeout);
-      result = await challengerClaimManager.checkClaimFinished(
+      result = await challengerSuperblockClaims.checkClaimFinished(
         proposesSuperblockHash
       );
       receipt = await result.wait();
@@ -349,7 +349,7 @@ describe("validateSuperblocks", function () {
     });
 
     it("Reject invalid prev timestamp", async () => {
-      let result = await submitterClaimManager.proposeSuperblock(
+      let result = await submitterSuperblockClaims.proposeSuperblock(
         proposedSuperblock.merkleRoot,
         proposedSuperblock.accumulatedWork,
         proposedSuperblock.timestamp,
@@ -369,10 +369,10 @@ describe("validateSuperblocks", function () {
       proposesSuperblockHash = superblockClaimCreatedEvent!.args!
         .superblockHash;
       const claim1 = proposesSuperblockHash;
-      await challengerClaimManager.makeDeposit({
+      await challengerSuperblockClaims.makeDeposit({
         value: DEPOSITS.MIN_CHALLENGE_DEPOSIT,
       });
-      result = await challengerClaimManager.challengeSuperblock(
+      result = await challengerSuperblockClaims.challengeSuperblock(
         proposesSuperblockHash
       );
       receipt = await result.wait();
@@ -392,7 +392,7 @@ describe("validateSuperblocks", function () {
       assert.ok(verificationGameStartedEvent, "Battle started");
 
       battleSessionId = verificationGameStartedEvent!.args!.sessionId;
-      await challengerClaimManager.makeDeposit({
+      await challengerSuperblockClaims.makeDeposit({
         value: DEPOSITS.RESPOND_MERKLE_COST,
       });
       result = await challengerBattleManager.queryMerkleRootHashes(
@@ -405,7 +405,7 @@ describe("validateSuperblocks", function () {
         "Query merkle root hashes"
       );
 
-      await submitterClaimManager.makeDeposit({
+      await submitterSuperblockClaims.makeDeposit({
         value: DEPOSITS.VERIFY_SUPERBLOCK_COST,
       });
       result = await submitterBattleManager.respondMerkleRootHashes(
@@ -419,7 +419,7 @@ describe("validateSuperblocks", function () {
         "Respond merkle root hashes"
       );
 
-      await challengerClaimManager.makeDeposit({
+      await challengerSuperblockClaims.makeDeposit({
         value: DEPOSITS.RESPOND_HEADER_COST,
       });
       result = await challengerBattleManager.queryBlockHeader(
@@ -434,7 +434,7 @@ describe("validateSuperblocks", function () {
       );
 
       const scryptHash = `0x${calcHeaderPoW(headers[0])}`;
-      await submitterClaimManager.makeDeposit({
+      await submitterSuperblockClaims.makeDeposit({
         value: DEPOSITS.VERIFY_SUPERBLOCK_COST,
       });
       result = await submitterBattleManager.respondBlockHeader(
@@ -462,7 +462,7 @@ describe("validateSuperblocks", function () {
 
       // Confirm superblock
       await blockchainTimeoutSeconds(2 * SUPERBLOCK_OPTIONS_LOCAL.timeout);
-      result = await challengerClaimManager.checkClaimFinished(
+      result = await challengerSuperblockClaims.checkClaimFinished(
         proposesSuperblockHash
       );
       receipt = await result.wait();
@@ -473,7 +473,7 @@ describe("validateSuperblocks", function () {
     });
 
     it("Reject invalid timestamp", async () => {
-      let result = await submitterClaimManager.proposeSuperblock(
+      let result = await submitterSuperblockClaims.proposeSuperblock(
         proposedSuperblock.merkleRoot,
         proposedSuperblock.accumulatedWork,
         proposedSuperblock.timestamp + 1,
@@ -493,7 +493,7 @@ describe("validateSuperblocks", function () {
       proposesSuperblockHash = superblockClaimCreatedEvent!.args!
         .superblockHash;
       const claim1 = proposesSuperblockHash;
-      result = await challengerClaimManager.challengeSuperblock(
+      result = await challengerSuperblockClaims.challengeSuperblock(
         proposesSuperblockHash
       );
       receipt = await result.wait();
@@ -514,7 +514,7 @@ describe("validateSuperblocks", function () {
       assert.ok(verificationGameStartedEvent, "Battle started");
 
       battleSessionId = verificationGameStartedEvent!.args!.sessionId;
-      await challengerClaimManager.makeDeposit({
+      await challengerSuperblockClaims.makeDeposit({
         value: DEPOSITS.RESPOND_MERKLE_COST,
       });
       result = await challengerBattleManager.queryMerkleRootHashes(
@@ -527,7 +527,7 @@ describe("validateSuperblocks", function () {
         "Query merkle root hashes"
       );
 
-      await submitterClaimManager.makeDeposit({
+      await submitterSuperblockClaims.makeDeposit({
         value: DEPOSITS.VERIFY_SUPERBLOCK_COST,
       });
       result = await submitterBattleManager.respondMerkleRootHashes(
@@ -541,7 +541,7 @@ describe("validateSuperblocks", function () {
         "Respond merkle root hashes"
       );
 
-      await challengerClaimManager.makeDeposit({
+      await challengerSuperblockClaims.makeDeposit({
         value: DEPOSITS.RESPOND_HEADER_COST,
       });
       result = await challengerBattleManager.queryBlockHeader(
@@ -556,7 +556,7 @@ describe("validateSuperblocks", function () {
       );
 
       const scryptHash = `0x${calcHeaderPoW(headers[0])}`;
-      await submitterClaimManager.makeDeposit({
+      await submitterSuperblockClaims.makeDeposit({
         value: DEPOSITS.VERIFY_SUPERBLOCK_COST,
       });
       result = await submitterBattleManager.respondBlockHeader(
@@ -584,7 +584,7 @@ describe("validateSuperblocks", function () {
 
       // Confirm superblock
       await blockchainTimeoutSeconds(2 * SUPERBLOCK_OPTIONS_LOCAL.timeout);
-      result = await challengerClaimManager.checkClaimFinished(
+      result = await challengerSuperblockClaims.checkClaimFinished(
         proposesSuperblockHash
       );
       receipt = await result.wait();
@@ -595,7 +595,7 @@ describe("validateSuperblocks", function () {
     });
 
     it("Reject invalid last hash", async () => {
-      let result = await submitterClaimManager.proposeSuperblock(
+      let result = await submitterSuperblockClaims.proposeSuperblock(
         proposedSuperblock.merkleRoot,
         proposedSuperblock.accumulatedWork,
         proposedSuperblock.timestamp + 1,
@@ -614,10 +614,10 @@ describe("validateSuperblocks", function () {
 
       proposesSuperblockHash = superblockClaimCreatedEvent!.args!
         .superblockHash;
-      await challengerClaimManager.makeDeposit({
+      await challengerSuperblockClaims.makeDeposit({
         value: DEPOSITS.MIN_CHALLENGE_DEPOSIT,
       });
-      result = await challengerClaimManager.challengeSuperblock(
+      result = await challengerSuperblockClaims.challengeSuperblock(
         proposesSuperblockHash
       );
       receipt = await result.wait();
@@ -638,7 +638,7 @@ describe("validateSuperblocks", function () {
       assert.ok(verificationGameStartedEvent, "Battle started");
 
       battleSessionId = verificationGameStartedEvent!.args!.sessionId;
-      await challengerClaimManager.makeDeposit({
+      await challengerSuperblockClaims.makeDeposit({
         value: DEPOSITS.RESPOND_MERKLE_COST,
       });
       result = await challengerBattleManager.queryMerkleRootHashes(
@@ -651,7 +651,7 @@ describe("validateSuperblocks", function () {
         "Query merkle root hashes"
       );
 
-      await submitterClaimManager.makeDeposit({
+      await submitterSuperblockClaims.makeDeposit({
         value: DEPOSITS.VERIFY_SUPERBLOCK_COST,
       });
       result = await submitterBattleManager.respondMerkleRootHashes(
@@ -672,7 +672,7 @@ describe("validateSuperblocks", function () {
         "Submitter failed"
       );
 
-      result = await challengerClaimManager.checkClaimFinished(
+      result = await challengerSuperblockClaims.checkClaimFinished(
         proposesSuperblockHash
       );
       receipt = await result.wait();

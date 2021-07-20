@@ -69,8 +69,8 @@ describe("approveDescendant", function () {
         20
     );
 
-    let submitterClaimManager: Contract;
-    let challengerClaimManager: Contract;
+    let submitterSuperblockClaims: Contract;
+    let challengerSuperblockClaims: Contract;
     let submitterBattleManager: Contract;
     let challengerBattleManager: Contract;
 
@@ -99,8 +99,8 @@ describe("approveDescendant", function () {
 
         // Set a read only provider to allow the use of any signer.
         // We need to do this to easily alternate between the submitter and the challenger
-        submitterClaimManager = superBlockchain.claimManager.connect(submitter);
-        challengerClaimManager = superBlockchain.claimManager.connect(
+        submitterSuperblockClaims = superBlockchain.superblockClaims.connect(submitter);
+        challengerSuperblockClaims = superBlockchain.superblockClaims.connect(
             challenger
         );
         submitterBattleManager = superBlockchain.battleManager.connect(
@@ -111,10 +111,10 @@ describe("approveDescendant", function () {
         );
 
         //FIXME: ganache-cli creates the same transaction hash if two accounts send the same amount
-        await submitterClaimManager.makeDeposit({
+        await submitterSuperblockClaims.makeDeposit({
             value: DEPOSITS.MIN_PROPOSAL_DEPOSIT,
         });
-        await challengerClaimManager.makeDeposit({
+        await challengerSuperblockClaims.makeDeposit({
             value: DEPOSITS.MIN_CHALLENGE_DEPOSIT * 2,
         });
     }
@@ -137,7 +137,7 @@ describe("approveDescendant", function () {
 
         // Propose initial superblock
         it("Propose superblock 1", async () => {
-            const response = await submitterClaimManager.proposeSuperblock(
+            const response = await submitterSuperblockClaims.proposeSuperblock(
                 superblock1.merkleRoot,
                 superblock1.accumulatedWork,
                 superblock1.timestamp,
@@ -156,7 +156,7 @@ describe("approveDescendant", function () {
         });
 
         it("Challenge superblock 1", async () => {
-            const response = await challengerClaimManager.challengeSuperblock(
+            const response = await challengerSuperblockClaims.challengeSuperblock(
                 superblock1Id
             );
             const result = await response.wait();
@@ -178,7 +178,7 @@ describe("approveDescendant", function () {
         });
 
         it("Query and verify hashes", async () => {
-            await challengerClaimManager.makeDeposit({
+            await challengerSuperblockClaims.makeDeposit({
                 value: DEPOSITS.RESPOND_MERKLE_COST,
             });
             let response = await challengerBattleManager.queryMerkleRootHashes(
@@ -191,7 +191,7 @@ describe("approveDescendant", function () {
                 "Query merkle root hashes"
             );
 
-            await submitterClaimManager.makeDeposit({
+            await submitterSuperblockClaims.makeDeposit({
                 value: DEPOSITS.VERIFY_SUPERBLOCK_COST,
             });
             response = await submitterBattleManager.respondMerkleRootHashes(
@@ -208,7 +208,7 @@ describe("approveDescendant", function () {
 
         it("Query and reply block header", async () => {
             let scryptHash: string;
-            await challengerClaimManager.makeDeposit({
+            await challengerSuperblockClaims.makeDeposit({
                 value: DEPOSITS.RESPOND_HEADER_COST,
             });
             let response = await challengerBattleManager.queryBlockHeader(
@@ -223,7 +223,7 @@ describe("approveDescendant", function () {
             );
 
             scryptHash = `0x${calcHeaderPoW(superblock1Headers[0])}`;
-            await submitterClaimManager.makeDeposit({
+            await submitterSuperblockClaims.makeDeposit({
                 value: DEPOSITS.VERIFY_SUPERBLOCK_COST,
             });
             response = await submitterBattleManager.respondBlockHeader(
@@ -238,7 +238,7 @@ describe("approveDescendant", function () {
                 "Respond block header"
             );
 
-            await challengerClaimManager.makeDeposit({
+            await challengerSuperblockClaims.makeDeposit({
                 value: DEPOSITS.RESPOND_HEADER_COST,
             });
             response = await challengerBattleManager.queryBlockHeader(
@@ -253,7 +253,7 @@ describe("approveDescendant", function () {
             );
 
             scryptHash = `0x${calcHeaderPoW(superblock1Headers[1])}`;
-            await submitterClaimManager.makeDeposit({
+            await submitterSuperblockClaims.makeDeposit({
                 value: DEPOSITS.VERIFY_SUPERBLOCK_COST,
             });
             response = await submitterBattleManager.respondBlockHeader(
@@ -268,7 +268,7 @@ describe("approveDescendant", function () {
                 "Respond block header"
             );
 
-            await challengerClaimManager.makeDeposit({
+            await challengerSuperblockClaims.makeDeposit({
                 value: DEPOSITS.RESPOND_HEADER_COST,
             });
             response = await challengerBattleManager.queryBlockHeader(
@@ -283,7 +283,7 @@ describe("approveDescendant", function () {
             );
 
             scryptHash = `0x${calcHeaderPoW(superblock1Headers[2])}`;
-            await submitterClaimManager.makeDeposit({
+            await submitterSuperblockClaims.makeDeposit({
                 value: DEPOSITS.VERIFY_SUPERBLOCK_COST,
             });
             response = await submitterBattleManager.respondBlockHeader(
@@ -314,7 +314,7 @@ describe("approveDescendant", function () {
             await blockchainTimeoutSeconds(
                 2 * SUPERBLOCK_OPTIONS_LOCAL.timeout
             );
-            const response = await challengerClaimManager.checkClaimFinished(
+            const response = await challengerSuperblockClaims.checkClaimFinished(
                 superblock1Id
             );
             const result = await response.wait();
@@ -331,7 +331,7 @@ describe("approveDescendant", function () {
         });
 
         it("Propose superblock 2", async () => {
-            const response = await submitterClaimManager.proposeSuperblock(
+            const response = await submitterSuperblockClaims.proposeSuperblock(
                 superblock2.merkleRoot,
                 superblock2.accumulatedWork,
                 superblock2.timestamp,
@@ -353,7 +353,7 @@ describe("approveDescendant", function () {
             await blockchainTimeoutSeconds(
                 2 * SUPERBLOCK_OPTIONS_LOCAL.timeout
             );
-            const response = await challengerClaimManager.checkClaimFinished(
+            const response = await challengerSuperblockClaims.checkClaimFinished(
                 superblock2Id
             );
             const result = await response.wait();
@@ -370,7 +370,7 @@ describe("approveDescendant", function () {
         });
 
         it("Missing confirmations", async () => {
-            const response = await submitterClaimManager.confirmClaim(
+            const response = await submitterSuperblockClaims.confirmClaim(
                 superblock1Id,
                 superblock2Id
             );
@@ -382,7 +382,7 @@ describe("approveDescendant", function () {
         });
 
         it("Propose superblock 3", async () => {
-            const response = await submitterClaimManager.proposeSuperblock(
+            const response = await submitterSuperblockClaims.proposeSuperblock(
                 superblock3.merkleRoot,
                 superblock3.accumulatedWork,
                 superblock3.timestamp,
@@ -404,7 +404,7 @@ describe("approveDescendant", function () {
             await blockchainTimeoutSeconds(
                 2 * SUPERBLOCK_OPTIONS_LOCAL.timeout
             );
-            const response = await challengerClaimManager.checkClaimFinished(
+            const response = await challengerSuperblockClaims.checkClaimFinished(
                 superblock3Id
             );
             const result = await response.wait();
@@ -421,7 +421,7 @@ describe("approveDescendant", function () {
         });
 
         it("Approve both superblocks", async () => {
-            const response: ContractTransaction = await submitterClaimManager.confirmClaim(
+            const response: ContractTransaction = await submitterSuperblockClaims.confirmClaim(
                 superblock1Id,
                 superblock3Id
             );
@@ -473,7 +473,7 @@ describe("approveDescendant", function () {
 
         // Propose initial superblock
         it("Propose superblock 1", async () => {
-            const response = await submitterClaimManager.proposeSuperblock(
+            const response = await submitterSuperblockClaims.proposeSuperblock(
                 superblock1.merkleRoot,
                 superblock1.accumulatedWork,
                 superblock1.timestamp,
@@ -492,7 +492,7 @@ describe("approveDescendant", function () {
         });
 
         it("Challenge superblock 1", async () => {
-            const response = await challengerClaimManager.challengeSuperblock(
+            const response = await challengerSuperblockClaims.challengeSuperblock(
                 superblock1Id
             );
             const result = await response.wait();
@@ -514,7 +514,7 @@ describe("approveDescendant", function () {
         });
 
         it("Query and verify hashes", async () => {
-            await challengerClaimManager.makeDeposit({
+            await challengerSuperblockClaims.makeDeposit({
                 value: DEPOSITS.RESPOND_MERKLE_COST,
             });
             let response = await challengerBattleManager.queryMerkleRootHashes(
@@ -527,7 +527,7 @@ describe("approveDescendant", function () {
                 "Query merkle root hashes"
             );
 
-            await submitterClaimManager.makeDeposit({
+            await submitterSuperblockClaims.makeDeposit({
                 value: DEPOSITS.VERIFY_SUPERBLOCK_COST,
             });
             response = await submitterBattleManager.respondMerkleRootHashes(
@@ -544,7 +544,7 @@ describe("approveDescendant", function () {
 
         it("Query and reply block header", async () => {
             let scryptHash;
-            await challengerClaimManager.makeDeposit({
+            await challengerSuperblockClaims.makeDeposit({
                 value: DEPOSITS.RESPOND_HEADER_COST,
             });
             let response = await challengerBattleManager.queryBlockHeader(
@@ -559,7 +559,7 @@ describe("approveDescendant", function () {
             );
 
             scryptHash = `0x${calcHeaderPoW(superblock1Headers[0])}`;
-            await submitterClaimManager.makeDeposit({
+            await submitterSuperblockClaims.makeDeposit({
                 value: DEPOSITS.VERIFY_SUPERBLOCK_COST,
             });
             response = await submitterBattleManager.respondBlockHeader(
@@ -574,7 +574,7 @@ describe("approveDescendant", function () {
                 "Respond block header"
             );
 
-            await challengerClaimManager.makeDeposit({
+            await challengerSuperblockClaims.makeDeposit({
                 value: DEPOSITS.RESPOND_HEADER_COST,
             });
             response = await challengerBattleManager.queryBlockHeader(
@@ -589,7 +589,7 @@ describe("approveDescendant", function () {
             );
 
             scryptHash = `0x${calcHeaderPoW(superblock1Headers[1])}`;
-            await submitterClaimManager.makeDeposit({
+            await submitterSuperblockClaims.makeDeposit({
                 value: DEPOSITS.VERIFY_SUPERBLOCK_COST,
             });
             response = await submitterBattleManager.respondBlockHeader(
@@ -604,7 +604,7 @@ describe("approveDescendant", function () {
                 "Respond block header"
             );
 
-            await challengerClaimManager.makeDeposit({
+            await challengerSuperblockClaims.makeDeposit({
                 value: DEPOSITS.RESPOND_HEADER_COST,
             });
             response = await challengerBattleManager.queryBlockHeader(
@@ -619,7 +619,7 @@ describe("approveDescendant", function () {
             );
 
             scryptHash = `0x${calcHeaderPoW(superblock1Headers[2])}`;
-            await submitterClaimManager.makeDeposit({
+            await submitterSuperblockClaims.makeDeposit({
                 value: DEPOSITS.VERIFY_SUPERBLOCK_COST,
             });
             response = await submitterBattleManager.respondBlockHeader(
@@ -650,7 +650,7 @@ describe("approveDescendant", function () {
             await blockchainTimeoutSeconds(
                 2 * SUPERBLOCK_OPTIONS_LOCAL.timeout
             );
-            const response = await challengerClaimManager.checkClaimFinished(
+            const response = await challengerSuperblockClaims.checkClaimFinished(
                 superblock1Id
             );
             const result = await response.wait();
@@ -667,7 +667,7 @@ describe("approveDescendant", function () {
         });
 
         it("Propose superblock 2", async () => {
-            const response = await submitterClaimManager.proposeSuperblock(
+            const response = await submitterSuperblockClaims.proposeSuperblock(
                 superblock2.merkleRoot,
                 superblock2.accumulatedWork,
                 superblock2.timestamp,
@@ -686,7 +686,7 @@ describe("approveDescendant", function () {
         });
 
         it("Challenge superblock 2", async () => {
-            const response = await challengerClaimManager.challengeSuperblock(
+            const response = await challengerSuperblockClaims.challengeSuperblock(
                 superblock2Id
             );
             const result = await response.wait();
@@ -708,7 +708,7 @@ describe("approveDescendant", function () {
         });
 
         it("Query and verify hashes", async () => {
-            await challengerClaimManager.makeDeposit({
+            await challengerSuperblockClaims.makeDeposit({
                 value: DEPOSITS.RESPOND_MERKLE_COST,
             });
             let response = await challengerBattleManager.queryMerkleRootHashes(
@@ -721,7 +721,7 @@ describe("approveDescendant", function () {
                 "Query merkle root hashes"
             );
 
-            await submitterClaimManager.makeDeposit({
+            await submitterSuperblockClaims.makeDeposit({
                 value: DEPOSITS.VERIFY_SUPERBLOCK_COST,
             });
             response = await submitterBattleManager.respondMerkleRootHashes(
@@ -821,7 +821,7 @@ describe("approveDescendant", function () {
             await blockchainTimeoutSeconds(
                 3 * SUPERBLOCK_OPTIONS_LOCAL.timeout
             );
-            const response = await challengerClaimManager.checkClaimFinished(
+            const response = await challengerSuperblockClaims.checkClaimFinished(
                 superblock2Id
             );
             const result = await response.wait();
@@ -838,7 +838,7 @@ describe("approveDescendant", function () {
         });
 
         it("Propose superblock 3", async () => {
-            const response = await submitterClaimManager.proposeSuperblock(
+            const response = await submitterSuperblockClaims.proposeSuperblock(
                 superblock3.merkleRoot,
                 superblock3.accumulatedWork,
                 superblock3.timestamp,
@@ -860,7 +860,7 @@ describe("approveDescendant", function () {
             await blockchainTimeoutSeconds(
                 2 * SUPERBLOCK_OPTIONS_LOCAL.timeout
             );
-            const response = await challengerClaimManager.checkClaimFinished(
+            const response = await challengerSuperblockClaims.checkClaimFinished(
                 superblock3Id
             );
             const result = await response.wait();
@@ -877,7 +877,7 @@ describe("approveDescendant", function () {
         });
 
         it("Do not approve descendants because one of them was challenged", async () => {
-            const response = await submitterClaimManager.confirmClaim(
+            const response = await submitterSuperblockClaims.confirmClaim(
                 superblock1Id,
                 superblock3Id
             );

@@ -15,7 +15,7 @@ let input = {
     'ScryptCheckerDummy.sol' : fs.readFileSync('./contracts/ScryptCheckerDummy.sol', 'utf8'),
     'TransactionProcessor.sol' : fs.readFileSync('./contracts/TransactionProcessor.sol', 'utf8'),
     'DogeBattleManager.sol' : fs.readFileSync('./contracts/DogeBattleManager.sol', 'utf8'),
-    'DogeClaimManager.sol' : fs.readFileSync('./contracts/DogeClaimManager.sol', 'utf8'),
+    'SuperblockClaims.sol' : fs.readFileSync('./contracts/SuperblockClaims.sol', 'utf8'),
     'DogeDepositsManager.sol' : fs.readFileSync('./contracts/DogeDepositsManager.sol', 'utf8'),
     'DogeErrorCodes.sol' : fs.readFileSync('./contracts/DogeErrorCodes.sol', 'utf8'),
     'DogeSuperblocks.sol' : fs.readFileSync('./contracts/DogeSuperblocks.sol', 'utf8'),
@@ -29,7 +29,7 @@ let input = {
         fs.readFileSync('./node_modules/openzeppelin-solidity/contracts/math/SafeMath.sol', 'utf8')
 };
 
-let dogeClaimManagerDeploymentInfo = {
+let superblockClaimsDeploymentInfo = {
     dependencies: {},
     deploymentGasLimit: "80000000"
 };
@@ -45,7 +45,7 @@ let contractDeploymentInfo = {
         deploymentGasLimit: "80000000"
     },
 
-    'DogeClaimManager.sol:DogeClaimManager' : dogeClaimManagerDeploymentInfo,
+    'SuperblockClaims.sol:SuperblockClaims' : superblockClaimsDeploymentInfo,
     
     'DogeSuperblocks.sol:DogeSuperblocks' : dogeSuperblocksDeploymentInfo,
     
@@ -231,7 +231,7 @@ async function measureBatchFunctionGas(compiledContracts, contractInfo) {
 }
 
 let dogeSuperblocksFunctions = {
-    "setClaimManager" : {
+    "setSuperblockClaims" : {
         args: ["0x1"],
         callGas: "1000000000"
     },
@@ -242,7 +242,7 @@ let dogeSuperblocksFunctions = {
     }
 }
 
-let dogeClaimManagerFunctions = {
+let superblockClaimsFunctions = {
     "getClaimSubmitter" : {
         args: ["0xc48beef32273a1cf1be0df0db9cea15cf798faecbe548574b07ceeb24f4e4293"],
         callGas: "1000000"
@@ -260,9 +260,9 @@ let contractInfo = {
         functions: dogeSuperblocksFunctions
     },
 
-    "DogeClaimManager.sol:DogeClaimManager" : {
-        deploymentInfo: dogeClaimManagerDeploymentInfo,
-        functions: dogeClaimManagerFunctions
+    "SuperblockClaims.sol:SuperblockClaims" : {
+        deploymentInfo: superblockClaimsDeploymentInfo,
+        functions: superblockClaimsFunctions
     }
 };
 
@@ -285,7 +285,7 @@ async function main() {
     //     compiledContracts,
     //     "DogeSuperblocks.sol:DogeSuperblocks",
     //     {'DogeParser/DogeMessageLibrary.sol:DogeMessageLibrary': '0x0'},
-    //     "setClaimManager",
+    //     "setSuperblockClaims",
     //     ["0x1"],
     //     "1000000000"
     // );

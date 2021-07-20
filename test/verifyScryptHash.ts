@@ -35,8 +35,8 @@ describe("verifyScryptHash", function () {
   let challenger: SignerWithAddress;
 
   let superblocks: Contract;
-  let submitterClaimManager: Contract;
-  let challengerClaimManager: Contract;
+  let submitterSuperblockClaims: Contract;
+  let challengerSuperblockClaims: Contract;
   let submitterBattleManager: Contract;
   let challengerBattleManager: Contract;
   let submitterScryptVerifier: Contract;
@@ -80,8 +80,8 @@ describe("verifyScryptHash", function () {
     const genesisSuperblockHash = genesisSuperblock.superblockHash;
     assert.equal(genesisSuperblockHash, best, "Best superblock should match");
 
-    submitterClaimManager = superBlockchain.claimManager.connect(submitter);
-    challengerClaimManager = superBlockchain.claimManager.connect(challenger);
+    submitterSuperblockClaims = superBlockchain.superblockClaims.connect(submitter);
+    challengerSuperblockClaims = superBlockchain.superblockClaims.connect(challenger);
     submitterBattleManager = superBlockchain.battleManager.connect(submitter);
     challengerBattleManager = superBlockchain.battleManager.connect(challenger);
     submitterScryptVerifier = superBlockchain.scryptVerifier!.connect(
@@ -93,10 +93,10 @@ describe("verifyScryptHash", function () {
     submitterScryptChecker = superBlockchain.scryptChecker.connect(submitter);
     challengerScryptChecker = superBlockchain.scryptChecker.connect(challenger);
 
-    await submitterClaimManager.makeDeposit({
+    await submitterSuperblockClaims.makeDeposit({
       value: DEPOSITS.MIN_PROPOSAL_DEPOSIT,
     });
-    await challengerClaimManager.makeDeposit({
+    await challengerSuperblockClaims.makeDeposit({
       value: DEPOSITS.MIN_CHALLENGE_DEPOSIT,
     });
 
@@ -109,7 +109,7 @@ describe("verifyScryptHash", function () {
       genesisSuperblock.accumulatedWork
     );
 
-    let result = await submitterClaimManager.proposeSuperblock(
+    let result = await submitterSuperblockClaims.proposeSuperblock(
       proposedSuperblock.merkleRoot,
       proposedSuperblock.accumulatedWork,
       proposedSuperblock.timestamp,
@@ -127,9 +127,9 @@ describe("verifyScryptHash", function () {
     assert.ok(superblockClaimCreated, "New superblock proposed");
     proposedSuperblockHash = superblockClaimCreated!.args?.superblockHash;
 
-    // await challengerClaimManager.makeDeposit({ value: DEPOSITS.MIN_CHALLENGE_DEPOSIT });
+    // await challengerSuperblockClaims.makeDeposit({ value: DEPOSITS.MIN_CHALLENGE_DEPOSIT });
 
-    result = await challengerClaimManager.challengeSuperblock(
+    result = await challengerSuperblockClaims.challengeSuperblock(
       proposedSuperblockHash
     );
     receipt = await result.wait();
@@ -149,7 +149,7 @@ describe("verifyScryptHash", function () {
     assert.ok(verificationGameStarted, "Battle started");
     battleSessionId = verificationGameStarted!.args?.sessionId;
 
-    await challengerClaimManager.makeDeposit({
+    await challengerSuperblockClaims.makeDeposit({
       value: DEPOSITS.RESPOND_MERKLE_COST,
     });
     result = await challengerBattleManager.queryMerkleRootHashes(
@@ -162,7 +162,7 @@ describe("verifyScryptHash", function () {
       "Query merkle root hashes"
     );
 
-    await submitterClaimManager.makeDeposit({
+    await submitterSuperblockClaims.makeDeposit({
       value: DEPOSITS.VERIFY_SUPERBLOCK_COST,
     });
     result = await submitterBattleManager.respondMerkleRootHashes(
@@ -176,7 +176,7 @@ describe("verifyScryptHash", function () {
       "Respond merkle root hashes"
     );
 
-    await challengerClaimManager.makeDeposit({
+    await challengerSuperblockClaims.makeDeposit({
       value: DEPOSITS.RESPOND_HEADER_COST,
     });
     result = await challengerBattleManager.queryBlockHeader(
@@ -191,7 +191,7 @@ describe("verifyScryptHash", function () {
     );
 
     let scryptHash = `0x${calcHeaderPoW(headers[1])}`;
-    await challengerClaimManager.makeDeposit({
+    await challengerSuperblockClaims.makeDeposit({
       value: DEPOSITS.VERIFY_SUPERBLOCK_COST,
     });
     result = await submitterBattleManager.respondBlockHeader(
@@ -206,7 +206,7 @@ describe("verifyScryptHash", function () {
       "Respond block header"
     );
 
-    await challengerClaimManager.makeDeposit({
+    await challengerSuperblockClaims.makeDeposit({
       value: DEPOSITS.RESPOND_HEADER_COST,
     });
     result = await challengerBattleManager.queryBlockHeader(
@@ -221,7 +221,7 @@ describe("verifyScryptHash", function () {
     );
 
     scryptHash = `0x${calcHeaderPoW(headers[0])}`;
-    await challengerClaimManager.makeDeposit({
+    await challengerSuperblockClaims.makeDeposit({
       value: DEPOSITS.VERIFY_SUPERBLOCK_COST,
     });
     result = await submitterBattleManager.respondBlockHeader(
@@ -483,7 +483,7 @@ describe("verifyScryptHash", function () {
 
         // Confirm superblock
         await blockchainTimeoutSeconds(2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout);
-        result = await submitterClaimManager.checkClaimFinished(
+        result = await submitterSuperblockClaims.checkClaimFinished(
           proposedSuperblockHash
         );
         receipt = await result.wait();
@@ -706,7 +706,7 @@ describe("verifyScryptHash", function () {
         );
         // Confirm superblock
         await blockchainTimeoutSeconds(2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout);
-        result = await challengerClaimManager.checkClaimFinished(
+        result = await challengerSuperblockClaims.checkClaimFinished(
           proposedSuperblockHash
         );
         receipt = await result.wait();
@@ -766,7 +766,7 @@ describe("verifyScryptHash", function () {
 
       it("Confirm superblock", async () => {
         await blockchainTimeoutSeconds(2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout);
-        const result = await challengerClaimManager.checkClaimFinished(
+        const result = await challengerSuperblockClaims.checkClaimFinished(
           proposedSuperblockHash
         );
         const receipt = await result.wait();
@@ -850,7 +850,7 @@ describe("verifyScryptHash", function () {
 
       it("Confirm superblock", async () => {
         await blockchainTimeoutSeconds(2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout);
-        const result = await challengerClaimManager.checkClaimFinished(
+        const result = await challengerSuperblockClaims.checkClaimFinished(
           proposedSuperblockHash
         );
         const receipt = await result.wait();

@@ -12,7 +12,7 @@ import "@openzeppelin/contracts/math/SafeMath.sol";
 // @dev - Manager of superblock claims
 //
 // Manages superblocks proposal and challenges
-contract DogeClaimManager is DogeDepositsManager, DogeErrorCodes {
+contract SuperblockClaims is DogeDepositsManager, DogeErrorCodes {
 
     using SafeMath for uint;
 
