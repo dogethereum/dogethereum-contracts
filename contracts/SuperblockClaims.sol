@@ -368,21 +368,22 @@ contract SuperblockClaims is DogeDepositsManager, DogeErrorCodes {
         return true;
     }
 
-    // @dev – confirm semi approved superblock.
+    // @dev – confirms a range of semi approved superblocks.
     //
-    // A semi approved superblock can be confirmed if it has several descendant
-    // superblocks that are also semi-approved.
+    // The range of superblocks is given by a semi approved superblock and one of its descendants.
+    // This will attempt to confirm all superblocks in between them.
+    //
+    // A semi approved superblock can be confirmed if its parent is approved.
     // If none of the descendants were challenged they will also be confirmed.
     //
-    // @param superblockHash – the claim ID.
-    // @param descendantId - claim ID descendants
+    // @param superblockHash – the claim ID of the superblock to be confirmed.
+    // @param descendantId - claim ID of the last descendant to be confirmed.
     function confirmClaim(bytes32 superblockHash, bytes32 descendantId) public returns (bool) {
         uint numSuperblocks = 0;
         bool confirmDescendants = true;
         bytes32 id = descendantId;
         SuperblockClaim storage claim = claims[id];
         // TODO: we probably want to refactor this loop into its own function.
-        // Does this loop have an upper bound to its iterations at all?
         while (id != superblockHash) {
             if (!claimExists(claim)) {
                 emit ErrorClaim(superblockHash, ERR_SUPERBLOCK_BAD_CLAIM);
@@ -392,9 +393,7 @@ contract SuperblockClaims is DogeDepositsManager, DogeErrorCodes {
                 emit ErrorClaim(superblockHash, ERR_SUPERBLOCK_BAD_STATUS);
                 return false;
             }
-            if (confirmDescendants && claim.challengers.length > 0) {
-                confirmDescendants = false;
-            }
+            confirmDescendants = confirmDescendants && claim.challengers.length == 0;
             id = trustedSuperblocks.getSuperblockParentId(id);
             claim = claims[id];
             numSuperblocks += 1;
@@ -424,8 +423,7 @@ contract SuperblockClaims is DogeDepositsManager, DogeErrorCodes {
         doPaySubmitter(superblockHash, claim);
         unbondDeposit(superblockHash, claim.submitter);
 
-        // TODO: The same concern about unbounded loops apply here.
-        // And it looks like this could use a refactor too.
+        // TODO: it looks like this could use a refactor too.
         if (confirmDescendants) {
             bytes32[] memory descendants = new bytes32[](numSuperblocks);
             id = descendantId;

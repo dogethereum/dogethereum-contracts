@@ -551,15 +551,15 @@ contract DogeSuperblocks is DogeErrorCodes {
     //   Status _status
     // }  Superblock data
     function getSuperblock(bytes32 superblockHash) public view returns (
-        bytes32 _blocksMerkleRoot,
-        uint _accumulatedWork,
-        uint _timestamp,
-        uint _prevTimestamp,
-        bytes32 _lastHash,
-        uint32 _lastBits,
-        bytes32 _parentId,
-        address _submitter,
-        Status _status
+        bytes32 blocksMerkleRoot,
+        uint accumulatedWork,
+        uint timestamp,
+        uint prevTimestamp,
+        bytes32 lastHash,
+        uint32 lastBits,
+        bytes32 parentId,
+        address submitter,
+        Status status
     ) {
         SuperblockInfo storage superblock = superblocks[superblockHash];
         return (
