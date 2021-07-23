@@ -1,5 +1,5 @@
 import { task, types } from "hardhat/config";
-import { ActionType, HardhatRuntimeEnvironment } from "hardhat/types";
+import { ActionType } from "hardhat/types";
 import { loadDeployment, DogethereumSystem } from "../deploy";
 import type {
   BigNumber,
@@ -222,29 +222,29 @@ async function challengeNextSuperblock(
   console.log("----------");
 }
 
-function nextSuperblockEvent(
+async function nextSuperblockEvent(
   superblocks: Contract,
   superblockId?: string
 ): Promise<string> {
-  return new Promise(async (resolve) => {
-    if (typeof superblockId === "string") {
-      const superblock = await superblocks.getSuperblock(superblockId);
-      if (superblock[8] !== STATUS_UNINITIALIZED) {
-        resolve(superblockId);
-        return;
-      }
+  if (typeof superblockId === "string") {
+    const superblock = await superblocks.getSuperblock(superblockId);
+    if (superblock[8] !== STATUS_UNINITIALIZED) {
+      return superblockId;
     }
+  }
+
+  return new Promise((resolve) => {
     const newSuperblockFilter = superblocks.filters.NewSuperblock();
     // TODO: does it make sense to keep waiting after the first event?
     // This assumes that a future superblock hash was predicted
     // which might be indeed the case in a development environment
     // but might overcomplicate this implementation if it isn't used at all.
     const listener: providers.Listener = (
-      newSuperblockId,
-      submitter,
-      event
+      newSuperblockId
+      // submitter,
+      // event
     ) => {
-      if (newSuperblockId === undefined || newSuperblockId === superblockId) {
+      if (superblockId === undefined || newSuperblockId === superblockId) {
         superblocks.off(newSuperblockFilter, listener);
         resolve(newSuperblockId);
       }
@@ -362,7 +362,10 @@ async function getBattleStatus(
   superblockHash: string,
   challenger: string
 ): Promise<BattleStatus> {
-  const sessionId = await superblockClaims.getSession(superblockHash, challenger);
+  const sessionId = await superblockClaims.getSession(
+    superblockHash,
+    challenger
+  );
   const [
     id,
     ,
@@ -454,17 +457,11 @@ async function displaySuperblock(
   dogethereum: DogethereumSystem,
   superblockHash: string
 ) {
-  const [
-    blocksMerkleRoot,
-    accumulatedWork,
+  const {
     timestamp,
-    prevTimestamp,
-    lastHash,
-    lastBits,
-    parentId,
     submitter,
     status,
-  ] = await dogethereum.superblocks.contract.getSuperblock(superblockHash);
+  } = await dogethereum.superblocks.contract.getSuperblock(superblockHash);
   const challengers: string[] = await dogethereum.superblockClaims.contract.getClaimChallengers(
     superblockHash
   );
@@ -577,11 +574,8 @@ const waitUtxoCommand: ActionType<WaitUtxoTaskArguments> = async function (
   console.log(
     `Utxo length of operator ${operatorPublicKeyHash} : ${utxosLength}`
   );
-  while (true) {
-    // TODO: parametrize length check
-    if (utxosLength >= expectedUtxoLength) {
-      return;
-    }
+
+  while (utxosLength < expectedUtxoLength) {
     await delay(2000);
     utxosLength = await dogeToken.getUtxosLength(operatorPublicKeyHash);
   }
