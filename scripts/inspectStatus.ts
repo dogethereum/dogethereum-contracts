@@ -1,4 +1,4 @@
-import type { Contract, Event } from "ethers";
+import type { Contract, Event, utils } from "ethers";
 import type { HardhatRuntimeEnvironment } from "hardhat/types";
 import type { DogethereumSystem } from "../deploy";
 
@@ -7,27 +7,39 @@ import { getWalletFor, Role } from "./signers";
 export async function printStatus(
   hre: HardhatRuntimeEnvironment,
   deployment: DogethereumSystem
-) {
+): Promise<void> {
   const superblocks = deployment.superblocks.contract;
   const superblockClaims = deployment.superblockClaims.contract;
   console.log("Superblocks");
   console.log("---------");
   const bestSuperblockHash = await superblocks.callStatic.getBestSuperblock();
-  console.log("Best superblock hash: " + bestSuperblockHash.toString(16));
+  console.log(`Best superblock hash: ${bestSuperblockHash.toString(16)}`);
   const bestSuperblockHeight = await superblocks.callStatic.getSuperblockHeight(
     bestSuperblockHash
   );
-  console.log("Best superblock height: " + bestSuperblockHeight);
+  console.log(`Best superblock height: ${bestSuperblockHeight}`);
   const lastHash = await superblocks.callStatic.getSuperblockLastHash(
     bestSuperblockHash
   );
-  console.log("lastHash: " + lastHash);
+  console.log(`lastHash: ${lastHash}`);
   const indexNextSuperblock = await superblocks.callStatic.getIndexNextSuperblock();
-  console.log("indexNextSuperblock: " + indexNextSuperblock);
+  console.log(`indexNextSuperblock: ${indexNextSuperblock}`);
   const newSuperblockEventTimestamp = await superblockClaims.callStatic.getNewSuperblockEventTimestamp(
     bestSuperblockHash
   );
-  console.log("newSuperblockEventTimestamp: " + newSuperblockEventTimestamp);
+  console.log(`newSuperblockEventTimestamp: ${newSuperblockEventTimestamp}`);
+  // idea: merge these into a single list and sort them by tx execution order?
+  const superblockClaimEvents = [
+    "SuperblockClaimCreated",
+    "SuperblockClaimChallenged",
+    "VerificationGameStarted",
+    "SuperblockBattleDecided",
+    "SuperblockClaimPending",
+    "SuperblockClaimSuccessful",
+    "SuperblockClaimFailed",
+    "ErrorClaim",
+  ];
+  await printSuperblockClaimEvents(superblockClaimEvents, superblockClaims);
   console.log("");
 
   console.log("DogeToken");
@@ -42,41 +54,48 @@ export async function printStatus(
   await showBalance(dogeToken, "0xf5fa014271b7971cb0ae960d445db3cb3802dfd9");
 
   const dogeEthPrice = await dogeToken.callStatic.dogeEthPrice();
-  console.log("Doge-Eth price: " + dogeEthPrice);
+  console.log(`Doge-Eth price: ${dogeEthPrice}`);
 
   // Operators
   const operatorsLength = await dogeToken.getOperatorsLength();
-  console.log("operators length: " + operatorsLength);
+  console.log(`operators length: ${operatorsLength}`);
   for (let i = 0; i < operatorsLength; i++) {
-    const operatorKey = await dogeToken.operatorKeys(i);
-    if (operatorKey[1] == false) {
+    const {
+      key: operatorPublicKeyHash,
+      deleted,
+    }: { key: string; deleted: boolean } = await dogeToken.operatorKeys(i);
+    if (!deleted) {
       // not deleted
-      const operatorPublicKeyHash = operatorKey[0];
-      const operator = await dogeToken.operators(operatorPublicKeyHash);
+      const {
+        ethAddress,
+        dogeAvailableBalance,
+        dogePendingBalance,
+        nextUnspentUtxoIndex,
+        ethBalance,
+      } = await dogeToken.operators(operatorPublicKeyHash);
       console.log(
         `operator [${operatorPublicKeyHash}]:
-  eth address: ${operator[0]},
-  dogeAvailableBalance: ${operator[1]},
-  dogePendingBalance: ${operator[2]},
-  nextUnspentUtxoIndex: ${operator[3]},
-  ethBalance: ${hre.web3.utils.fromWei(operator[4].toString())}`
+  eth address: ${ethAddress},
+  dogeAvailableBalance: ${dogeAvailableBalance},
+  dogePendingBalance: ${dogePendingBalance},
+  nextUnspentUtxoIndex: ${nextUnspentUtxoIndex},
+  ethBalance: ${hre.web3.utils.fromWei(ethBalance.toString())}`
       );
       const utxosLength = await dogeToken.getUtxosLength(operatorPublicKeyHash);
-      console.log("utxosLength: " + utxosLength);
+      console.log(`utxosLength: ${utxosLength}`);
       for (let j = 0; j < utxosLength; j++) {
-        const utxo = await dogeToken.getUtxo(operatorPublicKeyHash, j);
-        console.log(
-          `utxo [${j}]: ${utxo[1].toHexString()}, ${
-            utxo[2]
-          }, ${utxo[0]}`
+        const { value, txHash, index } = await dogeToken.getUtxo(
+          operatorPublicKeyHash,
+          j
         );
+        console.log(`utxo [${j}]: ${txHash.toHexString()}, ${index}, ${value}`);
       }
     }
   }
 
   // Current block number
-  const ethBlockNumber = await hre.web3.eth.getBlockNumber();
-  console.log("Eth Current block: " + ethBlockNumber);
+  const ethBlockNumber = await hre.ethers.provider.getBlockNumber();
+  console.log(`Eth Current block: ${ethBlockNumber}`);
 
   // Unlock events
   const unlockRequestFilter = dogeToken.filters.UnlockRequest();
@@ -116,10 +135,9 @@ async function printUnlockEvent(events: Event[], dogeToken: Contract) {
   console.log("Unlock events");
 
   for (const event of events) {
-    if (event.args === undefined) {
-      throw new Error("Arguments missing in unlock event.");
-    }
-    const [
+    const fragment = dogeToken.interface.getEvent(event.eventSignature!);
+    const args = enumerateEventArguments(event, fragment);
+    const {
       from,
       dogeAddress,
       value,
@@ -128,14 +146,10 @@ async function printUnlockEvent(events: Event[], dogeToken: Contract) {
       selectedUtxos,
       dogeTxFee,
       operatorPublicKeyHash,
-    ] = await dogeToken.getUnlockPendingInvestorProof(event.args.id, {
+    } = await dogeToken.getUnlockPendingInvestorProof(event.args!.id, {
       blockTag: event.blockNumber,
     });
-    let args = "";
-    for (const [key, value] of event.args.entries()) {
-      args += `${key}: ${value}  `;
-    }
-    console.log(`tx hash: ${event.transactionHash} log index: ${event.logIndex}
+    console.log(`- tx hash: ${event.transactionHash} log index: ${event.logIndex}
   block number: ${event.blockNumber}
   args: ${args}
   from: ${from}
@@ -158,14 +172,9 @@ async function printLockEvent(events: Event[], dogeToken: Contract) {
   console.log("Lock events");
 
   for (const event of events) {
-    if (event.args === undefined) {
-      throw new Error("Arguments missing in lock event.");
-    }
-    let args = "";
-    for (const [key, value] of event.args.entries()) {
-      args += `${key}: ${value}  `;
-    }
-    console.log(`tx hash: ${event.transactionHash} log index: ${event.logIndex}
+    const fragment = dogeToken.interface.getEvent(event.eventSignature!);
+    const args = enumerateEventArguments(event, fragment);
+    console.log(`- tx hash: ${event.transactionHash} log index: ${event.logIndex}
   block number: ${event.blockNumber}
   args: ${args}`);
   }
@@ -174,4 +183,43 @@ async function printLockEvent(events: Event[], dogeToken: Contract) {
 async function showBalance(dogeToken: Contract, address: string) {
   const balance = await dogeToken.callStatic.balanceOf(address);
   console.log(`DogeToken Balance of ${address}: ${balance}`);
+}
+
+async function printSuperblockClaimEvents(
+  eventNames: string[],
+  superblockClaims: Contract
+) {
+  console.log(`SuperblockClaims events`);
+  for (const eventName of eventNames) {
+    const filter = superblockClaims.filters[eventName]();
+    const events = await superblockClaims.queryFilter(filter, 0, "latest");
+
+    console.log(`- ${eventName}`);
+    for (const event of events) {
+      const fragment = superblockClaims.interface.getEvent(
+        event.eventSignature!
+      );
+      const args = enumerateEventArguments(event, fragment);
+      console.log(`  - tx hash: ${event.transactionHash} log index: ${event.logIndex}
+    block number: ${event.blockNumber}
+    args: ${args}`);
+    }
+  }
+}
+
+function enumerateEventArguments(
+  event: Event,
+  fragment: utils.EventFragment
+): string {
+  if (event.args === undefined) {
+    throw new Error("Arguments missing in ${event.event} event.");
+  }
+
+  let args = "";
+  // Event argument names are present in the `event.args` as custom properties,
+  // but they are hard to enumerate. This is why we use the event fragment instead.
+  for (const [index, value] of event.args.entries()) {
+    args += `${fragment.inputs[index].name}: ${value}  `;
+  }
+  return args;
 }
