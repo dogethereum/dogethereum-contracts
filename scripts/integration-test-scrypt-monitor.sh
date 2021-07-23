@@ -3,7 +3,7 @@
 # Test sending doge to eth and back
 
 # Declare variables
-export NETWORK="integrationDogeRegtest"
+export NETWORK="integrationDogeScrypt"
 
 dogecoinQtProcessName=dogecoin-qt
 dogecoinQtDatadir=.dogecoin-data
@@ -13,13 +13,13 @@ dogecoinQtRpcpassword=bbb
 
 # TODO: we probably want to store all temporary data in a single directory so cleanup is straightforward.
 if [[ ! -v agentRootDir ]]; then
-	agentRootDir=/path/agentCodeDir
+    agentRootDir=/path/agentCodeDir
 fi
 if [[ ! -v agentDataDir ]]; then
-	agentDataDir=/path/agentDataDir
+    agentDataDir=/path/agentDataDir
 fi
 if [[ ! -v toolsRootDir ]]; then
-	toolsRootDir=/path/toolsRootDir
+    toolsRootDir=/path/toolsRootDir
 fi
 dogethereumDeploymentJson="deployment/$NETWORK/deployment.json"
 
@@ -32,8 +32,8 @@ set -o xtrace -o nounset -o errexit
 # Stop dogecoin-qt
 DOGECOIN_PROCESSES="$(pgrep $dogecoinQtProcessName)" || echo "No dogecoin processes found"
 if [[ $DOGECOIN_PROCESSES ]]; then
-	kill "$DOGECOIN_PROCESSES"
-	sleep 1s
+    kill "$DOGECOIN_PROCESSES"
+    sleep 1s
 fi
 # Replace dogecoin-qt regtest datadir with the prepared db
 rm -rf "$dogecoinQtDatadir/regtest/"
@@ -53,9 +53,9 @@ rm -rf ${agentDataDir:?}/*
 # Stop ganache
 GANACHE_PROCESSES="$(pgrep --full '^node.*ganache-cli')" || echo "No ganache processes found"
 if [[ $GANACHE_PROCESSES ]]; then
-	# kill fails if passed an empty string
-	kill "$GANACHE_PROCESSES"
-	sleep 1s
+    # kill fails if passed an empty string
+    kill "$GANACHE_PROCESSES"
+    sleep 1s
 fi
 # Start ganache
 npm run ganache > ganachelog.txt &
@@ -70,6 +70,8 @@ rm -rf "deployment/$NETWORK"
 # Setup contracts in blockchain
 scripts/initialiseForAgent.sh
 
+# We're doing this here just to be able to synchronize with the dogethereum agent a few lines later.
+# TODO: remove this by writing a new wait primitive
 # Lock dogecoins with an operator
 # All of these are fixed according to what the regtest datadir has
 dogePrivateKey=cW9yAP8NRgGGN2qQ4vEQkvqhHFSNzeFPWTLBXriy5R5wf4KBWDbc
@@ -87,31 +89,25 @@ npx hardhat run --network $NETWORK scripts/wait_token_balance.ts
 
 npx hardhat run --network $NETWORK scripts/debug.ts
 
-# Prepare sender address to do unlocks
-npx hardhat run --network $NETWORK scripts/prepare_sender.ts
-for i in {1..2}; do
-	# Print debug.js status
-	npx hardhat run --network $NETWORK scripts/debug.ts
+# Here the superblock agent is active and ready for tests
 
-	# Send eth unlock tx
-	node "$toolsRootDir/user/unlock.js" --deployment $dogethereumDeploymentJson --privateKey 0xffd02f8d16c657add9aba568c83770cd3f06cebda3ddb544daf313002ca5bd53 --receiver n2z4kV3rWPALTZz4sdoE5ag2UiErsrmJpJ --value 300000000
 
-	# Mine 5 eth blocks so unlock eth tx has enough confirmations
-	for j in {1..5}; do
-		curl --request POST --data '{"jsonrpc":"2.0","method":"evm_mine","params":[],"id":74}' http://localhost:8545;
-	done
 
-	# Wait for Eth to Doge agent to sign and broadcast doge unlock tx
-	sleep 30s
+# Mine 5 eth blocks so unlock eth tx has enough confirmations
+# for j in {1..5}; do
+#     curl --request POST --data '{"jsonrpc":"2.0","method":"evm_mine","params":[],"id":74}' http://localhost:8545;
+# done
 
-	# Mine 10 doge blocks so doge unlock tx has enough confirmations
-	curl --user $dogecoinQtRpcuser:$dogecoinQtRpcpassword  --data-binary '{"jsonrpc": "1.0", "id":"curltest", "method": "generate", "params": [10] }' -H 'content-type: text/plain;' http://127.0.0.1:41200/
+# Wait for manual tests
+sleep 30000s
 
-	# Wait for agent to relay doge unlock tx to eth and utxo length updated
-	npx hardhat dogethereum.waitUtxo --network $NETWORK --operator-public-key-hash 0x03cd041b0139d3240607b9fd1b2d1b691e22b5d6 --utxo-length $(($i + 1))
-done
+# Mine 10 doge blocks so doge unlock tx has enough confirmations
+# curl --user $dogecoinQtRpcuser:$dogecoinQtRpcpassword  --data-binary '{"jsonrpc": "1.0", "id":"curltest", "method": "generate", "params": [10] }' -H 'content-type: text/plain;' http://127.0.0.1:41200/
 
-# Print status after the unlocks were processed
+
+
+# Print status
+# TODO: have it print challenge events
 npx hardhat run --network $NETWORK scripts/debug.ts
 
 kill $dogecoinNode $ganacheNode

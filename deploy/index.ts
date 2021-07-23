@@ -154,7 +154,7 @@ export const SUPERBLOCK_OPTIONS_INTEGRATION_SLOW_SYNC: SuperblockOptions = {
 export const SUPERBLOCK_OPTIONS_INTEGRATION_FAST_SYNC: SuperblockOptions = {
   duration: 10 * 60,
   delay: 5 * 60,
-  timeout: 10,
+  timeout: 30,
   confirmations: 1,
   reward: 10,
 };

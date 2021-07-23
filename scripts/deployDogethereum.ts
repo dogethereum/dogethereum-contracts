@@ -49,7 +49,8 @@ function getSuperblockOptions(ethereumNetworkName: string): SuperblockOptions {
   if (
     ethereumNetworkName === "rinkeby" ||
     ethereumNetworkName === "ropsten" ||
-    ethereumNetworkName === "integrationDogeMain"
+    ethereumNetworkName === "integrationDogeMain" ||
+    ethereumNetworkName === "integrationDogeScrypt"
   ) {
     return SUPERBLOCK_OPTIONS_INTEGRATION_FAST_SYNC;
   }
