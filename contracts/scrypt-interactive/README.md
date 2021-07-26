@@ -5,4 +5,4 @@ To run the integration tests located in `./test/verifyScryptHash.js` with the la
 
 
 
-[scrypt-interactive]: https://github.com/bridge2100/scrypt-interactive
+[scrypt-interactive]: ../../../../../../scrypt-interactive

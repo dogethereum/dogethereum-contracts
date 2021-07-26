@@ -41,7 +41,7 @@ There are two kinds of tests:
 - [Contract tests](#contract-tests)
 - [Integration tests](#integration-tests)
 
-Some contracts are copies from the [scrypt-interactive](https://github.com/bridge2100/scrypt-interactive) repository. These can be found in `contracts/scrypt-interactive`. You may need to update them to test with the latest version.
+Some contracts are copies from the [scrypt-interactive] repository. These can be found in `contracts/scrypt-interactive`. You may need to update them to test with the latest version.
 
 ### Contract tests
 
@@ -68,6 +68,16 @@ $ export agentDataDir=/your/tools/path
 Then run `npm run integration-tests`. Note that doing this will launch a dogecoin node in regtest mode with a graphical interface.
 
 At one point, the test will require the manual launch of the [dogethereum agents].
+
+#### Scrypt checker integration
+
+Tests involving the scrypt checker monitor require an additional environment variable:
+
+- `scryptInteractiveDir`: path to the root of the [scrypt-interactive] repository
+
+```shell
+$ export scryptInteractiveDir=/your/scrypt-interactive/path
+```
 
 ### Manual testing
 
@@ -119,5 +129,6 @@ Copyright (c) 2018 Coinfabrik & Oscar Guindzberg<br/>
 [0xbc2eadd8dbc9f08e924550c8138e5f4e6c64489e](https://etherscan.io/address/0xbc2eadd8dbc9f08e924550c8138e5f4e6c64489e#code)
 
 
-[dogethereum tools]: https://github.com/bridge2100/dogethereum-tools
-[dogethereum agents]: https://github.com/bridge2100/dogethereum-agents
+[dogethereum tools]: ../dogethereum-tools
+[dogethereum agents]: ../dogethereum-agents
+[scrypt-interactive]: ../scrypt-interactive
