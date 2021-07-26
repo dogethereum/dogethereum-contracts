@@ -30,10 +30,13 @@ async function main() {
   const dogeNetworkId = DogecoinNetworkId.Regtest;
   const superblockOptions = getSuperblockOptions(hre.network.name);
 
+  const scryptCheckerAddress = process.env.SCRYPT_CHECKER;
+
   const deployment = await deployDogethereum(
     hre,
     dogeNetworkId,
-    superblockOptions
+    superblockOptions,
+    scryptCheckerAddress
   );
   return storeDeployment(hre, deployment, deploymentDir);
 }

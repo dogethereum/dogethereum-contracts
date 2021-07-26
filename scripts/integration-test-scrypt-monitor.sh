@@ -21,6 +21,9 @@ fi
 if [[ ! -v toolsRootDir ]]; then
     toolsRootDir=/path/toolsRootDir
 fi
+if [[ ! -v scryptInteractiveDir ]]; then
+    scryptInteractiveDir=/path/scryptInteractiveDir
+fi
 dogethereumDeploymentJson="deployment/$NETWORK/deployment.json"
 
 # We avoid typechecking to speed up execution
@@ -62,6 +65,19 @@ npm run ganache > ganachelog.txt &
 ganacheNode=$!
 
 # Compile and deploy contracts
+
+# Deploy scrypt-interactive
+pushd .
+cd "$scryptInteractiveDir"
+eval "$(npm run migrate:dev | grep "SCRYPT_.*_ADDRESS")"
+if [[ ! -v SCRYPT_CLAIMS_ADDRESS ]]; then
+    echo "Failure during scrypt-interactive deployment. Bailing out."
+    kill $dogecoinNode $ganacheNode
+    exit 1
+fi
+export SCRYPT_CHECKER=$SCRYPT_CLAIMS_ADDRESS
+popd
+
 npx hardhat compile --quiet
 
 # Deploy dogethereum to Ethereum network

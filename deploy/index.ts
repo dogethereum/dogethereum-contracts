@@ -224,9 +224,25 @@ async function deployToken(
   return { dogeToken, setLibrary };
 }
 
+async function deployScryptCheckerDummy(
+  hre: HardhatRuntimeEnvironment,
+  deploySigner: ethers.Signer,
+): Promise<DogethereumContract> {
+  const scryptCheckerContractName = "ScryptCheckerDummy";
+  const scryptChecker = {
+    contract: await deployContract(scryptCheckerContractName, [true], hre, {
+      signer: deploySigner,
+    }),
+    name: scryptCheckerContractName,
+  };
+
+  return scryptChecker;
+}
+
 async function deployMainSystem(
   hre: HardhatRuntimeEnvironment,
   deploySigner: ethers.Signer,
+  scryptChecker: DogethereumContract,
   dogecoinNetworkId: DogecoinNetworkId,
   superblockOptions: SuperblockOptions
 ): Promise<DogethereumCoreSystem> {
@@ -236,14 +252,6 @@ async function deployMainSystem(
       signer: deploySigner,
     }),
     name: dogeMessageLibraryName,
-  };
-
-  const scryptCheckerContractName = "ScryptCheckerDummy";
-  const scryptChecker = {
-    contract: await deployContract(scryptCheckerContractName, [true], hre, {
-      signer: deploySigner,
-    }),
-    name: scryptCheckerContractName,
   };
 
   const superblocksContractName = "DogeSuperblocks";
@@ -318,7 +326,8 @@ async function deployMainSystem(
 export async function deployDogethereum(
   hre: HardhatRuntimeEnvironment,
   dogecoinNetworkId: DogecoinNetworkId = DogecoinNetworkId.Regtest,
-  superblockOptions: SuperblockOptions = SUPERBLOCK_OPTIONS_LOCAL
+  superblockOptions: SuperblockOptions = SUPERBLOCK_OPTIONS_LOCAL,
+  scryptCheckerAddress?: string
 ): Promise<DogethereumSystem> {
   const { ethers, network } = hre;
   const accounts = await ethers.getSigners();
@@ -339,9 +348,21 @@ export async function deployDogethereum(
     trustedDogeEthPriceOracle = deployAccount.address;
   }
 
+  let scryptChecker: DogethereumContract;
+  if (scryptCheckerAddress !== undefined) {
+    const scryptCheckerName = "ScryptClaims";
+    scryptChecker = {
+      contract: await hre.ethers.getContractAt(scryptCheckerName, scryptCheckerAddress, deployAccount),
+      name: scryptCheckerName,
+    }
+  } else {
+    scryptChecker = await deployScryptCheckerDummy(hre, deployAccount);
+  }
+
   const dogethereumMain = await deployMainSystem(
     hre,
     deployAccount,
+    scryptChecker,
     dogecoinNetworkId,
     superblockOptions
   );
