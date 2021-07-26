@@ -21,6 +21,9 @@ const config: HardhatUserConfig = {
         integrationDogeRegtest: {
             url: "http://127.0.0.1:8545",
         },
+        integrationDogeScrypt: {
+            url: "http://127.0.0.1:8545",
+        },
         ropsten: {
             url: "http://127.0.0.1:8545",
             chainId: 3,
