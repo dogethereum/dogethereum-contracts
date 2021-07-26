@@ -73,7 +73,7 @@ At one point, the test will require the manual launch of the [dogethereum agents
 
 Tests involving the scrypt checker monitor require an additional environment variable:
 
-- `scryptInteractiveDir`: path to the root of the [scrypt-interactive] repository
+- `scryptInteractiveDir`: path to the root of the [scrypt-interactive] repository.
 
 ```shell
 $ export scryptInteractiveDir=/your/scrypt-interactive/path
@@ -129,6 +129,6 @@ Copyright (c) 2018 Coinfabrik & Oscar Guindzberg<br/>
 [0xbc2eadd8dbc9f08e924550c8138e5f4e6c64489e](https://etherscan.io/address/0xbc2eadd8dbc9f08e924550c8138e5f4e6c64489e#code)
 
 
-[dogethereum tools]: ../dogethereum-tools
-[dogethereum agents]: ../dogethereum-agents
-[scrypt-interactive]: ../scrypt-interactive
+[dogethereum tools]: https://github.com/dogethereum/dogethereum-tools
+[dogethereum agents]: https://github.com/dogethereum/dogethereum-agents
+[scrypt-interactive]: https://github.com/dogethereum/scrypt-interactive

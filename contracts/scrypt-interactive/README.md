@@ -5,4 +5,4 @@ To run the integration tests located in `./test/verifyScryptHash.js` with the la
 
 
 
-[scrypt-interactive]: ../../../../../../scrypt-interactive
+[scrypt-interactive]: https://github.com/dogethereum/scrypt-interactive
