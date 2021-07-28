@@ -124,10 +124,11 @@ MIT License<br/>
 Copyright (c) 2018 Coinfabrik & Oscar Guindzberg<br/>
 [License](LICENSE)
 
-## Bounty payment address
+## Donations
 
-[0xbc2eadd8dbc9f08e924550c8138e5f4e6c64489e](https://etherscan.io/address/0xbc2eadd8dbc9f08e924550c8138e5f4e6c64489e#code)
-
+BTC: 37gWZJPmEjM8RdgjauLsDUgbkYPe5bRFtt
+ETH: 0xFc7E364035f52ecA68D71dcfb63D1E3769413d69
+DOGE: D5q6QoN51z1daFpkreNqpbVq6i6oP6S35m
 
 [dogethereum tools]: https://github.com/dogethereum/dogethereum-tools
 [dogethereum agents]: https://github.com/dogethereum/dogethereum-agents
