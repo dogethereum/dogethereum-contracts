@@ -126,8 +126,8 @@ Copyright (c) 2018 Coinfabrik & Oscar Guindzberg<br/>
 
 ## Donations
 
-BTC: 37gWZJPmEjM8RdgjauLsDUgbkYPe5bRFtt
-ETH: 0xFc7E364035f52ecA68D71dcfb63D1E3769413d69
+BTC: 37gWZJPmEjM8RdgjauLsDUgbkYPe5bRFttg<br/>
+ETH: 0xFc7E364035f52ecA68D71dcfb63D1E3769413d69<br/>
 DOGE: D5q6QoN51z1daFpkreNqpbVq6i6oP6S35m
 
 [dogethereum tools]: https://github.com/dogethereum/dogethereum-tools
