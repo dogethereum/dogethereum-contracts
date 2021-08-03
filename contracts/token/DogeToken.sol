@@ -415,7 +415,7 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
     }
 
     function setDogeEthPrice(uint _dogeEthPrice) public {
-        require(msg.sender == trustedDogeEthPriceOracle);
+        require(msg.sender == trustedDogeEthPriceOracle, "Only the Doge-Eth price oracle is allowed to set the price.");
         dogeEthPrice = _dogeEthPrice;
     }
 
