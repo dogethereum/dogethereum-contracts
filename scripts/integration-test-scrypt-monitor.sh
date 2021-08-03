@@ -86,6 +86,14 @@ rm -rf "deployment/$NETWORK"
 # Setup contracts in blockchain
 scripts/initialiseForAgent.sh
 
+# Deposit collateral in ScryptClaims contract and launch defender
+pushd .
+cd "$scryptInteractiveDir"
+npm start -- deposit 0.5
+npm start -- defend > defender.log 2>&1 &
+defenderProcess=$!
+popd
+
 # We're doing this here just to be able to synchronize with the dogethereum agent a few lines later.
 # TODO: remove this by writing a new wait primitive
 # Lock dogecoins with an operator
@@ -100,13 +108,15 @@ curl --user $dogecoinQtRpcuser:$dogecoinQtRpcpassword  --data-binary '{"jsonrpc"
 
 echo "Please, start the agent..."
 
-# Wait for agent to relay doge lock tx to eth and dogetokens minted
-npx hardhat run --network $NETWORK scripts/wait_token_balance.ts
-
-npx hardhat run --network $NETWORK scripts/debug.ts
+# Challenge the next superblock
+npx hardhat --network integrationDogeScrypt dogethereum.challenge --challenger 0xB50a77BF193245E431b29CdD70b354119eb75Fd2 --deposit 1000000000
 
 # Here the superblock agent is active and ready for tests
 
+npx hardhat run --network $NETWORK scripts/debug.ts
+
+# Wait for agent to relay doge lock tx to eth and dogetokens minted
+npx hardhat run --network $NETWORK scripts/wait_token_balance.ts
 
 
 # Mine 5 eth blocks so unlock eth tx has enough confirmations
@@ -126,4 +136,4 @@ sleep 30000s
 # TODO: have it print challenge events
 npx hardhat run --network $NETWORK scripts/debug.ts
 
-kill $dogecoinNode $ganacheNode
+kill $dogecoinNode $ganacheNode $defenderProcess
