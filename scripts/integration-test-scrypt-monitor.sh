@@ -66,6 +66,7 @@ ganacheNode=$!
 
 # Compile and deploy contracts
 
+
 # Deploy scrypt-interactive
 pushd .
 cd "$scryptInteractiveDir"
@@ -76,7 +77,22 @@ if [[ ! -v SCRYPT_CLAIMS_ADDRESS ]]; then
     exit 1
 fi
 export SCRYPT_CHECKER=$SCRYPT_CLAIMS_ADDRESS
+
+# The openethereum node is used to compute the scrypt hash algorithm.
+# See the scrypt-interactive repository for more details.
+# TODO: have this launch as part of the scrypt-interactive monitor?
+# Stop openethereum
+OPENETHEREUM_PROCESSES="$(pgrep 'openethereum')" || echo "No OpenEthereum processes found"
+if [[ $OPENETHEREUM_PROCESSES ]]; then
+    # kill fails if passed an empty string
+    kill "$OPENETHEREUM_PROCESSES"
+    sleep 1s
+fi
+# Start openethereum
+npm run openethereum > openethereum.log 2>&1 &
+openethereumNode=$!
 popd
+
 
 npx hardhat compile --quiet
 
@@ -136,4 +152,4 @@ sleep 30000s
 # TODO: have it print challenge events
 npx hardhat run --network $NETWORK scripts/debug.ts
 
-kill $dogecoinNode $ganacheNode $defenderProcess
+kill $dogecoinNode $ganacheNode $defenderProcess $openethereumNode
