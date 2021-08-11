@@ -15,7 +15,6 @@ import {
 
 describe("testDogeTokenProcessTransaction", function () {
   let signers: SignerWithAddress[];
-  let snapshot: any;
   const trustedDogeEthPriceOracle =
     "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
   let trustedRelayerContract: string;
