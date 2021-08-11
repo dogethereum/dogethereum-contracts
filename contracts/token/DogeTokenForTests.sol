@@ -6,10 +6,6 @@ import "./DogeToken.sol";
 
 contract DogeTokenForTests is DogeToken {
 
-    constructor (address _trustedRelayerContract, address _trustedDogeEthPriceOracle, uint8 _collateralRatio)  DogeToken(_trustedRelayerContract, _trustedDogeEthPriceOracle, _collateralRatio) {
-
-    }
-
     function assign(address _to, uint256 _value) public {
         balances[_to] += _value;
     }

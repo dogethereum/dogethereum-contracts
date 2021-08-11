@@ -75,26 +75,33 @@ contract SuperblockClaims is DogeDepositsManager, DogeErrorCodes {
         _;
     }
 
-    // @dev – Sets up the contract managing superblock challenges
-    // @param _superblocks Contract that manages superblocks
-    // @param _battleManager Contract that manages battles
-    // @param _superblockDelay Delay to accept a superblock submission (in seconds)
-    // @param _superblockTimeout Time to wait for challenges (in seconds)
-    // @param _superblockConfirmations Confirmations required to confirm semi approved superblocks
-    constructor(
-        DogeSuperblocks _superblocks,
-        DogeBattleManager _dogeBattleManager,
-        uint _superblockDelay,
-        uint _superblockTimeout,
-        uint _superblockConfirmations,
-        uint _battleReward
-    ) {
-        trustedSuperblocks = _superblocks;
-        trustedDogeBattleManager = _dogeBattleManager;
-        superblockDelay = _superblockDelay;
-        superblockTimeout = _superblockTimeout;
-        superblockConfirmations = _superblockConfirmations;
-        battleReward = _battleReward;
+    /**
+     * @dev – Sets up the contract managing superblock challenges
+     *        All of these values are constant.
+     * @param superblocks Contract that stores superblocks
+     * @param battleManager Contract that manages battles
+     * @param initSuperblockDelay Delay to accept a superblock submission (in seconds).
+     * @param initSuperblockTimeout Time to wait for challenges (in seconds)
+     * @param initSuperblockConfirmations Confirmations required to confirm semi approved superblocks
+     */
+    function initialize(
+        DogeSuperblocks superblocks,
+        DogeBattleManager battleManager,
+        uint initSuperblockDelay,
+        uint initSuperblockTimeout,
+        uint initSuperblockConfirmations,
+        uint initBattleReward
+    ) external {
+        require(address(trustedSuperblocks) == address(0), "SuperblockClaims already initialized.");
+        require(address(superblocks) != address(0), "Superblocks contract must be valid.");
+        require(address(battleManager) != address(0), "Battle manager contract must be valid.");
+
+        trustedSuperblocks = superblocks;
+        trustedDogeBattleManager = battleManager;
+        superblockDelay = initSuperblockDelay;
+        superblockTimeout = initSuperblockTimeout;
+        superblockConfirmations = initSuperblockConfirmations;
+        battleReward = initBattleReward;
     }
 
     // @dev – locks up part of a user's deposit into a claim.

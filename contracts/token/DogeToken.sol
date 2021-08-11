@@ -108,10 +108,14 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         bool deleted;
     }
 
-    constructor (address _trustedRelayerContract, address _trustedDogeEthPriceOracle, uint8 _collateralRatio) {
-        trustedRelayerContract = _trustedRelayerContract;
-        trustedDogeEthPriceOracle = _trustedDogeEthPriceOracle;
-        collateralRatio = _collateralRatio;
+    function initialize(address relayerContract, address dogeEthPriceOracle, uint8 initCollateralRatio) external {
+        require(trustedRelayerContract == address(0), "Contract already initialized!");
+        require(relayerContract != address(0), "Relayer contract must be valid.");
+        require(dogeEthPriceOracle != address(0), "Doge-Eth price oracle must be valid.");
+
+        trustedRelayerContract = relayerContract;
+        trustedDogeEthPriceOracle = dogeEthPriceOracle;
+        collateralRatio = initCollateralRatio;
     }
 
     // Adds an operator

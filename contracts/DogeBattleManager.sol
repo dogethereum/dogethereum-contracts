@@ -171,39 +171,59 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
         _;
     }
 
-    // @dev – Configures the contract managing superblocks battles
-    // @param _network Network type to use for block difficulty validation
-    // @param _superblocks Contract that manages superblocks
-    // @param _superblockDuration Superblock duration (in seconds)
-    // @param _superblockTimeout Time to wait for challenges (in seconds)
-    constructor(
-        DogeMessageLibrary.Network _network,
-        DogeSuperblocks _superblocks,
-        uint _superblockDuration,
-        uint _superblockTimeout
-    ) {
-        net = _network;
-        trustedSuperblocks = _superblocks;
-        superblockDuration = _superblockDuration;
-        superblockTimeout = _superblockTimeout;
+    /**
+     * Initializer functions
+     * Deferred initialization is necessary for the SuperblockClaims contract due to the fact
+     * that the battle manager and superblock claims contracts mutually depend on each other.
+     */
+
+    /**
+     * @dev – Configures the contract managing superblocks battles
+     * @param network Network type to use for block difficulty validation
+     * @param superblocks Contract that stores superblocks
+     * @param scryptChecker Contract that verifies scrypt hashes.
+     * @param initSuperblockDuration Superblock duration (in seconds)
+     * @param initSuperblockTimeout Time to wait for challenges (in seconds)
+     */
+    function initialize(
+        DogeMessageLibrary.Network network,
+        DogeSuperblocks superblocks,
+        IScryptChecker scryptChecker,
+        uint initSuperblockDuration,
+        uint initSuperblockTimeout
+    ) external {
+        require(address(trustedSuperblocks) == address(0), "DogeBattleManager already initialized.");
+        require(address(superblocks) != address(0), "Superblocks contract must be valid.");
+        require(address(scryptChecker) != address(0x0), "Scrypt checker must be valid.");
+
+        net = network;
+        trustedSuperblocks = superblocks;
+        trustedScryptChecker = scryptChecker;
+        superblockDuration = initSuperblockDuration;
+        superblockTimeout = initSuperblockTimeout;
     }
 
-    // @dev - sets ScryptChecker instance associated with this SuperblockClaims contract.
-    // Once trustedScryptChecker has been set, it cannot be changed.
-    // An address of 0x0 means trustedScryptChecker hasn't been set yet.
-    //
-    // @param _scryptChecker - address of the ScryptChecker contract to be associated with SuperblockClaims
-    function setScryptChecker(IScryptChecker _scryptChecker) public {
-        require(address(trustedScryptChecker) == address(0x0) && address(_scryptChecker) != address(0x0));
-        trustedScryptChecker = _scryptChecker;
+
+    /**
+     * @dev - sets SuperblockClaims instance associated with this DogeBattleManager contract.
+     * Once set, it cannot be reset.
+     * The SuperblockClaims contract is used in battle creation and resolution.
+     *
+     * @param superblockClaims Address of the SuperblockClaims contract.
+     */
+    function setSuperblockClaims(SuperblockClaims superblockClaims) public {
+        require(address(trustedSuperblockClaims) == address(0x0), "SuperblockClaims is already set!");
+        require(address(superblockClaims) != address(0x0), "Superblock claims contract must be valid.");
+        trustedSuperblockClaims = superblockClaims;
     }
 
-    function setSuperblockClaims(SuperblockClaims _superblockClaims) public {
-        require(address(trustedSuperblockClaims) == address(0x0) && address(_superblockClaims) != address(0x0));
-        trustedSuperblockClaims = _superblockClaims;
-    }
+    /**
+     * Battle functions
+     */
 
-    // @dev - Start a battle session
+    /**
+     * @dev - Start a battle session
+     */
     function beginBattleSession(bytes32 superblockHash, address submitter, address challenger)
     public onlyFrom(address(trustedSuperblockClaims)) returns (bytes32) {
         bytes32 sessionId = keccak256(abi.encode(superblockHash, msg.sender, sessionsCount));

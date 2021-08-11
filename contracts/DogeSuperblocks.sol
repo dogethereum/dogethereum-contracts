@@ -59,9 +59,6 @@ contract DogeSuperblocks is DogeErrorCodes {
         _;
     }
 
-    // @dev – the constructor
-    constructor() {}
-
     // @dev - sets SuperblockClaims instance associated with managing superblocks.
     // Once trustedSuperblockClaims has been set, it cannot be changed.
     // @param _superblockClaims - address of the SuperblockClaims contract to be associated with
