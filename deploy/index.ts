@@ -10,6 +10,9 @@ export interface DogethereumContract {
    * @dev The fully qualified name should be used if the contract name is not unique.
    */
   name: string;
+  /**
+   * Object representing a concrete deployment of the contract.
+   */
   contract: ethers.Contract;
 }
 
