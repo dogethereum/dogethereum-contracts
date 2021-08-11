@@ -3,12 +3,13 @@ import hre from "hardhat";
 import type { Contract } from "ethers";
 import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
-import { deployFixture, deployContract } from "../deploy";
+import { deployToken } from "../deploy";
 
 import {
   buildDogeTransaction,
   dogeAddressFromKeyPair,
   dogeKeyPairFromWIF,
+  isolateEachTest,
   isolateTests,
   publicKeyHashFromKeyPair,
 } from "./utils";
@@ -57,6 +58,7 @@ describe("testDogeTokenProcessTransaction", function () {
   let dogeToken: Contract;
 
   isolateTests();
+  isolateEachTest();
 
   before(async function () {
     signers = await hre.ethers.getSigners();
@@ -64,16 +66,15 @@ describe("testDogeTokenProcessTransaction", function () {
     trustedRelayerContract = signers[0].address;
     operatorEthAddress = signers[3].address;
     superblockSubmitterAddress = signers[4].address;
-  });
-
-  beforeEach(async function () {
-    const { setLibrary } = await deployFixture(hre);
-    dogeToken = await deployContract(
-      "DogeTokenForTests",
-      [trustedRelayerContract, trustedDogeEthPriceOracle, collateralRatio],
+    const dogeTokenSystem = await deployToken(
       hre,
-      { signer: signers[0], libraries: { Set: setLibrary.address } }
+      "DogeTokenForTests",
+      signers[0],
+      trustedDogeEthPriceOracle,
+      trustedRelayerContract,
+      collateralRatio
     );
+    dogeToken = dogeTokenSystem.dogeToken.contract;
   });
 
   it("processTransaction success", async () => {
