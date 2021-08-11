@@ -31,9 +31,12 @@ const config: HardhatUserConfig = {
         rinkeby: {
             url: "http://127.0.0.1:8545",
             chainId: 4,
-        }
+        },
     },
-    solidity: "0.7.6",
+    solidity: {
+        version: "0.7.6",
+        settings: { optimizer: { enabled: true, runs: 200 } },
+    },
 };
 
 export default config;
