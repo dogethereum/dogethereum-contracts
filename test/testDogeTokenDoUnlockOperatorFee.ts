@@ -1,21 +1,25 @@
-const hre = require("hardhat");
+import hre from "hardhat";
+import { assert } from "chai";
+import type { Contract } from "ethers";
 
-const deploy = require('../deploy');
+import { deployFixture } from "../deploy";
 
-const utils = require('./utils');
+import { base58ToBytes20, isolateTests } from "./utils";
 
 
-contract('testDogeTokenDoUnlockOperatorFee', function(accounts) {
-  let dogeToken;
-  let snapshot;
+describe('testDogeTokenDoUnlockOperatorFee', function() {
+  let dogeToken: Contract;
+  let accounts: string[];
+
+  isolateTests();
+
   before(async () => {
-    const dogethereum = await deploy.deployFixture(hre);
+    const dogethereum = await deployFixture(hre);
     dogeToken = dogethereum.dogeToken;
-    snapshot = await hre.network.provider.request({method: "evm_snapshot", params: []});
+
+    accounts = (await hre.ethers.getSigners()).map((signer) => signer.address);
   });
-  after(async function() {
-    await hre.network.provider.request({method: "evm_revert", params: [snapshot]});
-  });
+
   it('doUnlock pays operator fee', async () => {
     const operatorPublicKeyHash = `0x4d905b4b815d483cdfabcd292c6f86509d0fad82`;
     const operatorEthAddress = accounts[3];
@@ -27,13 +31,13 @@ contract('testDogeTokenDoUnlockOperatorFee', function(accounts) {
 
     await dogeToken.addUtxo(operatorPublicKeyHash, 20000000000, 1, 10);
     const utxo = await dogeToken.getUtxo(operatorPublicKeyHash, 0);
-    assert.equal(utxo[0].toNumber(), 20000000000, `Utxo value is not the expected one`);
+    assert.equal(utxo.value.toNumber(), 20000000000, `Utxo value is not the expected one`);
 
-    const dogeAddress = utils.base58ToBytes20("DHx8ZyJJuiFM5xAHFypfz1k6bd2X85xNMy");
+    const dogeAddress = base58ToBytes20("DHx8ZyJJuiFM5xAHFypfz1k6bd2X85xNMy");
     await dogeToken.doUnlock(dogeAddress, 15000000000, operatorPublicKeyHash);
 
     const unlockPendingInvestorProof = await dogeToken.getUnlockPendingInvestorProof(0);
-    assert.equal(unlockPendingInvestorProof[3].toNumber(), 150000000, `Unlock operator fee is not the expected one`);
+    assert.equal(unlockPendingInvestorProof.operatorFee.toNumber(), 150000000, `Unlock operator fee is not the expected one`);
     const operatorTokenBalance = await dogeToken.balanceOf(operatorEthAddress);
     assert.equal(operatorTokenBalance.toNumber(), 150000000, `DogeToken's operator balance after unlock is not the expected one`);
   });
