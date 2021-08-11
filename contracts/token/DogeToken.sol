@@ -130,9 +130,6 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
      *                  signature[33-64] = s
      */
     function addOperator(bytes memory operatorPublicKeyCompressed, bytes calldata signature) public {
-        //log0(bytes32(operatorPublicKeyCompressed.length));
-        //log0(bytes32(signature.length));
-
         // Parse operatorPublicKeyCompressed
         bytes32 operatorPublicKeyX;
         bool operatorPublicKeyOdd;
@@ -140,24 +137,20 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         assembly {
             operatorPublicKeyX := mload(add(operatorPublicKeyCompressed, 0x21))
         }
-        //log1(operatorPublicKeyX, bytes32(operatorPublicKeyOdd ? 1 : 0));
 
         // Check the non compressed version of operatorPublicKeyCompressed signed msg.sender hash
         bytes32 signedMessage = sha256(abi.encodePacked(sha256(abi.encodePacked(msg.sender))));
-        //log1(bytes20(msg.sender), signedMessage);
         address recoveredAddress = ECRecovery.recover(signedMessage, signature);
-        //log1(bytes32(recoveredAddress),
-        //     bytes32(DogeMessageLibrary.pub2address(uint(operatorPublicKeyX), operatorPublicKeyOdd)));
         if (recoveredAddress != DogeMessageLibrary.pub2address(uint(operatorPublicKeyX), operatorPublicKeyOdd)) {
             emit ErrorDogeToken(ERR_OPERATOR_SIGNATURE);
             return;
         }
+
         // Create operator
         bytes20 operatorPublicKeyHash = DogeMessageLibrary.pub2PubKeyHash(operatorPublicKeyX, operatorPublicKeyOdd);
-        //log0(operatorPublicKeyHash);
         Operator storage operator = operators[operatorPublicKeyHash];
+
         // Check that operator does not exist yet
-        //log1(bytes20(operator.ethAddress), bytes32((operator.ethAddress == 0) ? 0 : 1));
         if (operator.ethAddress != address(0)) {
             emit ErrorDogeToken(ERR_OPERATOR_ALREADY_CREATED);
             return;
@@ -165,7 +158,6 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         operator.ethAddress = msg.sender;
         operator.operatorKeyIndex = uint24(operatorKeys.length);
         operatorKeys.push(OperatorKey(operatorPublicKeyHash, false));
-
     }
 
     function deleteOperator(bytes20 operatorPublicKeyHash) public {
