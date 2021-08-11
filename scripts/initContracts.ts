@@ -3,7 +3,7 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import type { DogethereumSystem } from "../deploy";
 import type ethers from "ethers";
 
-const utils = require("./../test/utils");
+import {operatorSignItsEthAddress} from "./../test/utils";
 
 export interface SuperblockInit {
   blocksMerkleRoot: string;
@@ -69,7 +69,7 @@ async function initDogeToken(dogeToken: ethers.Contract) {
   const [
     operatorPublicKeyCompressedString,
     signature,
-  ] = utils.operatorSignItsEthAddress(
+  ] = operatorSignItsEthAddress(
     operatorPrivateKeyString,
     operatorSigner.address
   );

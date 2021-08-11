@@ -1,5 +1,4 @@
 import hre from "hardhat";
-import { loadDeployment } from "../deploy";
 import { getWalletFor, Role } from "./signers";
 
 // Prepares an eth account that holds doge tokens to send or unlock tokens:

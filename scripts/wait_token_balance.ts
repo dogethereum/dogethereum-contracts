@@ -10,7 +10,7 @@ export async function main() {
   const userWallet = getWalletFor(Role.User);
   let balance = await dogeToken.callStatic.balanceOf(userWallet.address);
   console.log(`Token balance of ${userWallet.address}: ${balance}`);
-  while (true) {
+  for (;;) {
     if (balance > 0) {
       return;
     }

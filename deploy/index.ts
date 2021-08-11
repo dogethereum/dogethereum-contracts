@@ -313,8 +313,9 @@ async function deployMainSystem(
     superblockOptions.reward
   );
 
-  await superblocks.contract.setSuperblockClaims(superblockClaims.contract.address);
-
+  await superblocks.contract.setSuperblockClaims(
+    superblockClaims.contract.address
+  );
   await battleManager.contract.setSuperblockClaims(
     superblockClaims.contract.address
   );
@@ -358,9 +359,13 @@ export async function deployDogethereum(
   if (scryptCheckerAddress !== undefined) {
     const scryptCheckerName = "ScryptClaims";
     scryptChecker = {
-      contract: await hre.ethers.getContractAt(scryptCheckerName, scryptCheckerAddress, deployAccount),
+      contract: await hre.ethers.getContractAt(
+        scryptCheckerName,
+        scryptCheckerAddress,
+        deployAccount
+      ),
       name: scryptCheckerName,
-    }
+    };
   } else {
     scryptChecker = await deployScryptCheckerDummy(hre, deployAccount);
   }
@@ -391,7 +396,9 @@ export async function deployDogethereum(
   };
 }
 
-export function getDefaultDeploymentPath(hre: HardhatRuntimeEnvironment): string {
+export function getDefaultDeploymentPath(
+  hre: HardhatRuntimeEnvironment
+): string {
   return path.join(hre.config.paths.root, "deployment", hre.network.name);
 }
 
