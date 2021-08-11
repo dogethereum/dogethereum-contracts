@@ -117,17 +117,17 @@ describe("testDogeTokenProcessTransaction", function () {
     );
 
     const utxo = await dogeToken.getUtxo(operatorPublicKeyHash, 0);
-    assert.equal(utxo[0], value, `Utxo's value is not the expected one`);
+    assert.equal(utxo.value, value, `Utxo's value is not the expected one`);
     assert.equal(
-      utxo[1].toHexString(),
+      utxo.txHash.toHexString(),
       txHash,
       `Utxo's value is not the expected one`
     );
-    assert.equal(utxo[2], 0, `Utxo's index is not the expected one`);
+    assert.equal(utxo.index, 0, `Utxo's index is not the expected one`);
 
     const operator = await dogeToken.operators(operatorPublicKeyHash);
     assert.equal(
-      operator[1],
+      operator.dogeAvailableBalance,
       value,
       "operator dogeAvailableBalance is not the expected one"
     );

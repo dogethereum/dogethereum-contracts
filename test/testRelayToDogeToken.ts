@@ -229,7 +229,7 @@ describe("testRelayToDogeToken", function () {
 
     const operator = await dogeToken.operators(operatorPublicKeyHash);
     assert.equal(
-      operator[1].toString(),
+      operator.dogeAvailableBalance.toString(),
       value,
       "operator dogeAvailableBalance is not the expected one"
     );
