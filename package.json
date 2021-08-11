@@ -45,7 +45,8 @@
     "ganache": "ganache-cli --mnemonic 'bean heart someone make olive oblige melody bacon mushroom swift tennis album' --gasLimit 4000000000000",
     "integration-tests": "scripts/send-back-and-forth-test.sh",
     "hh-network": "hardhat node",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit --project tsconfig.json",
+    "lint": "eslint ."
   },
   "repository": {
     "type": "git",
