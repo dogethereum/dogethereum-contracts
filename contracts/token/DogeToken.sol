@@ -118,14 +118,17 @@ contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), Transa
         collateralRatio = initCollateralRatio;
     }
 
-    // Adds an operator
-    // @param operatorPublicKeyCompressed operator compressed public key (33 bytes).
-    //                          operatorPublicKeyCompressed[0] = odd (0x02 or 0x03)
-    //                          operatorPublicKeyCompressed[1-32] = x
-    // @param signature doubleSha256(msg.sender) signed by operator (65 bytes).
-    //                  signature[0] = v
-    //                  signature[1-32] = r
-    //                  signature[33-64] = s
+    /**
+     * Adds an operator
+     * TODO: use fixed size parameters for the operator public key.
+     * @param operatorPublicKeyCompressed operator compressed public key (33 bytes).
+     *                          operatorPublicKeyCompressed[0] = odd (0x02 or 0x03)
+     *                          operatorPublicKeyCompressed[1-32] = x
+     * @param signature doubleSha256(msg.sender) signed by operator (65 bytes).
+     *                  signature[0] = v
+     *                  signature[1-32] = r
+     *                  signature[33-64] = s
+     */
     function addOperator(bytes memory operatorPublicKeyCompressed, bytes calldata signature) public {
         //log0(bytes32(operatorPublicKeyCompressed.length));
         //log0(bytes32(signature.length));

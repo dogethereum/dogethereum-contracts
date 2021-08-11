@@ -44,14 +44,24 @@ contract SuperblockClaims is DogeDepositsManager, DogeErrorCodes {
     // Battle manager contract
     DogeBattleManager public trustedDogeBattleManager;
 
-    // Confirmations required to confirm semi approved superblocks
+    /**
+     * Confirmations required to confirm semi approved superblocks
+     */
     uint public superblockConfirmations;
 
-    // Monetary reward for opponent in case battle is lost
+    /**
+     * Monetary reward for opponent in case battle is lost
+     */
     uint public battleReward;
 
-    uint public superblockDelay;    // Delay required to submit superblocks (in seconds)
-    uint public superblockTimeout;  // Timeout for action (in seconds)
+    /**
+     * Delay required to submit superblocks (in seconds)
+     */
+    uint public superblockDelay;
+    /**
+     * Timeout for action (in seconds)
+     */
+    uint public superblockTimeout;
 
     event DepositBonded(bytes32 superblockHash, address account, uint amount);
     event DepositUnbonded(bytes32 superblockHash, address account, uint amount);
