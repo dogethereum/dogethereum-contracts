@@ -63,25 +63,21 @@ export function calcBlockSha256Hash(blockHeader: string): string {
     .toString("hex")}`;
 }
 
+// function readUint32BE()
+
 // Get timestamp from dogecoin block header
 function getBlockTimestamp(blockHeader: string) {
-  const headerBin = fromHex(blockHeader).slice(0, 80);
-  const timestamp =
-    headerBin[68] +
-    256 * headerBin[69] +
-    256 * 256 * headerBin[70] +
-    256 * 256 * 256 * headerBin[71];
+  const timestampOffset = 68;
+  const timestampBuf = fromHex(blockHeader).slice(timestampOffset, timestampOffset + uint32Size);
+  const timestamp = timestampBuf.readUInt32LE();
   return timestamp;
 }
 
 // Get difficulty bits from block header
 function getBlockDifficultyBits(blockHeader: string) {
-  const headerBin = fromHex(blockHeader).slice(0, 80);
-  const bits =
-    headerBin[72] +
-    256 * headerBin[73] +
-    256 * 256 * headerBin[74] +
-    256 * 256 * 256 * headerBin[75];
+  const bitsOffset = 72;
+  const bitsBuf = fromHex(blockHeader).slice(bitsOffset, bitsOffset + uint32Size);
+  const bits = bitsBuf.readUInt32LE();
   return bits;
 }
 
@@ -114,17 +110,18 @@ export async function mineBlocks(n: number): Promise<void> {
   }
 }
 
+const uint256Size = 32;
+const uint32Size = 4;
+
 // Format a numeric or hexadecimal string to solidity uint256
 function toUint256(value: string) {
   // uint256 size in bytes
-  const uint256Size = 32;
   return hre.ethers.utils.hexZeroPad(value, uint256Size);
 }
 
 // Format a numeric or hexadecimal string to solidity uint32
 function toUint32(value: string) {
   // uint32 size in bytes
-  const uint32Size = 4;
   return hre.ethers.utils.hexZeroPad(value, uint32Size);
 }
 
@@ -411,7 +408,6 @@ export function operatorSignItsEthAddress(
   const signature = "0x" + ecdsaSig.toCompact().toString("hex");
   return [operatorPublicKeyCompressedString, signature];
 }
-
 
 /**
  * These isolation hooks can be used in conjunction.
