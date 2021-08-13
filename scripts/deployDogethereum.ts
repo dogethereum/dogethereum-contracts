@@ -7,6 +7,7 @@ import {
   DEPLOYMENT_JSON_NAME,
   DogecoinNetworkId,
   getDefaultDeploymentPath,
+  getScryptChecker,
   storeDeployment,
   SuperblockOptions,
   SUPERBLOCK_OPTIONS_LOCAL,
@@ -15,6 +16,9 @@ import {
   // SUPERBLOCK_OPTIONS_PRODUCTION,
 } from "../deploy";
 
+/**
+ * This script always deploys the production token.
+ */
 async function main() {
   const deploymentDir = getDefaultDeploymentPath(hre);
   const deploymentExists = await fs.pathExists(
@@ -27,17 +31,25 @@ async function main() {
   }
 
   // TODO: parametrize these when we write this as a Hardhat task.
-  const dogeNetworkId = DogecoinNetworkId.Regtest;
+  const dogecoinNetworkId = DogecoinNetworkId.Regtest;
   const superblockOptions = getSuperblockOptions(hre.network.name);
 
   const scryptCheckerAddress = process.env.SCRYPT_CHECKER;
+  if (scryptCheckerAddress === undefined) {
+    throw new Error(
+      `Scrypt checker contract address is missing.
+Please specify the address by setting the SCRYPT_CHECKER environment variable.`
+    );
+  }
+  const { scryptChecker } = await getScryptChecker(hre, scryptCheckerAddress);
 
-  const deployment = await deployDogethereum(
-    hre,
-    dogeNetworkId,
+  const deployment = await deployDogethereum(hre, {
+    dogecoinNetworkId,
     superblockOptions,
-    scryptCheckerAddress
-  );
+    scryptChecker,
+    dogeTokenContractName: "DogeToken",
+    useProxy: true,
+  });
   return storeDeployment(hre, deployment, deploymentDir);
 }
 

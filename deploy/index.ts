@@ -1,6 +1,7 @@
 import type ethers from "ethers";
 import type { HardhatRuntimeEnvironment } from "hardhat/types";
 import type { FactoryOptions } from "@nomiclabs/hardhat-ethers/types";
+import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import fs from "fs-extra";
 import path from "path";
 
@@ -61,49 +62,55 @@ interface DeploymentInfo {
   };
 }
 
-// TODO: move to a separate module?
-export interface Superblock {
+/**
+ * Superblock header.
+ * Fields are mostly encoded as strings to be safe.
+ */
+export interface SuperblockHeader {
+  /**
+   * Merkle root for blocks.
+   * Solidity type: bytes32
+   */
   merkleRoot: string;
+  /**
+   * Accumulated work
+   * Solidity type: uint256
+   */
   accumulatedWork: string;
+  /**
+   * Timestamp
+   * Solidity type: uint256
+   */
   timestamp: number;
+  /**
+   * Previous superblock timestamp
+   * Solidity type: uint256
+   */
   prevTimestamp: number;
+  /**
+   * Previous superblock hash
+   * Solidity type: bytes32
+   */
   lastHash: string;
+  /**
+   * Difficulty target bits
+   * Solidity type: uint32
+   */
   lastBits: number;
+  /**
+   * Parent superblock hash
+   * Solidity type: bytes32
+   */
   parentId: string;
+}
+
+export interface SuperblockData {
   superblockHash: string;
   blockHeaders: string[];
   blockHashes: string[];
 }
 
-export const DEPLOYMENT_JSON_NAME = "deployment.json";
-
-// TODO: Remove these?
-// const scryptCheckerAddress = "0xfeedbeeffeedbeeffeedbeeffeedbeeffeedbeef";
-//const dogethereumRecipientUnitTest = '0x4d905b4b815d483cdfabcd292c6f86509d0fad82';
-//const dogethereumRecipientIntegrationDogeMain = '0x0000000000000000000000000000000000000003';
-//const dogethereumRecipientIntegrationDogeRegtest = '0x03cd041b0139d3240607b9fd1b2d1b691e22b5d6';
-// TODO: placeholder for ropsten oracle?
-const trustedDogeEthPriceOracleRopsten =
-  "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-const trustedDogeEthPriceOracleRinkeby =
-  "0xf001a51533bcd531d7a2f40a4579afcc19038c14";
-
-/* ---- CONSTANTS FOR GENESIS SUPERBLOCK ---- */
-
-// TODO: set these to their actual values
-// const genesisSuperblockMerkleRoot =
-//   "0x3d2160a3b5dc4a9d62e7e66a295f70313ac808440ef7400d6c0772171ce973a5";
-// const genesisSuperblockChainWork = 0;
-// const genesisSuperblockLastBlockTimestamp = 1296688602;
-// const genesisSuperblockLastBlockHash =
-//   "0x3d2160a3b5dc4a9d62e7e66a295f70313ac808440ef7400d6c0772171ce973a5";
-// const genesisSuperblockParentId = "0x0";
-
-export enum DogecoinNetworkId {
-  Mainnet = 0,
-  Testnet = 1,
-  Regtest = 2,
-}
+export type Superblock = SuperblockHeader & SuperblockData;
 
 export interface SuperblockOptions {
   /**
@@ -118,7 +125,7 @@ export interface SuperblockOptions {
 
   /**
    * Battle timeout used in the superblock DogeBattleManager and ScryptClaims.
-   * This timeout is used in the challenge response protocols for both superblocks and scrypt hash verification.
+   * This timeout is used in the challenge response protocols for superblocks.
    */
   timeout: number;
 
@@ -131,16 +138,70 @@ export interface SuperblockOptions {
    * Monetary reward for opponent in case a battle is lost
    */
   reward: number;
+
+  /**
+   * Superblockchain genesis
+   */
+  genesis: SuperblockHeader;
 }
 
-// TODO: define an interface for these
-export const SUPERBLOCK_OPTIONS_PRODUCTION: SuperblockOptions = {
-  duration: 60 * 60,
-  delay: 3 * 60 * 60,
-  timeout: 5 * 60,
-  confirmations: 3,
-  reward: 10,
+export interface ContractOptions {
+  initArguments: InitializerArguments;
+  confirmations: number;
+}
+type InitializerArguments = any[];
+
+type DeployF = (
+  hre: HardhatRuntimeEnvironment,
+  factory: ethers.ContractFactory,
+  options: ContractOptions
+) => Promise<ethers.Contract>;
+
+export const DEPLOYMENT_JSON_NAME = "deployment.json";
+
+export enum DogecoinNetworkId {
+  Mainnet = 0,
+  Testnet = 1,
+  Regtest = 2,
+}
+
+// TODO: move these to another module?
+// These don't actually need to have specific values for our test suites.
+// We just need them to initialize the superblockchain with a known state.
+const localSuperblockGenesis: SuperblockHeader = {
+  merkleRoot:
+    "0x3d2160a3b5dc4a9d62e7e66a295f70313ac808440ef7400d6c0772171ce973a5",
+  accumulatedWork: "0",
+  timestamp: 1296688602,
+  prevTimestamp: 0,
+  lastHash:
+    "0x3d2160a3b5dc4a9d62e7e66a295f70313ac808440ef7400d6c0772171ce973a5",
+  lastBits: 0x207fffff,
+  parentId:
+    "0x0000000000000000000000000000000000000000000000000000000000000000",
 };
+
+const integrationSuperblockGenesis: SuperblockHeader = {
+  merkleRoot:
+    "0x629417921bc4ab79db4a4a02b4d7946a4d0dbc6a3c5bca898dd12eacaeb8b353",
+  accumulatedWork: "4266257060811936889868",
+  timestamp: 1535743139,
+  prevTimestamp: 1535743100,
+  lastHash:
+    "0xe2a056368784e63b9b5f9c17b613718ef7388a799e8535ab59be397019eff798",
+  lastBits: 436759445,
+  parentId:
+    "0x0000000000000000000000000000000000000000000000000000000000000000",
+};
+
+// TODO: define adequate parameters
+// export const SUPERBLOCK_OPTIONS_PRODUCTION: SuperblockOptions = {
+//   duration: 60 * 60,
+//   delay: 3 * 60 * 60,
+//   timeout: 5 * 60,
+//   confirmations: 3,
+//   reward: 10,
+// };
 
 export const SUPERBLOCK_OPTIONS_INTEGRATION_SLOW_SYNC: SuperblockOptions = {
   duration: 10 * 60,
@@ -148,6 +209,7 @@ export const SUPERBLOCK_OPTIONS_INTEGRATION_SLOW_SYNC: SuperblockOptions = {
   timeout: 60,
   confirmations: 1,
   reward: 10,
+  genesis: integrationSuperblockGenesis,
 };
 
 /**
@@ -159,6 +221,7 @@ export const SUPERBLOCK_OPTIONS_INTEGRATION_FAST_SYNC: SuperblockOptions = {
   timeout: 30,
   confirmations: 1,
   reward: 10,
+  genesis: integrationSuperblockGenesis,
 };
 
 /**
@@ -170,6 +233,7 @@ export const SUPERBLOCK_OPTIONS_LOCAL: SuperblockOptions = {
   timeout: 7,
   confirmations: 1,
   reward: 10,
+  genesis: localSuperblockGenesis,
 };
 
 /**
@@ -181,6 +245,7 @@ export const SUPERBLOCK_OPTIONS_CLAIM_TESTS: SuperblockOptions = {
   timeout: 15,
   confirmations: 1,
   reward: 3,
+  genesis: localSuperblockGenesis,
 };
 
 export function getDogecoinNetworkId(networkName: string): DogecoinNetworkId {
@@ -197,54 +262,78 @@ export async function deployToken(
   deploySigner: ethers.Signer,
   trustedDogeEthPriceOracle: string,
   superblocksAddress: string,
-  collateralRatio: number
+  collateralRatio: number,
+  confirmations = 0,
+  tokenDeployPrimitive = deployPlainWithInit
 ): Promise<DogethereumTokenSystem> {
   const setContractName = "Set";
   const setLibrary = {
-    contract: await deployContract(setContractName, [], hre, {
-      signer: deploySigner,
-    }),
+    contract: await deployContract(
+      setContractName,
+      [],
+      hre,
+      {
+        signer: deploySigner,
+      },
+      confirmations
+    ),
     name: setContractName,
   };
   const dogeToken = {
-    contract: await deployContract(tokenContractName, [], hre, {
-      signer: deploySigner,
-      libraries: {
-        Set: setLibrary.contract.address,
+    contract: await deployContract(
+      tokenContractName,
+      [superblocksAddress, trustedDogeEthPriceOracle, collateralRatio],
+      hre,
+      {
+        signer: deploySigner,
+        libraries: {
+          Set: setLibrary.contract.address,
+        },
       },
-    }),
+      confirmations,
+      tokenDeployPrimitive
+    ),
     name: tokenContractName,
   };
-  await dogeToken.contract.initialize(
-    superblocksAddress,
-    trustedDogeEthPriceOracle,
-    collateralRatio
-  );
   return { dogeToken, setLibrary };
 }
 
 function deployTokenForCoreSystem(
   hre: HardhatRuntimeEnvironment,
-  tokenContractName: "DogeToken" | "DogeTokenForTests",
-  deploySigner: ethers.Signer,
-  trustedDogeEthPriceOracle: string,
+  {
+    confirmations,
+    dogeTokenContractName,
+    deployAccount,
+    dogeEthPriceOracle,
+    useProxy,
+  }: DeploymentOptions,
   { superblocks }: DogethereumCoreSystem,
   collateralRatio = 2
 ): Promise<DogethereumTokenSystem> {
   return deployToken(
     hre,
-    tokenContractName,
-    deploySigner,
-    trustedDogeEthPriceOracle,
+    dogeTokenContractName,
+    deployAccount,
+    dogeEthPriceOracle,
     superblocks.contract.address,
-    collateralRatio
+    collateralRatio,
+    confirmations,
+    useProxy ? deployProxy : deployPlainWithInit
   );
 }
 
-async function deployScryptCheckerDummy(
+/**
+ * This deploys a simple contract that mocks the scrypt checker system
+ * implemented by ScryptClaims.
+ */
+export async function deployScryptCheckerDummy(
   hre: HardhatRuntimeEnvironment,
-  deploySigner: ethers.Signer
-): Promise<DogethereumContract> {
+  deploySigner?: ethers.Signer
+): Promise<ScryptCheckerDeployment> {
+  if (deploySigner === undefined) {
+    deploySigner = (await hre.ethers.getSigners())[0];
+  }
+
   const scryptCheckerContractName = "ScryptCheckerDummy";
   const scryptChecker = {
     contract: await deployContract(scryptCheckerContractName, [true], hre, {
@@ -253,68 +342,110 @@ async function deployScryptCheckerDummy(
     name: scryptCheckerContractName,
   };
 
-  return scryptChecker;
+  return { scryptChecker };
+}
+
+/**
+ * This instantiates an interface to interact with the scrypt checker system.
+ * It is assumed that the contract stored at the address given by parameter is
+ * ScryptClaims.
+ */
+export async function getScryptChecker(
+  hre: HardhatRuntimeEnvironment,
+  address: string
+): Promise<ScryptCheckerDeployment> {
+  const scryptCheckerName = "ScryptClaims";
+  const scryptChecker = {
+    contract: await hre.ethers.getContractAt(scryptCheckerName, address),
+    name: scryptCheckerName,
+  };
+  return { scryptChecker };
 }
 
 async function deployMainSystem(
   hre: HardhatRuntimeEnvironment,
-  deploySigner: ethers.Signer,
-  scryptChecker: DogethereumContract,
-  dogecoinNetworkId: DogecoinNetworkId,
-  superblockOptions: SuperblockOptions
+  {
+    confirmations,
+    scryptChecker,
+    dogecoinNetworkId,
+    deployAccount,
+    superblockOptions,
+    useProxy,
+  }: DeploymentOptions
 ): Promise<DogethereumCoreSystem> {
+  const deployPrimitive: DeployF = useProxy ? deployProxy : deployPlainWithInit;
+
   const dogeMessageLibraryName = "DogeMessageLibrary";
   const dogeMessageLibrary = {
     contract: await deployContract(dogeMessageLibraryName, [], hre, {
-      signer: deploySigner,
+      signer: deployAccount,
     }),
     name: dogeMessageLibraryName,
   };
 
   const superblocksContractName = "DogeSuperblocks";
   const superblocks = {
-    contract: await deployContract(superblocksContractName, [], hre, {
-      signer: deploySigner,
-      libraries: {
-        DogeMessageLibrary: dogeMessageLibrary.contract.address,
+    contract: await deployContract(
+      superblocksContractName,
+      [],
+      hre,
+      {
+        signer: deployAccount,
+        libraries: {
+          DogeMessageLibrary: dogeMessageLibrary.contract.address,
+        },
       },
-    }),
+      confirmations,
+      deployPlain
+    ),
     name: superblocksContractName,
   };
 
   const battleManagerContractName = "DogeBattleManager";
   const battleManager = {
-    contract: await deployContract(battleManagerContractName, [], hre, {
-      signer: deploySigner,
-      libraries: {
-        DogeMessageLibrary: dogeMessageLibrary.contract.address,
+    contract: await deployContract(
+      battleManagerContractName,
+      [
+        dogecoinNetworkId,
+        superblocks.contract.address,
+        scryptChecker.contract.address,
+        superblockOptions.duration,
+        superblockOptions.timeout,
+      ],
+      hre,
+      {
+        signer: deployAccount,
+        libraries: {
+          DogeMessageLibrary: dogeMessageLibrary.contract.address,
+        },
       },
-    }),
+      confirmations,
+      deployPrimitive
+    ),
     name: battleManagerContractName,
   };
-  await battleManager.contract.initialize(
-    dogecoinNetworkId,
-    superblocks.contract.address,
-    scryptChecker.contract.address,
-    superblockOptions.duration,
-    superblockOptions.timeout
-  );
 
   const superblockClaimsContractName = "SuperblockClaims";
   const superblockClaims = {
-    contract: await deployContract(superblockClaimsContractName, [], hre, {
-      signer: deploySigner,
-    }),
+    contract: await deployContract(
+      superblockClaimsContractName,
+      [
+        superblocks.contract.address,
+        battleManager.contract.address,
+        superblockOptions.delay,
+        superblockOptions.timeout,
+        superblockOptions.confirmations,
+        superblockOptions.reward,
+      ],
+      hre,
+      {
+        signer: deployAccount,
+      },
+      confirmations,
+      deployPrimitive
+    ),
     name: superblockClaimsContractName,
   };
-  await superblockClaims.contract.initialize(
-    superblocks.contract.address,
-    battleManager.contract.address,
-    superblockOptions.delay,
-    superblockOptions.timeout,
-    superblockOptions.confirmations,
-    superblockOptions.reward
-  );
 
   await superblocks.contract.setSuperblockClaims(
     superblockClaims.contract.address
@@ -332,64 +463,84 @@ async function deployMainSystem(
   };
 }
 
-// TODO: refactor conditional properties based on network name out of this function
+// TODO: add deployer account?
+export interface UserDogethereumDeploymentOptions {
+  /**
+   * Number of block confirmations to wait for when deploying a contract.
+   */
+  confirmations?: number;
+  /**
+   * Account used for deployment and initialization of contracts.
+   */
+  deployAccount?: SignerWithAddress;
+  /**
+   * Network ID of the dogecoin blockchain.
+   */
+  dogecoinNetworkId?: DogecoinNetworkId;
+  /**
+   * Address of the price oracle.
+   */
+  dogeEthPriceOracle?: string;
+  /**
+   * Name of the token contract used in this deployment.
+   */
+  dogeTokenContractName: "DogeToken" | "DogeTokenForTests";
+  /**
+   * Superblockchain parameters.
+   */
+  superblockOptions?: SuperblockOptions;
+  /**
+   * Use transparent proxies to deploy main contracts
+   */
+  useProxy?: boolean;
+}
+
+export interface ScryptCheckerDeployment {
+  scryptChecker: DogethereumContract;
+}
+
+export type DeploymentOptions = Required<UserDogethereumDeploymentOptions> &
+  ScryptCheckerDeployment;
+export type UserDeploymentOptions = UserDogethereumDeploymentOptions &
+  ScryptCheckerDeployment;
+
 export async function deployDogethereum(
   hre: HardhatRuntimeEnvironment,
-  dogecoinNetworkId: DogecoinNetworkId = DogecoinNetworkId.Regtest,
-  superblockOptions: SuperblockOptions = SUPERBLOCK_OPTIONS_LOCAL,
-  scryptCheckerAddress?: string
-): Promise<DogethereumSystem> {
-  const { ethers, network } = hre;
-  const accounts = await ethers.getSigners();
-  const deployAccount = accounts[0];
-  let trustedDogeEthPriceOracle: string;
-  if (
-    network.name === "hardhat" ||
-    network.name === "development" ||
-    network.name === "integrationDogeRegtest" ||
-    network.name === "integrationDogeMain"
-  ) {
-    trustedDogeEthPriceOracle = accounts[2].address;
-  } else if (network.name === "ropsten") {
-    trustedDogeEthPriceOracle = trustedDogeEthPriceOracleRopsten;
-  } else if (network.name === "rinkeby") {
-    trustedDogeEthPriceOracle = trustedDogeEthPriceOracleRinkeby;
-  } else {
-    trustedDogeEthPriceOracle = deployAccount.address;
-  }
-
-  let scryptChecker: DogethereumContract;
-  if (scryptCheckerAddress !== undefined) {
-    const scryptCheckerName = "ScryptClaims";
-    scryptChecker = {
-      contract: await hre.ethers.getContractAt(
-        scryptCheckerName,
-        scryptCheckerAddress,
-        deployAccount
-      ),
-      name: scryptCheckerName,
-    };
-  } else {
-    scryptChecker = await deployScryptCheckerDummy(hre, deployAccount);
-  }
-
-  const dogethereumMain = await deployMainSystem(
-    hre,
+  {
+    confirmations = 0,
     deployAccount,
+    dogecoinNetworkId = DogecoinNetworkId.Regtest,
+    dogeEthPriceOracle,
+    dogeTokenContractName = "DogeTokenForTests",
     scryptChecker,
-    dogecoinNetworkId,
-    superblockOptions
-  );
+    superblockOptions = SUPERBLOCK_OPTIONS_LOCAL,
+    useProxy = false,
+  }: UserDeploymentOptions
+): Promise<DogethereumSystem> {
+  const accounts = await hre.ethers.getSigners();
+  if (deployAccount === undefined) {
+    deployAccount = accounts[0];
+  }
+  if (dogeEthPriceOracle === undefined) {
+    dogeEthPriceOracle = accounts[2].address;
+  }
 
-  const dogeTokenContractName =
-    network.name === "hardhat" || network.name === "development"
-      ? "DogeTokenForTests"
-      : "DogeToken";
+  const deployOptions: DeploymentOptions = {
+    confirmations,
+    deployAccount,
+    dogecoinNetworkId,
+    dogeEthPriceOracle,
+    dogeTokenContractName,
+    scryptChecker,
+    superblockOptions,
+    useProxy,
+  };
+
+  const dogethereumMain = await deployMainSystem(hre, deployOptions);
+
   const dogeTokenContracts = await deployTokenForCoreSystem(
     hre,
-    dogeTokenContractName,
-    deployAccount,
-    trustedDogeEthPriceOracle,
+    deployOptions,
     dogethereumMain
   );
 
@@ -499,21 +650,64 @@ export async function loadDeployment(
   };
 }
 
+const deployProxy: DeployF = async (
+  hre,
+  factory,
+  { initArguments, confirmations }
+) => {
+  const contract = await hre.upgrades.deployProxy(factory, initArguments, {
+    kind: "transparent",
+    // We use a couple of external libraries so we need to tell the upgrades plugin
+    // to trust our linking.
+    // See https://docs.openzeppelin.com/upgrades-plugins/1.x/faq#why-cant-i-use-external-libraries
+    unsafeAllow: ["external-library-linking"],
+  });
+  await contract.deployTransaction.wait(confirmations);
+  return contract;
+};
+
+const deployPlain: DeployF = async (
+  hre,
+  factory,
+  { initArguments, confirmations }
+) => {
+  const contract = await factory.deploy(...initArguments);
+  await contract.deployTransaction.wait(confirmations);
+  return contract;
+};
+
+const deployPlainWithInit: DeployF = async (
+  hre,
+  factory,
+  { initArguments, confirmations }
+) => {
+  const contract = await factory.deploy();
+  await contract.deployTransaction.wait(confirmations);
+  const initTx = (await contract.initialize(
+    ...initArguments
+  )) as ethers.ContractTransaction;
+  await initTx.wait(confirmations);
+  return contract;
+};
+
 export async function deployContract(
   contractName: string,
-  constructorArguments: any[],
-  { ethers }: HardhatRuntimeEnvironment,
+  initArguments: InitializerArguments,
+  hre: HardhatRuntimeEnvironment,
   options: FactoryOptions = {},
-  confirmations = 0
+  confirmations = 0,
+  deployPrimitive = deployPlain
 ): Promise<ethers.Contract> {
   // TODO: `getContractFactory` gets a default signer so we may want to remove this.
   if (options.signer === undefined) {
     throw new Error("No wallet or signer defined for deployment.");
   }
 
-  const factory = await ethers.getContractFactory(contractName, options);
-  const contract = await factory.deploy(...constructorArguments);
-  await contract.deployTransaction.wait(confirmations);
+  const factory = await hre.ethers.getContractFactory(contractName, options);
+  const contract = await deployPrimitive(hre, factory, {
+    initArguments,
+    confirmations,
+  });
   return contract;
 }
 
@@ -527,6 +721,7 @@ export async function initSuperblockChain(
     from: string;
   }
 ) {
+  const deployPrimitive = deployPlainWithInit;
   const deploySigner = await hre.ethers.getSigner(options.from);
 
   const dogeMessageLibrary = await deployContract(
@@ -538,12 +733,27 @@ export async function initSuperblockChain(
     }
   );
 
-  const superblocks = await deployContract("DogeSuperblocks", [], hre, {
-    signer: deploySigner,
-    libraries: {
-      DogeMessageLibrary: dogeMessageLibrary.address,
+  const superblocks = await deployContract(
+    "DogeSuperblocks",
+    [
+      options.genesisSuperblock.merkleRoot,
+      options.genesisSuperblock.accumulatedWork,
+      options.genesisSuperblock.timestamp,
+      options.genesisSuperblock.prevTimestamp,
+      options.genesisSuperblock.lastHash,
+      options.genesisSuperblock.lastBits,
+      options.genesisSuperblock.parentId,
+    ],
+    hre,
+    {
+      signer: deploySigner,
+      libraries: {
+        DogeMessageLibrary: dogeMessageLibrary.address,
+      },
     },
-  });
+    0,
+    deployPrimitive
+  );
 
   let scryptVerifier;
   let scryptChecker;
@@ -561,48 +771,53 @@ export async function initSuperblockChain(
       hre,
       {
         signer: deploySigner,
-      }
+      },
+      0,
+      deployPrimitive
     );
   }
 
-  const battleManager = await deployContract("DogeBattleManager", [], hre, {
-    signer: deploySigner,
-    libraries: {
-      DogeMessageLibrary: dogeMessageLibrary.address,
+  const battleManager = await deployContract(
+    "DogeBattleManager",
+    [
+      options.network,
+      superblocks.address,
+      scryptChecker.address,
+      options.params.duration,
+      options.params.timeout,
+    ],
+    hre,
+    {
+      signer: deploySigner,
+      libraries: {
+        DogeMessageLibrary: dogeMessageLibrary.address,
+      },
     },
-  });
-  await battleManager.initialize(
-    options.network,
-    superblocks.address,
-    scryptChecker.address,
-    options.params.duration,
-    options.params.timeout
+    0,
+    deployPrimitive
   );
 
-  const superblockClaims = await deployContract("SuperblockClaims", [], hre, {
-    signer: deploySigner,
-  });
-  await superblockClaims.initialize(
-    superblocks.address,
-    battleManager.address,
-    options.params.delay,
-    options.params.timeout,
-    options.params.confirmations,
-    options.params.reward
+  const superblockClaims = await deployContract(
+    "SuperblockClaims",
+    [
+      superblocks.address,
+      battleManager.address,
+      options.params.delay,
+      options.params.timeout,
+      options.params.confirmations,
+      options.params.reward,
+    ],
+    hre,
+    {
+      signer: deploySigner,
+    },
+    0,
+    deployPrimitive
   );
 
   await superblocks.setSuperblockClaims(superblockClaims.address);
   await battleManager.setSuperblockClaims(superblockClaims.address);
 
-  await superblocks.initialize(
-    options.genesisSuperblock.merkleRoot,
-    options.genesisSuperblock.accumulatedWork,
-    options.genesisSuperblock.timestamp,
-    options.genesisSuperblock.prevTimestamp,
-    options.genesisSuperblock.lastHash,
-    options.genesisSuperblock.lastBits,
-    options.genesisSuperblock.parentId
-  );
   return {
     superblocks,
     superblockClaims,
@@ -617,13 +832,18 @@ let dogethereumFixture: DogethereumFixture;
 /**
  * This deploys the Dogethereum system the first time it's called.
  * Meant to be used in a test suite.
+ * In particular, it will deploy the DogeTokenForTests and ScryptCheckerDummy contracts.
  * @param hre The Hardhat runtime environment where the deploy takes place.
  */
 export async function deployFixture(
   hre: HardhatRuntimeEnvironment
 ): Promise<DogethereumFixture> {
   if (dogethereumFixture === undefined) {
-    const dogethereum = await deployDogethereum(hre);
+    const { scryptChecker } = await deployScryptCheckerDummy(hre);
+    const dogethereum = await deployDogethereum(hre, {
+      dogeTokenContractName: "DogeTokenForTests",
+      scryptChecker,
+    });
     dogethereumFixture = {
       superblocks: dogethereum.superblocks.contract,
       superblockClaims: dogethereum.superblockClaims.contract,

@@ -1,39 +1,29 @@
 import type { HardhatRuntimeEnvironment } from "hardhat/types";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import type { DogethereumSystem } from "../deploy";
+import type { DogethereumSystem, SuperblockHeader } from "../deploy";
 import type ethers from "ethers";
 
-import {operatorSignItsEthAddress} from "./../test/utils";
-
-export interface SuperblockInit {
-  blocksMerkleRoot: string;
-  accumulatedWork: string;
-  timestamp: string;
-  prevTimestamp: string;
-  lastHash: string;
-  lastBits: number;
-  parentId: string;
-}
+import { operatorSignItsEthAddress } from "./../test/utils";
 
 // TODO: choose better names for these
-export const contractsLocalSuperblockInit: SuperblockInit = {
-  blocksMerkleRoot:
+export const localSuperblockGenesis: SuperblockHeader = {
+  merkleRoot:
     "0x3d2160a3b5dc4a9d62e7e66a295f70313ac808440ef7400d6c0772171ce973a5",
   accumulatedWork: "0",
-  timestamp: "1296688602",
-  prevTimestamp: "0",
+  timestamp: 1296688602,
+  prevTimestamp: 0,
   lastHash:
     "0x3d2160a3b5dc4a9d62e7e66a295f70313ac808440ef7400d6c0772171ce973a5",
   lastBits: 0x207fffff,
   parentId:
     "0x0000000000000000000000000000000000000000000000000000000000000000",
 };
-export const contractsIntegrationSuperblockInit: SuperblockInit = {
-  blocksMerkleRoot:
+export const integrationSuperblockGenesis: SuperblockHeader = {
+  merkleRoot:
     "0x629417921bc4ab79db4a4a02b4d7946a4d0dbc6a3c5bca898dd12eacaeb8b353",
   accumulatedWork: "4266257060811936889868",
-  timestamp: "1535743139",
-  prevTimestamp: "1535743100",
+  timestamp: 1535743139,
+  prevTimestamp: 1535743100,
   lastHash:
     "0xe2a056368784e63b9b5f9c17b613718ef7388a799e8535ab59be397019eff798",
   lastBits: 436759445,
@@ -44,13 +34,13 @@ export const contractsIntegrationSuperblockInit: SuperblockInit = {
 export async function initContracts(
   hre: HardhatRuntimeEnvironment,
   deployment: DogethereumSystem,
-  superblockInit: SuperblockInit
+  superblockGenesis: SuperblockHeader
 ) {
   const [, , , operatorSigner] = await hre.ethers.getSigners();
   const dogeToken = deployment.dogeToken.contract.connect(operatorSigner);
   await initDogeToken(dogeToken);
   const superblocks = deployment.superblocks.contract;
-  await initSuperblocks(superblocks, superblockInit);
+  await initSuperblocks(superblocks, superblockGenesis);
 }
 
 async function initDogeToken(dogeToken: ethers.Contract) {
@@ -104,15 +94,15 @@ ${errorEvents}`);
 
 async function initSuperblocks(
   superblocks: ethers.Contract,
-  superblockInit: SuperblockInit
+  superblockGenesis: SuperblockHeader
 ) {
   return superblocks.initialize(
-    superblockInit.blocksMerkleRoot,
-    superblockInit.accumulatedWork,
-    superblockInit.timestamp,
-    superblockInit.prevTimestamp,
-    superblockInit.lastHash,
-    superblockInit.lastBits,
-    superblockInit.parentId
+    superblockGenesis.merkleRoot,
+    superblockGenesis.accumulatedWork,
+    superblockGenesis.timestamp,
+    superblockGenesis.prevTimestamp,
+    superblockGenesis.lastHash,
+    superblockGenesis.lastBits,
+    superblockGenesis.parentId
   );
 }
