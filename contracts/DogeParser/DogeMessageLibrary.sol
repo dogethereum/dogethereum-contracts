@@ -1367,7 +1367,10 @@ library DogeMessageLibrary {
     /**
      * Dead code.
      * This is currently unused code. This should be deleted once it is deemed no longer useful.
+     * It is commented out to avoid code generation.
      */
+
+    /*
 
     // Check whether `btcAddress` is in the transaction outputs *and*
     // whether *at least* `value` has been sent to it.
@@ -1448,4 +1451,6 @@ library DogeMessageLibrary {
             addr := uw
         }
     }
+
+    */
 }
