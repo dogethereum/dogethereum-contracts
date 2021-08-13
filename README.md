@@ -118,6 +118,17 @@ To run the deployment on, e.g. rinkeby, execute:
 $ npx hardhat --network rinkeby run scripts/deployDogethereum.ts
 ```
 
+### Upgrades
+
+The contracts support upgrades using [OpenZeppelin's upgrades plugin](https://docs.openzeppelin.com/upgrades-plugins/1.x/).
+
+Some of these contracts use state variables for values that are meant to be constant so that they can be set during initialization.
+When planning an upgrade, it is important to determine if part of the altered behaviour is based on some of these variables and update them as needed.
+
+For example, superblock duration is one of such "constant" state variables in the [SuperblockClaims](contracts/SuperblockClaims.sol) contract.
+
+Ideally, we would use `immutable` contract attributes for these, but the upgrades plugin does not support setting `immutable` attributes in constructors for logic/implementation contracts yet. See this [issue](https://github.com/OpenZeppelin/openzeppelin-upgrades/issues/312) for more details.
+
 ## License
 
 MIT License<br/>
