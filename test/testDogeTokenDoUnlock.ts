@@ -1,7 +1,6 @@
 import hre from "hardhat";
 import { assert } from "chai";
-import type { Contract, ContractTransaction } from "ethers";
-import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import type { Contract } from "ethers";
 
 import { deployFixture } from "../deploy";
 

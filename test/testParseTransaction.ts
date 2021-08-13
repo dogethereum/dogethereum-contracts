@@ -16,7 +16,6 @@ import {
 describe("testParseTransaction", () => {
   let dogeMessageLibraryForTests: Contract;
   let signers: SignerWithAddress[];
-  let snapshot: any;
   const keys = [
     "QSRUX7i1WVzFW6vx3i4Qj8iPPQ1tRcuPanMun8BKf8ySc8LsUuKx",
     "QULAK58teBn1Xi4eGo4fKea5oQDPMK4vcnmnivqzgvCPagsWHiyf",
@@ -63,10 +62,9 @@ describe("testParseTransaction", () => {
     });
     const operatorPublicKeyHash = publicKeyHashFromKeyPair(keys[0]);
     const txData = `0x${tx.toHex()}`;
-    const txHash = `0x${tx.getId()}`;
 
     try {
-      const parseResult = await dogeMessageLibraryForTests.parseLockTransaction(
+      await dogeMessageLibraryForTests.parseLockTransaction(
         txData,
         operatorPublicKeyHash
       );
@@ -102,10 +100,9 @@ describe("testParseTransaction", () => {
     });
     const operatorPublicKeyHash = publicKeyHashFromKeyPair(keys[1]);
     const txData = `0x${tx.toHex()}`;
-    const txHash = `0x${tx.getId()}`;
 
     try {
-      const parseResult = await dogeMessageLibraryForTests.parseLockTransaction(
+      await dogeMessageLibraryForTests.parseLockTransaction(
         txData,
         operatorPublicKeyHash
       );
@@ -152,7 +149,6 @@ describe("testParseTransaction", () => {
     });
     const operatorPublicKeyHash = publicKeyHashFromKeyPair(operatorKeyPair);
     const txData = `0x${tx.toHex()}`;
-    const txHash = `0x${tx.getId()}`;
 
     const parseResult = await dogeMessageLibraryForTests.parseLockTransaction(
       txData,

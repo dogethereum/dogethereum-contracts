@@ -1,7 +1,6 @@
 import hre from "hardhat";
 import { assert } from "chai";
-import type { Contract, ContractTransaction } from "ethers";
-import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import type { Contract } from "ethers";
 
 import { deployFixture } from "../deploy";
 
@@ -41,9 +40,6 @@ describe("testDogeTokenDoUnlock2", function () {
     await dogeToken.addUtxo(operatorPublicKeyHash, 900000000, 4, 1);
 
     const dogeAddress = base58ToBytes20("DHx8ZyJJuiFM5xAHFypfz1k6bd2X85xNMy");
-
-    //address from, bytes20 dogeAddress, uint value, uint operatorFee,
-    //uint timestamp, uint32[] memory selectedUtxos, uint dogeTxFee, bytes20 operatorPublicKeyHash
 
     // Unlock Request 1
     await dogeToken.doUnlock(dogeAddress, 1000000000, operatorPublicKeyHash);

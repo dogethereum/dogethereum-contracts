@@ -35,7 +35,7 @@ export async function initContracts(
   hre: HardhatRuntimeEnvironment,
   deployment: DogethereumSystem,
   superblockGenesis: SuperblockHeader
-) {
+): Promise<void> {
   const [, , , operatorSigner] = await hre.ethers.getSigners();
   const dogeToken = deployment.dogeToken.contract.connect(operatorSigner);
   await initDogeToken(dogeToken);

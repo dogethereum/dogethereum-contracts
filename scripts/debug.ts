@@ -1,4 +1,3 @@
-import type { HardhatRuntimeEnvironment } from "hardhat/types";
 import hre from "hardhat";
 import { loadDeployment } from "../deploy";
 import { printStatus } from "./inspectStatus";
