@@ -13,11 +13,12 @@ import '@openzeppelin/contracts/math/SafeMath.sol';
 contract ScryptClaims is DepositsManager, IScryptChecker {
   using SafeMath for uint;
 
-  uint private numClaims = 1;     // index as key for the claims mapping.
-  uint public minDeposit = 1;    // TODO: what should the minimum deposit be?
+  // index as key for the claims mapping.
+  uint private numClaims;
+  uint public minDeposit;
 
   // default initial amount of blocks for challenge timeout
-  uint public defaultChallengeTimeout = 5;
+  uint public defaultChallengeTimeout;
 
   ScryptVerifier public scryptVerifier;
 
@@ -57,9 +58,15 @@ contract ScryptClaims is DepositsManager, IScryptChecker {
     _;
   }
 
-  // @dev – the constructor
-  constructor(ScryptVerifier _scryptVerifier) {
-    scryptVerifier = _scryptVerifier;
+  function initialize(ScryptVerifier initScryptVerifier) external {
+    require(address(scryptVerifier) == address(0), "The contract is already initialized!");
+    require(address(initScryptVerifier) != address(0), "The scrypt verifier contract must be valid.");
+    scryptVerifier = initScryptVerifier;
+
+    numClaims = 1;
+    // TODO: what should the minimum deposit be?
+    minDeposit = 1;
+    defaultChallengeTimeout = 5;
   }
 
   // @dev – locks up part of the user's deposit into a claim.

@@ -41,7 +41,7 @@ abstract contract Verifier {
 
     mapping(uint => VerificationSession) public sessions;
     mapping(uint => uint) public sessionsClaimId;
-    uint sessionsCount = 0;
+    uint sessionsCount;
 
     function claimComputation(
         uint claimId,
@@ -186,8 +186,6 @@ abstract contract Verifier {
         // TODO: Is this necessary? Why is the claimId a parameter in this function?
         require(claimId == sessionsClaimId[sessionId], "The claim ID must be the one associated with this session.");
 
-        // TODO: in several places we use the term pre-state or post-state;
-        // these should be explained in more detail in documentation
         //prove game ended
         require(keccak256(preValue) == s.lowHash, "The preimage is not consistent with the claimed hash for the pre-state.");
         require(keccak256(postValue) == s.highHash, "The preimage is not consistent with the claimed hash for the post-state.");
