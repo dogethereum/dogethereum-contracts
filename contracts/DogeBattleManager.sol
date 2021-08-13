@@ -115,7 +115,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
 
     mapping (bytes32 => BattleSession) public sessions;
 
-    uint public sessionsCount = 0;
+    uint public sessionsCount;
 
     uint public superblockDuration;         // Superblock duration (in seconds)
     uint public superblockTimeout;          // Timeout action (in seconds)

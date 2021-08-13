@@ -9,7 +9,7 @@ import "../DogeParser/DogeMessageLibrary.sol";
 import "./../ECRecovery.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
-contract DogeToken is HumanStandardToken(0, "DogeToken", 8, "DOGETOKEN"), TransactionProcessor {
+contract DogeToken is HumanStandardToken, TransactionProcessor {
 
     using SafeMath for uint;
 
