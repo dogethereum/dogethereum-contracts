@@ -8,7 +8,9 @@ import {
   DogecoinNetworkId,
   getDefaultDeploymentPath,
   getScryptChecker,
+  deployScryptCheckerDummy,
   storeDeployment,
+  ScryptCheckerDeployment,
   SuperblockOptions,
   SUPERBLOCK_OPTIONS_LOCAL,
   SUPERBLOCK_OPTIONS_INTEGRATION_FAST_SYNC,
@@ -34,14 +36,7 @@ async function main() {
   const dogecoinNetworkId = DogecoinNetworkId.Regtest;
   const superblockOptions = getSuperblockOptions(hre.network.name);
 
-  const scryptCheckerAddress = process.env.SCRYPT_CHECKER;
-  if (scryptCheckerAddress === undefined) {
-    throw new Error(
-      `Scrypt checker contract address is missing.
-Please specify the address by setting the SCRYPT_CHECKER environment variable.`
-    );
-  }
-  const { scryptChecker } = await getScryptChecker(hre, scryptCheckerAddress);
+  const { scryptChecker } = await deployOrGetScryptChecker();
 
   const deployment = await deployDogethereum(hre, {
     dogecoinNetworkId,
@@ -51,6 +46,22 @@ Please specify the address by setting the SCRYPT_CHECKER environment variable.`
     useProxy: true,
   });
   return storeDeployment(hre, deployment, deploymentDir);
+}
+
+function deployOrGetScryptChecker(): Promise<ScryptCheckerDeployment> {
+  const scryptCheckerAddress = process.env.SCRYPT_CHECKER;
+  if (scryptCheckerAddress === undefined) {
+    throw new Error(
+      `Scrypt checker contract address is missing.
+Please specify the address by setting the SCRYPT_CHECKER environment variable.`
+    );
+  }
+
+  if (scryptCheckerAddress === "deploy_dummy") {
+    return deployScryptCheckerDummy(hre);
+  }
+
+  return getScryptChecker(hre, scryptCheckerAddress);
 }
 
 function getSuperblockOptions(ethereumNetworkName: string): SuperblockOptions {

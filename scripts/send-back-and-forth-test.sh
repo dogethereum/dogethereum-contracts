@@ -67,6 +67,7 @@ npx hardhat compile --quiet
 # Deploy dogethereum to Ethereum network
 rm -rf "deployment/$NETWORK"
 
+export SCRYPT_CHECKER="deploy_dummy"
 # Setup contracts in blockchain
 scripts/initialiseForAgent.sh
 
