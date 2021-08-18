@@ -107,6 +107,9 @@ pushd .
 cd "$scryptInteractiveDir"
 # TODO: remove deposit once it is handled by the agents correctly
 echo "Depositing ether in the ScryptClaims contract on behalf of the agent..."
+export SCRYPT_VERIFIER_ADDRESS
+export SCRYPT_CLAIMS_ADDRESS
+export SCRYPT_RUNNER_ADDRESS
 npm start -- deposit 0.5
 npm start -- defend > defender.log 2>&1 &
 defenderProcess=$!
