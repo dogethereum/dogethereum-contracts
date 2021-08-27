@@ -18,6 +18,24 @@ import {
   // SUPERBLOCK_OPTIONS_PRODUCTION,
 } from "../deploy";
 
+interface PriceOracles {
+  /**
+   * Doge - Usd Chainlink price oracle.
+   */
+  dogeUsdPriceOracle?: string,
+  /**
+   * Eth - Usd Chainlink price oracle.
+   */
+  ethUsdPriceOracle?: string,
+}
+
+const mainnetOracles: PriceOracles = {
+  dogeUsdPriceOracle: "0x2465CefD3b488BE410b941b1d4b2767088e2A028",
+  ethUsdPriceOracle: "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419",
+}
+
+const localOracles: PriceOracles = {};
+
 /**
  * This script always deploys the production token.
  */
@@ -38,12 +56,22 @@ async function main() {
 
   const { scryptChecker } = await deployOrGetScryptChecker();
 
+  // TODO: add testnet oracles when they are available.
+  let oracles: PriceOracles;
+  if (hre.network.name === "mainnet") {
+    oracles = mainnetOracles;
+  } else {
+    oracles = localOracles;
+  }
+
   const deployment = await deployDogethereum(hre, {
+    confirmations: 1,
     dogecoinNetworkId,
     superblockOptions,
     scryptChecker,
     dogeTokenContractName: "DogeToken",
     useProxy: true,
+    ...oracles,
   });
   return storeDeployment(hre, deployment, deploymentDir);
 }

@@ -172,9 +172,13 @@ export interface UserDogethereumDeploymentOptions {
    */
   dogecoinNetworkId?: DogecoinNetworkId;
   /**
-   * Address of the price oracle.
+   * Address of the doge price oracle.
    */
-  dogeEthPriceOracle?: string;
+  dogeUsdPriceOracle?: string;
+  /**
+   * Address of the eth price oracle.
+   */
+  ethUsdPriceOracle?: string;
   /**
    * Name of the token contract used in this deployment.
    */
@@ -301,7 +305,8 @@ export async function deployToken(
   hre: HardhatRuntimeEnvironment,
   tokenContractName: "DogeToken" | "DogeTokenForTests",
   deploySigner: ethers.Signer,
-  trustedDogeEthPriceOracle: string,
+  dogeUsdPriceOracle: string,
+  ethUsdPriceOracle: string,
   superblocksAddress: string,
   collateralRatio: number,
   confirmations = 0,
@@ -323,7 +328,12 @@ export async function deployToken(
   const dogeToken = {
     contract: await deployContract(
       tokenContractName,
-      [superblocksAddress, trustedDogeEthPriceOracle, collateralRatio],
+      [
+        superblocksAddress,
+        dogeUsdPriceOracle,
+        ethUsdPriceOracle,
+        collateralRatio,
+      ],
       hre,
       {
         signer: deploySigner,
@@ -345,7 +355,8 @@ function deployTokenForCoreSystem(
     confirmations,
     dogeTokenContractName,
     deployAccount,
-    dogeEthPriceOracle,
+    dogeUsdPriceOracle,
+    ethUsdPriceOracle,
     useProxy,
   }: DeploymentOptions,
   { superblocks }: DogethereumCoreSystem,
@@ -355,7 +366,8 @@ function deployTokenForCoreSystem(
     hre,
     dogeTokenContractName,
     deployAccount,
-    dogeEthPriceOracle,
+    dogeUsdPriceOracle,
+    ethUsdPriceOracle,
     superblocks.contract.address,
     collateralRatio,
     confirmations,
@@ -504,13 +516,32 @@ async function deployMainSystem(
   };
 }
 
+export async function deployOracleMock(
+  hre: HardhatRuntimeEnvironment,
+  price: string | number,
+  deployAccount: SignerWithAddress,
+  confirmations: number
+) {
+  const oracleMock = await deployContract(
+    "AggregatorMock",
+    [price],
+    hre,
+    {
+      signer: deployAccount,
+    },
+    confirmations
+  );
+  return oracleMock;
+}
+
 export async function deployDogethereum(
   hre: HardhatRuntimeEnvironment,
   {
     confirmations = 0,
     deployAccount,
     dogecoinNetworkId = DogecoinNetworkId.Regtest,
-    dogeEthPriceOracle,
+    dogeUsdPriceOracle,
+    ethUsdPriceOracle,
     dogeTokenContractName = "DogeTokenForTests",
     scryptChecker,
     superblockOptions = SUPERBLOCK_OPTIONS_LOCAL,
@@ -521,15 +552,33 @@ export async function deployDogethereum(
   if (deployAccount === undefined) {
     deployAccount = accounts[0];
   }
-  if (dogeEthPriceOracle === undefined) {
-    dogeEthPriceOracle = accounts[2].address;
+  if (dogeUsdPriceOracle === undefined) {
+    const dogeUsdPrice = 29214072;
+    const oracle = await deployOracleMock(
+      hre,
+      dogeUsdPrice,
+      deployAccount,
+      confirmations
+    );
+    dogeUsdPriceOracle = oracle.address;
+  }
+  if (ethUsdPriceOracle === undefined) {
+    const ethUsdPrice = 323316156333;
+    const oracle = await deployOracleMock(
+      hre,
+      ethUsdPrice,
+      deployAccount,
+      confirmations
+    );
+    ethUsdPriceOracle = oracle.address;
   }
 
   const deployOptions: DeploymentOptions = {
     confirmations,
     deployAccount,
     dogecoinNetworkId,
-    dogeEthPriceOracle,
+    dogeUsdPriceOracle,
+    ethUsdPriceOracle,
     dogeTokenContractName,
     scryptChecker,
     superblockOptions,
