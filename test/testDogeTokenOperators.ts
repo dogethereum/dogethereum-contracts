@@ -3,7 +3,7 @@ import { assert } from "chai";
 import type { Contract, ContractTransaction } from "ethers";
 import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
-import { deployToken } from "../deploy";
+import { deployToken, deployOracleMock } from "../deploy";
 
 import {
   isolateTests,
@@ -12,8 +12,13 @@ import {
 } from "./utils";
 
 describe("DogeToken - Operators", function () {
-  let trustedDogeEthPriceOracle;
-  let trustedRelayerContract;
+  const initialDogeUsdPrice = 100;
+  // This is not a safe integer
+  const initialEthUsdPrice = `1${"0".repeat(18)}`;
+
+  let dogeUsdPriceOracle: Contract;
+  let ethUsdPriceOracle: Contract;
+  let trustedRelayerContract: string;
   const collateralRatio = 2;
 
   let operatorSigner: SignerWithAddress;
@@ -50,13 +55,17 @@ describe("DogeToken - Operators", function () {
   before(async function () {
     const [signer, opSigner] = await hre.ethers.getSigners();
     // Tell DogeToken to trust the first account as a price oracle and relayer contract
-    trustedRelayerContract = trustedDogeEthPriceOracle = signer.address;
+    trustedRelayerContract = signer.address;
+
+    dogeUsdPriceOracle = await deployOracleMock(hre, initialDogeUsdPrice, signer, 0);
+    ethUsdPriceOracle = await deployOracleMock(hre, initialEthUsdPrice, signer, 0);
 
     const dogeTokenSystem = await deployToken(
       hre,
       "DogeTokenForTests",
       signer,
-      trustedDogeEthPriceOracle,
+      dogeUsdPriceOracle.address,
+      ethUsdPriceOracle.address,
       trustedRelayerContract,
       collateralRatio
     );
@@ -203,7 +212,7 @@ describe("DogeToken - Operators", function () {
       const operatorEthAddressBalanceBeforeWithdraw = await hre.ethers.provider.getBalance(
         operatorSigner.address
       );
-      await dogeToken.setDogeEthPrice(1);
+      await dogeUsdPriceOracle.setPrice(1);
       const withdrawOperatorDepositTxResponse = await operatorDogeToken.withdrawOperatorDeposit(
         operatorPublicKeyHash,
         "400000000000000000"
@@ -239,7 +248,7 @@ describe("DogeToken - Operators", function () {
       const operatorEthAddressBalanceBeforeWithdraw = await hre.ethers.provider.getBalance(
         operatorSigner.address
       );
-      await dogeToken.setDogeEthPrice(3);
+      await dogeUsdPriceOracle.setPrice(3);
       await dogeToken.addUtxo(operatorPublicKeyHash, 400, 1, 1);
       const withdrawOperatorDepositTxResponse = await operatorDogeToken.withdrawOperatorDeposit(
         operatorPublicKeyHash,
@@ -269,7 +278,7 @@ describe("DogeToken - Operators", function () {
       await operatorDogeToken.addOperatorDeposit(operatorPublicKeyHash, {
         value: "1000000000000000000",
       });
-      await dogeToken.setDogeEthPrice(1);
+      await dogeUsdPriceOracle.setPrice(1);
       const withdrawOperatorDepositTxResponse = await operatorDogeToken.withdrawOperatorDeposit(
         operatorPublicKeyHash,
         "2000000000000000000"
@@ -293,7 +302,7 @@ describe("DogeToken - Operators", function () {
       await operatorDogeToken.addOperatorDeposit(operatorPublicKeyHash, {
         value: 5000,
       });
-      await dogeToken.setDogeEthPrice(3);
+      await dogeUsdPriceOracle.setPrice(3);
       await dogeToken.addUtxo(operatorPublicKeyHash, 400, 1, 1);
       const withdrawOperatorDepositTxResponse = await operatorDogeToken.withdrawOperatorDeposit(
         operatorPublicKeyHash,

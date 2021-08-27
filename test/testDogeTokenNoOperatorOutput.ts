@@ -1,6 +1,6 @@
 import hre from "hardhat";
 
-import { deployToken } from "../deploy";
+import { deployFixture, deployToken } from "../deploy";
 
 import {
   buildDogeTransaction,
@@ -11,10 +11,10 @@ import {
 } from "./utils";
 
 describe("testDogeTokenNoOperatorOutput", function () {
-  const trustedDogeEthPriceOracle =
-    "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
   const collateralRatio = 2;
   let trustedRelayerContract: string;
+  let dogeUsdPriceOracle: string;
+  let ethUsdPriceOracle: string;
   let operatorEthAddress: string;
   let superblockSubmitterAddress: string;
 
@@ -22,10 +22,13 @@ describe("testDogeTokenNoOperatorOutput", function () {
 
   before(async function () {
     const signers = await hre.ethers.getSigners();
+    const { dogeToken } = await deployFixture(hre);
     // Tell DogeToken to trust first account as if it were the relayer contract
     trustedRelayerContract = signers[0].address;
     operatorEthAddress = signers[3].address;
     superblockSubmitterAddress = signers[4].address;
+    dogeUsdPriceOracle = await dogeToken.callStatic.dogeUsdOracle();
+    ethUsdPriceOracle = await dogeToken.callStatic.ethUsdOracle();
   });
 
   it("Accept unlock transaction without output for operator", async function() {
@@ -62,7 +65,8 @@ describe("testDogeTokenNoOperatorOutput", function () {
       hre,
       "DogeTokenForTests",
       signer,
-      trustedDogeEthPriceOracle,
+      dogeUsdPriceOracle,
+      ethUsdPriceOracle,
       trustedRelayerContract,
       collateralRatio
     );

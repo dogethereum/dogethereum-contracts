@@ -3,7 +3,7 @@ import hre from "hardhat";
 import type { Contract } from "ethers";
 import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
-import { deployToken } from "../deploy";
+import { deployFixture, deployToken } from "../deploy";
 
 import {
   buildDogeTransaction,
@@ -16,8 +16,6 @@ import {
 
 describe("testDogeTokenProcessTransaction", function () {
   let signers: SignerWithAddress[];
-  const trustedDogeEthPriceOracle =
-    "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
   let trustedRelayerContract: string;
   let operatorEthAddress: string;
   let superblockSubmitterAddress: string;
@@ -62,15 +60,21 @@ describe("testDogeTokenProcessTransaction", function () {
 
   before(async function () {
     signers = await hre.ethers.getSigners();
+    const { dogeToken: fixtureToken } = await deployFixture(hre);
     // Tell DogeToken to trust signers[0] as if it were the relayer contract
     trustedRelayerContract = signers[0].address;
     operatorEthAddress = signers[3].address;
     superblockSubmitterAddress = signers[4].address;
+
+    const dogeUsdPriceOracle = await fixtureToken.callStatic.dogeUsdOracle();
+    const ethUsdPriceOracle = await fixtureToken.callStatic.ethUsdOracle();
+
     const dogeTokenSystem = await deployToken(
       hre,
       "DogeTokenForTests",
       signers[0],
-      trustedDogeEthPriceOracle,
+      dogeUsdPriceOracle,
+      ethUsdPriceOracle,
       trustedRelayerContract,
       collateralRatio
     );
