@@ -2,7 +2,7 @@
 
 pragma solidity ^0.7.6;
 
-import "./HumanStandardToken.sol";
+import "./StandardToken.sol";
 import "./Set.sol";
 import "./../TransactionProcessor.sol";
 import "../DogeParser/DogeMessageLibrary.sol";
@@ -10,7 +10,7 @@ import "./../ECRecovery.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@chainlink/contracts/src/v0.7/interfaces/AggregatorV3Interface.sol";
 
-contract DogeToken is HumanStandardToken, TransactionProcessor {
+contract DogeToken is StandardToken, TransactionProcessor {
 
     using SafeMath for uint;
 
@@ -43,7 +43,14 @@ contract DogeToken is HumanStandardToken, TransactionProcessor {
     uint constant ERR_UNLOCK_VALUE_TO_SEND_LESS_THAN_FEE = 60140;
     uint constant ERR_LOCK_MIN_LOCK_VALUE = 60180;
 
-    // Variables set by constructor
+    // Token name
+    string public constant name = "DogeToken";
+    // Decimals for display purposes
+    // How many decimals to show. ie. There could be 1000 base units with 3 decimals.
+    // Meaning 0.980 SBX = 980 base units. It's like comparing 1 wei to 1 ether.
+    uint8 public constant decimals = 8;
+    // TODO: set an appropriate symbol
+    string public constant symbol = "DOGETOKEN";
 
     // Contract to trust for tx included in a doge block verification.
     // Only doge txs relayed from trustedRelayerContract will be accepted.
