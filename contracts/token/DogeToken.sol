@@ -214,12 +214,13 @@ contract DogeToken is HumanStandardToken, TransactionProcessor {
             emit ErrorDogeToken(ERR_OPERATOR_WITHDRAWAL_NOT_ENOUGH_BALANCE);
             return;
         }
-        if ((operator.ethBalance.sub(value)).div(dogeEthPrice) <
+        uint256 ethPostWithdrawal = operator.ethBalance.sub(value);
+        if (ethPostWithdrawal.div(dogeEthPrice()) <
             (operator.dogeAvailableBalance.add(operator.dogePendingBalance)).mul(collateralRatio)) {
             emit ErrorDogeToken(ERR_OPERATOR_WITHDRAWAL_COLLATERAL_WOULD_BE_TOO_LOW);
             return;
         }
-        operator.ethBalance = operator.ethBalance.sub(value);
+        operator.ethBalance = ethPostWithdrawal;
         msg.sender.transfer(value);
     }
 
