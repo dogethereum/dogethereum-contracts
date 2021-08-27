@@ -157,6 +157,47 @@ type DeployF = (
   options: ContractOptions
 ) => Promise<ethers.Contract>;
 
+// TODO: add deployer account?
+export interface UserDogethereumDeploymentOptions {
+  /**
+   * Number of block confirmations to wait for when deploying a contract.
+   */
+  confirmations?: number;
+  /**
+   * Account used for deployment and initialization of contracts.
+   */
+  deployAccount?: SignerWithAddress;
+  /**
+   * Network ID of the dogecoin blockchain.
+   */
+  dogecoinNetworkId?: DogecoinNetworkId;
+  /**
+   * Address of the price oracle.
+   */
+  dogeEthPriceOracle?: string;
+  /**
+   * Name of the token contract used in this deployment.
+   */
+  dogeTokenContractName: "DogeToken" | "DogeTokenForTests";
+  /**
+   * Superblockchain parameters.
+   */
+  superblockOptions?: SuperblockOptions;
+  /**
+   * Use transparent proxies to deploy main contracts
+   */
+  useProxy?: boolean;
+}
+
+export interface ScryptCheckerDeployment {
+  scryptChecker: DogethereumContract;
+}
+
+export type DeploymentOptions = Required<UserDogethereumDeploymentOptions> &
+  ScryptCheckerDeployment;
+export type UserDeploymentOptions = UserDogethereumDeploymentOptions &
+  ScryptCheckerDeployment;
+
 export const DEPLOYMENT_JSON_NAME = "deployment.json";
 
 export enum DogecoinNetworkId {
@@ -462,47 +503,6 @@ async function deployMainSystem(
     superblockClaims,
   };
 }
-
-// TODO: add deployer account?
-export interface UserDogethereumDeploymentOptions {
-  /**
-   * Number of block confirmations to wait for when deploying a contract.
-   */
-  confirmations?: number;
-  /**
-   * Account used for deployment and initialization of contracts.
-   */
-  deployAccount?: SignerWithAddress;
-  /**
-   * Network ID of the dogecoin blockchain.
-   */
-  dogecoinNetworkId?: DogecoinNetworkId;
-  /**
-   * Address of the price oracle.
-   */
-  dogeEthPriceOracle?: string;
-  /**
-   * Name of the token contract used in this deployment.
-   */
-  dogeTokenContractName: "DogeToken" | "DogeTokenForTests";
-  /**
-   * Superblockchain parameters.
-   */
-  superblockOptions?: SuperblockOptions;
-  /**
-   * Use transparent proxies to deploy main contracts
-   */
-  useProxy?: boolean;
-}
-
-export interface ScryptCheckerDeployment {
-  scryptChecker: DogethereumContract;
-}
-
-export type DeploymentOptions = Required<UserDogethereumDeploymentOptions> &
-  ScryptCheckerDeployment;
-export type UserDeploymentOptions = UserDogethereumDeploymentOptions &
-  ScryptCheckerDeployment;
 
 export async function deployDogethereum(
   hre: HardhatRuntimeEnvironment,
