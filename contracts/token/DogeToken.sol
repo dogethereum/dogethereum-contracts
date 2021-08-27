@@ -41,9 +41,6 @@ contract DogeToken is HumanStandardToken, TransactionProcessor {
     uint constant ERR_UNLOCK_NO_AVAILABLE_UTXOS = 60120;
     uint constant ERR_UNLOCK_UTXOS_VALUE_LESS_THAN_VALUE_TO_SEND = 60130;
     uint constant ERR_UNLOCK_VALUE_TO_SEND_LESS_THAN_FEE = 60140;
-    uint constant ERR_UNLOCK_BAD_ADDR_LENGTH = 60150;
-    uint constant ERR_UNLOCK_BAD_ADDR_PREFIX = 60160;
-    uint constant ERR_UNLOCK_BAD_ADDR_CHAR = 60170;
     uint constant ERR_LOCK_MIN_LOCK_VALUE = 60180;
 
     // Variables set by constructor
