@@ -230,7 +230,7 @@ contract DogeToken is HumanStandardToken, TransactionProcessor {
         bytes20 operatorPublicKeyHash,
         address superblockSubmitterAddress
     ) override public returns (uint) {
-        require(msg.sender == trustedRelayerContract);
+        require(msg.sender == trustedRelayerContract, "Only the tx relayer can call this function.");
 
         Operator storage operator = operators[operatorPublicKeyHash];
         // Check operator exists
@@ -276,7 +276,7 @@ contract DogeToken is HumanStandardToken, TransactionProcessor {
         bytes20 operatorPublicKeyHash,
         address /*superblockSubmitterAddress*/
     ) override public returns (uint) {
-        require(msg.sender == trustedRelayerContract);
+        require(msg.sender == trustedRelayerContract, "Only the tx relayer can call this function.");
 
         Operator storage operator = operators[operatorPublicKeyHash];
         // Check operator exists
