@@ -8,6 +8,7 @@ import "./../TransactionProcessor.sol";
 import "../DogeParser/DogeMessageLibrary.sol";
 import "./../ECRecovery.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
+import "@chainlink/contracts/src/v0.7/interfaces/AggregatorV3Interface.sol";
 
 contract DogeToken is HumanStandardToken, TransactionProcessor {
 
@@ -51,7 +52,8 @@ contract DogeToken is HumanStandardToken, TransactionProcessor {
     // Only doge txs relayed from trustedRelayerContract will be accepted.
     address public trustedRelayerContract;
     // Doge-Eth price oracle to trust.
-    address public trustedDogeEthPriceOracle;
+    AggregatorV3Interface public dogeUsdOracle;
+    AggregatorV3Interface public ethUsdOracle;
     // Number of times the eth collateral operator should cover her doge holdings
     uint8 public collateralRatio;
 
@@ -60,8 +62,6 @@ contract DogeToken is HumanStandardToken, TransactionProcessor {
     uint32 public unlockIdx;
     // Unlocks for which the investor has not sent a proof of unlock yet.
     mapping (uint32 => Unlock) public unlocksPendingInvestorProof;
-    // Doge-Eth currencies current market price.
-    uint public dogeEthPrice;
     // operatorPublicKeyHash to Operator
     mapping (bytes20 => Operator) public operators;
     OperatorKey[] public operatorKeys;
@@ -108,14 +108,32 @@ contract DogeToken is HumanStandardToken, TransactionProcessor {
         bool deleted;
     }
 
-    function initialize(address relayerContract, address dogeEthPriceOracle, uint8 initCollateralRatio) external {
+    function initialize(
+        address relayerContract,
+        AggregatorV3Interface initDogeUsdOracle,
+        AggregatorV3Interface initEthUsdOracle,
+        uint8 initCollateralRatio
+    ) external {
         require(trustedRelayerContract == address(0), "Contract already initialized!");
         require(relayerContract != address(0), "Relayer contract must be valid.");
-        require(dogeEthPriceOracle != address(0), "Doge-Eth price oracle must be valid.");
+        require(address(initDogeUsdOracle) != address(0), "Doge-Usd price oracle must be valid.");
+        require(address(initEthUsdOracle) != address(0), "Eth-Usd price oracle must be valid.");
 
         trustedRelayerContract = relayerContract;
-        trustedDogeEthPriceOracle = dogeEthPriceOracle;
+        dogeUsdOracle = initDogeUsdOracle;
+        ethUsdOracle = initEthUsdOracle;
         collateralRatio = initCollateralRatio;
+    }
+
+    /**
+     * Retrieves dogecoin price from oracle.
+     *
+     * @return dogePrice The price of a single dogecoin in ether weis.
+     */
+    function dogeEthPrice() public view returns (uint256 dogePrice) {
+        (, int256 dogeUsdPrice,,,) = dogeUsdOracle.latestRoundData();
+        (, int256 ethUsdPrice,,,) = ethUsdOracle.latestRoundData();
+        return uint256(dogeUsdPrice).mul(1 ether).div(uint256(ethUsdPrice));
     }
 
     /**
@@ -411,11 +429,6 @@ contract DogeToken is HumanStandardToken, TransactionProcessor {
         changeValue = selectedUtxosValue.sub(valueToSend);
         errorCode = 0;
         return (errorCode, selectedUtxos, dogeTxFee, changeValue);
-    }
-
-    function setDogeEthPrice(uint _dogeEthPrice) public {
-        require(msg.sender == trustedDogeEthPriceOracle, "Only the Doge-Eth price oracle is allowed to set the price.");
-        dogeEthPrice = _dogeEthPrice;
     }
 
     function getUnlockPendingInvestorProof(uint32 index) public view returns (address from, bytes20 dogeAddress, uint value, uint operatorFee, uint timestamp, uint32[] memory selectedUtxos, uint dogeTxFee, bytes20 operatorPublicKeyHash) {

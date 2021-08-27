@@ -6,6 +6,7 @@
     "test": "test"
   },
   "dependencies": {
+    "@chainlink/contracts": "^0.2.1",
     "@openzeppelin/contracts": "^3.4.2",
     "bitcoin-proof": "2.0.0",
     "bitcoinjs-lib": "^5.2.0",
