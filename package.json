@@ -6,7 +6,7 @@
     "test": "test"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^3.4.1",
+    "@openzeppelin/contracts": "^3.4.2",
     "bitcoin-proof": "2.0.0",
     "bitcoinjs-lib": "^5.2.0",
     "js-sha256": "^0.9.0",
