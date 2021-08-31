@@ -62,7 +62,7 @@ To set them, run
 ```shell
 $ export agentRootDir=/your/agent/path
 $ export agentDataDir=/your/agent/path/to/data/dir
-$ export agentDataDir=/your/tools/path
+$ export toolsRootDir=/your/tools/path
 ```
 
 Then run `npm run integration-tests`. Note that doing this will launch a dogecoin node in regtest mode with a graphical interface.
