@@ -772,20 +772,20 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
     // @dev - To be called after scrypt verification is submitted
     function scryptSubmitted(
         bytes32 scryptChallengeId,
-        bytes32 _scryptHash,
-        bytes calldata _data,
-        address _submitter
+        bytes32 scryptHash,
+        bytes calldata data,
+        address submitter
     ) override external onlyFrom(address(trustedScryptChecker)) {
-        require(_data.length == 80);
+        require(data.length == 80);
         ScryptHashVerification storage verification = scryptHashVerifications[scryptChallengeId];
         BattleSession storage session = sessions[verification.sessionId];
         require(session.pendingScryptHashId == scryptChallengeId);
         require(session.challengeState == ChallengeState.RequestScryptVerification);
-        require(session.submitter == _submitter);
+        require(session.submitter == submitter);
         BlockInfo storage blockInfo = session.blocksInfo[verification.blockSha256Hash];
         require(blockInfo.status == BlockInfoStatus.ScryptHashPending);
-        require(blockInfo.scryptHash == _scryptHash);
-        require(compareBlockHeader(blockInfo.powBlockHeader, _data) == 0);
+        require(blockInfo.scryptHash == scryptHash);
+        require(compareBlockHeader(blockInfo.powBlockHeader, data) == 0);
         session.challengeState = ChallengeState.PendingScryptVerification;
         session.actionsCounter += 1;
         session.lastActionTimestamp = block.timestamp;
@@ -852,15 +852,15 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
 
     // @dev - Retrieve superblock information
     function getSuperblockInfo(bytes32 superblockHash) internal view returns (
-        bytes32 _blocksMerkleRoot,
-        uint _accumulatedWork,
-        uint _timestamp,
-        uint _prevTimestamp,
-        bytes32 _lastHash,
-        uint32 _lastBits,
-        bytes32 _parentId,
-        address _submitter,
-        DogeSuperblocks.Status _status
+        bytes32 blocksMerkleRoot,
+        uint accumulatedWork,
+        uint timestamp,
+        uint prevTimestamp,
+        bytes32 lastHash,
+        uint32 lastBits,
+        bytes32 parentId,
+        address submitter,
+        DogeSuperblocks.Status status
     ) {
         return trustedSuperblocks.getSuperblock(superblockHash);
     }

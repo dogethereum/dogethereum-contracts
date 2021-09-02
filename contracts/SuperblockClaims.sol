@@ -176,22 +176,22 @@ contract SuperblockClaims is DogeDepositsManager, DogeErrorCodes {
 
     // @dev – Propose a new superblock.
     //
-    // @param _blocksMerkleRoot Root of the merkle tree of blocks contained in a superblock
-    // @param _accumulatedWork Accumulated proof of work of the last block in the superblock
-    // @param _timestamp Timestamp of the last block in the superblock
-    // @param _prevTimestamp Timestamp of the block previous to the last
-    // @param _lastHash Hash of the last block in the superblock
-    // @param _lastBits Difficulty bits of the last block in the superblock
-    // @param _parentHash Id of the parent superblock
+    // @param blocksMerkleRoot Root of the merkle tree of blocks contained in a superblock
+    // @param accumulatedWork Accumulated proof of work of the last block in the superblock
+    // @param timestamp Timestamp of the last block in the superblock
+    // @param prevTimestamp Timestamp of the block previous to the last
+    // @param lastHash Hash of the last block in the superblock
+    // @param lastBits Difficulty bits of the last block in the superblock
+    // @param parentHash Id of the parent superblock
     // @return Error code and superblockHash
     function proposeSuperblock(
-        bytes32 _blocksMerkleRoot,
-        uint _accumulatedWork,
-        uint _timestamp,
-        uint _prevTimestamp,
-        bytes32 _lastHash,
-        uint32 _lastBits,
-        bytes32 _parentHash
+        bytes32 blocksMerkleRoot,
+        uint accumulatedWork,
+        uint timestamp,
+        uint prevTimestamp,
+        bytes32 lastHash,
+        uint32 lastBits,
+        bytes32 parentHash
     ) public returns (uint, bytes32) {
         // TODO: this address validity check looks out of place here
         require(address(trustedSuperblocks) != address(0));
@@ -201,15 +201,15 @@ contract SuperblockClaims is DogeDepositsManager, DogeErrorCodes {
             return (ERR_SUPERBLOCK_MIN_DEPOSIT, 0);
         }
 
-        if (_timestamp + superblockDelay > block.timestamp) {
+        if (timestamp + superblockDelay > block.timestamp) {
             emit ErrorClaim(0, ERR_SUPERBLOCK_BAD_TIMESTAMP);
             return (ERR_SUPERBLOCK_BAD_TIMESTAMP, 0);
         }
 
         uint err;
         bytes32 superblockHash;
-        (err, superblockHash) = trustedSuperblocks.propose(_blocksMerkleRoot, _accumulatedWork,
-            _timestamp, _prevTimestamp, _lastHash, _lastBits, _parentHash, msg.sender);
+        (err, superblockHash) = trustedSuperblocks.propose(blocksMerkleRoot, accumulatedWork,
+            timestamp, prevTimestamp, lastHash, lastBits, parentHash, msg.sender);
         if (err != 0) {
             emit ErrorClaim(superblockHash, err);
             return (err, superblockHash);
@@ -653,15 +653,15 @@ contract SuperblockClaims is DogeDepositsManager, DogeErrorCodes {
     }
 
     function getSuperblockInfo(bytes32 superblockHash) internal view returns (
-        bytes32 _blocksMerkleRoot,
-        uint _accumulatedWork,
-        uint _timestamp,
-        uint _prevTimestamp,
-        bytes32 _lastHash,
-        uint32 _lastBits,
-        bytes32 _parentId,
-        address _submitter,
-        DogeSuperblocks.Status _status
+        bytes32 blocksMerkleRoot,
+        uint accumulatedWork,
+        uint timestamp,
+        uint prevTimestamp,
+        bytes32 lastHash,
+        uint32 lastBits,
+        bytes32 parentId,
+        address submitter,
+        DogeSuperblocks.Status status
     ) {
         return trustedSuperblocks.getSuperblock(superblockHash);
     }

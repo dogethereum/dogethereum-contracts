@@ -36,28 +36,28 @@ contract DogeMessageLibraryForTests {
     }
 
     // doesn't check merge mining to see if other error codes work
-    function checkAuxPoWForTests(uint _blockHash, bytes memory _auxBytes) internal view returns (uint) {
-        DogeMessageLibrary.AuxPoW memory ap = DogeMessageLibrary.parseAuxPoW(_auxBytes, 0, _auxBytes.length);
+    function checkAuxPoWForTests(uint blockHash, bytes memory auxBytes) internal view returns (uint) {
+        DogeMessageLibrary.AuxPoW memory auxPow = DogeMessageLibrary.parseAuxPoW(auxBytes, 0, auxBytes.length);
 
-        //uint32 version = bytesToUint32Flipped(_auxBytes, 0);
+        //uint32 version = bytesToUint32Flipped(auxBytes, 0);
 
-        if (!DogeMessageLibrary.isMergeMined(_auxBytes, 0)) {
+        if (!DogeMessageLibrary.isMergeMined(auxBytes, 0)) {
             return ERR_NOT_MERGE_MINED;
         }
 
-        if (ap.coinbaseTxIndex != 0) {
+        if (auxPow.coinbaseTxIndex != 0) {
             return ERR_COINBASE_INDEX;
         }
 
-        if (ap.coinbaseMerkleRootCode != 1) {
-            return ap.coinbaseMerkleRootCode;
+        if (auxPow.coinbaseMerkleRootCode != 1) {
+            return auxPow.coinbaseMerkleRootCode;
         }
 
-        if (DogeMessageLibrary.computeChainMerkle(_blockHash, ap) != ap.coinbaseMerkleRoot) {
+        if (DogeMessageLibrary.computeChainMerkle(blockHash, auxPow) != auxPow.coinbaseMerkleRoot) {
             return ERR_CHAIN_MERKLE;
         }
 
-        if (DogeMessageLibrary.computeParentMerkle(ap) != ap.parentMerkleRoot) {
+        if (DogeMessageLibrary.computeParentMerkle(auxPow) != auxPow.parentMerkleRoot) {
             return ERR_PARENT_MERKLE;
         }
 
@@ -71,16 +71,16 @@ contract DogeMessageLibraryForTests {
     }
 
     // @dev converts bytes of any length to bytes32.
-    // If `_rawBytes` is longer than 32 bytes, it truncates to the 32 leftmost bytes.
+    // If `rawBytes` is longer than 32 bytes, it truncates to the 32 leftmost bytes.
     // If it is shorter, it pads with 0s on the left.
     // Should be private, made internal for testing
     //
-    // @param _rawBytes - arbitrary length bytes
+    // @param rawBytes - arbitrary length bytes
     // @return - leftmost 32 or less bytes of input value; padded if less than 32
-    function bytesToBytes32(bytes memory _rawBytes, uint pos) internal pure returns (bytes32) {
+    function bytesToBytes32(bytes memory rawBytes, uint pos) internal pure returns (bytes32) {
         bytes32 out;
         assembly {
-            out := mload(add(add(_rawBytes, 0x20), pos))
+            out := mload(add(add(rawBytes, 0x20), pos))
         }
         return out;
     }

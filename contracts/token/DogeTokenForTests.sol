@@ -6,8 +6,8 @@ import "./DogeToken.sol";
 
 contract DogeTokenForTests is DogeToken {
 
-    function assign(address _to, uint256 _value) public {
-        balances[_to] += _value;
+    function assign(address to, uint256 value) public {
+        balances[to] += value;
     }
 
     // Similar to DogeToken.addOperator() but makes no checks before adding the operator

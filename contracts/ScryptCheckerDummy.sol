@@ -23,44 +23,44 @@ contract ScryptCheckerDummy is IScryptChecker {
     mapping (bytes32 => ScryptHashRequest) public pendingRequests;
 
 
-    constructor(bool _acceptAll) {
-        acceptAll = _acceptAll;
+    constructor(bool initAcceptAll) {
+        acceptAll = initAcceptAll;
     }
 
-    // Mark to accept _hash as the scrypt hash of _data
-    function storeScryptHash(bytes calldata _data, bytes32 _hash) public {
-        hashStorage[keccak256(_data)] = _hash;
+    // Mark to accept hash as the scrypt hash of data
+    function storeScryptHash(bytes calldata data, bytes32 hash) public {
+        hashStorage[keccak256(data)] = hash;
     }
 
     // Check a scrypt was calculated correctly from a plaintext.
-    // @param _data – data used to calculate scrypt hash.
-    // @param _hash – result of applying scrypt to data.
-    // @param _submitter – the address of the submitter.
-    // @param _requestId – request identifier of the call.
-    function checkScrypt(bytes calldata _data, bytes32 _hash, bytes32 _proposalId, IScryptCheckerListener _scryptDependent) override external payable {
-        if (acceptAll || hashStorage[keccak256(_data)] == _hash) {
-            _scryptDependent.scryptSubmitted(_proposalId, _hash, _data, msg.sender);
-            _scryptDependent.scryptVerified(_proposalId);
+    // @param data – data used to calculate scrypt hash.
+    // @param hash – result of applying scrypt to data.
+    // @param submitter – the address of the submitter.
+    // @param requestId – request identifier of the call.
+    function checkScrypt(bytes calldata data, bytes32 hash, bytes32 proposalId, IScryptCheckerListener scryptDependent) override external payable {
+        if (acceptAll || hashStorage[keccak256(data)] == hash) {
+            scryptDependent.scryptSubmitted(proposalId, hash, data, msg.sender);
+            scryptDependent.scryptVerified(proposalId);
         } else {
-            pendingRequests[_hash] = ScryptHashRequest({
-                data: _data,
-                hash: _hash,
+            pendingRequests[hash] = ScryptHashRequest({
+                data: data,
+                hash: hash,
                 submitter: msg.sender,
-                id: _proposalId
+                id: proposalId
             });
-            _scryptDependent.scryptSubmitted(_proposalId, _hash, _data, msg.sender);
+            scryptDependent.scryptSubmitted(proposalId, hash, data, msg.sender);
         }
     }
 
-    function sendVerification(bytes32 _hash, IScryptCheckerListener _scryptDependent) public {
-        ScryptHashRequest storage request = pendingRequests[_hash];
-        require(request.hash == _hash);
-        _scryptDependent.scryptVerified(request.id);
+    function sendVerification(bytes32 hash, IScryptCheckerListener scryptDependent) public {
+        ScryptHashRequest storage request = pendingRequests[hash];
+        require(request.hash == hash);
+        scryptDependent.scryptVerified(request.id);
     }
 
-    function sendFailed(bytes32 _hash, IScryptCheckerListener _scryptDependent) public {
-        ScryptHashRequest storage request = pendingRequests[_hash];
-        require(request.hash == _hash);
-        _scryptDependent.scryptFailed(request.id);
+    function sendFailed(bytes32 hash, IScryptCheckerListener scryptDependent) public {
+        ScryptHashRequest storage request = pendingRequests[hash];
+        require(request.hash == hash);
+        scryptDependent.scryptFailed(request.id);
     }
 }

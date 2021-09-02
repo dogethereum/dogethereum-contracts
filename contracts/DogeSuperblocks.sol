@@ -61,53 +61,53 @@ contract DogeSuperblocks is DogeErrorCodes {
 
     // @dev - sets SuperblockClaims instance associated with managing superblocks.
     // Once trustedSuperblockClaims has been set, it cannot be changed.
-    // @param _superblockClaims - address of the SuperblockClaims contract to be associated with
-    function setSuperblockClaims(address _superblockClaims) public {
-        require(address(trustedSuperblockClaims) == address(0x0) && _superblockClaims != address(0x0));
-        trustedSuperblockClaims = _superblockClaims;
+    // @param superblockClaims - address of the SuperblockClaims contract to be associated with
+    function setSuperblockClaims(address superblockClaims) public {
+        require(address(trustedSuperblockClaims) == address(0x0) && superblockClaims != address(0x0));
+        trustedSuperblockClaims = superblockClaims;
     }
 
     // @dev - Initializes superblocks contract
     //
     // Initializes the superblock contract. It can only be called once.
     //
-    // @param _blocksMerkleRoot Root of the merkle tree of blocks contained in a superblock
-    // @param _accumulatedWork Accumulated proof of work of the last block in the superblock
-    // @param _timestamp Timestamp of the last block in the superblock
-    // @param _prevTimestamp Timestamp of the block previous to the last
-    // @param _lastHash Hash of the last block in the superblock
-    // @param _lastBits Difficulty bits of the last block in the superblock
-    // @param _parentId Id of the parent superblock
+    // @param blocksMerkleRoot Root of the merkle tree of blocks contained in a superblock
+    // @param accumulatedWork Accumulated proof of work of the last block in the superblock
+    // @param timestamp Timestamp of the last block in the superblock
+    // @param prevTimestamp Timestamp of the block previous to the last
+    // @param lastHash Hash of the last block in the superblock
+    // @param lastBits Difficulty bits of the last block in the superblock
+    // @param parentId Id of the parent superblock
     // @return Error code and superblockHash
     function initialize(
-        bytes32 _blocksMerkleRoot,
-        uint _accumulatedWork,
-        uint _timestamp,
-        uint _prevTimestamp,
-        bytes32 _lastHash,
-        uint32 _lastBits,
-        bytes32 _parentId
+        bytes32 blocksMerkleRoot,
+        uint accumulatedWork,
+        uint timestamp,
+        uint prevTimestamp,
+        bytes32 lastHash,
+        uint32 lastBits,
+        bytes32 parentId
     ) public returns (uint, bytes32) {
         require(bestSuperblock == 0);
-        require(_parentId == 0);
+        require(parentId == 0);
 
-        bytes32 superblockHash = calcSuperblockHash(_blocksMerkleRoot, _accumulatedWork, _timestamp, _prevTimestamp, _lastHash, _lastBits, _parentId);
+        bytes32 superblockHash = calcSuperblockHash(blocksMerkleRoot, accumulatedWork, timestamp, prevTimestamp, lastHash, lastBits, parentId);
         SuperblockInfo storage superblock = superblocks[superblockHash];
 
         require(superblock.status == Status.Uninitialized);
 
         indexSuperblock[indexNextSuperblock] = superblockHash;
 
-        superblock.blocksMerkleRoot = _blocksMerkleRoot;
-        superblock.accumulatedWork = _accumulatedWork;
-        superblock.timestamp = _timestamp;
-        superblock.prevTimestamp = _prevTimestamp;
-        superblock.lastHash = _lastHash;
-        superblock.parentId = _parentId;
+        superblock.blocksMerkleRoot = blocksMerkleRoot;
+        superblock.accumulatedWork = accumulatedWork;
+        superblock.timestamp = timestamp;
+        superblock.prevTimestamp = prevTimestamp;
+        superblock.lastHash = lastHash;
+        superblock.parentId = parentId;
         superblock.submitter = msg.sender;
         superblock.index = indexNextSuperblock;
         superblock.height = 1;
-        superblock.lastBits = _lastBits;
+        superblock.lastBits = lastBits;
         superblock.status = Status.Approved;
         superblock.ancestors = 0x0;
 
@@ -116,7 +116,7 @@ contract DogeSuperblocks is DogeErrorCodes {
         emit NewSuperblock(superblockHash, msg.sender);
 
         bestSuperblock = superblockHash;
-        bestSuperblockAccumulatedWork = _accumulatedWork;
+        bestSuperblockAccumulatedWork = accumulatedWork;
 
         emit ApprovedSuperblock(superblockHash, msg.sender);
 
@@ -128,22 +128,22 @@ contract DogeSuperblocks is DogeErrorCodes {
     // To be accepted, a new superblock needs to have its parent
     // either approved or semi-approved.
     //
-    // @param _blocksMerkleRoot Root of the merkle tree of blocks contained in a superblock
-    // @param _accumulatedWork Accumulated proof of work of the last block in the superblock
-    // @param _timestamp Timestamp of the last block in the superblock
-    // @param _prevTimestamp Timestamp of the last block's parent
-    // @param _lastHash Hash of the last block in the superblock
-    // @param _lastBits Difficulty bits of the last block in the superblock
-    // @param _parentId Id of the parent superblock
+    // @param blocksMerkleRoot Root of the merkle tree of blocks contained in a superblock
+    // @param accumulatedWork Accumulated proof of work of the last block in the superblock
+    // @param timestamp Timestamp of the last block in the superblock
+    // @param prevTimestamp Timestamp of the last block's parent
+    // @param lastHash Hash of the last block in the superblock
+    // @param lastBits Difficulty bits of the last block in the superblock
+    // @param parentId Id of the parent superblock
     // @return Error code and superblockHash
     function propose(
-        bytes32 _blocksMerkleRoot,
-        uint _accumulatedWork,
-        uint _timestamp,
-        uint _prevTimestamp,
-        bytes32 _lastHash,
-        uint32 _lastBits,
-        bytes32 _parentId,
+        bytes32 blocksMerkleRoot,
+        uint accumulatedWork,
+        uint timestamp,
+        uint prevTimestamp,
+        bytes32 lastHash,
+        uint32 lastBits,
+        bytes32 parentId,
         address submitter
     ) public returns (uint, bytes32) {
         if (msg.sender != trustedSuperblockClaims) {
@@ -151,9 +151,9 @@ contract DogeSuperblocks is DogeErrorCodes {
             return (ERR_SUPERBLOCK_NOT_CLAIMMANAGER, 0);
         }
 
-        bytes32 superblockHash = calcSuperblockHash(_blocksMerkleRoot, _accumulatedWork, _timestamp, _prevTimestamp, _lastHash, _lastBits, _parentId);
+        bytes32 superblockHash = calcSuperblockHash(blocksMerkleRoot, accumulatedWork, timestamp, prevTimestamp, lastHash, lastBits, parentId);
 
-        SuperblockInfo storage parent = superblocks[_parentId];
+        SuperblockInfo storage parent = superblocks[parentId];
         if (parent.status != Status.SemiApproved && parent.status != Status.Approved) {
             emit ErrorSuperblock(superblockHash, ERR_SUPERBLOCK_BAD_PARENT);
             return (ERR_SUPERBLOCK_BAD_PARENT, 0);
@@ -167,16 +167,16 @@ contract DogeSuperblocks is DogeErrorCodes {
 
         indexSuperblock[indexNextSuperblock] = superblockHash;
 
-        superblock.blocksMerkleRoot = _blocksMerkleRoot;
-        superblock.accumulatedWork = _accumulatedWork;
-        superblock.timestamp = _timestamp;
-        superblock.prevTimestamp = _prevTimestamp;
-        superblock.lastHash = _lastHash;
-        superblock.parentId = _parentId;
+        superblock.blocksMerkleRoot = blocksMerkleRoot;
+        superblock.accumulatedWork = accumulatedWork;
+        superblock.timestamp = timestamp;
+        superblock.prevTimestamp = prevTimestamp;
+        superblock.lastHash = lastHash;
+        superblock.parentId = parentId;
         superblock.submitter = submitter;
         superblock.index = indexNextSuperblock;
         superblock.height = parent.height + 1;
-        superblock.lastBits = _lastBits;
+        superblock.lastBits = lastBits;
         superblock.status = Status.New;
         superblock.ancestors = updateAncestors(parent.ancestors, parent.index, parent.height);
 
@@ -193,31 +193,31 @@ contract DogeSuperblocks is DogeErrorCodes {
     // A challenged superblock is confirmed if it has enough descendants
     // in the main chain.
     //
-    // @param _superblockHash Id of the superblock to confirm
-    // @param _validator Address requesting superblock confirmation
+    // @param superblockHash Id of the superblock to confirm
+    // @param validator Address requesting superblock confirmation
     // @return Error code and superblockHash
-    function confirm(bytes32 _superblockHash, address _validator) public returns (uint, bytes32) {
+    function confirm(bytes32 superblockHash, address validator) public returns (uint, bytes32) {
         if (msg.sender != trustedSuperblockClaims) {
-            emit ErrorSuperblock(_superblockHash, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
+            emit ErrorSuperblock(superblockHash, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
             return (ERR_SUPERBLOCK_NOT_CLAIMMANAGER, 0);
         }
-        SuperblockInfo storage superblock = superblocks[_superblockHash];
+        SuperblockInfo storage superblock = superblocks[superblockHash];
         if (superblock.status != Status.New && superblock.status != Status.SemiApproved) {
-            emit ErrorSuperblock(_superblockHash, ERR_SUPERBLOCK_BAD_STATUS);
+            emit ErrorSuperblock(superblockHash, ERR_SUPERBLOCK_BAD_STATUS);
             return (ERR_SUPERBLOCK_BAD_STATUS, 0);
         }
         SuperblockInfo storage parent = superblocks[superblock.parentId];
         if (parent.status != Status.Approved) {
-            emit ErrorSuperblock(_superblockHash, ERR_SUPERBLOCK_BAD_PARENT);
+            emit ErrorSuperblock(superblockHash, ERR_SUPERBLOCK_BAD_PARENT);
             return (ERR_SUPERBLOCK_BAD_PARENT, 0);
         }
         superblock.status = Status.Approved;
         if (superblock.accumulatedWork > bestSuperblockAccumulatedWork) {
-            bestSuperblock = _superblockHash;
+            bestSuperblock = superblockHash;
             bestSuperblockAccumulatedWork = superblock.accumulatedWork;
         }
-        emit ApprovedSuperblock(_superblockHash, _validator);
-        return (ERR_SUPERBLOCK_OK, _superblockHash);
+        emit ApprovedSuperblock(superblockHash, validator);
+        return (ERR_SUPERBLOCK_OK, superblockHash);
     }
 
     // @dev - Challenge a proposed superblock
@@ -225,22 +225,22 @@ contract DogeSuperblocks is DogeErrorCodes {
     // A new superblock can be challenged to start a battle
     // to verify the correctness of the data submitted.
     //
-    // @param _superblockHash Id of the superblock to challenge
-    // @param _challenger Address requesting a challenge
+    // @param superblockHash Id of the superblock to challenge
+    // @param challenger Address requesting a challenge
     // @return Error code and superblockHash
-    function challenge(bytes32 _superblockHash, address _challenger) public returns (uint, bytes32) {
+    function challenge(bytes32 superblockHash, address challenger) public returns (uint, bytes32) {
         if (msg.sender != trustedSuperblockClaims) {
-            emit ErrorSuperblock(_superblockHash, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
+            emit ErrorSuperblock(superblockHash, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
             return (ERR_SUPERBLOCK_NOT_CLAIMMANAGER, 0);
         }
-        SuperblockInfo storage superblock = superblocks[_superblockHash];
+        SuperblockInfo storage superblock = superblocks[superblockHash];
         if (superblock.status != Status.New && superblock.status != Status.InBattle) {
-            emit ErrorSuperblock(_superblockHash, ERR_SUPERBLOCK_BAD_STATUS);
+            emit ErrorSuperblock(superblockHash, ERR_SUPERBLOCK_BAD_STATUS);
             return (ERR_SUPERBLOCK_BAD_STATUS, 0);
         }
         superblock.status = Status.InBattle;
-        emit ChallengeSuperblock(_superblockHash, _challenger);
-        return (ERR_SUPERBLOCK_OK, _superblockHash);
+        emit ChallengeSuperblock(superblockHash, challenger);
+        return (ERR_SUPERBLOCK_OK, superblockHash);
     }
 
     // @dev - Semi-approve a challenged superblock
@@ -249,23 +249,23 @@ contract DogeSuperblocks is DogeErrorCodes {
     // if it satisfies all the queries or when all challengers have
     // stopped participating.
     //
-    // @param _superblockHash Id of the superblock to semi-approve
-    // @param _validator Address requesting semi approval
+    // @param superblockHash Id of the superblock to semi-approve
+    // @param validator Address requesting semi approval
     // @return Error code and superblockHash
-    function semiApprove(bytes32 _superblockHash, address _validator) public returns (uint, bytes32) {
+    function semiApprove(bytes32 superblockHash, address validator) public returns (uint, bytes32) {
         if (msg.sender != trustedSuperblockClaims) {
-            emit ErrorSuperblock(_superblockHash, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
+            emit ErrorSuperblock(superblockHash, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
             return (ERR_SUPERBLOCK_NOT_CLAIMMANAGER, 0);
         }
-        SuperblockInfo storage superblock = superblocks[_superblockHash];
+        SuperblockInfo storage superblock = superblocks[superblockHash];
 
         if (superblock.status != Status.InBattle && superblock.status != Status.New) {
-            emit ErrorSuperblock(_superblockHash, ERR_SUPERBLOCK_BAD_STATUS);
+            emit ErrorSuperblock(superblockHash, ERR_SUPERBLOCK_BAD_STATUS);
             return (ERR_SUPERBLOCK_BAD_STATUS, 0);
         }
         superblock.status = Status.SemiApproved;
-        emit SemiApprovedSuperblock(_superblockHash, _validator);
-        return (ERR_SUPERBLOCK_OK, _superblockHash);
+        emit SemiApprovedSuperblock(superblockHash, validator);
+        return (ERR_SUPERBLOCK_OK, superblockHash);
     }
 
     // @dev - Invalidates a superblock
@@ -275,183 +275,183 @@ contract DogeSuperblocks is DogeErrorCodes {
     // if not enough superblocks follow them, i.e. they don't have
     // enough descendants.
     //
-    // @param _superblockHash Id of the superblock to invalidate
-    // @param _validator Address requesting superblock invalidation
+    // @param superblockHash Id of the superblock to invalidate
+    // @param validator Address requesting superblock invalidation
     // @return Error code and superblockHash
-    function invalidate(bytes32 _superblockHash, address _validator) public returns (uint, bytes32) {
+    function invalidate(bytes32 superblockHash, address validator) public returns (uint, bytes32) {
         if (msg.sender != trustedSuperblockClaims) {
-            emit ErrorSuperblock(_superblockHash, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
+            emit ErrorSuperblock(superblockHash, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
             return (ERR_SUPERBLOCK_NOT_CLAIMMANAGER, 0);
         }
-        SuperblockInfo storage superblock = superblocks[_superblockHash];
+        SuperblockInfo storage superblock = superblocks[superblockHash];
         if (superblock.status != Status.InBattle && superblock.status != Status.SemiApproved) {
-            emit ErrorSuperblock(_superblockHash, ERR_SUPERBLOCK_BAD_STATUS);
+            emit ErrorSuperblock(superblockHash, ERR_SUPERBLOCK_BAD_STATUS);
             return (ERR_SUPERBLOCK_BAD_STATUS, 0);
         }
         superblock.status = Status.Invalid;
-        emit InvalidSuperblock(_superblockHash, _validator);
-        return (ERR_SUPERBLOCK_OK, _superblockHash);
+        emit InvalidSuperblock(superblockHash, validator);
+        return (ERR_SUPERBLOCK_OK, superblockHash);
     }
 
-    // @dev - relays transaction `_txBytes` to `_untrustedMethod`.
+    // @dev - relays transaction `txBytes` to `untrustedMethod`.
     // Also logs the value returned by the method.
     // Note: callers cannot be 100% certain when an ERR_RELAY_VERIFY occurs because
     // it may also have been returned by processTransaction(). Callers should be
     // aware of the contract that they are relaying transactions to and
     // understand what that contract's processTransaction method returns.
     //
-    // @param _txBytes - transaction bytes
-    // @param _operatorPublicKeyHash
-    // @param _txIndex - transaction's index within the block
-    // @param _txSiblings - transaction's Merkle siblings
-    // @param _dogeBlockHeader - block header containing transaction
-    // @param _dogeBlockIndex - block's index withing superblock
-    // @param _dogeBlockSiblings - block's merkle siblings
-    // @param _superblockHash - superblock containing block header
-    // @param _untrustedMethod - the external method that will process the transaction
+    // @param txBytes - transaction bytes
+    // @param operatorPublicKeyHash
+    // @param txIndex - transaction's index within the block
+    // @param txSiblings - transaction's Merkle siblings
+    // @param dogeBlockHeader - block header containing transaction
+    // @param dogeBlockIndex - block's index withing superblock
+    // @param dogeBlockSiblings - block's merkle siblings
+    // @param superblockHash - superblock containing block header
+    // @param untrustedMethod - the external method that will process the transaction
     function relayTx(
-        bytes calldata _txBytes,
-        bytes20 _operatorPublicKeyHash,
-        uint _txIndex,
-        uint[] memory _txSiblings,
-        bytes memory _dogeBlockHeader,
-        uint _dogeBlockIndex,
-        uint[] memory _dogeBlockSiblings,
-        bytes32 _superblockHash,
-        function (bytes memory, uint, bytes20, address) external returns (uint) _untrustedMethod
+        bytes calldata txBytes,
+        bytes20 operatorPublicKeyHash,
+        uint txIndex,
+        uint[] memory txSiblings,
+        bytes memory dogeBlockHeader,
+        uint dogeBlockIndex,
+        uint[] memory dogeBlockSiblings,
+        bytes32 superblockHash,
+        function (bytes memory, uint, bytes20, address) external returns (uint) untrustedMethod
     ) public returns (uint) {
-        uint dogeBlockHash = DogeMessageLibrary.dblShaFlip(_dogeBlockHeader);
+        uint dogeBlockHash = DogeMessageLibrary.dblShaFlip(dogeBlockHeader);
 
         // Check if Doge block belongs to given superblock
         require(
-            bytes32(DogeMessageLibrary.computeMerkle(dogeBlockHash, _dogeBlockIndex, _dogeBlockSiblings))
-            == getSuperblockMerkleRoot(_superblockHash),
+            bytes32(DogeMessageLibrary.computeMerkle(dogeBlockHash, dogeBlockIndex, dogeBlockSiblings))
+            == getSuperblockMerkleRoot(superblockHash),
             "Doge block does not belong to superblock"
         );
 
-        uint txHash = verifyTx(_txBytes, _txIndex, _txSiblings, _dogeBlockHeader, _superblockHash);
+        uint txHash = verifyTx(txBytes, txIndex, txSiblings, dogeBlockHeader, superblockHash);
         if (txHash != 0) {
-            return notifyTx(_txBytes, _operatorPublicKeyHash, _superblockHash, txHash, _untrustedMethod);
+            return notifyTx(txBytes, operatorPublicKeyHash, superblockHash, txHash, untrustedMethod);
         }
 
         emit RelayTransaction(bytes32(0), ERR_RELAY_VERIFY);
         return(ERR_RELAY_VERIFY);
     }
 
-    // @dev - relays transaction `_txBytes` to `_untrustedTargetContract`'s processLockTransaction() method.
+    // @dev - relays transaction `txBytes` to `untrustedTargetContract`'s processLockTransaction() method.
     // This function exists solely to offer a compatibility layer for libraries that don't support function
     // types in parameters.
     //
-    // @param _txBytes - transaction bytes
-    // @param _operatorPublicKeyHash
-    // @param _txIndex - transaction's index within the block
-    // @param _txSiblings - transaction's Merkle siblings
-    // @param _dogeBlockHeader - block header containing transaction
-    // @param _dogeBlockIndex - block's index withing superblock
-    // @param _dogeBlockSiblings - block's merkle siblings
-    // @param _superblockHash - superblock containing block header
-    // @param _untrustedTargetContract - the contract that is going to process the lock transaction
+    // @param txBytes - transaction bytes
+    // @param operatorPublicKeyHash
+    // @param txIndex - transaction's index within the block
+    // @param txSiblings - transaction's Merkle siblings
+    // @param dogeBlockHeader - block header containing transaction
+    // @param dogeBlockIndex - block's index withing superblock
+    // @param dogeBlockSiblings - block's merkle siblings
+    // @param superblockHash - superblock containing block header
+    // @param untrustedTargetContract - the contract that is going to process the lock transaction
     function relayLockTx(
-        bytes calldata _txBytes,
-        bytes20 _operatorPublicKeyHash,
-        uint _txIndex,
-        uint[] memory _txSiblings,
-        bytes memory _dogeBlockHeader,
-        uint _dogeBlockIndex,
-        uint[] memory _dogeBlockSiblings,
-        bytes32 _superblockHash,
-        TransactionProcessor _untrustedTargetContract
+        bytes calldata txBytes,
+        bytes20 operatorPublicKeyHash,
+        uint txIndex,
+        uint[] memory txSiblings,
+        bytes memory dogeBlockHeader,
+        uint dogeBlockIndex,
+        uint[] memory dogeBlockSiblings,
+        bytes32 superblockHash,
+        TransactionProcessor untrustedTargetContract
     ) public returns (uint) {
         return relayTx(
-            _txBytes,
-            _operatorPublicKeyHash,
-            _txIndex,
-            _txSiblings,
-            _dogeBlockHeader,
-            _dogeBlockIndex,
-            _dogeBlockSiblings,
-            _superblockHash,
-            _untrustedTargetContract.processLockTransaction
+            txBytes,
+            operatorPublicKeyHash,
+            txIndex,
+            txSiblings,
+            dogeBlockHeader,
+            dogeBlockIndex,
+            dogeBlockSiblings,
+            superblockHash,
+            untrustedTargetContract.processLockTransaction
         );
     }
 
-    // @dev - relays transaction `_txBytes` to `_untrustedTargetContract`'s processUnlockTransaction() method.
+    // @dev - relays transaction `txBytes` to `untrustedTargetContract`'s processUnlockTransaction() method.
     // This function exists solely to offer a compatibility layer for libraries that don't support function
     // types in parameters.
     //
-    // @param _txBytes - transaction bytes
-    // @param _operatorPublicKeyHash
-    // @param _txIndex - transaction's index within the block
-    // @param _txSiblings - transaction's Merkle siblings
-    // @param _dogeBlockHeader - block header containing transaction
-    // @param _dogeBlockIndex - block's index withing superblock
-    // @param _dogeBlockSiblings - block's merkle siblings
-    // @param _superblockHash - superblock containing block header
-    // @param _untrustedTargetContract - the contract that is going to process the lock transaction
+    // @param txBytes - transaction bytes
+    // @param operatorPublicKeyHash
+    // @param txIndex - transaction's index within the block
+    // @param txSiblings - transaction's Merkle siblings
+    // @param dogeBlockHeader - block header containing transaction
+    // @param dogeBlockIndex - block's index withing superblock
+    // @param dogeBlockSiblings - block's merkle siblings
+    // @param superblockHash - superblock containing block header
+    // @param untrustedTargetContract - the contract that is going to process the lock transaction
     function relayUnlockTx(
-        bytes calldata _txBytes,
-        bytes20 _operatorPublicKeyHash,
-        uint _txIndex,
-        uint[] memory _txSiblings,
-        bytes memory _dogeBlockHeader,
-        uint _dogeBlockIndex,
-        uint[] memory _dogeBlockSiblings,
-        bytes32 _superblockHash,
-        TransactionProcessor _untrustedTargetContract
+        bytes calldata txBytes,
+        bytes20 operatorPublicKeyHash,
+        uint txIndex,
+        uint[] memory txSiblings,
+        bytes memory dogeBlockHeader,
+        uint dogeBlockIndex,
+        uint[] memory dogeBlockSiblings,
+        bytes32 superblockHash,
+        TransactionProcessor untrustedTargetContract
     ) public returns (uint) {
         return relayTx(
-            _txBytes,
-            _operatorPublicKeyHash,
-            _txIndex,
-            _txSiblings,
-            _dogeBlockHeader,
-            _dogeBlockIndex,
-            _dogeBlockSiblings,
-            _superblockHash,
-            _untrustedTargetContract.processUnlockTransaction
+            txBytes,
+            operatorPublicKeyHash,
+            txIndex,
+            txSiblings,
+            dogeBlockHeader,
+            dogeBlockIndex,
+            dogeBlockSiblings,
+            superblockHash,
+            untrustedTargetContract.processUnlockTransaction
         );
     }
 
     // @dev This function guards against hitting "stack too deep" compiler error in the parent, `relayTx`, function.
     function notifyTx(
-        bytes calldata _txBytes,
-        bytes20 _operatorPublicKeyHash,
-        bytes32 _superblockHash,
+        bytes calldata txBytes,
+        bytes20 operatorPublicKeyHash,
+        bytes32 superblockHash,
         uint txHash,
-        function (bytes memory, uint, bytes20, address) external returns (uint) _untrustedMethod
+        function (bytes memory, uint, bytes20, address) external returns (uint) untrustedMethod
     ) private returns (uint) {
         // TODO: potential revert here
-        uint returnCode = _untrustedMethod(_txBytes, txHash, _operatorPublicKeyHash, superblocks[_superblockHash].submitter);
+        uint returnCode = untrustedMethod(txBytes, txHash, operatorPublicKeyHash, superblocks[superblockHash].submitter);
         emit RelayTransaction(bytes32(txHash), returnCode);
         return returnCode;
     }
 
-    // @dev - Checks whether the transaction given by `_txBytes` is in the block identified by `_txBlockHash`.
+    // @dev - Checks whether the transaction given by `txBytes` is in the block identified by `txBlockHash`.
     // First it guards against a Merkle tree collision attack by raising an error if the transaction is exactly 64 bytes long,
     // then it calls helperVerifyHash to do the actual check.
     //
-    // @param _txBytes - transaction bytes
-    // @param _txIndex - transaction's index within the block
-    // @param _siblings - transaction's Merkle siblings
-    // @param _txBlockHeaderBytes - block header containing transaction
-    // @param _txsuperblockHash - superblock containing block header
-    // @return - SHA-256 hash of _txBytes if the transaction is in the block, 0 otherwise
+    // @param txBytes - transaction bytes
+    // @param txIndex - transaction's index within the block
+    // @param siblings - transaction's Merkle siblings
+    // @param txBlockHeaderBytes - block header containing transaction
+    // @param txsuperblockHash - superblock containing block header
+    // @return - SHA-256 hash of txBytes if the transaction is in the block, 0 otherwise
     // TODO: this can probably be made private
     function verifyTx(
-        bytes memory _txBytes,
-        uint _txIndex,
-        uint[] memory _siblings,
-        bytes memory _txBlockHeaderBytes,
-        bytes32 _txsuperblockHash
+        bytes memory txBytes,
+        uint txIndex,
+        uint[] memory siblings,
+        bytes memory txBlockHeaderBytes,
+        bytes32 txsuperblockHash
     ) public returns (uint) {
-        uint txHash = DogeMessageLibrary.dblShaFlip(_txBytes);
+        uint txHash = DogeMessageLibrary.dblShaFlip(txBytes);
 
-        if (_txBytes.length == 64) {  // todo: is check 32 also needed?
+        if (txBytes.length == 64) {  // todo: is check 32 also needed?
             emit VerifyTransaction(bytes32(txHash), ERR_TX_64BYTE);
             return 0;
         }
 
-        if (helperVerifyHash(txHash, _txIndex, _siblings, _txBlockHeaderBytes, _txsuperblockHash) == 1) {
+        if (helperVerifyHash(txHash, txIndex, siblings, txBlockHeaderBytes, txsuperblockHash) == 1) {
             return txHash;
         } else {
             // log is done via helperVerifyHash
@@ -459,71 +459,71 @@ contract DogeSuperblocks is DogeErrorCodes {
         }
     }
 
-    // @dev - Checks whether the transaction identified by `_txHash` is in the block identified by `_txBlockHash`
+    // @dev - Checks whether the transaction identified by `txHash` is in the block identified by `txBlockHash`
     // and whether the block is in the Dogecoin main chain. Transaction check is done via Merkle proof.
     // Note: no verification is performed to prevent txHash from just being an
     // internal hash in the Merkle tree. Thus this helper method should NOT be used
     // directly and is intended to be private.
     //
-    // @param _txHash - transaction hash
-    // @param _txIndex - transaction's index within the block
-    // @param _siblings - transaction's Merkle siblings
-    // @param _blockHeaderBytes - block header containing transaction
-    // @param _txsuperblockHash - superblock containing block header
+    // @param txHash - transaction hash
+    // @param txIndex - transaction's index within the block
+    // @param siblings - transaction's Merkle siblings
+    // @param blockHeaderBytes - block header containing transaction
+    // @param txsuperblockHash - superblock containing block header
     // @return - 1 if the transaction is in the block and the block is in the main chain,
     function helperVerifyHash(
-        uint256 _txHash,
-        uint _txIndex,
-        uint[] memory _siblings,
-        bytes memory _blockHeaderBytes,
-        bytes32 _txsuperblockHash
+        uint256 txHash,
+        uint txIndex,
+        uint[] memory siblings,
+        bytes memory blockHeaderBytes,
+        bytes32 txsuperblockHash
     ) private returns (uint) {
         // TODO: implement when dealing with incentives
-        // if (!feePaid(_txBlockHash, getFeeAmount(_txBlockHash))) {  // in incentive.se
-        //    VerifyTransaction(bytes32(_txHash), ERR_BAD_FEE);
+        // if (!feePaid(txBlockHash, getFeeAmount(txBlockHash))) {  // in incentive.se
+        //    VerifyTransaction(bytes32(txHash), ERR_BAD_FEE);
         //    return (ERR_BAD_FEE);
         // }
 
         //TODO: Verify superblock is in superblock's main chain
-        require(isApproved(_txsuperblockHash), "Superblock is not approved");
-        require(inMainChain(_txsuperblockHash), "Superblock is not part of the main chain");
+        require(isApproved(txsuperblockHash), "Superblock is not approved");
+        require(inMainChain(txsuperblockHash), "Superblock is not part of the main chain");
 
         // Verify tx Merkle root
-        uint merkle = DogeMessageLibrary.getHeaderMerkleRoot(_blockHeaderBytes, 0);
-        uint computedMerkle = DogeMessageLibrary.computeMerkle(_txHash, _txIndex, _siblings);
+        uint merkle = DogeMessageLibrary.getHeaderMerkleRoot(blockHeaderBytes, 0);
+        uint computedMerkle = DogeMessageLibrary.computeMerkle(txHash, txIndex, siblings);
         require(computedMerkle == merkle, "Tx merkle proof is invalid");
 
-        emit VerifyTransaction(bytes32(_txHash), 1);
+        emit VerifyTransaction(bytes32(txHash), 1);
         return (1);
     }
 
     // @dev - Calculate superblock hash from superblock data
     //
-    // @param _blocksMerkleRoot Root of the merkle tree of blocks contained in a superblock
-    // @param _accumulatedWork Accumulated proof of work of the last block in the superblock
-    // @param _timestamp Timestamp of the last block in the superblock
-    // @param _prevTimestamp Timestamp of the block previous to the last
-    // @param _lastHash Hash of the last block in the superblock
-    // @param _lastBits Difficulty bits of the last block in the superblock
-    // @param _parentId Id of the parent superblock
+    // @param blocksMerkleRoot Root of the merkle tree of blocks contained in a superblock
+    // @param accumulatedWork Accumulated proof of work of the last block in the superblock
+    // @param timestamp Timestamp of the last block in the superblock
+    // @param prevTimestamp Timestamp of the block previous to the last
+    // @param lastHash Hash of the last block in the superblock
+    // @param lastBits Difficulty bits of the last block in the superblock
+    // @param parentId Id of the parent superblock
     // @return Superblock id
     function calcSuperblockHash(
-        bytes32 _blocksMerkleRoot,
-        uint _accumulatedWork,
-        uint _timestamp,
-        uint _prevTimestamp,
-        bytes32 _lastHash,
-        uint32 _lastBits,
-        bytes32 _parentId
+        bytes32 blocksMerkleRoot,
+        uint accumulatedWork,
+        uint timestamp,
+        uint prevTimestamp,
+        bytes32 lastHash,
+        uint32 lastBits,
+        bytes32 parentId
     ) public pure returns (bytes32) {
         return keccak256(abi.encodePacked(
-            _blocksMerkleRoot,
-            _accumulatedWork,
-            _timestamp,
-            _prevTimestamp,
-            _lastHash,
-            _lastBits,
-            _parentId
+            blocksMerkleRoot,
+            accumulatedWork,
+            timestamp,
+            prevTimestamp,
+            lastHash,
+            lastBits,
+            parentId
         ));
     }
 
@@ -537,15 +537,15 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @dev - Returns the superblock data for the supplied superblock hash
     //
     // @return {
-    //   bytes32 _blocksMerkleRoot,
-    //   uint _accumulatedWork,
-    //   uint _timestamp,
-    //   uint _prevTimestamp,
-    //   bytes32 _lastHash,
-    //   uint32 _lastBits,
-    //   bytes32 _parentId,
-    //   address _submitter,
-    //   Status _status
+    //   bytes32 blocksMerkleRoot,
+    //   uint accumulatedWork,
+    //   uint timestamp,
+    //   uint prevTimestamp,
+    //   bytes32 lastHash,
+    //   uint32 lastBits,
+    //   bytes32 parentId,
+    //   address submitter,
+    //   Status status
     // }  Superblock data
     function getSuperblock(bytes32 superblockHash) public view returns (
         bytes32 blocksMerkleRoot,
@@ -588,38 +588,38 @@ contract DogeSuperblocks is DogeErrorCodes {
     }
 
     // @dev - Return superblock blocks' Merkle root
-    function getSuperblockMerkleRoot(bytes32 _superblockHash) public view returns (bytes32) {
-        return superblocks[_superblockHash].blocksMerkleRoot;
+    function getSuperblockMerkleRoot(bytes32 superblockHash) public view returns (bytes32) {
+        return superblocks[superblockHash].blocksMerkleRoot;
     }
 
     // @dev - Return superblock timestamp
-    function getSuperblockTimestamp(bytes32 _superblockHash) public view returns (uint) {
-        return superblocks[_superblockHash].timestamp;
+    function getSuperblockTimestamp(bytes32 superblockHash) public view returns (uint) {
+        return superblocks[superblockHash].timestamp;
     }
 
     // @dev - Return superblock prevTimestamp
-    function getSuperblockPrevTimestamp(bytes32 _superblockHash) public view returns (uint) {
-        return superblocks[_superblockHash].prevTimestamp;
+    function getSuperblockPrevTimestamp(bytes32 superblockHash) public view returns (uint) {
+        return superblocks[superblockHash].prevTimestamp;
     }
 
     // @dev - Return superblock last block hash
-    function getSuperblockLastHash(bytes32 _superblockHash) public view returns (bytes32) {
-        return superblocks[_superblockHash].lastHash;
+    function getSuperblockLastHash(bytes32 superblockHash) public view returns (bytes32) {
+        return superblocks[superblockHash].lastHash;
     }
 
     // @dev - Return superblock parent
-    function getSuperblockParentId(bytes32 _superblockHash) public view returns (bytes32) {
-        return superblocks[_superblockHash].parentId;
+    function getSuperblockParentId(bytes32 superblockHash) public view returns (bytes32) {
+        return superblocks[superblockHash].parentId;
     }
 
     // @dev - Return superblock accumulated work
-    function getSuperblockAccumulatedWork(bytes32 _superblockHash) public view returns (uint) {
-        return superblocks[_superblockHash].accumulatedWork;
+    function getSuperblockAccumulatedWork(bytes32 superblockHash) public view returns (uint) {
+        return superblocks[superblockHash].accumulatedWork;
     }
 
     // @dev - Return superblock status
-    function getSuperblockStatus(bytes32 _superblockHash) public view returns (Status) {
-        return superblocks[_superblockHash].status;
+    function getSuperblockStatus(bytes32 superblockHash) public view returns (Status) {
+        return superblocks[superblockHash].status;
     }
 
     // @dev - Return indexNextSuperblock
@@ -632,29 +632,29 @@ contract DogeSuperblocks is DogeErrorCodes {
         return DogeMessageLibrary.makeMerkle(hashes);
     }
 
-    function isApproved(bytes32 _superblockHash) public view returns (bool) {
-        return (getSuperblockStatus(_superblockHash) == Status.Approved);
+    function isApproved(bytes32 superblockHash) public view returns (bool) {
+        return (getSuperblockStatus(superblockHash) == Status.Approved);
     }
 
     function getChainHeight() public view returns (uint) {
         return superblocks[bestSuperblock].height;
     }
 
-    // @dev - write `_fourBytes` into `_word` starting from `_position`
+    // @dev - write `fourBytes` into `word` starting from `position`
     // This is useful for writing 32bit ints inside one 32 byte word
     //
-    // @param _word - information to be partially overwritten
-    // @param _position - position to start writing from
-    // @param _eightBytes - information to be written
-    function writeUint32(bytes32 _word, uint _position, uint32 _fourBytes) private pure returns (bytes32) {
+    // @param word - information to be partially overwritten
+    // @param position - position to start writing from
+    // @param fourBytes - information to be written
+    function writeUint32(bytes32 word, uint position, uint32 fourBytes) private pure returns (bytes32) {
         bytes32 result;
         assembly {
             let pointer := mload(0x40)
-            mstore(pointer, _word)
-            mstore8(add(pointer, _position), byte(28, _fourBytes))
-            mstore8(add(pointer, add(_position,1)), byte(29, _fourBytes))
-            mstore8(add(pointer, add(_position,2)), byte(30, _fourBytes))
-            mstore8(add(pointer, add(_position,3)), byte(31, _fourBytes))
+            mstore(pointer, word)
+            mstore8(add(pointer, position), byte(28, fourBytes))
+            mstore8(add(pointer, add(position,1)), byte(29, fourBytes))
+            mstore8(add(pointer, add(position,2)), byte(30, fourBytes))
+            mstore8(add(pointer, add(position,3)), byte(31, fourBytes))
             result := mload(pointer)
         }
         return result;
@@ -711,23 +711,23 @@ contract DogeSuperblocks is DogeErrorCodes {
 
     // dev - returns depth associated with an ancestor index; applies to any superblock
     //
-    // @param _index - index of ancestor to be looked up; an integer between 0 and 7
+    // @param index - index of ancestor to be looked up; an integer between 0 and 7
     // @return - depth corresponding to said index, i.e. 5**index
-    function getAncDepth(uint _index) private pure returns (uint) {
-        return ANCESTOR_STEP**(uint(_index));
+    function getAncDepth(uint index) private pure returns (uint) {
+        return ANCESTOR_STEP**(uint(index));
     }
 
     // @dev - return superblock hash at a given height in superblock main chain
     //
-    // @param _height - superblock height
-    // @return - hash corresponding to block of height _blockHeight
-    function getSuperblockAt(uint _height) public view returns (bytes32) {
+    // @param height - superblock height
+    // @return - hash corresponding to block of given height
+    function getSuperblockAt(uint height) public view returns (bytes32) {
         bytes32 superblockHash = bestSuperblock;
         uint index = NUM_ANCESTOR_DEPTHS - 1;
 
         uint currentHeight = getSuperblockHeight(superblockHash);
-        while (currentHeight > _height) {
-            while (currentHeight - _height < getAncDepth(index) && index > 0) {
+        while (currentHeight > height) {
+            while (currentHeight - height < getAncDepth(index) && index > 0) {
                 index -= 1;
             }
             superblockHash = getSuperblockAncestor(superblockHash, index);
@@ -739,12 +739,12 @@ contract DogeSuperblocks is DogeErrorCodes {
 
     // @dev - Checks if a superblock is in superblock main chain
     //
-    // @param _blockHash - hash of the block being searched for in the main chain
-    // @return - true if the block identified by _blockHash is in the main chain,
+    // @param superblockHash - hash of the block being searched for in the main chain
+    // @return - true if the block identified by superblockHash is in the main chain,
     // false otherwise
-    function inMainChain(bytes32 _superblockHash) internal view returns (bool) {
-        uint height = getSuperblockHeight(_superblockHash);
+    function inMainChain(bytes32 superblockHash) internal view returns (bool) {
+        uint height = getSuperblockHeight(superblockHash);
         if (height == 0) return false;
-        return (getSuperblockAt(height) == _superblockHash);
+        return (getSuperblockAt(height) == superblockHash);
     }
 }

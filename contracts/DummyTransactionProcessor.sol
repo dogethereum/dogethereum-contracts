@@ -15,10 +15,10 @@ contract DummyTransactionProcessor is TransactionProcessor {
     uint256 public lastTxHash;
     uint256 public ethBlock;
 
-    address private _trustedRelayerContract;
+    address private trustedRelayerContract;
 
-    constructor(address trustedRelayerContract) {
-        _trustedRelayerContract = trustedRelayerContract;
+    constructor(address initRelayerContract) {
+        trustedRelayerContract = initRelayerContract;
     }
 
     // processLockTransaction should avoid returning the same
@@ -33,7 +33,7 @@ contract DummyTransactionProcessor is TransactionProcessor {
         console.log("processLockTransaction called");
 
         // only allow trustedRelayerContract, otherwise anyone can provide a fake dogeTx
-        if (msg.sender == _trustedRelayerContract) {
+        if (msg.sender == trustedRelayerContract) {
             console.log("processLockTransaction txHash, ");
             console.logBytes32(bytes32(txHash));
             ethBlock = block.number;
@@ -60,7 +60,7 @@ contract DummyTransactionProcessor is TransactionProcessor {
         console.log("processUnlockTransaction called");
 
         // only allow trustedRelayerContract, otherwise anyone can provide a fake dogeTx
-        if (msg.sender == _trustedRelayerContract) {
+        if (msg.sender == trustedRelayerContract) {
             console.log("processUnlockTransaction txHash, ");
             console.logBytes32(bytes32(txHash));
             ethBlock = block.number;
