@@ -25,6 +25,9 @@ contract DogeToken is StandardToken, TransactionProcessor {
     uint constant DOGE_TX_BASE_FEE = 50000000; // 0.5 doge
     uint constant DOGE_TX_FEE_PER_INPUT = 100000000; // 1 doge
 
+    // Used when calculating the operator and submitter fees for lock and unlock txs.
+    uint public constant DOGETHEREUM_FEE_FRACTION = 1000;
+
     // Error codes
     uint constant ERR_OPERATOR_SIGNATURE = 60010;
     uint constant ERR_OPERATOR_ALREADY_CREATED = 60015;
@@ -327,10 +330,10 @@ contract DogeToken is StandardToken, TransactionProcessor {
         address operatorEthAddress,
         address superblockSubmitterAddress
     ) private {
-        uint operatorFee = value.mul(OPERATOR_LOCK_FEE) / 1000;
+        uint operatorFee = value.mul(OPERATOR_LOCK_FEE).div(DOGETHEREUM_FEE_FRACTION);
         mintTokens(operatorEthAddress, operatorFee);
 
-        uint superblockSubmitterFee = value.mul(SUPERBLOCK_SUBMITTER_LOCK_FEE) / 1000;
+        uint superblockSubmitterFee = value.mul(SUPERBLOCK_SUBMITTER_LOCK_FEE).div(DOGETHEREUM_FEE_FRACTION);
         mintTokens(superblockSubmitterAddress, superblockSubmitterFee);
 
         uint userValue = value.sub(operatorFee).sub(superblockSubmitterFee);
@@ -370,7 +373,7 @@ contract DogeToken is StandardToken, TransactionProcessor {
             return false;
         }
 
-        uint operatorFee = value.mul(OPERATOR_UNLOCK_FEE) / 1000;
+        uint operatorFee = value.mul(OPERATOR_UNLOCK_FEE).div(DOGETHEREUM_FEE_FRACTION);
         uint unlockValue = value.sub(operatorFee);
 
         uint32[] memory selectedUtxos;
