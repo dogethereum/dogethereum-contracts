@@ -48,7 +48,6 @@ contract DogeSuperblocks is DogeErrorCodes {
 
     event ErrorSuperblock(bytes32 superblockHash, uint err);
 
-    event VerifyTransaction(bytes32 txHash, uint returnCode);
     event RelayTransaction(bytes32 txHash, uint returnCode);
 
     // SuperblockClaims
@@ -426,75 +425,45 @@ contract DogeSuperblocks is DogeErrorCodes {
         return returnCode;
     }
 
-    // @dev - Checks whether the transaction given by `txBytes` is in the block identified by `txBlockHash`.
-    // First it guards against a Merkle tree collision attack by raising an error if the transaction is exactly 64 bytes long,
-    // then it calls helperVerifyHash to do the actual check.
+    // @dev - Checks whether the transaction given by `txBytes` is in the block identified by `txBlockHash`
+    // and whether the block is in the Dogecoin main chain. Transaction check is done via Merkle proof.
     //
     // @param txBytes - transaction bytes
     // @param txIndex - transaction's index within the block
     // @param siblings - transaction's Merkle siblings
-    // @param txBlockHeaderBytes - block header containing transaction
-    // @param txsuperblockHash - superblock containing block header
+    // @param blockHeader - block header containing transaction
+    // @param superblockHash - superblock containing block header
     // @return - SHA-256 hash of txBytes if the transaction is in the block, 0 otherwise
     // TODO: this can probably be made private
     function verifyTx(
         bytes memory txBytes,
         uint txIndex,
         uint[] memory siblings,
-        bytes memory txBlockHeaderBytes,
-        bytes32 txsuperblockHash
-    ) public returns (uint) {
+        bytes memory blockHeader,
+        bytes32 superblockHash
+    ) public view returns (uint) {
         uint txHash = DogeMessageLibrary.dblShaFlip(txBytes);
 
-        if (txBytes.length == 64) {  // todo: is check 32 also needed?
-            emit VerifyTransaction(bytes32(txHash), ERR_TX_64BYTE);
-            return 0;
-        }
+        // Attack on Merkle tree mitigations
 
-        if (helperVerifyHash(txHash, txIndex, siblings, txBlockHeaderBytes, txsuperblockHash) == 1) {
-            return txHash;
-        } else {
-            // log is done via helperVerifyHash
-            return 0;
-        }
-    }
+        // This guards against a Merkle tree collision attack if the transaction is exactly 64 bytes long,
+        // TODO: are 32 bytes long transactions also a problem?
+        require(txBytes.length != 64, "Transactions of exactly 64 bytes cannot be accepted.");
 
-    // @dev - Checks whether the transaction identified by `txHash` is in the block identified by `txBlockHash`
-    // and whether the block is in the Dogecoin main chain. Transaction check is done via Merkle proof.
-    // Note: no verification is performed to prevent txHash from just being an
-    // internal hash in the Merkle tree. Thus this helper method should NOT be used
-    // directly and is intended to be private.
-    //
-    // @param txHash - transaction hash
-    // @param txIndex - transaction's index within the block
-    // @param siblings - transaction's Merkle siblings
-    // @param blockHeaderBytes - block header containing transaction
-    // @param txsuperblockHash - superblock containing block header
-    // @return - 1 if the transaction is in the block and the block is in the main chain,
-    function helperVerifyHash(
-        uint256 txHash,
-        uint txIndex,
-        uint[] memory siblings,
-        bytes memory blockHeaderBytes,
-        bytes32 txsuperblockHash
-    ) private returns (uint) {
+        // Merkle tree verification
+
         // TODO: implement when dealing with incentives
-        // if (!feePaid(txBlockHash, getFeeAmount(txBlockHash))) {  // in incentive.se
-        //    VerifyTransaction(bytes32(txHash), ERR_BAD_FEE);
-        //    return (ERR_BAD_FEE);
-        // }
+        // require(feePaid(txBlockHash, getFeeAmount(txBlockHash)));  // in incentive.se
 
         //TODO: Verify superblock is in superblock's main chain
-        require(isApproved(txsuperblockHash), "Superblock is not approved");
-        require(inMainChain(txsuperblockHash), "Superblock is not part of the main chain");
+        require(isApproved(superblockHash), "Superblock is not approved");
+        require(inMainChain(superblockHash), "Superblock is not part of the main chain");
 
         // Verify tx Merkle root
-        uint merkle = DogeMessageLibrary.getHeaderMerkleRoot(blockHeaderBytes, 0);
+        uint merkle = DogeMessageLibrary.getHeaderMerkleRoot(blockHeader, 0);
         uint computedMerkle = DogeMessageLibrary.computeMerkle(txHash, txIndex, siblings);
         require(computedMerkle == merkle, "Tx merkle proof is invalid");
-
-        emit VerifyTransaction(bytes32(txHash), 1);
-        return (1);
+        return txHash;
     }
 
     // @dev - Calculate superblock hash from superblock data

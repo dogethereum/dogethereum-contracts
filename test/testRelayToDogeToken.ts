@@ -185,16 +185,6 @@ describe("testRelayToDogeToken", function () {
     );
     receipt = await result.wait();
 
-    const verifyTxEvents = receipt.events!.filter(
-      (log) => log.event === "VerifyTransaction"
-    );
-    assert.lengthOf(verifyTxEvents, 1);
-    assert.equal(
-      verifyTxEvents[0].args!.returnCode.toNumber(),
-      1,
-      "VerifyTransaction failed"
-    );
-
     const relayTxEvents = receipt.events!.filter(
       (log) => log.event === "RelayTransaction"
     );
