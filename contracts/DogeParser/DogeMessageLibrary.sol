@@ -214,6 +214,22 @@ library DogeMessageLibrary {
     }
 
     /**
+     * @dev - Parses a specific input in a tx to return its outpoint, i.e., its tx output reference.
+     * @param txBytes - tx byte array
+     * @param txInputIndex - Output index in tx.
+     * @return spentTxHash Tx hash of the outpoint.
+     * @return spentTxIndex Tx index of the outpoint.
+     */
+    function getInputOutpoint(
+        bytes memory txBytes,
+        uint32 txInputIndex
+    ) internal pure returns (uint spentTxHash, uint32 spentTxIndex) {
+        uint pos = TX_INPUTS_OFFSET;
+
+        (spentTxHash, spentTxIndex, /*pos*/) = getOutpointFromInputsByIndex(txBytes, pos, txInputIndex);
+    }
+
+    /**
      * @dev - Parses an unlock doge tx
      *   Inputs
      *   One or more inputs signed by the operator.
@@ -488,6 +504,40 @@ library DogeMessageLibrary {
         }
 
         return (inputs, pos);
+    }
+
+    /**
+     * Returns the nth input outpoint. Outpoints are the tx hash and output index within the tx.
+     * Reverts if the index is out of bounds for the input array.
+     * @return dogeTxHash Tx hash referenced in input.
+     * @return dogeTxIndex Output index within referenced tx.
+     */
+    function getOutpointFromInputsByIndex(bytes memory txBytes, uint pos, uint index) private pure
+             returns (uint256 dogeTxHash, uint32 dogeTxIndex, uint)
+    {
+        uint n_inputs;
+
+        (n_inputs, pos) = parseVarInt(txBytes, pos);
+
+        require(index < n_inputs, "Requested index is out of bounds for input array in tx.");
+
+        for (uint256 i = 0; i < index; i++) {
+            // skip outpoint
+            pos += 36;
+
+            uint script_len;
+            (script_len, pos) = parseVarInt(txBytes, pos);
+
+            // skip sig_script and seq
+            pos += script_len + 4;
+        }
+
+        uint256 txHash = uint256(readBytes32(txBytes, pos));
+        pos += 32;
+        uint32 txIndex = uint32(getBytesLE(txBytes, pos, 32));
+        pos += 4;
+
+        return (txHash, txIndex, pos);
     }
 
     /**

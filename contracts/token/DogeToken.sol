@@ -79,6 +79,7 @@ contract DogeToken is StandardToken, TransactionProcessor {
     event ErrorDogeToken(uint err);
     event NewToken(address indexed user, uint value);
     event UnlockRequest(uint32 id, bytes20 operatorPublicKeyHash);
+    event OperatorCondemned(bytes20 operatorPublicKeyHash);
 
     // Represents an unlock request
     struct Unlock {
@@ -295,6 +296,33 @@ contract DogeToken is StandardToken, TransactionProcessor {
         return 0;
     }
 
+    /**
+     * Reports that an operator used an UTXO that wasn't yet requested for an unlock.
+     */
+    function processReportOperatorFreeUtxoSpend(
+        bytes calldata dogeTx,
+        uint dogeTxHash,
+        bytes20 operatorPublicKeyHash,
+        uint operatorTxOutputReference,
+        uint32 unlawfulTxInputIndex
+    ) external {
+        transactionPreliminaryChecks(dogeTxHash);
+        Operator storage operator = getValidOperator(operatorPublicKeyHash);
+
+        require(operator.nextUnspentUtxoIndex <= operatorTxOutputReference, "The UTXO is already reserved or spent.");
+        Utxo storage utxo = operator.utxos[operatorTxOutputReference];
+
+        // Parse transaction and verify malfeasance claim
+        (uint spentTxHash, uint32 spentTxIndex) = DogeMessageLibrary.getInputOutpoint(dogeTx, unlawfulTxInputIndex);
+        require(
+            spentTxHash == utxo.txHash && spentTxIndex == utxo.index,
+            "The reported spent input and the UTXO are not the same."
+        );
+
+        // Condemn
+        condemnOperator(operatorPublicKeyHash);
+    }
+
     function transactionPreliminaryChecks(
         uint dogeTxHash
     ) internal {
@@ -428,6 +456,11 @@ contract DogeToken is StandardToken, TransactionProcessor {
         changeValue = selectedUtxosValue.sub(valueToSend);
         errorCode = 0;
         return (errorCode, selectedUtxos, dogeTxFee, changeValue);
+    }
+
+    function condemnOperator(bytes20 operatorPublicKeyHash) internal {
+        // TODO: implement
+        emit OperatorCondemned(operatorPublicKeyHash);
     }
 
     function getUnlockPendingInvestorProof(uint32 index) public view returns (address from, bytes20 dogeAddress, uint value, uint operatorFee, uint timestamp, uint32[] memory selectedUtxos, uint dogeTxFee, bytes20 operatorPublicKeyHash) {
