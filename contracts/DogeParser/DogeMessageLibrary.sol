@@ -108,6 +108,10 @@ library DogeMessageLibrary {
     uint constant p = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f;  // secp256k1
     uint constant q = (p + 1) / 4;
 
+    // Offset for the transaction inputs.
+    // This offset is constant because the version field is of fixed size.
+    uint constant TX_INPUTS_OFFSET = 4;
+
     // Error codes
     uint constant ERR_INVALID_HEADER = 10050;
     uint constant ERR_COINBASE_INDEX = 10060; // coinbase tx index within Litecoin merkle isn't 0
@@ -209,32 +213,26 @@ library DogeMessageLibrary {
         }
     }
 
-    // @dev - Parses a doge tx
-    //
-    // @param txBytes - tx byte array
-    // @param expectedOperatorPKH - public key hash that is expected to be used as output or input
-    // Outputs
-    // @return userOutputValue - amount sent to the unlock address in satoshis
-    // @return operatorChangePresent - if true, indicates that the operator sent some change to his address.
-    // @return operatorOutputValue - amount of the operator change output
-    // @return operatorOutputIndex - number of the operator change output in the tx
+    /**
+     * @dev - Parses an unlock doge tx
+     *   Inputs
+     *   One or more inputs signed by the operator.
+     *
+     *   Ouputs
+     *   0. Output for the user. This is ignored.
+     *   1. Optional. Operator change.
+     *
+     * @param txBytes - tx byte array
+     * @param expectedOperatorPKH - public key hash that is expected to be used as output or input
+     * @return userOutputValue Value of user output
+     * @return operatorChangeValue Value of operator change output.
+     * @return operatorChangeIndex Tx output index of operator change. If zero, there's no change output.
+     */
     function parseUnlockTransaction(
         bytes memory txBytes,
         bytes20 expectedOperatorPKH
     ) internal pure returns (uint, uint, uint16) {
-        uint pos;
-
-        // skip version
-        pos = 4;
-
-        /*
-            Inputs
-            One or more inputs signed by the operator.
-
-            Ouputs
-            0. Output for the user. This is ignored.
-            1. Optional. Operator change.
-        */
+        uint pos = TX_INPUTS_OFFSET;
 
         pos = checkUnlockInputs(txBytes, pos, expectedOperatorPKH);
 
@@ -261,31 +259,30 @@ library DogeMessageLibrary {
         return pos;
     }
 
-    // Determine the operator output, if any, and the value of the user output
-    //
-    // @param expectedOperatorPKH - operator public key hash
-    // @param txBytes - tx byte array
-    // @param pos - position to start parsing txBytes
-    // Outputs
-    // @return output value of operator output
-    // @return output index of operator output
-    // @return lockDestinationEthAddress - Lock destination address if operator output and OP_RETURN output found, 0 otherwise
-    //
-    // Returns output amount, index and ethereum address
+    /**
+     * Determine the operator output, if any, and the value of the user output
+     *   Ouputs
+     *   0. Output for the user. This output is ignored.
+     *   1. Optional. Operator change.
+     *
+     * @param expectedOperatorPKH - operator public key hash
+     * @param txBytes - tx byte array
+     * @param pos - position to start parsing txBytes
+     * @return userOutputValue Value of user output
+     * @return operatorChangeValue Value of operator change output.
+     * @return operatorChangeIndex Tx output index of operator change. If zero, there's no change output.
+     *
+     * Returns output amount, index and ethereum address
+     */
     function parseUnlockTxOutputs(
         bytes20 expectedOperatorPKH,
         bytes memory txBytes,
         uint pos
-    ) private pure returns (uint, uint, uint16) {
-        /*
-            Ouputs
-            0. Output for the user. This output is ignored.
-            1. Optional. Operator change.
-        */
-        (uint userOutputValue,
+    ) private pure returns (uint userOutputValue, uint operatorChangeValue, uint16 operatorChangeIndex) {
+        (uint userValue,
         uint operatorChangeScriptStart,
         uint operatorChangeScriptLength,
-        uint operatorChangeValue) = scanUnlockOutputs(txBytes, pos);
+        uint opChangeValue) = scanUnlockOutputs(txBytes, pos);
 
         // TODO: abstract this check into a function?
         // Check if the change output exists
@@ -297,10 +294,10 @@ library DogeMessageLibrary {
                 "Invalid unlock tx. The second tx output does not have a P2PKH output script for an operator."
             );
 
-            return (userOutputValue, operatorChangeValue, 1);
+            return (userValue, opChangeValue, 1);
         }
 
-        return (userOutputValue, 0, 0);
+        return (userValue, 0, 0);
     }
 
     // Scan the outputs of an unlock transaction.
@@ -355,10 +352,7 @@ library DogeMessageLibrary {
         bytes memory txBytes,
         bytes20 expectedOperatorPKH
     ) internal pure returns (uint, address, uint16) {
-        uint pos;
-
-        // skip version
-        pos = 4;
+        uint pos = TX_INPUTS_OFFSET;
 
         // Ignore inputs
         pos = skipInputs(txBytes, pos);
@@ -1375,7 +1369,7 @@ library DogeMessageLibrary {
     function checkValueSent(bytes memory txBytes, bytes20 btcAddress, uint value) private pure
              returns (bool)
     {
-        uint pos = 4;  // skip version
+        uint pos = TX_INPUTS_OFFSET;
         pos = skipInputs(txBytes, pos);  // find end of inputs
 
         // scan *all* the outputs and find where they are
@@ -1429,7 +1423,7 @@ library DogeMessageLibrary {
         uint[] memory output_values;
         bytes20[] memory output_public_key_hashes = new bytes20[](2);
 
-        pos = 4;  // skip version
+        pos = TX_INPUTS_OFFSET;
 
         pos = skipInputs(txBytes, pos);
 
