@@ -95,8 +95,11 @@ contract DogeToken is StandardToken, TransactionProcessor {
 
     // TODO: value can fit in uint64 while index technically fits in uint64 too
     struct Utxo {
+        // Value of the output.
         uint value;
+        // Transaction hash.
         uint txHash;
+        // Output index within the transaction.
         uint16 index;
     }
 
@@ -376,7 +379,6 @@ contract DogeToken is StandardToken, TransactionProcessor {
         }
 
         balances[operator.ethAddress] = balances[operator.ethAddress].add(operatorFee);
-        // Hack to make etherscan show the event
         emit Transfer(msg.sender, operator.ethAddress, operatorFee);
         balances[msg.sender] = balances[msg.sender].sub(value);
         // Hack to make etherscan show the event
