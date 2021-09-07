@@ -68,7 +68,10 @@ export function calcBlockSha256Hash(blockHeader: string): string {
 // Get timestamp from dogecoin block header
 function getBlockTimestamp(blockHeader: string) {
   const timestampOffset = 68;
-  const timestampBuf = fromHex(blockHeader).slice(timestampOffset, timestampOffset + uint32Size);
+  const timestampBuf = fromHex(blockHeader).slice(
+    timestampOffset,
+    timestampOffset + uint32Size
+  );
   const timestamp = timestampBuf.readUInt32LE();
   return timestamp;
 }
@@ -76,7 +79,10 @@ function getBlockTimestamp(blockHeader: string) {
 // Get difficulty bits from block header
 function getBlockDifficultyBits(blockHeader: string) {
   const bitsOffset = 72;
-  const bitsBuf = fromHex(blockHeader).slice(bitsOffset, bitsOffset + uint32Size);
+  const bitsBuf = fromHex(blockHeader).slice(
+    bitsOffset,
+    bitsOffset + uint32Size
+  );
   const bits = bitsBuf.readUInt32LE();
   return bits;
 }
