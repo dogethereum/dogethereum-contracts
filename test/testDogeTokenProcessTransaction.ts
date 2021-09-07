@@ -9,6 +9,7 @@ import {
   buildDogeTransaction,
   dogeAddressFromKeyPair,
   dogeKeyPairFromWIF,
+  expectFailure,
   isolateEachTest,
   isolateTests,
   publicKeyHashFromKeyPair,
@@ -138,17 +139,21 @@ describe("testDogeTokenProcessTransaction", function () {
   });
 
   it("processTransaction fail - operator not created", async () => {
-    const processTransactionTxResponse = await dogeToken.processLockTransaction(
-      txData,
-      txHash,
-      operatorPublicKeyHash,
-      superblockSubmitterAddress
-    );
-    const processTransactionTxReceipt = await processTransactionTxResponse.wait();
-    assert.equal(
-      60060,
-      processTransactionTxReceipt.events[0].args.err,
-      "Expected ERR_PROCESS_OPERATOR_NOT_CREATED error"
+    await expectFailure(
+      () => {
+        return dogeToken.processLockTransaction(
+          txData,
+          txHash,
+          operatorPublicKeyHash,
+          superblockSubmitterAddress
+        );
+      },
+      (error) =>
+        assert.include(
+          error.message,
+          "Operator is not registered",
+          "Expected operator to not be registered."
+        )
     );
   });
 
@@ -164,17 +169,20 @@ describe("testDogeTokenProcessTransaction", function () {
       superblockSubmitterAddress
     );
 
-    const processTransactionTxResponse = await dogeToken.processLockTransaction(
-      txData,
-      txHash,
-      operatorPublicKeyHash,
-      superblockSubmitterAddress
-    );
-    const processTransactionTxReceipt = await processTransactionTxResponse.wait();
-    assert.equal(
-      60070,
-      processTransactionTxReceipt.events[0].args.err,
-      "Expected ERR_PROCESS_TX_ALREADY_PROCESSED error"
+    await expectFailure(
+      () =>
+        dogeToken.processLockTransaction(
+          txData,
+          txHash,
+          operatorPublicKeyHash,
+          superblockSubmitterAddress
+        ),
+      (error) =>
+        assert.include(
+          error.message,
+          "Transaction already processed.",
+          "Expected transaction to be already processed."
+        )
     );
   });
 });

@@ -455,3 +455,28 @@ function isolate(
     });
   });
 }
+
+export async function expectFailure(
+  f: () => Promise<unknown>,
+  handle: (error: Error) => void
+): Promise<void> {
+  let result;
+  try {
+    result = await f();
+  } catch (error) {
+    if (error instanceof Error) {
+      // In most cases the handler won't return a promise, but just in case.
+      try {
+        await handle(error);
+      } catch (assertion) {
+        throw new Error(`${assertion}
+Original error: ${error.stack || error}`);
+      }
+      return;
+    }
+
+    throw error;
+  }
+
+  throw new Error(`Did not fail. Result: ${result}`);
+}

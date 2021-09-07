@@ -236,26 +236,12 @@ contract DogeToken is StandardToken, TransactionProcessor {
 
     function processLockTransaction(
         bytes calldata dogeTx,
-        uint txHash,
+        uint dogeTxHash,
         bytes20 operatorPublicKeyHash,
         address superblockSubmitterAddress
     ) override public returns (uint) {
-        require(msg.sender == trustedRelayerContract, "Only the tx relayer can call this function.");
-
-        Operator storage operator = operators[operatorPublicKeyHash];
-        // Check operator exists
-        if (operator.ethAddress == address(0)) {
-            emit ErrorDogeToken(ERR_PROCESS_OPERATOR_NOT_CREATED);
-            return 0;
-        }
-
-        // Add tx to the dogeTxHashesAlreadyProcessed
-        bool inserted = Set.insert(dogeTxHashesAlreadyProcessed, txHash);
-        // Check tx was not already processed
-        if (!inserted) {
-            emit ErrorDogeToken(ERR_PROCESS_TX_ALREADY_PROCESSED);
-            return 0;
-        }
+        transactionPreliminaryChecks(dogeTxHash);
+        Operator storage operator = getValidOperator(operatorPublicKeyHash);
 
         uint value;
         address lockDestinationEthAddress;
@@ -264,7 +250,7 @@ contract DogeToken is StandardToken, TransactionProcessor {
 
         // Add utxo
         if (value > 0) {
-            operator.utxos.push(Utxo(value, txHash, outputIndex));
+            operator.utxos.push(Utxo(value, dogeTxHash, outputIndex));
         }
 
         // Update operator's doge balance
@@ -282,26 +268,12 @@ contract DogeToken is StandardToken, TransactionProcessor {
 
     function processUnlockTransaction(
         bytes calldata dogeTx,
-        uint txHash,
+        uint dogeTxHash,
         bytes20 operatorPublicKeyHash,
         address /*superblockSubmitterAddress*/
     ) override public returns (uint) {
-        require(msg.sender == trustedRelayerContract, "Only the tx relayer can call this function.");
-
-        Operator storage operator = operators[operatorPublicKeyHash];
-        // Check operator exists
-        if (operator.ethAddress == address(0)) {
-            emit ErrorDogeToken(ERR_PROCESS_OPERATOR_NOT_CREATED);
-            return 0;
-        }
-
-        // Add tx to the dogeTxHashesAlreadyProcessed
-        bool inserted = Set.insert(dogeTxHashesAlreadyProcessed, txHash);
-        // Check tx was not already processed
-        if (!inserted) {
-            emit ErrorDogeToken(ERR_PROCESS_TX_ALREADY_PROCESSED);
-            return 0;
-        }
+        transactionPreliminaryChecks(dogeTxHash);
+        Operator storage operator = getValidOperator(operatorPublicKeyHash);
 
         uint userValue;
         uint operatorValue;
@@ -310,7 +282,7 @@ contract DogeToken is StandardToken, TransactionProcessor {
 
         // Add utxo
         if (operatorValue > 0) {
-            operator.utxos.push(Utxo(operatorValue, txHash, outputIndex));
+            operator.utxos.push(Utxo(operatorValue, dogeTxHash, outputIndex));
 
             // Update operator's doge balance
             operator.dogeAvailableBalance = operator.dogeAvailableBalance.add(operatorValue);
@@ -318,6 +290,23 @@ contract DogeToken is StandardToken, TransactionProcessor {
         }
 
         return 0;
+    }
+
+    function transactionPreliminaryChecks(
+        uint dogeTxHash
+    ) internal {
+        require(msg.sender == trustedRelayerContract, "Only the tx relayer can call this function.");
+
+        // Add tx to the dogeTxHashesAlreadyProcessed
+        bool inserted = Set.insert(dogeTxHashesAlreadyProcessed, dogeTxHash);
+        // Check tx was not already processed
+        require(inserted, "Transaction already processed.");
+    }
+
+    function getValidOperator(bytes20 operatorPublicKeyHash) internal view returns (Operator storage) {
+        Operator storage operator = operators[operatorPublicKeyHash];
+        require(operator.ethAddress != address(0), "Operator is not registered.");
+        return operator;
     }
 
     function wasDogeTxProcessed(uint txHash) public view returns (bool) {
