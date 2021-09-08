@@ -16,4 +16,11 @@ abstract contract TransactionProcessor {
         bytes20 operatorPublicKeyHash,
         address superblockSubmitterAddress
     ) virtual public;
+    function processReportOperatorFreeUtxoSpend(
+        bytes calldata txn,
+        uint txHash,
+        bytes20 operatorPublicKeyHash,
+        uint32 operatorTxOutputReference,
+        uint32 unlawfulTxInputIndex
+    ) virtual public;
 }

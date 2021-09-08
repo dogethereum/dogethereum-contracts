@@ -300,9 +300,9 @@ contract DogeToken is StandardToken, TransactionProcessor {
         bytes calldata dogeTx,
         uint dogeTxHash,
         bytes20 operatorPublicKeyHash,
-        uint operatorTxOutputReference,
+        uint32 operatorTxOutputReference,
         uint32 unlawfulTxInputIndex
-    ) external {
+    ) override public {
         transactionPreliminaryChecks(dogeTxHash);
         Operator storage operator = getValidOperator(operatorPublicKeyHash);
 

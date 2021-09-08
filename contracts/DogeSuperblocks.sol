@@ -319,16 +319,7 @@ contract DogeSuperblocks is DogeErrorCodes {
         bytes32 superblockHash,
         function (bytes memory, uint, bytes20, address) external untrustedMethod
     ) public {
-        {
-            uint dogeBlockHash = DogeMessageLibrary.dblShaFlip(dogeBlockHeader);
-
-            // Check if Doge block belongs to given superblock
-            require(
-                bytes32(DogeMessageLibrary.computeMerkle(dogeBlockHash, dogeBlockIndex, dogeBlockSiblings))
-                == getSuperblockMerkleRoot(superblockHash),
-                "Doge block does not belong to superblock"
-            );
-        }
+        verifyBlockMembership(dogeBlockHeader, dogeBlockIndex, dogeBlockSiblings, superblockHash);
 
         uint txHash = verifyTx(txBytes, txIndex, txSiblings, dogeBlockHeader, superblockHash);
         untrustedMethod(txBytes, txHash, operatorPublicKeyHash, superblocks[superblockHash].submitter);
@@ -406,6 +397,57 @@ contract DogeSuperblocks is DogeErrorCodes {
             dogeBlockSiblings,
             superblockHash,
             untrustedTargetContract.processUnlockTransaction
+        );
+    }
+
+    // @dev - relays transaction `txBytes` to `untrustedTargetContract`'s processUnlockTransaction() method.
+    // This function exists solely to offer a compatibility layer for libraries that don't support function
+    // types in parameters.
+    //
+    // @param txBytes - transaction bytes
+    // @param operatorPublicKeyHash
+    // @param txIndex - transaction's index within the block
+    // @param txSiblings - transaction's Merkle siblings
+    // @param dogeBlockHeader - block header containing transaction
+    // @param dogeBlockIndex - block's index withing superblock
+    // @param dogeBlockSiblings - block's merkle siblings
+    // @param superblockHash - superblock containing block header
+    // @param untrustedTargetContract - the contract that is going to process the lock transaction
+    function relayTxAndReportOperatorFreeUtxoSpend(
+        bytes calldata txBytes,
+        bytes20 operatorPublicKeyHash,
+        uint txIndex,
+        uint[] memory txSiblings,
+        bytes memory dogeBlockHeader,
+        uint dogeBlockIndex,
+        uint[] memory dogeBlockSiblings,
+        bytes32 superblockHash,
+        TransactionProcessor untrustedTargetContract,
+        uint32 operatorTxOutputReference,
+        uint32 unlawfulTxInputIndex
+    ) public {
+        verifyBlockMembership(dogeBlockHeader, dogeBlockIndex, dogeBlockSiblings, superblockHash);
+
+        uint txHash = verifyTx(txBytes, txIndex, txSiblings, dogeBlockHeader, superblockHash);
+        untrustedTargetContract.processReportOperatorFreeUtxoSpend(txBytes, txHash, operatorPublicKeyHash, operatorTxOutputReference, unlawfulTxInputIndex);
+        emit RelayTransaction(bytes32(txHash));
+    }
+
+    /**
+     * Check if Doge block belongs to given superblock
+     */
+    function verifyBlockMembership(
+        bytes memory dogeBlockHeader,
+        uint dogeBlockIndex,
+        uint[] memory dogeBlockSiblings,
+        bytes32 superblockHash
+    ) internal view {
+        uint dogeBlockHash = DogeMessageLibrary.dblShaFlip(dogeBlockHeader);
+
+        require(
+            bytes32(DogeMessageLibrary.computeMerkle(dogeBlockHash, dogeBlockIndex, dogeBlockSiblings))
+            == getSuperblockMerkleRoot(superblockHash),
+            "Doge block does not belong to superblock"
         );
     }
 

@@ -72,4 +72,28 @@ contract DummyTransactionProcessor is TransactionProcessor {
 
         console.log("processUnlockTransaction failed");
     }
+
+    function processReportOperatorFreeUtxoSpend(
+        bytes calldata /*txn*/,
+        uint txHash,
+        bytes20 /*operatorPublicKeyHash*/,
+        uint32 /*operatorTxOutputReference*/,
+        uint32 /*unlawfulTxInputIndex*/
+    ) override public {
+        console.log("processReportOperatorFreeUtxoSpend called");
+
+        // only allow trustedRelayerContract, otherwise anyone can provide a fake dogeTx
+        if (msg.sender == trustedRelayerContract) {
+            console.log("processReportOperatorFreeUtxoSpend txHash, ");
+            console.logBytes32(bytes32(txHash));
+            ethBlock = block.number;
+            lastTxHash = txHash;
+            // parse & do whatever with dogeTx
+            // For example, you should probably check if txHash has already
+            // been processed, to prevent replay attacks.
+            return;
+        }
+
+        console.log("processReportOperatorFreeUtxoSpend failed");
+    }
 }
