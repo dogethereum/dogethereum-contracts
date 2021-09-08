@@ -479,7 +479,7 @@ contract DogeSuperblocks is DogeErrorCodes {
         // Merkle tree verification
 
         // TODO: implement when dealing with incentives
-        // require(feePaid(txBlockHash, getFeeAmount(txBlockHash)));  // in incentive.se
+        // require(feePaid(txBlockHash, getFeeAmount(txBlockHash)));
 
         // Verify superblock is in superblock's main chain
         require(isApproved(superblockHash), "Superblock is not approved");
