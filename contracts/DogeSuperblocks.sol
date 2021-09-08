@@ -455,7 +455,7 @@ contract DogeSuperblocks is DogeErrorCodes {
         // TODO: implement when dealing with incentives
         // require(feePaid(txBlockHash, getFeeAmount(txBlockHash)));  // in incentive.se
 
-        //TODO: Verify superblock is in superblock's main chain
+        // Verify superblock is in superblock's main chain
         require(isApproved(superblockHash), "Superblock is not approved");
         require(inMainChain(superblockHash), "Superblock is not part of the main chain");
 
