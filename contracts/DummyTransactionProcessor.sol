@@ -29,7 +29,7 @@ contract DummyTransactionProcessor is TransactionProcessor {
     // @param bytes20 - public key hash of the operator
     // @param address - superblock submitter address
     // @return uint - number of satoshidoges locked in case of a valid lock tx, 0 in any other case.
-    function processLockTransaction(bytes calldata, uint256 txHash, bytes20, address) override public returns (uint) {
+    function processLockTransaction(bytes calldata, uint256 txHash, bytes20, address) override public {
         console.log("processLockTransaction called");
 
         // only allow trustedRelayerContract, otherwise anyone can provide a fake dogeTx
@@ -41,11 +41,10 @@ contract DummyTransactionProcessor is TransactionProcessor {
             // parse & do whatever with dogeTx
             // For example, you should probably check if txHash has already
             // been processed, to prevent replay attacks.
-            return 1;
+            return;
         }
 
         console.log("processLockTransaction failed");
-        return 0;
     }
 
     // processUnlockTransaction should avoid returning the same
@@ -56,7 +55,7 @@ contract DummyTransactionProcessor is TransactionProcessor {
     // @param bytes20 - public key hash of the operator
     // @param address - superblock submitter address
     // @return uint - number of satoshidoges locked in case of a valid lock tx, 0 in any other case.
-    function processUnlockTransaction(bytes calldata, uint256 txHash, bytes20, address) override public returns (uint) {
+    function processUnlockTransaction(bytes calldata, uint256 txHash, bytes20, address) override public {
         console.log("processUnlockTransaction called");
 
         // only allow trustedRelayerContract, otherwise anyone can provide a fake dogeTx
@@ -68,10 +67,9 @@ contract DummyTransactionProcessor is TransactionProcessor {
             // parse & do whatever with dogeTx
             // For example, you should probably check if txHash has already
             // been processed, to prevent replay attacks.
-            return 1;
+            return;
         }
 
         console.log("processUnlockTransaction failed");
-        return 0;
     }
 }

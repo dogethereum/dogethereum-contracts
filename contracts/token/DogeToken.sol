@@ -243,7 +243,7 @@ contract DogeToken is StandardToken, TransactionProcessor {
         uint dogeTxHash,
         bytes20 operatorPublicKeyHash,
         address superblockSubmitterAddress
-    ) override public returns (uint) {
+    ) override public {
         transactionPreliminaryChecks(dogeTxHash);
         Operator storage operator = getValidOperator(operatorPublicKeyHash);
 
@@ -262,12 +262,11 @@ contract DogeToken is StandardToken, TransactionProcessor {
 
         if (value < MIN_LOCK_VALUE) {
             emit ErrorDogeToken(ERR_LOCK_MIN_LOCK_VALUE);
-            return 0;
+            return;
         }
 
         distributeTokensAfterLock(lockDestinationEthAddress, value,
                                operator.ethAddress, superblockSubmitterAddress);
-        return value;
     }
 
     function processUnlockTransaction(
@@ -275,7 +274,7 @@ contract DogeToken is StandardToken, TransactionProcessor {
         uint dogeTxHash,
         bytes20 operatorPublicKeyHash,
         address /*superblockSubmitterAddress*/
-    ) override public returns (uint) {
+    ) override public {
         transactionPreliminaryChecks(dogeTxHash);
         Operator storage operator = getValidOperator(operatorPublicKeyHash);
 
@@ -292,8 +291,6 @@ contract DogeToken is StandardToken, TransactionProcessor {
             operator.dogeAvailableBalance = operator.dogeAvailableBalance.add(operatorValue);
             operator.dogePendingBalance = operator.dogePendingBalance.sub(operatorValue);
         }
-
-        return 0;
     }
 
     /**

@@ -48,7 +48,7 @@ contract DogeSuperblocks is DogeErrorCodes {
 
     event ErrorSuperblock(bytes32 superblockHash, uint err);
 
-    event RelayTransaction(bytes32 txHash, uint returnCode);
+    event RelayTransaction(bytes32 txHash);
 
     // SuperblockClaims
     address public trustedSuperblockClaims;
@@ -317,24 +317,22 @@ contract DogeSuperblocks is DogeErrorCodes {
         uint dogeBlockIndex,
         uint[] memory dogeBlockSiblings,
         bytes32 superblockHash,
-        function (bytes memory, uint, bytes20, address) external returns (uint) untrustedMethod
-    ) public returns (uint) {
-        uint dogeBlockHash = DogeMessageLibrary.dblShaFlip(dogeBlockHeader);
+        function (bytes memory, uint, bytes20, address) external untrustedMethod
+    ) public {
+        {
+            uint dogeBlockHash = DogeMessageLibrary.dblShaFlip(dogeBlockHeader);
 
-        // Check if Doge block belongs to given superblock
-        require(
-            bytes32(DogeMessageLibrary.computeMerkle(dogeBlockHash, dogeBlockIndex, dogeBlockSiblings))
-            == getSuperblockMerkleRoot(superblockHash),
-            "Doge block does not belong to superblock"
-        );
-
-        uint txHash = verifyTx(txBytes, txIndex, txSiblings, dogeBlockHeader, superblockHash);
-        if (txHash != 0) {
-            return notifyTx(txBytes, operatorPublicKeyHash, superblockHash, txHash, untrustedMethod);
+            // Check if Doge block belongs to given superblock
+            require(
+                bytes32(DogeMessageLibrary.computeMerkle(dogeBlockHash, dogeBlockIndex, dogeBlockSiblings))
+                == getSuperblockMerkleRoot(superblockHash),
+                "Doge block does not belong to superblock"
+            );
         }
 
-        emit RelayTransaction(bytes32(0), ERR_RELAY_VERIFY);
-        return(ERR_RELAY_VERIFY);
+        uint txHash = verifyTx(txBytes, txIndex, txSiblings, dogeBlockHeader, superblockHash);
+        untrustedMethod(txBytes, txHash, operatorPublicKeyHash, superblocks[superblockHash].submitter);
+        emit RelayTransaction(bytes32(txHash));
     }
 
     // @dev - relays transaction `txBytes` to `untrustedTargetContract`'s processLockTransaction() method.
@@ -360,8 +358,8 @@ contract DogeSuperblocks is DogeErrorCodes {
         uint[] memory dogeBlockSiblings,
         bytes32 superblockHash,
         TransactionProcessor untrustedTargetContract
-    ) public returns (uint) {
-        return relayTx(
+    ) public {
+        relayTx(
             txBytes,
             operatorPublicKeyHash,
             txIndex,
@@ -397,8 +395,8 @@ contract DogeSuperblocks is DogeErrorCodes {
         uint[] memory dogeBlockSiblings,
         bytes32 superblockHash,
         TransactionProcessor untrustedTargetContract
-    ) public returns (uint) {
-        return relayTx(
+    ) public {
+        relayTx(
             txBytes,
             operatorPublicKeyHash,
             txIndex,
@@ -409,20 +407,6 @@ contract DogeSuperblocks is DogeErrorCodes {
             superblockHash,
             untrustedTargetContract.processUnlockTransaction
         );
-    }
-
-    // @dev This function guards against hitting "stack too deep" compiler error in the parent, `relayTx`, function.
-    function notifyTx(
-        bytes calldata txBytes,
-        bytes20 operatorPublicKeyHash,
-        bytes32 superblockHash,
-        uint txHash,
-        function (bytes memory, uint, bytes20, address) external returns (uint) untrustedMethod
-    ) private returns (uint) {
-        // TODO: potential revert here
-        uint returnCode = untrustedMethod(txBytes, txHash, operatorPublicKeyHash, superblocks[superblockHash].submitter);
-        emit RelayTransaction(bytes32(txHash), returnCode);
-        return returnCode;
     }
 
     // @dev - Checks whether the transaction given by `txBytes` is in the block identified by `txBlockHash`

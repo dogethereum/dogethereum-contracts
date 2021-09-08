@@ -189,11 +189,10 @@ describe("testRelayToDogeToken", function () {
       (log) => log.event === "RelayTransaction"
     );
     assert.lengthOf(relayTxEvents, 1);
-    const ERR_RELAY_VERIFY = 30010;
-    assert.notEqual(
-      relayTxEvents[0].args!.returnCode.toNumber(),
-      ERR_RELAY_VERIFY,
-      "RelayTransaction failed"
+    assert.equal(
+      relayTxEvents[0].args!.txHash,
+      txHash,
+      "Unexpected tx hash when relayed"
     );
 
     const balance = await dogeToken.balanceOf(userEthAddress);
