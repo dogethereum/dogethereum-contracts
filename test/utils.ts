@@ -217,7 +217,10 @@ export function findEvent(
   return events.find((log) => log.event === name);
 }
 
-const DOGECOIN = {
+/**
+ * Network parameters for Dogecoin mainnet.
+ */
+const DogecoinMainnet = {
   /**
    * Message prefix used in dogecoin `signmessage` node API
    */
@@ -253,7 +256,7 @@ const DOGECOIN = {
 };
 
 export function dogeKeyPairFromWIF(wif: string): bitcoin.ECPairInterface {
-  return bitcoin.ECPair.fromWIF(wif, DOGECOIN);
+  return bitcoin.ECPair.fromWIF(wif, DogecoinMainnet);
 }
 
 // keyPair should be the output of dogeKeyPairFromWIF
@@ -262,7 +265,7 @@ export function dogeAddressFromKeyPair(
 ): string {
   const { address } = bitcoin.payments.p2pkh({
     pubkey: keyPair.publicKey,
-    network: DOGECOIN,
+    network: DogecoinMainnet,
   });
   if (address === undefined) {
     throw new Error("Could not retrieve address.");
@@ -322,7 +325,7 @@ export function buildDogeTransaction({
   inputs: TxInput[];
   outputs: TxOutput[];
 }): bitcoin.Transaction {
-  const txBuilder = new bitcoin.TransactionBuilder(DOGECOIN);
+  const txBuilder = new bitcoin.TransactionBuilder(DogecoinMainnet);
   txBuilder.setVersion(1);
   inputs.forEach(({ txId, index }) => txBuilder.addInput(txId, index));
   outputs.forEach((txOut) => {
