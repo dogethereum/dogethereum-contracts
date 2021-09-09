@@ -282,16 +282,38 @@ export function publicKeyHashFromKeyPair(
     .toString("hex")}`;
 }
 
+/**
+ * A descriptor of the UTXO reference that is to be used in a transaction.
+ */
 interface TxInput {
+  /**
+   * The transaction ID of where the UTXO is.
+   */
   txId: string;
+  /**
+   * The transaction output index of the UTXO.
+   */
   index: number;
 }
 
 type TxOutput = PaymentTxOutput | DataTxOutput;
 
+/**
+ * A descriptor of a payment transaction output.
+ * Outputs of this type are used for value transfers.
+ */
 interface PaymentTxOutput {
+  /**
+   * The type of the output.
+   */
   type: "payment";
+  /**
+   * The address that receives the value in this output.
+   */
   address: string;
+  /**
+   * The value sent to the address.
+   */
   value: number;
 }
 
@@ -300,9 +322,23 @@ function isPaymentTxOutput(txOut: any): txOut is PaymentTxOutput {
   return typeof txOut === "object" && txOut.type === "payment";
 }
 
+/**
+ * A descriptor of a data embedding transaction output.
+ * Outputs of this type are used for embedding messages in a transaction.
+ */
 interface DataTxOutput {
+  /**
+   * The type of the output.
+   */
   type: "data embed";
+  /**
+   * The value associated with this output.
+   * It should be zero always.
+   */
   value: 0;
+  /**
+   * The data embedded in this output.
+   */
   data: Buffer;
 }
 
