@@ -348,32 +348,72 @@ function isDataTxOutput(txOut: any): txOut is DataTxOutput {
 }
 
 /**
- * @param signer private key in WIF
- * @param inputs [[txid, index]] list of utxos where utxo = txid + index of output
- * @param outputs [[address, amount, data]] list of tx data
+ * Encodes and signs a Dogecoin transaction for the Dogecoin mainnet network.
+ * TODO: support testnet and regtest?
+ * @param txDetails Descriptor for tx inputs, outputs and the signing private key.
  */
-export function buildDogeTransaction({
-  signer,
+export function buildDogeTransaction(txDetails: {
+  /**
+   * Signer of the transaction.
+   */
+  signer: bitcoin.ECPair.Signer;
+  /**
+   * List of tx inputs.
+   */
+  inputs: TxInput[];
+  /**
+   * List of tx outputs. Can contain payment or data outputs.
+   */
+  outputs: TxOutput[];
+}): bitcoin.Transaction {
+  const txBuilder = prepareDogeTransaction(txDetails);
+  txBuilder.sign(0, txDetails.signer);
+  return txBuilder.build();
+}
+
+/**
+ * Encodes a Dogecoin transaction for the Dogecoin mainnet network.
+ * TODO: support testnet and regtest?
+ * @param txDetails Descriptor for tx inputs and outputs.
+ */
+export function mockDogeTransaction(txDetails: {
+  /**
+   * List of tx inputs.
+   */
+  inputs: TxInput[];
+  /**
+   * List of tx outputs. Can contain payment or data outputs.
+   */
+  outputs: TxOutput[];
+}): bitcoin.Transaction {
+  const txBuilder = prepareDogeTransaction(txDetails);
+  return txBuilder.build();
+}
+
+function prepareDogeTransaction({
   inputs,
   outputs,
 }: {
-  signer: bitcoin.ECPair.Signer;
   inputs: TxInput[];
   outputs: TxOutput[];
-}): bitcoin.Transaction {
+}): bitcoin.TransactionBuilder {
   const txBuilder = new bitcoin.TransactionBuilder(DogecoinMainnet);
   txBuilder.setVersion(1);
   inputs.forEach(({ txId, index }) => txBuilder.addInput(txId, index));
   outputs.forEach((txOut) => {
+    let output: string | Buffer;
     if (isDataTxOutput(txOut)) {
       const embed = bitcoin.payments.embed({ data: [txOut.data] });
-      txBuilder.addOutput(embed.output!, txOut.value);
+      if (embed.output === undefined) {
+        throw new Error("Couldn't embed data in tx output!");
+      }
+      output = embed.output;
     } else {
-      txBuilder.addOutput(txOut.address, txOut.value);
+      output = txOut.address;
     }
+    txBuilder.addOutput(output, txOut.value);
   });
-  txBuilder.sign(0, signer);
-  return txBuilder.build();
+  return txBuilder;
 }
 
 export function remove0x(str: string) {
