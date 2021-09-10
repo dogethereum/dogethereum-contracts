@@ -172,20 +172,17 @@ contract DogeToken is StandardToken, TransactionProcessor {
         // Check the non compressed version of operatorPublicKeyCompressed signed msg.sender hash
         bytes32 signedMessage = sha256(abi.encodePacked(sha256(abi.encodePacked(msg.sender))));
         address recoveredAddress = ECRecovery.recover(signedMessage, signature);
-        if (recoveredAddress != DogeMessageLibrary.pub2address(uint(operatorPublicKeyX), operatorPublicKeyOdd)) {
-            emit ErrorDogeToken(ERR_OPERATOR_SIGNATURE);
-            return;
-        }
+        require(
+            recoveredAddress == DogeMessageLibrary.pub2address(uint(operatorPublicKeyX), operatorPublicKeyOdd),
+            "Bad operator signature."
+        );
 
         // Create operator
         bytes20 operatorPublicKeyHash = DogeMessageLibrary.pub2PubKeyHash(operatorPublicKeyX, operatorPublicKeyOdd);
         Operator storage operator = operators[operatorPublicKeyHash];
 
         // Check that operator does not exist yet
-        if (operator.ethAddress != address(0)) {
-            emit ErrorDogeToken(ERR_OPERATOR_ALREADY_CREATED);
-            return;
-        }
+        require(operator.ethAddress == address(0), "Operator already created.");
         operator.ethAddress = msg.sender;
         operator.operatorKeyIndex = uint24(operatorKeys.length);
         operatorKeys.push(OperatorKey(operatorPublicKeyHash, false));

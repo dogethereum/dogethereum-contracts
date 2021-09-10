@@ -6,6 +6,7 @@ import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { deployToken, deployOracleMock } from "../deploy";
 
 import {
+  expectFailure,
   isolateTests,
   isolateEachTest,
   operatorSignItsEthAddress,
@@ -97,23 +98,17 @@ describe("DogeToken - Operators", function () {
 
     it("addOperator fail - try adding the same operator twice", async () => {
       await sendAddOperator(dogeToken);
-      const addOperatorTxReceipt = await sendAddOperator(dogeToken);
-      assert.equal(
-        60015,
-        addOperatorTxReceipt.events![0].args!.err,
-        "Expected ERR_OPERATOR_ALREADY_CREATED error"
-      );
+      await expectFailure(() => sendAddOperator(dogeToken), (error) => {
+        assert.include(error.message, "Operator already created");
+      });
     });
 
     it("addOperator fail - wrong signature", async () => {
-      const addOperatorTxReceipt = await sendAddOperator(dogeToken, true);
-      assert.equal(
-        60010,
-        addOperatorTxReceipt.events![0].args!.err,
-        "Expected ERR_OPERATOR_SIGNATURE error"
-      );
+      await expectFailure(() => sendAddOperator(dogeToken, true), (error) => {
+        assert.include(error.message, "Bad operator signature");
+      });
       const operator = await dogeToken.operators(operatorPublicKeyHash);
-      assert.equal(operator.ethAddress, 0, "Operator created");
+      assert.equal(operator.ethAddress, 0, "Operator created with a bad signature");
     });
   });
 
