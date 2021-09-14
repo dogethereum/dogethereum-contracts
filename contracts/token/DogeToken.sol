@@ -435,7 +435,16 @@ contract DogeToken is StandardToken, TransactionProcessor {
         emit OperatorCondemned(operatorPublicKeyHash);
     }
 
-    function getUnlockPendingInvestorProof(uint32 index) public view returns (address from, bytes20 dogeAddress, uint value, uint operatorFee, uint timestamp, uint32[] memory selectedUtxos, uint dogeTxFee, bytes20 operatorPublicKeyHash) {
+    function getUnlockPendingInvestorProof(uint32 index) public view returns (
+        address from,
+        bytes20 dogeAddress,
+        uint value,
+        uint operatorFee,
+        uint timestamp,
+        uint32[] memory selectedUtxos,
+        uint dogeTxFee,
+        bytes20 operatorPublicKeyHash
+    ) {
         Unlock storage unlock = unlocksPendingInvestorProof[index];
         from = unlock.from;
         dogeAddress = unlock.dogeAddress;
