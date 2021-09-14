@@ -889,10 +889,12 @@ library DogeMessageLibrary {
         return ripemd160(abi.encodePacked(sha256(abi.encodePacked(firstByte, pub))));
     }
 
-    // @dev - convert an unsigned integer from little-endian to big-endian representation
-    //
-    // @param input - little-endian value
-    // @return - input value in big-endian format
+    /**
+     * @dev - convert an unsigned integer from little-endian to big-endian representation or viceversa
+     *
+     * @param input Little-endian value
+     * @return result Input value in big-endian format
+     */
     function flip32Bytes(uint input) internal pure returns (uint result) {
         assembly {
             let pos := mload(0x40)
