@@ -1316,9 +1316,9 @@ library DogeMessageLibrary {
 
     // For verifying Dogecoin difficulty
     uint constant DIFFICULTY_ADJUSTMENT_INTERVAL = 1;  // Bitcoin adjusts every block
-    uint constant TARGET_TIMESPAN =  60;  // 1 minute
-    uint constant TARGET_TIMESPAN_DIV_4 = TARGET_TIMESPAN / 4;
-    uint constant TARGET_TIMESPAN_MUL_4 = TARGET_TIMESPAN * 4;
+    int64 constant TARGET_TIMESPAN =  60;  // 1 minute
+    int64 constant TARGET_TIMESPAN_DIV_4 = TARGET_TIMESPAN / 4;
+    int64 constant TARGET_TIMESPAN_MUL_4 = TARGET_TIMESPAN * 4;
     uint constant UNROUNDED_MAX_TARGET = 2**224 - 1;  // different from (2**16-1)*2**208 http =//bitcoin.stackexchange.com/questions/13803/how/ exactly-was-the-original-coefficient-for-difficulty-determined
     uint constant POW_LIMIT = 0x00000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff;
 
@@ -1349,8 +1349,8 @@ library DogeMessageLibrary {
 
         // Retarget
         uint bnNew = targetFromBits(bits);
-        bnNew = bnNew * uint(nModulatedTimespan);
-        bnNew = uint(bnNew) / uint(retargetTimespan);
+        bnNew = bnNew * uint64(nModulatedTimespan);
+        bnNew = bnNew / uint64(retargetTimespan);
 
         if (bnNew > POW_LIMIT) {
             bnNew = POW_LIMIT;
