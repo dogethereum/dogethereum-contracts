@@ -5,7 +5,12 @@ import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 import { deployFixture } from "../deploy";
 
-import { base58ToBytes20, isolateTests, isolateEachTest } from "./utils";
+import {
+  base58ToBytes20,
+  expectFailure,
+  isolateTests,
+  isolateEachTest,
+} from "./utils";
 
 describe("DogeToken::doUnlock fails when it should", function () {
   let dogeToken: Contract;
@@ -26,44 +31,34 @@ describe("DogeToken::doUnlock fails when it should", function () {
 
   describe(`With unregistered operator`, async function () {
     it(`fails unlock when requesting an amount below min value.`, async function () {
-      const tx: ContractTransaction = await dogeToken.doUnlock(
-        dogeAddress,
-        200000000,
-        operatorPublicKeyHash
-      );
-      const receipt = await tx.wait();
-      assert.equal(
-        60080,
-        receipt.events![0].args!.err,
-        "Expected ERR_UNLOCK_MIN_UNLOCK_VALUE error"
+      await expectFailure(
+        () => dogeToken.doUnlock(dogeAddress, 200000000, operatorPublicKeyHash),
+        (error) => {
+          assert.include(error.message, "Can't unlock small amounts");
+        }
       );
     });
 
     it(`fails unlock when requesting an amount greater than user balance.`, async function () {
-      const tx: ContractTransaction = await dogeToken.doUnlock(
-        dogeAddress,
-        200000000000,
-        operatorPublicKeyHash
-      );
-      const receipt = await tx.wait();
-      assert.equal(
-        60090,
-        receipt.events![0].args!.err,
-        "Expected ERR_UNLOCK_USER_BALANCE error"
+      await expectFailure(
+        () =>
+          dogeToken.doUnlock(dogeAddress, 200000000000, operatorPublicKeyHash),
+        (error) => {
+          assert.include(
+            error.message,
+            "User doesn't have enough token balance"
+          );
+        }
       );
     });
 
     it(`fails when unlocking with an unregistered operator`, async function () {
-      const tx: ContractTransaction = await dogeToken.doUnlock(
-        dogeAddress,
-        1000000000,
-        operatorPublicKeyHash
-      );
-      const receipt = await tx.wait();
-      assert.equal(
-        60100,
-        receipt.events![0].args!.err,
-        "Expected ERR_UNLOCK_OPERATOR_NOT_CREATED error"
+      await expectFailure(
+        () =>
+          dogeToken.doUnlock(dogeAddress, 1000000000, operatorPublicKeyHash),
+        (error) => {
+          assert.include(error.message, "Operator is not registered");
+        }
       );
     });
   });
@@ -78,16 +73,12 @@ describe("DogeToken::doUnlock fails when it should", function () {
     });
 
     it(`fails when unlocking with an operator that doesn't have enough balance`, async function () {
-      const tx: ContractTransaction = await dogeToken.doUnlock(
-        dogeAddress,
-        1000000000,
-        operatorPublicKeyHash
-      );
-      const receipt = await tx.wait();
-      assert.equal(
-        60110,
-        receipt.events![0].args!.err,
-        "Expected ERR_UNLOCK_OPERATOR_BALANCE error"
+      await expectFailure(
+        () =>
+          dogeToken.doUnlock(dogeAddress, 1000000000, operatorPublicKeyHash),
+        (error) => {
+          assert.include(error.message, "Operator doesn't have enough balance");
+        }
       );
     });
 
@@ -98,16 +89,12 @@ describe("DogeToken::doUnlock fails when it should", function () {
         operatorPublicKeyHash,
         1000000000
       );
-      const tx: ContractTransaction = await dogeToken.doUnlock(
-        dogeAddress,
-        1000000000,
-        operatorPublicKeyHash
-      );
-      const receipt = await tx.wait();
-      assert.equal(
-        60120,
-        receipt.events![0].args!.err.toNumber(),
-        "Expected ERR_UNLOCK_NO_AVAILABLE_UTXOS error"
+      await expectFailure(
+        () =>
+          dogeToken.doUnlock(dogeAddress, 1000000000, operatorPublicKeyHash),
+        (error) => {
+          assert.include(error.message, "No available UTXOs for this operator");
+        }
       );
     });
 
@@ -119,16 +106,15 @@ describe("DogeToken::doUnlock fails when it should", function () {
         operatorPublicKeyHash,
         2400000000
       );
-      const tx: ContractTransaction = await dogeToken.doUnlock(
-        dogeAddress,
-        2500000000,
-        operatorPublicKeyHash
-      );
-      const receipt = await tx.wait();
-      assert.equal(
-        60130,
-        receipt.events![0].args!.err,
-        "Expected ERR_UNLOCK_UTXOS_VALUE_LESS_THAN_VALUE_TO_SEND error"
+      await expectFailure(
+        () =>
+          dogeToken.doUnlock(dogeAddress, 2500000000, operatorPublicKeyHash),
+        (error) => {
+          assert.include(
+            error.message,
+            "Available UTXOs don't cover requested unlock amount"
+          );
+        }
       );
     });
 
@@ -138,16 +124,19 @@ describe("DogeToken::doUnlock fails when it should", function () {
       for (let i = 0; i < utxoAmount; i++) {
         await dogeToken.addUtxo(operatorPublicKeyHash, utxoValue, 1, 10);
       }
-      const tx: ContractTransaction = await dogeToken.doUnlock(
-        dogeAddress,
-        utxoValue * utxoAmount,
-        operatorPublicKeyHash
-      );
-      const receipt = await tx.wait();
-      assert.equal(
-        60140,
-        receipt.events![0].args!.err,
-        "Expected ERR_UNLOCK_VALUE_TO_SEND_LESS_THAN_FEE error"
+      await expectFailure(
+        () =>
+          dogeToken.doUnlock(
+            dogeAddress,
+            utxoValue * utxoAmount,
+            operatorPublicKeyHash
+          ),
+        (error) => {
+          assert.include(
+            error.message,
+            "Requested unlock amount can't cover tx fees."
+          );
+        }
       );
     });
   });

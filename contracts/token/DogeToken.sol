@@ -367,40 +367,18 @@ contract DogeToken is StandardToken, TransactionProcessor {
     // Unlock section begin
 
     // Request ERC20 tokens to be burnt and dogecoins be received on the doge blockchain
-    function doUnlock(bytes20 dogeAddress, uint value, bytes20 operatorPublicKeyHash) public returns (bool success) {
-        if (value < MIN_UNLOCK_VALUE) {
-            emit ErrorDogeToken(ERR_UNLOCK_MIN_UNLOCK_VALUE);
-            return false;
-        }
-        if (balances[msg.sender] < value) {
-            emit ErrorDogeToken(ERR_UNLOCK_USER_BALANCE);
-            return false;
-        }
+    function doUnlock(bytes20 dogeAddress, uint value, bytes20 operatorPublicKeyHash) public {
+        require(value >= MIN_UNLOCK_VALUE, "Can't unlock small amounts.");
+        require(balances[msg.sender] >= value, "User doesn't have enough token balance.");
 
-        Operator storage operator = operators[operatorPublicKeyHash];
-        // Check that operator exists
-        if (operator.ethAddress == address(0)) {
-            emit ErrorDogeToken(ERR_UNLOCK_OPERATOR_NOT_CREATED);
-            return false;
-        }
+        Operator storage operator = getValidOperator(operatorPublicKeyHash);
+
         // Check that operator available balance is enough
-        if (operator.dogeAvailableBalance < value) {
-            emit ErrorDogeToken(ERR_UNLOCK_OPERATOR_BALANCE);
-            return false;
-        }
-
         uint operatorFee = value.mul(OPERATOR_UNLOCK_FEE).div(DOGETHEREUM_FEE_FRACTION);
         uint unlockValue = value.sub(operatorFee);
+        require(operator.dogeAvailableBalance >= unlockValue, "Operator doesn't have enough balance.");
 
-        uint32[] memory selectedUtxos;
-        uint dogeTxFee;
-        uint changeValue;
-        uint errorCode;
-        (errorCode, selectedUtxos, dogeTxFee, changeValue) = selectUtxosAndFee(unlockValue, operator);
-        if (errorCode != 0) {
-            emit ErrorDogeToken(errorCode);
-            return false;
-        }
+        (uint32[] memory selectedUtxos, uint dogeTxFee, uint changeValue) = selectUtxosAndFee(unlockValue, operator);
 
         balances[operator.ethAddress] = balances[operator.ethAddress].add(operatorFee);
         emit Transfer(msg.sender, operator.ethAddress, operatorFee);
@@ -418,15 +396,19 @@ contract DogeToken is StandardToken, TransactionProcessor {
         operator.dogePendingBalance = operator.dogePendingBalance.add(changeValue);
         operator.nextUnspentUtxoIndex += uint32(selectedUtxos.length);
         unlockIdx++;
-        return true;
     }
 
-    function selectUtxosAndFee(uint valueToSend, Operator memory operator) private pure returns (uint errorCode, uint32[] memory selectedUtxos, uint dogeTxFee, uint changeValue) {
+    function selectUtxosAndFee(
+        uint valueToSend,
+        Operator memory operator
+    ) private pure returns (
+        uint32[] memory selectedUtxos,
+        uint dogeTxFee,
+        uint changeValue
+    ) {
         // There should be at least 1 utxo available
-        if (operator.nextUnspentUtxoIndex >= operator.utxos.length) {
-            errorCode = ERR_UNLOCK_NO_AVAILABLE_UTXOS;
-            return (errorCode, selectedUtxos, dogeTxFee, changeValue);
-        }
+        require(operator.nextUnspentUtxoIndex < operator.utxos.length, "No available UTXOs for this operator.");
+
         dogeTxFee = DOGE_TX_BASE_FEE;
         uint selectedUtxosValue;
         uint32 firstSelectedUtxo = operator.nextUnspentUtxoIndex;
@@ -436,22 +418,16 @@ contract DogeToken is StandardToken, TransactionProcessor {
             dogeTxFee = dogeTxFee.add(DOGE_TX_FEE_PER_INPUT);
             lastSelectedUtxo++;
         }
-        if (selectedUtxosValue < valueToSend) {
-            errorCode = ERR_UNLOCK_UTXOS_VALUE_LESS_THAN_VALUE_TO_SEND;
-            return (errorCode, selectedUtxos, dogeTxFee, changeValue);
-        }
-        if (valueToSend <= dogeTxFee) {
-            errorCode = ERR_UNLOCK_VALUE_TO_SEND_LESS_THAN_FEE;
-            return (errorCode, selectedUtxos, dogeTxFee, changeValue);
-        }
+        require(selectedUtxosValue >= valueToSend, "Available UTXOs don't cover requested unlock amount.");
+        require(valueToSend > dogeTxFee, "Requested unlock amount can't cover tx fees.");
+
         uint32 numberOfSelectedUtxos = lastSelectedUtxo - firstSelectedUtxo;
         selectedUtxos = new uint32[](numberOfSelectedUtxos);
-        for(uint32 i = 0; i < numberOfSelectedUtxos; i++) {
+        for (uint32 i = 0; i < numberOfSelectedUtxos; i++) {
             selectedUtxos[i] = i + firstSelectedUtxo;
         }
         changeValue = selectedUtxosValue.sub(valueToSend);
-        errorCode = 0;
-        return (errorCode, selectedUtxos, dogeTxFee, changeValue);
+        return (selectedUtxos, dogeTxFee, changeValue);
     }
 
     function condemnOperator(bytes20 operatorPublicKeyHash) internal {
