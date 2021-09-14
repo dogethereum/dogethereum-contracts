@@ -179,37 +179,53 @@ library DogeMessageLibrary {
         if (ibit < 0xfd) {
             return (ibit, pos);
         } else if (ibit == 0xfd) {
-            return (getBytesLE(txBytes, pos, 16), pos + 2);
+            return (readUint16LE(txBytes, pos), pos + 2);
         } else if (ibit == 0xfe) {
-            return (getBytesLE(txBytes, pos, 32), pos + 4);
+            return (readUint32LE(txBytes, pos), pos + 4);
         } else /*if (ibit == 0xff)*/ {
-            return (getBytesLE(txBytes, pos, 64), pos + 8);
+            return (readUint64LE(txBytes, pos), pos + 8);
         }
     }
 
-    // Convert little endian bytes to uint
-    function getBytesLE(bytes memory data, uint pos, uint bits) internal pure returns (uint) {
-        if (bits == 8) {
-            return uint8(data[pos]);
-        } else if (bits == 16) {
-            return uint16(uint8(data[pos]))
-                 + uint16(uint8(data[pos + 1])) * 2 ** 8;
-        } else if (bits == 32) {
-            return uint32(uint8(data[pos]))
-                 + uint32(uint8(data[pos + 1])) * 2 ** 8
-                 + uint32(uint8(data[pos + 2])) * 2 ** 16
-                 + uint32(uint8(data[pos + 3])) * 2 ** 24;
-        } else if (bits == 64) {
-            return uint64(uint8(data[pos]))
-                 + uint64(uint8(data[pos + 1])) * 2 ** 8
-                 + uint64(uint8(data[pos + 2])) * 2 ** 16
-                 + uint64(uint8(data[pos + 3])) * 2 ** 24
-                 + uint64(uint8(data[pos + 4])) * 2 ** 32
-                 + uint64(uint8(data[pos + 5])) * 2 ** 40
-                 + uint64(uint8(data[pos + 6])) * 2 ** 48
-                 + uint64(uint8(data[pos + 7])) * 2 ** 56;
-        } else {
-            revert("Invalid bits parameter in getBytesLE");
+    // Read a uint16 value from buffer in little endian format.
+    function readUint16LE(bytes memory data, uint pos) private pure returns (uint16) {
+        return uint16(uint8(data[pos]))
+            + (uint16(uint8(data[pos + 1])) << 8);
+    }
+
+    // Read a uint32 value from buffer in little endian format.
+    function readUint32LE(bytes memory data, uint pos) private pure returns (uint32) {
+        return uint32(uint8(data[pos]))
+            + (uint32(uint8(data[pos + 1])) << 8)
+            + (uint32(uint8(data[pos + 2])) << 16)
+            + (uint32(uint8(data[pos + 3])) << 24);
+    }
+
+    // Read a uint64 value from buffer in little endian format.
+    function readUint64LE(bytes memory data, uint pos) private pure returns (uint64) {
+        return uint64(uint8(data[pos]))
+            + (uint64(uint8(data[pos + 1])) << 8)
+            + (uint64(uint8(data[pos + 2])) << 16)
+            + (uint64(uint8(data[pos + 3])) << 24)
+            + (uint64(uint8(data[pos + 4])) << 32)
+            + (uint64(uint8(data[pos + 5])) << 40)
+            + (uint64(uint8(data[pos + 6])) << 48)
+            + (uint64(uint8(data[pos + 7])) << 56);
+    }
+
+    // Read uint256 value from buffer in little endian format.
+    function readUint256LE(bytes memory data, uint start) private pure returns (uint256 res) {
+        require(start + 31 < data.length, "Invalid uint256 LE read from buffer");
+        for (uint i = 0; i < 32; i++) {
+            res += uint(uint8(data[i + start])) << (8 * i);
+        }
+    }
+
+    // Read uint256 value from buffer in big endian format.
+    function readUint256BE(bytes memory data, uint start) private pure returns (uint256 res) {
+        require(start + 31 < data.length, "Invalid uint256 BE read from buffer");
+        for (uint i = 0; i < 32; i++) {
+            res += uint(uint8(data[i + start])) << (8 * (31 - i));
         }
     }
 
@@ -332,7 +348,7 @@ library DogeMessageLibrary {
 
         // Tx output 0 is for the user
         // read value of the output for the user
-        uint firstOutputValue = getBytesLE(txBytes, pos, 64);
+        uint firstOutputValue = readUint64LE(txBytes, pos);
         pos += 8;
 
         // read the script length
@@ -347,7 +363,7 @@ library DogeMessageLibrary {
         if (nOutputs == 2) {
             // Tx output 1 is the change for the operator
             // read value of operator change
-            secondOutputValue = getBytesLE(txBytes, pos, 64);
+            secondOutputValue = readUint64LE(txBytes, pos);
             pos += 8;
 
             (secondOutputScriptLength, secondOutputScriptStart) = parseVarInt(txBytes, pos);
@@ -441,7 +457,7 @@ library DogeMessageLibrary {
 
         // Tx output 0 is for the operator
         // read value of the output for the operator
-        uint operatorOutputValue = getBytesLE(txBytes, pos, 64);
+        uint operatorOutputValue = readUint64LE(txBytes, pos);
         pos += 8;
 
         // read the script length
@@ -532,9 +548,14 @@ library DogeMessageLibrary {
             pos += script_len + 4;
         }
 
-        uint256 txHash = uint256(readBytes32(txBytes, pos));
+        // We need to flip the tx hash bytes to have it in reversed byte order as specified in the protocol.
+        // We could use internal byte order and flip the hash later on when necessary but
+        // that would add complexity to the usage of these functions.
+        // See https://github.com/bitcoin-dot-org/bitcoin.org/issues/580
+        // Interpreting this value as a little endian uin256 lets us reverse it as soon as we read it.
+        uint256 txHash = readUint256LE(txBytes, pos);
         pos += 32;
-        uint32 txIndex = uint32(getBytesLE(txBytes, pos, 32));
+        uint32 txIndex = readUint32LE(txBytes, pos);
         pos += 4;
 
         return (txHash, txIndex, pos);
@@ -621,7 +642,7 @@ library DogeMessageLibrary {
         uint[] memory output_values = new uint[](halt);
 
         for (uint256 i = 0; i < halt; i++) {
-            output_values[i] = getBytesLE(txBytes, pos, 64);
+            output_values[i] = readUint64LE(txBytes, pos);
             pos += 8;
 
             (script_len, pos) = parseVarInt(txBytes, pos);
@@ -689,7 +710,7 @@ library DogeMessageLibrary {
         uint[] memory sibling_values = new uint[](halt);
 
         for (uint256 i = 0; i < halt; i++) {
-            sibling_values[i] = flip32Bytes(sliceBytes32Int(txBytes, pos));
+            sibling_values[i] = flip32Bytes(readUint256BE(txBytes, pos));
             pos += 32;
         }
 
@@ -705,14 +726,6 @@ library DogeMessageLibrary {
             slice += uint160(uint8(data[i + start])) << uint160(8 * (19 - i));
         }
         return bytes20(slice);
-    }
-    // Slice 32 contiguous bytes from bytes `data`, starting at `start`
-    function sliceBytes32Int(bytes memory data, uint start) private pure returns (uint slice) {
-        for (uint i = 0; i < 32; i++) {
-            if (i + start < data.length) {
-                slice += uint(uint8(data[i + start])) << (8 * (31 - i));
-            }
-        }
     }
 
     // @dev returns a portion of a given byte array specified by its starting and ending points
@@ -889,10 +902,6 @@ library DogeMessageLibrary {
             result := mload(pos)
         }
     }
-    // helpers for flip32Bytes
-    struct UintWrapper {
-        uint value;
-    }
 
     // @dev - Parses AuxPow part of block header
     // @param rawBytes - array of bytes with the block header
@@ -904,23 +913,23 @@ library DogeMessageLibrary {
     {
         // we need to traverse the bytes with a pointer because some fields are of variable length
         pos += 80; // skip non-AuxPoW header
-        // auxpow.firstBytes = sliceBytes32Int(rawBytes, pos);
+        // auxpow.firstBytes = readUint256BE(rawBytes, pos);
         uint slicePos;
         uint inputScriptPos;
         (slicePos, inputScriptPos) = getSlicePosAndScriptPos(rawBytes, pos);
         auxpow.txHash = dblShaFlipMem(rawBytes, pos, slicePos - pos);
         pos = slicePos;
-        auxpow.scryptHash = sliceBytes32Int(rawBytes, pos);
+        auxpow.scryptHash = readUint256BE(rawBytes, pos);
         pos += 32;
         (auxpow.parentMerkleProof, pos) = scanMerkleBranch(rawBytes, pos, 0);
-        auxpow.coinbaseTxIndex = getBytesLE(rawBytes, pos, 32);
+        auxpow.coinbaseTxIndex = readUint32LE(rawBytes, pos);
         pos += 4;
         (auxpow.chainMerkleProof, pos) = scanMerkleBranch(rawBytes, pos, 0);
-        auxpow.dogeHashIndex = getBytesLE(rawBytes, pos, 32);
+        auxpow.dogeHashIndex = readUint32LE(rawBytes, pos);
         pos += 40; // skip hash that was just read, parent version and prev block
-        auxpow.parentMerkleRoot = sliceBytes32Int(rawBytes, pos);
+        auxpow.parentMerkleRoot = readUint256BE(rawBytes, pos);
         pos += 40; // skip root that was just read, parent block timestamp and bits
-        auxpow.parentNonce = getBytesLE(rawBytes, pos, 32);
+        auxpow.parentNonce = readUint32LE(rawBytes, pos);
         uint coinbaseMerkleRootPosition;
         (auxpow.coinbaseMerkleRoot, coinbaseMerkleRootPosition, auxpow.coinbaseMerkleRootCode) = findCoinbaseMerkleRoot(rawBytes);
         if (coinbaseMerkleRootPosition - inputScriptPos > 20 && auxpow.coinbaseMerkleRootCode == 1) {
@@ -953,7 +962,7 @@ library DogeMessageLibrary {
         if (!found) { // no merge mining header
             return (0, position - 4, ERR_NO_MERGE_HEADER);
         } else {
-            return (sliceBytes32Int(rawBytes, position), position - 4, 1);
+            return (readUint256BE(rawBytes, position), position - 4, 1);
         }
     }
 
@@ -1486,6 +1495,11 @@ library DogeMessageLibrary {
 
         return (output_values[0], output_public_key_hashes[0],
                 output_values[1], output_public_key_hashes[1]);
+    }
+
+    // helpers for flip32Bytes
+    struct UintWrapper {
+        uint value;
     }
 
     function ptr(UintWrapper memory uw) private pure returns (uint addr) {
