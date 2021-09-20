@@ -1,13 +1,30 @@
 #!/usr/bin/env bash
 
+unameOut="$(uname -s)"
+case "${unameOut}" in
+    Linux*)     machine=Linux;;
+    Darwin*)    machine=Mac;;
+    *)          machine="UNKNOWN:${unameOut}"
+esac
+
 # Test sending doge to eth and back
 
 # Declare variables
 export NETWORK="integrationDogeRegtest"
 
-dogecoinQtProcessName=dogecoin-qt
-dogecoinQtDatadir=.dogecoin-data
-dogecoinQtExecutable=dogecoin-qt
+if [ $machine == "Mac" ]; then
+    dogecoinQtProcessName=Dogecoin-Qt
+	dogecoinQtDatadir=.dogecoin-data
+	dogecoinQtExecutable=/Applications/Dogecoin-Qt.app/Contents/MacOS/Dogecoin-Qt
+elif [ $machine == "Linux" ]; then
+    dogecoinQtProcessName=dogecoin-qt
+	dogecoinQtDatadir=.dogecoin-data
+	dogecoinQtExecutable=dogecoin-qt
+else
+	echo "Unexpected OS: $machine"
+	exit 1
+fi
+
 dogecoinQtRpcuser=aaa
 dogecoinQtRpcpassword=bbb
 
@@ -51,7 +68,7 @@ curl --user $dogecoinQtRpcuser:$dogecoinQtRpcpassword  --data-binary '{"jsonrpc"
 rm -rf ${agentDataDir:?}/*
 
 # Stop ganache
-GANACHE_PROCESSES="$(pgrep --full '^node.*ganache-cli')" || echo "No ganache processes found"
+GANACHE_PROCESSES="$(pgrep -f '^node.*ganache-cli')" || echo "No ganache processes found"
 if [[ $GANACHE_PROCESSES ]]; then
 	# kill fails if passed an empty string
 	kill "$GANACHE_PROCESSES"
