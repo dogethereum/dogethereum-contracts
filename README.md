@@ -24,6 +24,7 @@ If you are new to the Dogecoin <-> Ethereum bridge, please check the [docs](http
 ## Prerequisites
 
 To build, deploy or run tests on these contracts you need to install the following:
+- bash 5.1 or above. macOS users probably have an [older version](https://www.shell-tips.com/mac/upgrade-bash/).
 - [nodejs](https://nodejs.org) [latest LTS](https://nodejs.org/en/about/releases/) or above. This is currently fermium (v14).
 - [dogecoin-qt](https://github.com/dogecoin/dogecoin)
 
