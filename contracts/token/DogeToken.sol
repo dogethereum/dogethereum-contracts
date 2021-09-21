@@ -89,10 +89,12 @@ contract DogeToken is StandardToken, TransactionProcessor {
         bytes20 dogeAddress;
         uint value;
         uint operatorFee;
+        // Block timestamp at which this request was made.
         uint timestamp;
-        // Values are indexes in storage array "utxos"
+        // List of indexes of the corresponding utxos in the Operator struct
         uint32[] selectedUtxos;
         uint dogeTxFee;
+        // Operator public key hash. Key for the operators mapping.
         bytes20 operatorPublicKeyHash;
     }
 
