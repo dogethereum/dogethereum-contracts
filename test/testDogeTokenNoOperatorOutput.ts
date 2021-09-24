@@ -17,21 +17,24 @@ describe("testDogeTokenNoOperatorOutput", function () {
   let ethUsdPriceOracle: string;
   let operatorEthAddress: string;
   let superblockSubmitterAddress: string;
+  let superblockClaimsAddress: string;
 
   isolateTests();
 
   before(async function () {
     const signers = await hre.ethers.getSigners();
-    const { dogeToken } = await deployFixture(hre);
+    const { dogeToken, superblockClaims } = await deployFixture(hre);
     // Tell DogeToken to trust first account as if it were the relayer contract
     trustedRelayerContract = signers[0].address;
     operatorEthAddress = signers[3].address;
     superblockSubmitterAddress = signers[4].address;
     dogeUsdPriceOracle = await dogeToken.callStatic.dogeUsdOracle();
     ethUsdPriceOracle = await dogeToken.callStatic.ethUsdOracle();
+
+    superblockClaimsAddress = superblockClaims.address;
   });
 
-  it("Accept unlock transaction without output for operator", async function() {
+  it("Accept unlock transaction without output for operator", async function () {
     const keys = [
       "QSRUX7i1WVzFW6vx3i4Qj8iPPQ1tRcuPanMun8BKf8ySc8LsUuKx",
       "QULAK58teBn1Xi4eGo4fKea5oQDPMK4vcnmnivqzgvCPagsWHiyf",
@@ -68,6 +71,7 @@ describe("testDogeTokenNoOperatorOutput", function () {
       dogeUsdPriceOracle,
       ethUsdPriceOracle,
       trustedRelayerContract,
+      superblockClaimsAddress,
       collateralRatio
     );
 

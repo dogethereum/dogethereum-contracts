@@ -51,7 +51,7 @@ describe("Token transaction processing", function () {
 
   before(async function () {
     signers = await hre.ethers.getSigners();
-    const { dogeToken: fixtureToken } = await deployFixture(hre);
+    const { dogeToken: fixtureToken, superblocks } = await deployFixture(hre);
     // Tell DogeToken to trust signers[0] as if it were the relayer contract
     trustedRelayerContract = signers[0].address;
     operatorEthAddress = signers[3].address;
@@ -68,6 +68,7 @@ describe("Token transaction processing", function () {
       dogeUsdPriceOracle,
       ethUsdPriceOracle,
       trustedRelayerContract,
+      superblocks.address,
       collateralRatio
     );
     dogeToken = dogeTokenSystem.dogeToken.contract;

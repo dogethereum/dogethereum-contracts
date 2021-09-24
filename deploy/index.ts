@@ -307,6 +307,7 @@ export async function deployToken(
   deploySigner: ethers.Signer,
   dogeUsdPriceOracle: string,
   ethUsdPriceOracle: string,
+  txRelayerContract: string,
   superblocksAddress: string,
   collateralRatio: number,
   confirmations = 0,
@@ -329,6 +330,7 @@ export async function deployToken(
     contract: await deployContract(
       tokenContractName,
       [
+        txRelayerContract,
         superblocksAddress,
         dogeUsdPriceOracle,
         ethUsdPriceOracle,
@@ -368,6 +370,7 @@ function deployTokenForCoreSystem(
     deployAccount,
     dogeUsdPriceOracle,
     ethUsdPriceOracle,
+    superblocks.contract.address,
     superblocks.contract.address,
     collateralRatio,
     confirmations,

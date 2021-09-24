@@ -1,5 +1,5 @@
 import BN from "bn.js";
-import type { ContractReceipt, Event } from "ethers";
+import type { ContractReceipt, ContractTransaction, Event } from "ethers";
 import hre from "hardhat";
 import { sha256 } from "js-sha256";
 import { keccak256 } from "js-sha3";
@@ -215,6 +215,25 @@ export function findEvent(
     throw new Error("No events found on receipt!");
   }
   return events.find((log) => log.event === name);
+}
+
+export function filterEvents(
+  events: ContractReceipt["events"],
+  name: string
+): Event[] {
+  if (events === undefined) {
+    throw new Error("No events found on receipt!");
+  }
+  return events.filter(({ event }) => event === name);
+}
+
+export async function getEvents(
+  tx: ContractTransaction,
+  eventName: string
+): Promise<{ receipt: ContractReceipt; events: Event[] }> {
+  const receipt = await tx.wait();
+  const events = filterEvents(receipt.events, eventName);
+  return { receipt, events: events };
 }
 
 /**

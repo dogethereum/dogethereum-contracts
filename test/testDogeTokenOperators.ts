@@ -3,7 +3,7 @@ import { assert } from "chai";
 import type { Contract, ContractTransaction } from "ethers";
 import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
-import { deployToken, deployOracleMock } from "../deploy";
+import { deployFixture, deployToken, deployOracleMock } from "../deploy";
 
 import {
   expectFailure,
@@ -58,8 +58,20 @@ describe("DogeToken - Operators", function () {
     // Tell DogeToken to trust the first account as a price oracle and relayer contract
     trustedRelayerContract = signer.address;
 
-    dogeUsdPriceOracle = await deployOracleMock(hre, initialDogeUsdPrice, signer, 0);
-    ethUsdPriceOracle = await deployOracleMock(hre, initialEthUsdPrice, signer, 0);
+    const { superblockClaims } = await deployFixture(hre);
+
+    dogeUsdPriceOracle = await deployOracleMock(
+      hre,
+      initialDogeUsdPrice,
+      signer,
+      0
+    );
+    ethUsdPriceOracle = await deployOracleMock(
+      hre,
+      initialEthUsdPrice,
+      signer,
+      0
+    );
 
     const dogeTokenSystem = await deployToken(
       hre,
@@ -68,6 +80,7 @@ describe("DogeToken - Operators", function () {
       dogeUsdPriceOracle.address,
       ethUsdPriceOracle.address,
       trustedRelayerContract,
+      superblockClaims.address,
       collateralRatio
     );
     dogeToken = dogeTokenSystem.dogeToken.contract;
@@ -98,17 +111,27 @@ describe("DogeToken - Operators", function () {
 
     it("addOperator fail - try adding the same operator twice", async () => {
       await sendAddOperator(dogeToken);
-      await expectFailure(() => sendAddOperator(dogeToken), (error) => {
-        assert.include(error.message, "Operator already created");
-      });
+      await expectFailure(
+        () => sendAddOperator(dogeToken),
+        (error) => {
+          assert.include(error.message, "Operator already created");
+        }
+      );
     });
 
     it("addOperator fail - wrong signature", async () => {
-      await expectFailure(() => sendAddOperator(dogeToken, true), (error) => {
-        assert.include(error.message, "Bad operator signature");
-      });
+      await expectFailure(
+        () => sendAddOperator(dogeToken, true),
+        (error) => {
+          assert.include(error.message, "Bad operator signature");
+        }
+      );
       const operator = await dogeToken.operators(operatorPublicKeyHash);
-      assert.equal(operator.ethAddress, 0, "Operator created with a bad signature");
+      assert.equal(
+        operator.ethAddress,
+        0,
+        "Operator created with a bad signature"
+      );
     });
   });
 
