@@ -340,10 +340,10 @@ describe("Token transaction processing", function () {
         dogeTx.rogueInputIndex
       );
       const receipt = await tx.wait();
-      const condemnEvents = receipt.events!.filter(({ event }) => {
-        return event === "OperatorCondemned";
+      const liquidateEvents = receipt.events!.filter(({ event }) => {
+        return event === "OperatorLiquidated";
       });
-      assert.lengthOf(condemnEvents, 1, "Operator wasn't condemned.");
+      assert.lengthOf(liquidateEvents, 1, "Operator wasn't liquidated.");
     });
 
     it(`fail report of free utxo after it's been reserved`, async function () {

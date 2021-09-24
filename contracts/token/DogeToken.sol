@@ -94,7 +94,7 @@ contract DogeToken is StandardToken, TransactionProcessor {
     event ErrorDogeToken(uint err);
     event NewToken(address indexed user, uint value);
     event UnlockRequest(uint256 id, bytes20 operatorPublicKeyHash);
-    event OperatorCondemned(bytes20 operatorPublicKeyHash);
+    event OperatorLiquidated(bytes20 operatorPublicKeyHash);
 
     // Represents an unlock request
     struct Unlock {
@@ -336,8 +336,7 @@ contract DogeToken is StandardToken, TransactionProcessor {
             "The reported spent input and the UTXO are not the same."
         );
 
-        // Condemn
-        condemnOperator(operatorPublicKeyHash);
+        liquidateOperator(operatorPublicKeyHash, operator);
     }
 
     /**
@@ -362,7 +361,7 @@ contract DogeToken is StandardToken, TransactionProcessor {
             "The unlock is still within the superblockchain height grace period."
         );
 
-        condemnOperator(operatorPublicKeyHash);
+        liquidateOperator(operatorPublicKeyHash, operator);
     }
 
     function transactionPreliminaryChecks(
@@ -409,6 +408,10 @@ contract DogeToken is StandardToken, TransactionProcessor {
         emit Transfer(address(0), destination, amount);
     }
 
+    function liquidateOperator(bytes20 operatorPublicKeyHash, Operator storage operator) internal {
+        // TODO: implement
+        emit OperatorLiquidated(operatorPublicKeyHash);
+    }
 
     // Unlock section begin
 
@@ -486,11 +489,6 @@ contract DogeToken is StandardToken, TransactionProcessor {
         return (selectedUtxos, dogeTxFee, changeValue);
     }
 
-    function condemnOperator(bytes20 operatorPublicKeyHash) internal {
-        // TODO: implement
-        emit OperatorCondemned(operatorPublicKeyHash);
-    }
-
     function getValidUnlock(uint32 index) internal view returns (Unlock storage) {
         require(index < unlockIdx, "The unlock request doesn't exist.");
         return unlocksPendingInvestorProof[index];
@@ -517,6 +515,8 @@ contract DogeToken is StandardToken, TransactionProcessor {
         operatorPublicKeyHash = unlock.operatorPublicKeyHash;
     }
 
+    // Unlock section end
+
     function getUtxosLength(bytes20 operatorPublicKeyHash) public view returns (uint) {
         Operator storage operator = operators[operatorPublicKeyHash];
         return operator.utxos.length;
@@ -527,6 +527,4 @@ contract DogeToken is StandardToken, TransactionProcessor {
         Utxo storage utxo = operator.utxos[i];
         return (utxo.value, utxo.txHash, utxo.index);
     }
-
-    // Unlock section end
 }
