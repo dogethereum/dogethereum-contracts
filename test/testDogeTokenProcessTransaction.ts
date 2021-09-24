@@ -383,4 +383,60 @@ describe("Token transaction processing", function () {
       );
     });
   });
+
+  describe("processReportOperatorUtxoBadSpend", function () {
+    const operatorFee = Math.floor(value * 0.01);
+    const dogeTxFeeOneInput = 150000000;
+
+    const rogueTx = buildDogeTransaction({
+      signer: operatorKeypair,
+      inputs: [utxoRef],
+      outputs: [
+        {
+          type: "payment",
+          address: userAddress,
+          value: value - operatorFee - dogeTxFeeOneInput,
+        },
+        { type: "payment", address: operatorDogeAddress, value: change },
+      ],
+    });
+    const dogeTx = {
+      utxoValue: value - operatorFee + change,
+      rogueInputIndex: 0,
+      data: `0x${rogueTx.toHex()}`,
+      hash: `0x${rogueTx.getId()}`,
+    };
+
+    let userDogeToken: Contract;
+
+    before(function () {
+      userDogeToken = dogeToken.connect(userEthSigner);
+    });
+
+    it(`valid report of free utxo`, async function () {
+      await dogeToken.addOperatorSimple(
+        operatorPublicKeyHash,
+        operatorEthAddress
+      );
+      await dogeToken.addUtxo(
+        operatorPublicKeyHash,
+        dogeTx.utxoValue,
+        `0x${utxoRef.txId}`,
+        utxoRef.index
+      );
+
+      const tx: ContractTransaction = await dogeToken.processReportOperatorFreeUtxoSpend(
+        dogeTx.data,
+        dogeTx.hash,
+        operatorPublicKeyHash,
+        utxoRef.index,
+        dogeTx.rogueInputIndex
+      );
+      const receipt = await tx.wait();
+      const liquidateEvents = receipt.events!.filter(({ event }) => {
+        return event === "OperatorLiquidated";
+      });
+      assert.lengthOf(liquidateEvents, 1, "Operator wasn't liquidated.");
+    });
+  });
 });
