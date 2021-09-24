@@ -568,7 +568,7 @@ export async function deployOracleMock(
   price: string | number,
   deployAccount: SignerWithAddress,
   confirmations: number
-) {
+): Promise<ethers.Contract> {
   const oracleMock = await deployContract(
     "AggregatorMock",
     [price],
