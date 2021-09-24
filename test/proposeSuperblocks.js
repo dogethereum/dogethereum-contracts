@@ -26,105 +26,103 @@ let superblock3ParentId = superblock2Id;
 let superblock3Id = "0xd2a92b0e691fddd3413d4c07e548b629a5655572a27337c0994728969ba1e086";
 
 // TODO: rewrite this test suite to use artifacts and remove redundant code
-contract('proposeSuperblocks', (accounts) => {
-    describe.skip('Superblock proposal integration test', function() {
-        let dogeSuperblocks;
-        let superblockClaims;
+describe.skip('Superblock proposal integration test', function () {
+    let dogeSuperblocks;
+    let superblockClaims;
 
-        // let dogeSuperblocksJSON = fs.readFileSync('./build/contracts/DogeSuperblocks.json', 'utf8');
-        // let dogeSuperblocksParsedJSON = JSON.parse(dogeSuperblocksJSON);
-        // let networks = dogeSuperblocksParsedJSON['networks'];
-        // let networkKey = Object.keys(networks)[0];
-        // let dogeSuperblocksAddress = typeof networks[networkKey] !== 'undefined' ? networks[networkKey].address : '0x0';
+    // let dogeSuperblocksJSON = fs.readFileSync('./build/contracts/DogeSuperblocks.json', 'utf8');
+    // let dogeSuperblocksParsedJSON = JSON.parse(dogeSuperblocksJSON);
+    // let networks = dogeSuperblocksParsedJSON['networks'];
+    // let networkKey = Object.keys(networks)[0];
+    // let dogeSuperblocksAddress = typeof networks[networkKey] !== 'undefined' ? networks[networkKey].address : '0x0';
 
-        // let superblockClaimsJSON = fs.readFileSync('./build/contracts/SuperblockClaims.json', 'utf8');
-        // let superblockClaimsParsedJSON = JSON.parse(superblockClaimsJSON);
-        // networks = superblockClaimsParsedJSON['networks'];
-        // let superblockClaimsAddress = networks[networkKey].address;
-        let superblockClaimsAddress;
+    // let superblockClaimsJSON = fs.readFileSync('./build/contracts/SuperblockClaims.json', 'utf8');
+    // let superblockClaimsParsedJSON = JSON.parse(superblockClaimsJSON);
+    // networks = superblockClaimsParsedJSON['networks'];
+    // let superblockClaimsAddress = networks[networkKey].address;
+    let superblockClaimsAddress;
 
-        before(async() => {
-            dogeSuperblocks = await DogeSuperblocks.at(dogeSuperblocksAddress);
-            superblockClaimsAddress = await dogeSuperblocks.superblockClaims.call();
-            superblockClaims = await SuperblockClaims.at(superblockClaimsAddress);
+    before(async() => {
+        dogeSuperblocks = await DogeSuperblocks.at(dogeSuperblocksAddress);
+        superblockClaimsAddress = await dogeSuperblocks.superblockClaims.call();
+        superblockClaims = await SuperblockClaims.at(superblockClaimsAddress);
 
-            // console.log(dogeSuperblocksAddress, superblockClaimsAddress);
-            // await dogeSuperblocks.setSuperblockClaims(superblockClaimsAddress);
-        });
-
-        let merkleRoot;
-        let chainWork;
-        let lastDogeBlockTime;
-        let lastDogeBlockHash;
-        let parentId;
-        let superblockHash;
-
-        let bestSuperblock;
-
-        it('Superblock 1', async() => {
-            superblockClaims = await dogeSuperblocks.superblockClaims;
-
-            await utils.mineBlocks(5);
-            await superblockClaims.checkClaimFinished(superblock1Id);
-            await utils.mineBlocks(5);
-
-            merkleRoot = await dogeSuperblocks.getSuperblockMerkleRoot(superblock1Id);
-            chainWork = await dogeSuperblocks.getSuperblockAccumulatedWork(superblock1Id);
-            lastDogeBlockTime = await dogeSuperblocks.getSuperblockTimestamp(superblock1Id);
-            lastDogeBlockHash = await dogeSuperblocks.getSuperblockLastHash(superblock1Id);
-            parentId = await dogeSuperblocks.getSuperblockParentId(superblock1Id);
-
-            assert.equal(merkleRoot, superblock1MerkleRoot, "Superblock 1 Merkle root does not match");
-            assert.equal(chainWork.toNumber(), superblock1ChainWork, "Superblock 1 chain work does not match");
-            assert.equal(lastDogeBlockTime, superblock1LastDogeBlockTime, "Superblock 1 last Doge block time does not match");
-            assert.equal(lastDogeBlockHash, superblock1LastDogeBlockHash, "Superblock 1 last Doge block hash does not match");
-            assert.equal(parentId, superblock1ParentId, "Superblock 1 parent ID does not match");
-        });
-
-        it('Superblock 2', async() => {
-            superblockClaims = await dogeSuperblocks.superblockClaims;
-
-            await utils.mineBlocks(5);
-            await superblockClaims.checkClaimFinished(superblock2Id);
-            await utils.mineBlocks(5);
-
-            merkleRoot = await dogeSuperblocks.getSuperblockMerkleRoot(superblock2Id);
-            chainWork = await dogeSuperblocks.getSuperblockAccumulatedWork(superblock2Id);
-            lastDogeBlockTime = await dogeSuperblocks.getSuperblockTimestamp(superblock2Id);
-            lastDogeBlockHash = await dogeSuperblocks.getSuperblockLastHash(superblock2Id);
-            parentId = await dogeSuperblocks.getSuperblockParentId(superblock2Id);
-
-            assert.equal(merkleRoot, superblock2MerkleRoot, "Superblock 2 Merkle root does not match");
-            assert.equal(chainWork.toNumber(), superblock2ChainWork, "Superblock 2 chain work does not match");
-            assert.equal(lastDogeBlockTime, superblock2LastDogeBlockTime, "Superblock 2 last Doge block time does not match");
-            assert.equal(lastDogeBlockHash, superblock2LastDogeBlockHash, "Superblock 2 last Doge block hash does not match");
-            assert.equal(parentId, superblock2ParentId, "Superblock 2 parent ID does not match");
-        });
-
-        // it('Superblock 3', async() => {
-        //     superblockClaims = await dogeSuperblocks.superblockClaims;
-
-        //     await utils.mineBlocks(5);
-        //     await superblockClaims.checkClaimFinished(superblock3Id);
-        //     await utils.mineBlocks(5);
-
-        //     merkleRoot = await dogeSuperblocks.getSuperblockMerkleRoot(superblock3Id);
-        //     chainWork = await dogeSuperblocks.getSuperblockAccumulatedWork(superblock3Id);
-        //     lastDogeBlockTime = await dogeSuperblocks.getSuperblockTimestamp(superblock3Id);
-        //     lastDogeBlockHash = await dogeSuperblocks.getSuperblockLastHash(superblock3Id);
-        //     parentId = await dogeSuperblocks.getSuperblockParentId(superblock3Id);
-
-        //     assert.equal(merkleRoot, superblock3MerkleRoot, "Superblock 3 Merkle root does not match");
-        //     assert.equal(chainWork.toNumber(), superblock3ChainWork, "Superblock 3 chain work does not match");
-        //     assert.equal(lastDogeBlockTime, superblock3LastDogeBlockTime, "Superblock 3 last Doge block time does not match");
-        //     assert.equal(lastDogeBlockHash, superblock3LastDogeBlockHash, "Superblock 3 last Doge block hash does not match");
-        //     assert.equal(parentId, superblock3ParentId, "Superblock 3 parent ID does not match");
-        // });
-
-        before(async() => {
-            bestSuperblock = await dogeSuperblocks.getBestSuperblock();
-            console.log("Best superblock:", bestSuperblock);
-        });
-
+        // console.log(dogeSuperblocksAddress, superblockClaimsAddress);
+        // await dogeSuperblocks.setSuperblockClaims(superblockClaimsAddress);
     });
+
+    let merkleRoot;
+    let chainWork;
+    let lastDogeBlockTime;
+    let lastDogeBlockHash;
+    let parentId;
+    let superblockHash;
+
+    let bestSuperblock;
+
+    it('Superblock 1', async() => {
+        superblockClaims = await dogeSuperblocks.superblockClaims;
+
+        await utils.mineBlocks(5);
+        await superblockClaims.checkClaimFinished(superblock1Id);
+        await utils.mineBlocks(5);
+
+        merkleRoot = await dogeSuperblocks.getSuperblockMerkleRoot(superblock1Id);
+        chainWork = await dogeSuperblocks.getSuperblockAccumulatedWork(superblock1Id);
+        lastDogeBlockTime = await dogeSuperblocks.getSuperblockTimestamp(superblock1Id);
+        lastDogeBlockHash = await dogeSuperblocks.getSuperblockLastHash(superblock1Id);
+        parentId = await dogeSuperblocks.getSuperblockParentId(superblock1Id);
+
+        assert.equal(merkleRoot, superblock1MerkleRoot, "Superblock 1 Merkle root does not match");
+        assert.equal(chainWork.toNumber(), superblock1ChainWork, "Superblock 1 chain work does not match");
+        assert.equal(lastDogeBlockTime, superblock1LastDogeBlockTime, "Superblock 1 last Doge block time does not match");
+        assert.equal(lastDogeBlockHash, superblock1LastDogeBlockHash, "Superblock 1 last Doge block hash does not match");
+        assert.equal(parentId, superblock1ParentId, "Superblock 1 parent ID does not match");
+    });
+
+    it('Superblock 2', async() => {
+        superblockClaims = await dogeSuperblocks.superblockClaims;
+
+        await utils.mineBlocks(5);
+        await superblockClaims.checkClaimFinished(superblock2Id);
+        await utils.mineBlocks(5);
+
+        merkleRoot = await dogeSuperblocks.getSuperblockMerkleRoot(superblock2Id);
+        chainWork = await dogeSuperblocks.getSuperblockAccumulatedWork(superblock2Id);
+        lastDogeBlockTime = await dogeSuperblocks.getSuperblockTimestamp(superblock2Id);
+        lastDogeBlockHash = await dogeSuperblocks.getSuperblockLastHash(superblock2Id);
+        parentId = await dogeSuperblocks.getSuperblockParentId(superblock2Id);
+
+        assert.equal(merkleRoot, superblock2MerkleRoot, "Superblock 2 Merkle root does not match");
+        assert.equal(chainWork.toNumber(), superblock2ChainWork, "Superblock 2 chain work does not match");
+        assert.equal(lastDogeBlockTime, superblock2LastDogeBlockTime, "Superblock 2 last Doge block time does not match");
+        assert.equal(lastDogeBlockHash, superblock2LastDogeBlockHash, "Superblock 2 last Doge block hash does not match");
+        assert.equal(parentId, superblock2ParentId, "Superblock 2 parent ID does not match");
+    });
+
+    // it('Superblock 3', async() => {
+    //     superblockClaims = await dogeSuperblocks.superblockClaims;
+
+    //     await utils.mineBlocks(5);
+    //     await superblockClaims.checkClaimFinished(superblock3Id);
+    //     await utils.mineBlocks(5);
+
+    //     merkleRoot = await dogeSuperblocks.getSuperblockMerkleRoot(superblock3Id);
+    //     chainWork = await dogeSuperblocks.getSuperblockAccumulatedWork(superblock3Id);
+    //     lastDogeBlockTime = await dogeSuperblocks.getSuperblockTimestamp(superblock3Id);
+    //     lastDogeBlockHash = await dogeSuperblocks.getSuperblockLastHash(superblock3Id);
+    //     parentId = await dogeSuperblocks.getSuperblockParentId(superblock3Id);
+
+    //     assert.equal(merkleRoot, superblock3MerkleRoot, "Superblock 3 Merkle root does not match");
+    //     assert.equal(chainWork.toNumber(), superblock3ChainWork, "Superblock 3 chain work does not match");
+    //     assert.equal(lastDogeBlockTime, superblock3LastDogeBlockTime, "Superblock 3 last Doge block time does not match");
+    //     assert.equal(lastDogeBlockHash, superblock3LastDogeBlockHash, "Superblock 3 last Doge block hash does not match");
+    //     assert.equal(parentId, superblock3ParentId, "Superblock 3 parent ID does not match");
+    // });
+
+    before(async() => {
+        bestSuperblock = await dogeSuperblocks.getBestSuperblock();
+        console.log("Best superblock:", bestSuperblock);
+    });
+
 });
