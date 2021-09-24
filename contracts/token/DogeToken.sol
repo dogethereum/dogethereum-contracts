@@ -81,9 +81,9 @@ contract DogeToken is StandardToken, TransactionProcessor {
 
 
     // counter for next unlock
-    uint32 public unlockIdx;
+    uint256 public unlockIdx;
     // Unlocks for which the investor has not sent a proof of unlock yet.
-    mapping (uint32 => Unlock) public unlocksPendingInvestorProof;
+    mapping (uint256 => Unlock) public unlocksPendingInvestorProof;
     // operatorPublicKeyHash to Operator
     mapping (bytes20 => Operator) public operators;
     OperatorKey[] public operatorKeys;
@@ -93,7 +93,7 @@ contract DogeToken is StandardToken, TransactionProcessor {
 
     event ErrorDogeToken(uint err);
     event NewToken(address indexed user, uint value);
-    event UnlockRequest(uint32 id, bytes20 operatorPublicKeyHash);
+    event UnlockRequest(uint256 id, bytes20 operatorPublicKeyHash);
     event OperatorCondemned(bytes20 operatorPublicKeyHash);
 
     // Represents an unlock request
