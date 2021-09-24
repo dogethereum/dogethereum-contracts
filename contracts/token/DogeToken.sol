@@ -2,13 +2,16 @@
 
 pragma solidity ^0.7.6;
 
-import "./StandardToken.sol";
-import "./Set.sol";
-import "./../TransactionProcessor.sol";
-import "../DogeParser/DogeMessageLibrary.sol";
-import "./../ECRecovery.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@chainlink/contracts/src/v0.7/interfaces/AggregatorV3Interface.sol";
+
+import "../TransactionProcessor.sol";
+import "../DogeParser/DogeMessageLibrary.sol";
+import "../ECRecovery.sol";
+import "../DogeSuperblocks.sol";
+
+import "./StandardToken.sol";
+import "./Set.sol";
 
 contract DogeToken is StandardToken, TransactionProcessor {
 
@@ -29,6 +32,11 @@ contract DogeToken is StandardToken, TransactionProcessor {
     // Used when calculating the operator and submitter fees for lock and unlock txs.
     // 1 fee point = 0.1% of tx value
     uint public constant DOGETHEREUM_FEE_FRACTION = 1000;
+
+    // Ethereum time lapse in which the operator can complete an unlock without repercussions.
+    uint256 constant ETHEREUM_TIME_GRACE_PERIOD = 1 days;
+    // Amount of superblocks that need to be confirmed before an unlock can be reported as missing.
+    uint256 constant SUPERBLOCKS_HEIGHT_GRACE_PERIOD = 24;
 
     // Error codes
     uint constant ERR_OPERATOR_SIGNATURE = 60010;
@@ -60,6 +68,11 @@ contract DogeToken is StandardToken, TransactionProcessor {
     // Contract to trust for tx included in a doge block verification.
     // Only doge txs relayed from trustedRelayerContract will be accepted.
     address public trustedRelayerContract;
+    // Contract that stores the superblockchain.
+    // Note that in production the superblockchain contract should be the same as the relayer contract.
+    // We separate these roles to write some tests more easily
+    DogeSuperblocks public superblocks;
+
     // Doge-Eth price oracle to trust.
     AggregatorV3Interface public dogeUsdOracle;
     AggregatorV3Interface public ethUsdOracle;
@@ -91,6 +104,8 @@ contract DogeToken is StandardToken, TransactionProcessor {
         uint operatorFee;
         // Block timestamp at which this request was made.
         uint timestamp;
+        // Superblock height at which this request was made.
+        uint superblockHeight;
         // List of indexes of the corresponding utxos in the Operator struct
         uint32[] selectedUtxos;
         uint dogeTxFee;
@@ -125,16 +140,20 @@ contract DogeToken is StandardToken, TransactionProcessor {
 
     function initialize(
         address relayerContract,
+        DogeSuperblocks initSuperblocks,
         AggregatorV3Interface initDogeUsdOracle,
         AggregatorV3Interface initEthUsdOracle,
         uint8 initCollateralRatio
     ) external {
         require(trustedRelayerContract == address(0), "Contract already initialized!");
+
         require(relayerContract != address(0), "Relayer contract must be valid.");
+        require(address(initSuperblocks) != address(0), "Superblockchain contract must be valid.");
         require(address(initDogeUsdOracle) != address(0), "Doge-Usd price oracle must be valid.");
         require(address(initEthUsdOracle) != address(0), "Eth-Usd price oracle must be valid.");
 
         trustedRelayerContract = relayerContract;
+        superblocks = initSuperblocks;
         dogeUsdOracle = initDogeUsdOracle;
         ethUsdOracle = initEthUsdOracle;
         collateralRatio = initCollateralRatio;
@@ -321,6 +340,31 @@ contract DogeToken is StandardToken, TransactionProcessor {
         condemnOperator(operatorPublicKeyHash);
     }
 
+    /**
+     * Reports that an operator did not complete the unlock request in time.
+     */
+    function reportOperatorMissingUnlock(
+        bytes20 operatorPublicKeyHash,
+        uint32 unlockIndex
+    ) public {
+        Operator storage operator = getValidOperator(operatorPublicKeyHash);
+
+        Unlock storage unlock = getValidUnlock(unlockIndex);
+
+        require(
+            block.timestamp > uint256(unlock.timestamp).add(ETHEREUM_TIME_GRACE_PERIOD),
+            "The unlock is still within the time grace period."
+        );
+
+        uint superblockchainHeight = superblocks.getChainHeight();
+        require(
+            superblockchainHeight > unlock.superblockHeight.add(SUPERBLOCKS_HEIGHT_GRACE_PERIOD),
+            "The unlock is still within the superblockchain height grace period."
+        );
+
+        condemnOperator(operatorPublicKeyHash);
+    }
+
     function transactionPreliminaryChecks(
         uint dogeTxHash
     ) internal {
@@ -388,11 +432,21 @@ contract DogeToken is StandardToken, TransactionProcessor {
         // Hack to make etherscan show the event
         emit Transfer(msg.sender, address(0), unlockValue);
 
+        // Get superblockchain height
+        uint superblockchainHeight = superblocks.getChainHeight();
+
         emit UnlockRequest(unlockIdx, operatorPublicKeyHash);
-        unlocksPendingInvestorProof[unlockIdx] = Unlock(msg.sender, dogeAddress, value,
-                                                        operatorFee,
-                                                        block.timestamp, selectedUtxos, dogeTxFee,
-                                                        operatorPublicKeyHash);
+        unlocksPendingInvestorProof[unlockIdx] = Unlock(
+            msg.sender,
+            dogeAddress,
+            value,
+            operatorFee,
+            block.timestamp,
+            superblockchainHeight,
+            selectedUtxos,
+            dogeTxFee,
+            operatorPublicKeyHash
+        );
         // Update operator's doge balance
         operator.dogeAvailableBalance = operator.dogeAvailableBalance.sub(unlockValue.add(changeValue));
         operator.dogePendingBalance = operator.dogePendingBalance.add(changeValue);
@@ -435,6 +489,11 @@ contract DogeToken is StandardToken, TransactionProcessor {
     function condemnOperator(bytes20 operatorPublicKeyHash) internal {
         // TODO: implement
         emit OperatorCondemned(operatorPublicKeyHash);
+    }
+
+    function getValidUnlock(uint32 index) internal view returns (Unlock storage) {
+        require(index < unlockIdx, "The unlock request doesn't exist.");
+        return unlocksPendingInvestorProof[index];
     }
 
     function getUnlockPendingInvestorProof(uint32 index) public view returns (
