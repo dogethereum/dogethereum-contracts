@@ -1,6 +1,6 @@
 import hre from "hardhat";
 
-import { deployFixture, deployToken } from "../deploy";
+import { deployFixture, deployToken, TokenOptions } from "../deploy";
 
 import {
   buildDogeTransaction,
@@ -11,7 +11,11 @@ import {
 } from "./utils";
 
 describe("testDogeTokenNoOperatorOutput", function () {
-  const collateralRatio = 2;
+  const tokenOptions: TokenOptions = {
+    collateralRatio: 2,
+    unlockEthereumTimeGracePeriod: 4 * 60 * 60,
+    unlockSuperblocksHeightGracePeriod: 4,
+  }
   let trustedRelayerContract: string;
   let dogeUsdPriceOracle: string;
   let ethUsdPriceOracle: string;
@@ -72,7 +76,7 @@ describe("testDogeTokenNoOperatorOutput", function () {
       ethUsdPriceOracle,
       trustedRelayerContract,
       superblockClaimsAddress,
-      collateralRatio
+      tokenOptions
     );
 
     await dogeToken.addOperatorSimple(

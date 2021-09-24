@@ -3,7 +3,7 @@ import hre from "hardhat";
 import type { Contract, ContractTransaction } from "ethers";
 import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
-import { deployFixture, deployToken } from "../deploy";
+import { deployFixture, deployToken, TokenOptions } from "../deploy";
 
 import {
   buildDogeTransaction,
@@ -22,7 +22,11 @@ describe("Token - report operator missing unlock tx", function () {
   let trustedRelayerContract: string;
   let operatorEthAddress: string;
   let superblockClaimsAddress: string;
-  const collateralRatio = 2;
+  const tokenOptions: TokenOptions = {
+    collateralRatio: 2,
+    unlockEthereumTimeGracePeriod: 4 * 60 * 60,
+    unlockSuperblocksHeightGracePeriod: 4,
+  };
 
   let claimerSuperblocks: Contract;
 
@@ -109,7 +113,7 @@ describe("Token - report operator missing unlock tx", function () {
       ethUsdPriceOracle,
       trustedRelayerContract,
       superblocks.address,
-      collateralRatio
+      tokenOptions
     );
     dogeToken = dogeTokenSystem.dogeToken.contract;
 

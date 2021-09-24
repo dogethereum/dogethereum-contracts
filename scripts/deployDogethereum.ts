@@ -11,7 +11,7 @@ import {
   deployScryptCheckerDummy,
   storeDeployment,
   ScryptCheckerDeployment,
-  SuperblockOptions,
+  SuperblockchainOptions,
   SUPERBLOCK_OPTIONS_LOCAL,
   SUPERBLOCK_OPTIONS_INTEGRATION_FAST_SYNC,
   // SUPERBLOCK_OPTIONS_INTEGRATION_SLOW_SYNC,
@@ -52,7 +52,7 @@ async function main() {
 
   // TODO: parametrize these when we write this as a Hardhat task.
   const dogecoinNetworkId = DogecoinNetworkId.Regtest;
-  const superblockOptions = getSuperblockOptions(hre.network.name);
+  const superblockOptions = getSuperblockchainOptions(hre.network.name);
 
   const { scryptChecker } = await deployOrGetScryptChecker();
 
@@ -92,7 +92,7 @@ Please specify the address by setting the SCRYPT_CHECKER environment variable.`
   return getScryptChecker(hre, scryptCheckerAddress);
 }
 
-function getSuperblockOptions(ethereumNetworkName: string): SuperblockOptions {
+function getSuperblockchainOptions(ethereumNetworkName: string): SuperblockchainOptions {
   if (
     ethereumNetworkName === "hardhat" ||
     ethereumNetworkName === "development" ||

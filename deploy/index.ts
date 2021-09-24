@@ -112,6 +112,27 @@ export interface SuperblockData {
 
 export type Superblock = SuperblockHeader & SuperblockData;
 
+export interface TokenOptions {
+  /**
+   * Grace period in seconds for an operator to relay an unlock tx.
+   * The time window is based on the timestamp of ethereum blocks.
+   */
+  unlockEthereumTimeGracePeriod: number;
+
+  /**
+   * Grace period in number of superblocks for an operator to relay an unlock tx.
+   * This option determines how many new confirmed superblocks need to appear
+   * after an unlock request before a missing unlock tx relay is reportable.
+   */
+  unlockSuperblocksHeightGracePeriod: number;
+
+  /**
+   * Ratio that indicates how many value in ether wei should the operator hold in relation
+   * to Dogecoin satoshis.
+   */
+  collateralRatio: number;
+}
+
 export interface SuperblockOptions {
   /**
    * Superblock duration (in seconds)
@@ -144,6 +165,8 @@ export interface SuperblockOptions {
    */
   genesis: SuperblockHeader;
 }
+
+export type SuperblockchainOptions = SuperblockOptions & TokenOptions;
 
 export interface ContractOptions {
   initArguments: InitializerArguments;
@@ -186,7 +209,7 @@ export interface UserDogethereumDeploymentOptions {
   /**
    * Superblockchain parameters.
    */
-  superblockOptions?: SuperblockOptions;
+  superblockOptions?: SuperblockchainOptions;
   /**
    * Use transparent proxies to deploy main contracts
    */
@@ -240,57 +263,72 @@ const integrationSuperblockGenesis: SuperblockHeader = {
 };
 
 // TODO: define adequate parameters
-// export const SUPERBLOCK_OPTIONS_PRODUCTION: SuperblockOptions = {
+// export const SUPERBLOCK_OPTIONS_PRODUCTION: SuperblockchainOptions = {
 //   duration: 60 * 60,
 //   delay: 3 * 60 * 60,
 //   timeout: 5 * 60,
 //   confirmations: 3,
 //   reward: 10,
+//   unlockEthereumTimeGracePeriod: 24 * 60 * 60,
+//   unlockSuperblocksHeightGracePeriod: 24,
+//   collateralRatio: 2,
 // };
 
-export const SUPERBLOCK_OPTIONS_INTEGRATION_SLOW_SYNC: SuperblockOptions = {
+export const SUPERBLOCK_OPTIONS_INTEGRATION_SLOW_SYNC: SuperblockchainOptions = {
   duration: 10 * 60,
   delay: 5 * 60,
   timeout: 60,
   confirmations: 1,
   reward: 10,
   genesis: integrationSuperblockGenesis,
+  unlockEthereumTimeGracePeriod: 4 * 60 * 60,
+  unlockSuperblocksHeightGracePeriod: 4,
+  collateralRatio: 2,
 };
 
 /**
  * These options are typically used in testnets like ropsten, rinkeby.
  */
-export const SUPERBLOCK_OPTIONS_INTEGRATION_FAST_SYNC: SuperblockOptions = {
+export const SUPERBLOCK_OPTIONS_INTEGRATION_FAST_SYNC: SuperblockchainOptions = {
   duration: 10 * 60,
   delay: 5 * 60,
   timeout: 30,
   confirmations: 1,
   reward: 10,
   genesis: integrationSuperblockGenesis,
+  unlockEthereumTimeGracePeriod: 4 * 60 * 60,
+  unlockSuperblocksHeightGracePeriod: 4,
+  collateralRatio: 2,
 };
 
 /**
  * These options are used for most tests.
  */
-export const SUPERBLOCK_OPTIONS_LOCAL: SuperblockOptions = {
+export const SUPERBLOCK_OPTIONS_LOCAL: SuperblockchainOptions = {
   duration: 10,
   delay: 10,
   timeout: 7,
   confirmations: 1,
   reward: 10,
   genesis: localSuperblockGenesis,
+  unlockEthereumTimeGracePeriod: 10 * 60,
+  unlockSuperblocksHeightGracePeriod: 1,
+  collateralRatio: 2,
 };
 
 /**
  * These options are used for some tests.
  */
-export const SUPERBLOCK_OPTIONS_CLAIM_TESTS: SuperblockOptions = {
+export const SUPERBLOCK_OPTIONS_CLAIM_TESTS: SuperblockchainOptions = {
   duration: 10 * 60,
   delay: 60,
   timeout: 15,
   confirmations: 1,
   reward: 3,
   genesis: localSuperblockGenesis,
+  unlockEthereumTimeGracePeriod: 4 * 60 * 60,
+  unlockSuperblocksHeightGracePeriod: 4,
+  collateralRatio: 2,
 };
 
 export function getDogecoinNetworkId(networkName: string): DogecoinNetworkId {
@@ -309,7 +347,11 @@ export async function deployToken(
   ethUsdPriceOracle: string,
   txRelayerContract: string,
   superblocksAddress: string,
-  collateralRatio: number,
+  {
+    collateralRatio,
+    unlockEthereumTimeGracePeriod,
+    unlockSuperblocksHeightGracePeriod,
+  }: TokenOptions,
   confirmations = 0,
   tokenDeployPrimitive = deployPlainWithInit
 ): Promise<DogethereumTokenSystem> {
@@ -335,6 +377,8 @@ export async function deployToken(
         dogeUsdPriceOracle,
         ethUsdPriceOracle,
         collateralRatio,
+        unlockEthereumTimeGracePeriod,
+        unlockSuperblocksHeightGracePeriod
       ],
       hre,
       {
@@ -360,9 +404,9 @@ function deployTokenForCoreSystem(
     dogeUsdPriceOracle,
     ethUsdPriceOracle,
     useProxy,
+    superblockOptions
   }: DeploymentOptions,
-  { superblocks }: DogethereumCoreSystem,
-  collateralRatio = 2
+  { superblocks }: DogethereumCoreSystem
 ): Promise<DogethereumTokenSystem> {
   return deployToken(
     hre,
@@ -372,7 +416,7 @@ function deployTokenForCoreSystem(
     ethUsdPriceOracle,
     superblocks.contract.address,
     superblocks.contract.address,
-    collateralRatio,
+    superblockOptions,
     confirmations,
     useProxy ? deployProxy : deployPlainWithInit
   );
@@ -766,7 +810,7 @@ export async function deployContract(
 export async function initSuperblockChain(
   hre: HardhatRuntimeEnvironment,
   options: {
-    params: SuperblockOptions;
+    params: SuperblockchainOptions;
     network: DogecoinNetworkId;
     genesisSuperblock: Superblock;
     dummyChecker: boolean;

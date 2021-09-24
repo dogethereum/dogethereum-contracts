@@ -34,9 +34,9 @@ contract DogeToken is StandardToken, TransactionProcessor {
     uint public constant DOGETHEREUM_FEE_FRACTION = 1000;
 
     // Ethereum time lapse in which the operator can complete an unlock without repercussions.
-    uint256 constant ETHEREUM_TIME_GRACE_PERIOD = 1 days;
+    uint256 public ethereumTimeGracePeriod;
     // Amount of superblocks that need to be confirmed before an unlock can be reported as missing.
-    uint256 constant SUPERBLOCKS_HEIGHT_GRACE_PERIOD = 24;
+    uint256 public superblocksHeightGracePeriod;
 
     // Error codes
     uint constant ERR_OPERATOR_SIGNATURE = 60010;
@@ -143,7 +143,9 @@ contract DogeToken is StandardToken, TransactionProcessor {
         DogeSuperblocks initSuperblocks,
         AggregatorV3Interface initDogeUsdOracle,
         AggregatorV3Interface initEthUsdOracle,
-        uint8 initCollateralRatio
+        uint8 initCollateralRatio,
+        uint256 timeGracePeriod,
+        uint256 superblocksGracePeriod
     ) external {
         require(trustedRelayerContract == address(0), "Contract already initialized!");
 
@@ -151,12 +153,16 @@ contract DogeToken is StandardToken, TransactionProcessor {
         require(address(initSuperblocks) != address(0), "Superblockchain contract must be valid.");
         require(address(initDogeUsdOracle) != address(0), "Doge-Usd price oracle must be valid.");
         require(address(initEthUsdOracle) != address(0), "Eth-Usd price oracle must be valid.");
+        require(timeGracePeriod > 0, "Time grace period should be greater than 0.");
+        require(superblocksGracePeriod > 0, "Superblocks grace period should be greater than 0.");
 
         trustedRelayerContract = relayerContract;
         superblocks = initSuperblocks;
         dogeUsdOracle = initDogeUsdOracle;
         ethUsdOracle = initEthUsdOracle;
         collateralRatio = initCollateralRatio;
+        ethereumTimeGracePeriod = timeGracePeriod;
+        superblocksHeightGracePeriod = superblocksGracePeriod;
     }
 
     /**
@@ -351,13 +357,13 @@ contract DogeToken is StandardToken, TransactionProcessor {
         Unlock storage unlock = getValidUnlock(unlockIndex);
 
         require(
-            block.timestamp > uint256(unlock.timestamp).add(ETHEREUM_TIME_GRACE_PERIOD),
+            block.timestamp > uint256(unlock.timestamp).add(ethereumTimeGracePeriod),
             "The unlock is still within the time grace period."
         );
 
         uint superblockchainHeight = superblocks.getChainHeight();
         require(
-            superblockchainHeight > unlock.superblockHeight.add(SUPERBLOCKS_HEIGHT_GRACE_PERIOD),
+            superblockchainHeight > unlock.superblockHeight.add(superblocksHeightGracePeriod),
             "The unlock is still within the superblockchain height grace period."
         );
 

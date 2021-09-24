@@ -3,7 +3,12 @@ import { assert } from "chai";
 import type { Contract, ContractTransaction } from "ethers";
 import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
-import { deployFixture, deployToken, deployOracleMock } from "../deploy";
+import {
+  deployFixture,
+  deployToken,
+  deployOracleMock,
+  TokenOptions,
+} from "../deploy";
 
 import {
   expectFailure,
@@ -20,7 +25,11 @@ describe("DogeToken - Operators", function () {
   let dogeUsdPriceOracle: Contract;
   let ethUsdPriceOracle: Contract;
   let trustedRelayerContract: string;
-  const collateralRatio = 2;
+  const tokenOptions: TokenOptions = {
+    collateralRatio: 2,
+    unlockEthereumTimeGracePeriod: 4 * 60 * 60,
+    unlockSuperblocksHeightGracePeriod: 4,
+  };
 
   let operatorSigner: SignerWithAddress;
   const operatorPublicKeyHash = "0x03cd041b0139d3240607b9fd1b2d1b691e22b5d6";
@@ -81,7 +90,7 @@ describe("DogeToken - Operators", function () {
       ethUsdPriceOracle.address,
       trustedRelayerContract,
       superblockClaims.address,
-      collateralRatio
+      tokenOptions
     );
     dogeToken = dogeTokenSystem.dogeToken.contract;
 
