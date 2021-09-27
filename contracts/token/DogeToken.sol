@@ -350,7 +350,7 @@ contract DogeToken is StandardToken, TransactionProcessor {
      */
     function reportOperatorMissingUnlock(
         bytes20 operatorPublicKeyHash,
-        uint32 unlockIndex
+        uint256 unlockIndex
     ) public {
         Operator storage operator = getValidOperator(operatorPublicKeyHash);
 
@@ -495,12 +495,12 @@ contract DogeToken is StandardToken, TransactionProcessor {
         return (selectedUtxos, dogeTxFee, changeValue);
     }
 
-    function getValidUnlock(uint32 index) internal view returns (Unlock storage) {
+    function getValidUnlock(uint256 index) internal view returns (Unlock storage) {
         require(index < unlockIdx, "The unlock request doesn't exist.");
         return unlocksPendingInvestorProof[index];
     }
 
-    function getUnlockPendingInvestorProof(uint32 index) public view returns (
+    function getUnlockPendingInvestorProof(uint256 index) public view returns (
         address from,
         bytes20 dogeAddress,
         uint value,
@@ -510,7 +510,7 @@ contract DogeToken is StandardToken, TransactionProcessor {
         uint dogeTxFee,
         bytes20 operatorPublicKeyHash
     ) {
-        Unlock storage unlock = unlocksPendingInvestorProof[index];
+        Unlock storage unlock = getValidUnlock(index);
         from = unlock.from;
         dogeAddress = unlock.dogeAddress;
         value = unlock.value;
