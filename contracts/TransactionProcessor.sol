@@ -14,7 +14,7 @@ abstract contract TransactionProcessor {
         bytes calldata txn,
         uint txHash,
         bytes20 operatorPublicKeyHash,
-        address superblockSubmitterAddress
+        uint256 unlockIndex
     ) virtual public;
     function processReportOperatorFreeUtxoSpend(
         bytes calldata txn,

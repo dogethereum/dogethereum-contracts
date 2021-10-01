@@ -385,19 +385,14 @@ contract DogeSuperblocks is DogeErrorCodes {
         uint dogeBlockIndex,
         uint[] memory dogeBlockSiblings,
         bytes32 superblockHash,
-        TransactionProcessor untrustedTargetContract
+        TransactionProcessor untrustedTargetContract,
+        uint256 unlockIndex
     ) public {
-        relayTx(
-            txBytes,
-            operatorPublicKeyHash,
-            txIndex,
-            txSiblings,
-            dogeBlockHeader,
-            dogeBlockIndex,
-            dogeBlockSiblings,
-            superblockHash,
-            untrustedTargetContract.processUnlockTransaction
-        );
+        verifyBlockMembership(dogeBlockHeader, dogeBlockIndex, dogeBlockSiblings, superblockHash);
+
+        uint txHash = verifyTx(txBytes, txIndex, txSiblings, dogeBlockHeader, superblockHash);
+        untrustedTargetContract.processUnlockTransaction(txBytes, txHash, operatorPublicKeyHash, unlockIndex);
+        emit RelayTransaction(bytes32(txHash));
     }
 
     // @dev - relays transaction `txBytes` to `untrustedTargetContract`'s processUnlockTransaction() method.

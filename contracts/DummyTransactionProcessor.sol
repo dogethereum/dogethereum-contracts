@@ -53,9 +53,9 @@ contract DummyTransactionProcessor is TransactionProcessor {
     // @param bytes - doge tx
     // @param txHash - doge tx hash
     // @param bytes20 - public key hash of the operator
-    // @param address - superblock submitter address
+    // @param uint256 - Index of the unlock request
     // @return uint - number of satoshidoges locked in case of a valid lock tx, 0 in any other case.
-    function processUnlockTransaction(bytes calldata, uint256 txHash, bytes20, address) override public {
+    function processUnlockTransaction(bytes calldata, uint256 txHash, bytes20, uint256) override public {
         console.log("processUnlockTransaction called");
 
         // only allow trustedRelayerContract, otherwise anyone can provide a fake dogeTx
