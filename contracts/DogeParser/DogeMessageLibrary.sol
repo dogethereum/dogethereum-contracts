@@ -570,7 +570,7 @@ library DogeMessageLibrary {
         // We could use internal byte order and flip the hash later on when necessary but
         // that would add complexity to the usage of these functions.
         // See https://github.com/bitcoin-dot-org/bitcoin.org/issues/580
-        // Interpreting this value as a little endian uin256 lets us reverse it as soon as we read it.
+        // Interpreting this value as a little endian uint256 lets us reverse it as soon as we read it.
         uint256 txHash = readUint256LE(txBytes, pos);
         pos += 32;
         uint32 txIndex = readUint32LE(txBytes, pos);
