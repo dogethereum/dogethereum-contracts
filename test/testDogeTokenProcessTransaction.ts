@@ -413,12 +413,6 @@ describe("Token transaction processing", function () {
       hash: `0x${rogueTx.getId()}`,
     };
 
-    let userDogeToken: Contract;
-
-    before(function () {
-      userDogeToken = dogeToken.connect(userEthSigner);
-    });
-
     it(`valid report of free utxo`, async function () {
       await dogeToken.addOperatorSimple(
         operatorPublicKeyHash,

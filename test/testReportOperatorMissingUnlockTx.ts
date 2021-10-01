@@ -185,7 +185,7 @@ describe("Token - report operator missing unlock tx", function () {
     );
   });
 
-  it("fails to liquidate an operator if not enough superblocks were confirmed", async function () {
+  it("fails to liquidate an operator if not enough time has elapsed in ethereum", async function () {
     await expectFailure(
       () =>
         dogeToken.reportOperatorMissingUnlock(operatorPublicKeyHash, unlockId),
