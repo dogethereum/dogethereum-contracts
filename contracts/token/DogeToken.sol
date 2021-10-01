@@ -26,8 +26,8 @@ contract DogeToken is StandardToken, TransactionProcessor {
     uint public constant MIN_UNLOCK_VALUE = 300000000; // 3 doges
     uint public constant OPERATOR_UNLOCK_FEE = 10;
     // These are Dogecoin network fees required in unlock transactions
-    uint constant DOGE_TX_BASE_FEE = 50000000; // 0.5 doge
-    uint constant DOGE_TX_FEE_PER_INPUT = 100000000; // 1 doge
+    uint public constant DOGE_TX_BASE_FEE = 50000000; // 0.5 doge
+    uint public constant DOGE_TX_FEE_PER_INPUT = 100000000; // 1 doge
 
     // Used when calculating the operator and submitter fees for lock and unlock txs.
     // 1 fee point = 0.1% of tx value
