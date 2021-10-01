@@ -39,21 +39,10 @@ contract DogeToken is StandardToken, TransactionProcessor {
     uint256 public superblocksHeightGracePeriod;
 
     // Error codes
-    uint constant ERR_OPERATOR_SIGNATURE = 60010;
-    uint constant ERR_OPERATOR_ALREADY_CREATED = 60015;
     uint constant ERR_OPERATOR_NOT_CREATED_OR_WRONG_SENDER = 60020;
     uint constant ERR_OPERATOR_HAS_BALANCE = 60030;
     uint constant ERR_OPERATOR_WITHDRAWAL_NOT_ENOUGH_BALANCE = 60040;
     uint constant ERR_OPERATOR_WITHDRAWAL_COLLATERAL_WOULD_BE_TOO_LOW = 60050;
-    uint constant ERR_PROCESS_OPERATOR_NOT_CREATED = 60060;
-    uint constant ERR_PROCESS_TX_ALREADY_PROCESSED = 60070;
-    uint constant ERR_UNLOCK_MIN_UNLOCK_VALUE = 60080;
-    uint constant ERR_UNLOCK_USER_BALANCE = 60090;
-    uint constant ERR_UNLOCK_OPERATOR_NOT_CREATED = 60100;
-    uint constant ERR_UNLOCK_OPERATOR_BALANCE = 60110;
-    uint constant ERR_UNLOCK_NO_AVAILABLE_UTXOS = 60120;
-    uint constant ERR_UNLOCK_UTXOS_VALUE_LESS_THAN_VALUE_TO_SEND = 60130;
-    uint constant ERR_UNLOCK_VALUE_TO_SEND_LESS_THAN_FEE = 60140;
     uint constant ERR_LOCK_MIN_LOCK_VALUE = 60180;
 
     // Token name
