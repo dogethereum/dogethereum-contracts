@@ -14,6 +14,7 @@ contract DogeTokenForTests is DogeToken {
     function addOperatorSimple(bytes20 operatorPublicKeyHash, address operatorEthAddress) public {
         Operator storage operator = operators[operatorPublicKeyHash];
         operator.ethAddress = operatorEthAddress;
+        operatorKeys.push(OperatorKey(operatorPublicKeyHash, false));
     }
 
     function addUtxo(bytes20 operatorPublicKeyHash, uint value, uint txHash, uint16 outputIndex) public {
