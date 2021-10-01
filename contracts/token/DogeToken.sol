@@ -83,7 +83,7 @@ contract DogeToken is StandardToken, TransactionProcessor {
     // counter for next unlock
     uint256 public unlockIdx;
     // Unlocks for which the investor has not sent a proof of unlock yet.
-    mapping (uint256 => Unlock) public unlocksPendingInvestorProof;
+    mapping (uint256 => Unlock) public unlocks;
     // operatorPublicKeyHash to Operator
     mapping (bytes20 => Operator) public operators;
     OperatorKey[] public operatorKeys;
@@ -100,27 +100,31 @@ contract DogeToken is StandardToken, TransactionProcessor {
     struct Unlock {
         address from;
         bytes20 dogeAddress;
-        uint value;
-        uint operatorFee;
+        // TODO: value to user can fit in uint64
+        uint valueToUser;
+        // TODO: change can fit in uint64
+        uint operatorChange;
         // Block timestamp at which this request was made.
         uint timestamp;
         // Superblock height at which this request was made.
         uint superblockHeight;
         // List of indexes of the corresponding utxos in the Operator struct
         uint32[] selectedUtxos;
-        uint dogeTxFee;
         // Operator public key hash. Key for the operators mapping.
         bytes20 operatorPublicKeyHash;
+        // This marks the unlock as complete or incomplete.
+        // An unlock is complete if the unlock transaction was relayed to the bridge.
+        bool completed;
     }
 
-    // TODO: value can fit in uint64 while index technically fits in uint64 too
     struct Utxo {
+        // TODO: value can fit in uint64
         // Value of the output.
         uint value;
         // Transaction hash.
         uint txHash;
         // Output index within the transaction.
-        uint16 index;
+        uint32 index;
     }
 
     struct Operator {
@@ -275,7 +279,7 @@ contract DogeToken is StandardToken, TransactionProcessor {
 
         uint value;
         address lockDestinationEthAddress;
-        uint16 outputIndex;
+        uint32 outputIndex;
         (value, lockDestinationEthAddress, outputIndex) = DogeMessageLibrary.parseLockTransaction(dogeTx, operatorPublicKeyHash);
 
         // Add utxo
@@ -299,24 +303,53 @@ contract DogeToken is StandardToken, TransactionProcessor {
         bytes calldata dogeTx,
         uint dogeTxHash,
         bytes20 operatorPublicKeyHash,
-        address /*superblockSubmitterAddress*/
+        uint256 unlockIndex
     ) override public {
         transactionPreliminaryChecks(dogeTxHash);
         Operator storage operator = getValidOperator(operatorPublicKeyHash);
+        Unlock storage unlock = getValidUnlock(unlockIndex);
 
-        uint userValue;
-        uint operatorValue;
-        uint16 outputIndex;
-        (userValue, operatorValue, outputIndex) = DogeMessageLibrary.parseUnlockTransaction(dogeTx, operatorPublicKeyHash);
+        // Expected number of outputs for this unlock
+        // We only want one or two outputs. We ignore the rest of the outputs.
+        // If there's no change for the operator, we only check the output for the user.
+        uint numberOfOutputs = unlock.operatorChange > 0 ? 2 : 1;
 
-        // Add utxo
-        if (operatorValue > 0) {
-            operator.utxos.push(Utxo(operatorValue, dogeTxHash, outputIndex));
+        DogeMessageLibrary.Outpoint[] memory outpoints;
+        DogeMessageLibrary.P2PKHOutput[] memory outputs;
+        (outpoints, outputs) = DogeMessageLibrary.parseUnlockTransaction(
+            dogeTx,
+            unlock.selectedUtxos.length,
+            numberOfOutputs
+        );
+
+        // Ensure utxos reserved for the unlock were spent.
+        for (uint i = 0; i < unlock.selectedUtxos.length; i++) {
+            uint32 utxoIndex = unlock.selectedUtxos[i];
+            Utxo storage utxo = operator.utxos[utxoIndex];
+            require(utxo.txHash == outpoints[i].txHash, "Unexpected tx hash reference in input.");
+            require(utxo.index == outpoints[i].txIndex, "Unexpected tx output index reference in input.");
+        }
+
+        require(outputs[0].publicKeyHash == unlock.dogeAddress, "Wrong dogecoin public key hash for user.");
+        require(outputs[0].value == unlock.valueToUser, "Wrong amount of dogecoins sent to user.");
+
+        // If the unlock transaction has operator change
+        if (numberOfOutputs > 1) {
+            uint32 operatorOutputIndex = 1;
+            uint operatorValue = outputs[operatorOutputIndex].value;
+            require(outputs[operatorOutputIndex].publicKeyHash == unlock.operatorPublicKeyHash, "Wrong dogecoin public key hash for operator.");
+            require(operatorValue == unlock.operatorChange, "Wrong change amount for the operator.");
+
+            // Add utxo
+            operator.utxos.push(Utxo(operatorValue, dogeTxHash, operatorOutputIndex));
 
             // Update operator's doge balance
             operator.dogeAvailableBalance = operator.dogeAvailableBalance.add(operatorValue);
             operator.dogePendingBalance = operator.dogePendingBalance.sub(operatorValue);
         }
+
+        // Mark the unlock as completed.
+        unlock.completed = true;
     }
 
     /**
@@ -445,16 +478,17 @@ contract DogeToken is StandardToken, TransactionProcessor {
         uint superblockchainHeight = superblocks.getChainHeight();
 
         emit UnlockRequest(unlockIdx, operatorPublicKeyHash);
-        unlocksPendingInvestorProof[unlockIdx] = Unlock(
+        // The value sent to the user is the unlock value minus the doge tx fee.
+        unlocks[unlockIdx] = Unlock(
             msg.sender,
             dogeAddress,
-            value,
-            operatorFee,
+            unlockValue.sub(dogeTxFee),
+            changeValue,
             block.timestamp,
             superblockchainHeight,
             selectedUtxos,
-            dogeTxFee,
-            operatorPublicKeyHash
+            operatorPublicKeyHash,
+            false
         );
         // Update operator's doge balance
         operator.dogeAvailableBalance = operator.dogeAvailableBalance.sub(unlockValue.add(changeValue));
@@ -497,28 +531,30 @@ contract DogeToken is StandardToken, TransactionProcessor {
 
     function getValidUnlock(uint256 index) internal view returns (Unlock storage) {
         require(index < unlockIdx, "The unlock request doesn't exist.");
-        return unlocksPendingInvestorProof[index];
+        return unlocks[index];
     }
 
-    function getUnlockPendingInvestorProof(uint256 index) public view returns (
+    function getUnlock(uint256 index) public view returns (
         address from,
         bytes20 dogeAddress,
-        uint value,
-        uint operatorFee,
+        uint valueToUser,
+        uint operatorChange,
         uint timestamp,
+        uint superblockHeight,
         uint32[] memory selectedUtxos,
-        uint dogeTxFee,
-        bytes20 operatorPublicKeyHash
+        bytes20 operatorPublicKeyHash,
+        bool completed
     ) {
         Unlock storage unlock = getValidUnlock(index);
         from = unlock.from;
         dogeAddress = unlock.dogeAddress;
-        value = unlock.value;
-        operatorFee = unlock.operatorFee;
+        valueToUser = unlock.valueToUser;
+        operatorChange = unlock.operatorChange;
         timestamp = unlock.timestamp;
+        superblockHeight = unlock.superblockHeight;
         selectedUtxos = unlock.selectedUtxos;
-        dogeTxFee = unlock.dogeTxFee;
         operatorPublicKeyHash = unlock.operatorPublicKeyHash;
+        completed = unlock.completed;
     }
 
     // Unlock section end
@@ -528,7 +564,7 @@ contract DogeToken is StandardToken, TransactionProcessor {
         return operator.utxos.length;
     }
 
-    function getUtxo(bytes20 operatorPublicKeyHash, uint i) public view returns (uint value, uint txHash, uint16 index) {
+    function getUtxo(bytes20 operatorPublicKeyHash, uint i) public view returns (uint value, uint txHash, uint32 index) {
         Operator storage operator = operators[operatorPublicKeyHash];
         Utxo storage utxo = operator.utxos[i];
         return (utxo.value, utxo.txHash, utxo.index);
