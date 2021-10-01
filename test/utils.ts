@@ -1,5 +1,12 @@
 import BN from "bn.js";
-import type { ContractReceipt, ContractTransaction, Event } from "ethers";
+import { assert } from "chai";
+import type {
+  BigNumber,
+  Contract,
+  ContractReceipt,
+  ContractTransaction,
+  Event,
+} from "ethers";
 import hre from "hardhat";
 import { sha256 } from "js-sha256";
 import { keccak256 } from "js-sha3";
@@ -583,4 +590,90 @@ Original error: ${error.stack || error}`);
   }
 
   throw new Error(`Did not fail. Result: ${result}`);
+}
+
+/**
+ * This ensures that the available and pending balances of each operator
+ * is consistent with their free and reserved utxos respectively.
+ * A utxo is free if it wasn't selected for an unlock transaction yet.
+ *
+ * TODO: returning the net worth of the doge token operators and the total supply
+ * could be useful for additional asserts of global token state in tests.
+ */
+export async function checkDogeTokenInvariant(
+  dogeToken: Contract
+): Promise<void> {
+  const operatorKeysLength = await dogeToken.callStatic.getOperatorsLength();
+  const operatorPendingBalances: Record<string, BigNumber> = {};
+  for (let i = 0; i < operatorKeysLength; i++) {
+    const { key: publicKeyHash, deleted } = await dogeToken.callStatic.operatorKeys(i);
+    if (deleted) continue;
+
+    const {
+      dogeAvailableBalance,
+      dogePendingBalance,
+      nextUnspentUtxoIndex,
+    } = await dogeToken.callStatic.operators(publicKeyHash);
+
+    const utxosLength = (await dogeToken.callStatic.getUtxosLength(publicKeyHash)).toNumber();
+
+    let utxoValues = hre.ethers.BigNumber.from(0);
+    for (
+      let utxoIndex = nextUnspentUtxoIndex;
+      utxoIndex < utxosLength;
+      utxoIndex++
+    ) {
+      const utxo = await dogeToken.callStatic.getUtxo(publicKeyHash, utxoIndex);
+      utxoValues = utxoValues.add(utxo.value);
+    }
+
+    assert.equal(
+      dogeAvailableBalance.toString(),
+      utxoValues.toString(),
+      "Operator balance is inconsistent with available utxos."
+    );
+
+    operatorPendingBalances[publicKeyHash] = dogePendingBalance;
+  }
+
+  const totalUnlocks = (await dogeToken.callStatic.unlockIdx()).toNumber();
+  const operatorChangeSumPendingUnlocks: Record<string, BigNumber> = {};
+  for (let unlockIndex = 0; unlockIndex < totalUnlocks; unlockIndex++) {
+    const {
+      completed,
+      operatorPublicKeyHash,
+      operatorChange,
+    } = await dogeToken.callStatic.unlocks(unlockIndex);
+    if (completed) continue;
+
+    if (operatorChangeSumPendingUnlocks[operatorPublicKeyHash] === undefined) {
+      operatorChangeSumPendingUnlocks[operatorPublicKeyHash] = operatorChange;
+    } else {
+      operatorChangeSumPendingUnlocks[
+        operatorPublicKeyHash
+      ] = operatorChangeSumPendingUnlocks[operatorPublicKeyHash].add(
+        operatorChange
+      );
+    }
+  }
+
+  const activeOperatorKeys = Object.keys(operatorChangeSumPendingUnlocks);
+  // We need to shortcircuit execution here because chai asserts
+  // non empty list of keys in `assert.containsAllKeys`.
+  if (activeOperatorKeys.length === 0) return;
+
+  // TODO: this may break with operator liquidation. Check it out once implemented.
+  assert.containsAllKeys(
+    operatorPendingBalances,
+    activeOperatorKeys,
+    "Unknown operator found in unlock request"
+  );
+
+  for (const key of activeOperatorKeys) {
+    assert.equal(
+      operatorPendingBalances[key].toString(),
+      operatorChangeSumPendingUnlocks[key].toString(),
+      "Pending balance is inconsistent with sum of change outputs in pending unlocks"
+    );
+  }
 }
