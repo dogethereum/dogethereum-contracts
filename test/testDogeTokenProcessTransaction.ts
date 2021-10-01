@@ -271,6 +271,8 @@ describe("Token transaction processing", function () {
           utxoRef.index
         );
         await dogeToken.assign(userEthSigner.address, value);
+
+        const unlockIndex = await dogeToken.callStatic.unlockIdx();
         await userDogeToken.doUnlock(
           userPublicKeyHash,
           unlockRequest.requestValue,
@@ -281,7 +283,7 @@ describe("Token transaction processing", function () {
           unlockRequest.data,
           unlockRequest.hash,
           operatorPublicKeyHash,
-          superblockSubmitterAddress
+          unlockIndex
         );
         const receipt = await tx.wait();
         const errorEvents = receipt.events!.filter(({ event }) => {
