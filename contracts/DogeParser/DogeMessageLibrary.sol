@@ -486,15 +486,6 @@ library DogeMessageLibrary {
         return (operatorOutputValue, operatorScriptStart, operatorScriptLength, ethAddressScriptStart, ethAddressScriptLength);
     }
 
-    function getInputPubKey(bytes memory txBytes, InputDescriptor memory input) private pure
-             returns (bytes32, bool)
-    {
-        bytes32 pubKey;
-        bool odd;
-        (, pubKey, odd,) = parseScriptSig(txBytes, input.sigScriptOffset);
-        return (pubKey, odd);
-    }
-
     /**
      * Scan some inputs and find their script lengths.
      * The rest of the inputs are consumed but ignored otherwise.
@@ -794,21 +785,6 @@ library DogeMessageLibrary {
         } else {
             return bytes20(0);
         }
-    }
-
-
-    // Parse a P2PKH scriptSig
-    // TODO: add script length as a parameter?
-    function parseScriptSig(bytes memory txBytes, uint pos) private pure
-             returns (bytes memory, bytes32, bool, uint)
-    {
-        bytes memory sig;
-        bytes32 pubKey;
-        bool odd;
-        // TODO: do we want the signature?
-        (sig, pos) = parseSignature(txBytes, pos);
-        (pubKey, odd, pos) = parsePubKey(txBytes, pos);
-        return (sig, pubKey, odd, pos);
     }
 
     // Extract a signature
@@ -1451,6 +1427,29 @@ library DogeMessageLibrary {
      */
 
     /*
+
+    function getInputPubKey(bytes memory txBytes, InputDescriptor memory input) private pure
+             returns (bytes32, bool)
+    {
+        bytes32 pubKey;
+        bool odd;
+        (, pubKey, odd,) = parseScriptSig(txBytes, input.sigScriptOffset);
+        return (pubKey, odd);
+    }
+
+    // Parse a P2PKH scriptSig
+    // TODO: add script length as a parameter?
+    function parseScriptSig(bytes memory txBytes, uint pos) private pure
+             returns (bytes memory, bytes32, bool, uint)
+    {
+        bytes memory sig;
+        bytes32 pubKey;
+        bool odd;
+        // TODO: do we want the signature?
+        (sig, pos) = parseSignature(txBytes, pos);
+        (pubKey, odd, pos) = parsePubKey(txBytes, pos);
+        return (sig, pubKey, odd, pos);
+    }
 
     // Check whether `btcAddress` is in the transaction outputs *and*
     // whether *at least* `value` has been sent to it.
