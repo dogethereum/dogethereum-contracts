@@ -86,7 +86,7 @@ contract DogeMessageLibraryForTests {
     }
 
     function parseLockTransaction(bytes calldata txBytes, bytes20 expected_output_public_key_hash) public pure
-             returns (uint, address, uint16) {
+             returns (uint, address, uint32) {
         return DogeMessageLibrary.parseLockTransaction(txBytes, expected_output_public_key_hash);
     }
 

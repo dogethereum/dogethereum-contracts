@@ -156,6 +156,7 @@ library DogeMessageLibrary {
         uint merkleRoot;
     }
 
+    // Describes the input and where its script can be found.
     struct InputDescriptor {
         // Byte offset where the input is located in the tx
         uint offset;
@@ -163,6 +164,21 @@ library DogeMessageLibrary {
         uint sigScriptOffset;
         // Length of the signature script
         uint sigScriptLength;
+    }
+
+    // Outpoints are references to a particular output in a tx.
+    // At the time a transaction is built, an outpoint should
+    // derreference to an unspent transaction output.
+    struct Outpoint {
+        // Tx id
+        uint txHash;
+        // Index of output consumed in tx
+        uint32 txIndex;
+    }
+
+    struct P2PKHOutput {
+        uint64 value;
+        bytes20 publicKeyHash;
     }
 
     /**
@@ -249,127 +265,120 @@ library DogeMessageLibrary {
      * @dev - Parses an unlock doge tx
      *   Inputs
      *   One or more inputs signed by the operator.
+     *   The rest of the inputs are ignored.
      *
      *   Ouputs
-     *   0. Output for the user. This is ignored.
-     *   1. Optional. Operator change.
+     *   0. Output for the user. Must contain a P2PKH script.
+     *   1. Optional. Operator change. Must contain a P2PKH script.
+     *   The rest of the outputs are ignored
+     *   If there is no change for the operator, the second output is ignored.
      *
      * @param txBytes - tx byte array
-     * @param expectedOperatorPKH - public key hash that is expected to be used as output or input
-     * @return userOutputValue Value of user output
-     * @return operatorChangeValue Value of operator change output.
-     * @return operatorChangeIndex Tx output index of operator change. If zero, there's no change output.
+     * @param amountOfInputs - Amount of inputs expected to be parsed.
+     * @param amountOfOutputs - Amount of outputs expected to be parsed.
+     *        All parsed outputs must contain P2PKH scripts.
+     * @return inputOutpoints References to previous tx outputs that are consumed in this tx.
+     * @return outputs P2PKH outputs parsed in the transaction.
      */
     function parseUnlockTransaction(
         bytes memory txBytes,
-        bytes20 expectedOperatorPKH
-    ) internal pure returns (uint, uint, uint16) {
+        uint256 amountOfInputs,
+        uint256 amountOfOutputs
+    ) internal pure returns (Outpoint[] memory, P2PKHOutput[] memory) {
         uint pos = TX_INPUTS_OFFSET;
 
-        pos = checkUnlockInputs(txBytes, pos, expectedOperatorPKH);
+        Outpoint[] memory outpoints;
+        (outpoints, pos) = getUnlockInputs(txBytes, pos, amountOfInputs);
 
-        return parseUnlockTxOutputs(expectedOperatorPKH, txBytes, pos);
+        P2PKHOutput[] memory outputs = parseUnlockTxOutputs(txBytes, pos, amountOfOutputs);
+        return (outpoints, outputs);
     }
 
-    function checkUnlockInputs(
+    function getUnlockInputs(
         bytes memory txBytes,
         uint pos,
-        bytes20 expectedOperatorPKH
-    ) private pure returns (uint) {
+        uint256 amountOfInputs
+    ) private pure returns (Outpoint[] memory, uint) {
         InputDescriptor[] memory inputScripts;
 
-        (inputScripts, pos) = scanInputs(txBytes, pos, 0);
+        (inputScripts, pos) = scanInputs(txBytes, pos, amountOfInputs);
 
+        Outpoint[] memory outpoints = new Outpoint[](inputScripts.length);
         for (uint i = 0; i < inputScripts.length; i++) {
-            (bytes32 inputPubKey, bool inputPubKeyOdd) = getInputPubKey(txBytes, inputScripts[i]);
-            require(
-                expectedOperatorPKH == pub2PubKeyHash(inputPubKey, inputPubKeyOdd),
-                "Invalid unlock tx. One of the inputs is not signed by the operator."
-            );
+            // We need to flip the tx hash bytes to have it in reversed byte order as specified in the protocol.
+            // We could use internal byte order and flip the hash later on when necessary but
+            // that would add complexity to the usage of these functions.
+            // See https://github.com/bitcoin-dot-org/bitcoin.org/issues/580
+            // Interpreting this value as a little endian uint256 lets us reverse it as soon as we read it.
+            uint256 inputOffset = inputScripts[i].offset;
+            outpoints[i].txHash = readUint256LE(txBytes, inputOffset);
+            outpoints[i].txIndex = readUint32LE(txBytes, inputOffset + 32);
         }
 
-        return pos;
+        return (outpoints, pos);
     }
 
     /**
      * Determine the operator output, if any, and the value of the user output
      *   Ouputs
-     *   0. Output for the user. This output is ignored.
-     *   1. Optional. Operator change.
+     *   0. Output for the user. Must contain a P2PKH script.
+     *   1. Optional. Operator change. Must contain a P2PKH script.
+     *   The rest of the outputs are ignored
+     *   If there is no change for the operator, the second output is ignored.
      *
-     * @param expectedOperatorPKH - operator public key hash
      * @param txBytes - tx byte array
      * @param pos - position to start parsing txBytes
-     * @return userOutputValue Value of user output
-     * @return operatorChangeValue Value of operator change output.
-     * @return operatorChangeIndex Tx output index of operator change. If zero, there's no change output.
+     * @param amountOfOutputs - Amount of outputs expected to be parsed.
+     *        All parsed outputs must contain P2PKH scripts.
+     * @return outputs P2PKH outputs parsed in the transaction.
      *
      * Returns output amount, index and ethereum address
      */
     function parseUnlockTxOutputs(
-        bytes20 expectedOperatorPKH,
         bytes memory txBytes,
-        uint pos
-    ) private pure returns (uint userOutputValue, uint operatorChangeValue, uint16 operatorChangeIndex) {
-        (uint userValue,
-        uint operatorChangeScriptStart,
-        uint operatorChangeScriptLength,
-        uint opChangeValue) = scanUnlockOutputs(txBytes, pos);
+        uint pos,
+        uint256 amountOfOutputs
+    ) private pure returns (P2PKHOutput[] memory) {
+        uint nOutputs;
+        (nOutputs, pos) = parseVarInt(txBytes, pos);
+        require(amountOfOutputs <= nOutputs, "The unlock transaction doesn't have enough outputs.");
 
-        // TODO: abstract this check into a function?
-        // Check if the change output exists
-        if (operatorChangeScriptStart < txBytes.length) {
-            // Check tx is sending funds to an operator.
-            bytes20 outputPublicKeyHash = parseP2PKHOutputScript(txBytes, operatorChangeScriptStart, operatorChangeScriptLength);
-            require(
-                outputPublicKeyHash == expectedOperatorPKH,
-                "Invalid unlock tx. The second tx output does not have a P2PKH output script for an operator."
-            );
+        P2PKHOutput[] memory outputs = new P2PKHOutput[](amountOfOutputs);
 
-            return (userValue, opChangeValue, 1);
+        for (uint256 i = 0; i < outputs.length; i++) {
+            bytes20 userPublicKeyHash;
+            uint64 userValue;
+            (userPublicKeyHash, userValue, pos) = scanUnlockOutput(txBytes, pos);
+            outputs[i].value = userValue;
+            outputs[i].publicKeyHash = userPublicKeyHash;
         }
 
-        return (userValue, 0, 0);
+        return outputs;
     }
 
-    // Scan the outputs of an unlock transaction.
-    // The first output in an unlock transaction transfers value to a user.
-    // The second output in an unlock transaction may be change for the operator.
-    // Returns the value unlocked for the user output and the value, offset and length of scripts
-    // for the operator change output, if any.
-    function scanUnlockOutputs(
+    // Scans a single output of an unlock transaction.
+    // The output script should be a P2PKH script.
+    // If this is not the case, the parsing fails with a revert.
+    // Returns the value, offset and length of scripts of the output.
+    function scanUnlockOutput(
         bytes memory txBytes,
         uint pos
-    ) private pure returns (uint, uint, uint, uint) {
-        uint nOutputs;
-
-        (nOutputs, pos) = parseVarInt(txBytes, pos);
-        require(nOutputs == 1 || nOutputs == 2, "Unlock transactions only have one or two outputs.");
-
-        // Tx output 0 is for the user
-        // read value of the output for the user
-        uint firstOutputValue = readUint64LE(txBytes, pos);
+    ) private pure returns (bytes20, uint64, uint) {
+        uint64 outputValue = readUint64LE(txBytes, pos);
         pos += 8;
 
-        // read the script length
-        uint firstOutputScriptLength;
-        (firstOutputScriptLength, pos) = parseVarInt(txBytes, pos);
-        // uint firstOutputScriptStart = pos;
-        pos += firstOutputScriptLength;
+        uint outputScriptLength;
+        (outputScriptLength, pos) = parseVarInt(txBytes, pos);
+        uint outputScriptStart = pos;
+        pos += outputScriptLength;
 
-        uint secondOutputScriptLength;
-        uint secondOutputScriptStart = txBytes.length;
-        uint secondOutputValue;
-        if (nOutputs == 2) {
-            // Tx output 1 is the change for the operator
-            // read value of operator change
-            secondOutputValue = readUint64LE(txBytes, pos);
-            pos += 8;
+        bytes20 outputPublicKeyHash = parseP2PKHOutputScript(txBytes, outputScriptStart, outputScriptLength);
 
-            (secondOutputScriptLength, secondOutputScriptStart) = parseVarInt(txBytes, pos);
-        }
-
-        return (firstOutputValue, secondOutputScriptStart, secondOutputScriptLength, secondOutputValue);
+        return (
+            outputPublicKeyHash,
+            outputValue,
+            pos
+        );
     }
 
     // @dev - Parses a doge tx assuming it is a lock operation
@@ -383,7 +392,7 @@ library DogeMessageLibrary {
     function parseLockTransaction(
         bytes memory txBytes,
         bytes20 expectedOperatorPKH
-    ) internal pure returns (uint, address, uint16) {
+    ) internal pure returns (uint, address, uint32) {
         uint pos = TX_INPUTS_OFFSET;
 
         // Ignore inputs
@@ -486,12 +495,15 @@ library DogeMessageLibrary {
         return (pubKey, odd);
     }
 
-    // Scan the inputs and find the script lengths.
-    // @return an array of script descriptors. Each one describes the length and the start position
-    // of the script.
-    // takes a 'stop' argument which sets the maximum number of
-    // outputs to scan through. stop=0 => scan all.
-    function scanInputs(bytes memory txBytes, uint pos, uint stop) private pure
+    /**
+     * Scan some inputs and find their script lengths.
+     * The rest of the inputs are consumed but ignored otherwise.
+     * @param desiredInputs Number of outputs to scan through. desiredInputs=0 => scan all.
+     * If the amount of inputs is less than the desired inputs, the scan reverts the transaction.
+     * @return Array of input descriptors.
+     * @return The position where the outputs begin in the transaction.
+     */
+    function scanInputs(bytes memory txBytes, uint pos, uint desiredInputs) private pure
              returns (InputDescriptor[] memory, uint)
     {
         uint nInputs;
@@ -499,15 +511,18 @@ library DogeMessageLibrary {
 
         (nInputs, pos) = parseVarInt(txBytes, pos);
 
-        if (stop == 0 || stop > nInputs) {
+        require(desiredInputs <= nInputs, "The transaction doesn't have enough inputs.");
+
+        if (desiredInputs == 0) {
             halt = nInputs;
         } else {
-            halt = stop;
+            halt = desiredInputs;
         }
 
         InputDescriptor[] memory inputs = new InputDescriptor[](halt);
 
-        for (uint256 i = 0; i < halt; i++) {
+        uint256 i;
+        for (i = 0; i < halt; i++) {
             inputs[i].offset = pos;
             // skip outpoint
             pos += 36;
@@ -516,6 +531,18 @@ library DogeMessageLibrary {
             inputs[i].sigScriptOffset = pos;
             inputs[i].sigScriptLength = scriptLength;
             // skip sig_script, seq
+            pos += scriptLength + 4;
+        }
+
+        // Skip the rest of the inputs to consume them and obtain outputs offset.
+        for (; i < nInputs; i++) {
+            // skip outpoint
+            pos += 36;
+
+            uint scriptLength;
+            (scriptLength, pos) = parseVarInt(txBytes, pos);
+
+            // skip sig_script and seq
             pos += scriptLength + 4;
         }
 
