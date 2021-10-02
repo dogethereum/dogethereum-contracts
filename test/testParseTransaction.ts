@@ -9,6 +9,7 @@ import {
   buildDogeTransaction,
   dogeAddressFromKeyPair,
   dogeKeyPairFromWIF,
+  expectFailure,
   isolateTests,
   publicKeyHashFromKeyPair,
 } from "./utils";
@@ -63,21 +64,21 @@ describe("testParseTransaction", () => {
     const operatorPublicKeyHash = publicKeyHashFromKeyPair(keys[0]);
     const txData = `0x${tx.toHex()}`;
 
-    try {
-      await dogeMessageLibraryForTests.parseLockTransaction(
-        txData,
-        operatorPublicKeyHash
-      );
-    } catch (error) {
-      expect(error).to.be.an.instanceOf(Error);
-      expect(error.message)
-        .to.be.a("string")
-        .and.include(
-          "The first tx output does not have a P2PKH output script for an operator."
-        );
-      return;
-    }
-    assert.fail("The lock transaction is invalid and should be rejected.");
+    await expectFailure(
+      () =>
+        dogeMessageLibraryForTests.parseLockTransaction(
+          txData,
+          operatorPublicKeyHash
+        ),
+      (error) => {
+        expect(error).to.be.an.instanceOf(Error);
+        expect(error.message)
+          .to.be.a("string")
+          .and.include(
+            "The first tx output does not have a P2PKH output script for an operator."
+          );
+      }
+    );
   });
 
   it("Attempt to parse transaction without operator output", async function () {
@@ -101,19 +102,19 @@ describe("testParseTransaction", () => {
     const operatorPublicKeyHash = publicKeyHashFromKeyPair(keys[1]);
     const txData = `0x${tx.toHex()}`;
 
-    try {
-      await dogeMessageLibraryForTests.parseLockTransaction(
-        txData,
-        operatorPublicKeyHash
-      );
-    } catch (error) {
-      expect(error).to.be.an.instanceOf(Error);
-      expect(error.message)
-        .to.be.a("string")
-        .and.include("Lock transactions only have two or three outputs.");
-      return;
-    }
-    assert.fail("The lock transaction is invalid and should be rejected.");
+    await expectFailure(
+      () =>
+        dogeMessageLibraryForTests.parseLockTransaction(
+          txData,
+          operatorPublicKeyHash
+        ),
+      (error) => {
+        expect(error).to.be.an.instanceOf(Error);
+        expect(error.message)
+          .to.be.a("string")
+          .and.include("Lock transactions only have two or three outputs.");
+      }
+    );
   });
 
   it("Parse lock transaction", async function () {
@@ -154,12 +155,20 @@ describe("testParseTransaction", () => {
       txData,
       operatorPublicKeyHash
     );
-    assert.equal(parseResult[0], lockAmount, "Amount deposited to operator is incorrect");
+    assert.equal(
+      parseResult[0],
+      lockAmount,
+      "Amount deposited to operator is incorrect"
+    );
     assert.equal(
       parseResult[1],
       destinationEthereumAddress,
       "User ethereum address is incorrect"
     );
-    assert.equal(parseResult[2], 0, "The operator output should be the first one");
+    assert.equal(
+      parseResult[2],
+      0,
+      "The operator output should be the first one"
+    );
   });
 });
