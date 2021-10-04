@@ -393,7 +393,9 @@ export function buildDogeTransaction(txDetails: {
   outputs: TxOutput[];
 }): bitcoin.Transaction {
   const txBuilder = prepareDogeTransaction(txDetails);
-  txBuilder.sign(0, txDetails.signer);
+  for (let i = 0; i < txDetails.inputs.length; i++) {
+    txBuilder.sign(i, txDetails.signer);
+  }
   return txBuilder.build();
 }
 
