@@ -780,11 +780,8 @@ library DogeMessageLibrary {
     function parseP2PKHOutputScript(bytes memory txBytes, uint pos, uint script_len) private pure
              returns (bytes20)
     {
-        if (isP2PKH(txBytes, pos, script_len)) {
-            return sliceBytes20(txBytes, pos + 3);
-        } else {
-            return bytes20(0);
-        }
+        require(isP2PKH(txBytes, pos, script_len), "Expected a P2PKH script in output.");
+        return sliceBytes20(txBytes, pos + 3);
     }
 
     // Extract a signature
