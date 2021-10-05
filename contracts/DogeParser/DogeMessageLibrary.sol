@@ -277,20 +277,19 @@ library DogeMessageLibrary {
      * @param amountOfInputs - Amount of inputs expected to be parsed.
      * @param amountOfOutputs - Amount of outputs expected to be parsed.
      *        All parsed outputs must contain P2PKH scripts.
-     * @return inputOutpoints References to previous tx outputs that are consumed in this tx.
+     * @return outpoints References to previous tx outputs that are consumed in this tx.
      * @return outputs P2PKH outputs parsed in the transaction.
      */
     function parseUnlockTransaction(
         bytes memory txBytes,
         uint256 amountOfInputs,
         uint256 amountOfOutputs
-    ) internal pure returns (Outpoint[] memory, P2PKHOutput[] memory) {
+    ) internal pure returns (Outpoint[] memory outpoints, P2PKHOutput[] memory outputs) {
         uint pos = TX_INPUTS_OFFSET;
 
-        Outpoint[] memory outpoints;
         (outpoints, pos) = getUnlockInputs(txBytes, pos, amountOfInputs);
 
-        P2PKHOutput[] memory outputs = parseUnlockTxOutputs(txBytes, pos, amountOfOutputs);
+        outputs = parseUnlockTxOutputs(txBytes, pos, amountOfOutputs);
         return (outpoints, outputs);
     }
 
@@ -406,17 +405,18 @@ library DogeMessageLibrary {
         return (operatorTxOutputValue, lockDestinationEthAddress, 0);
     }
 
-    // Parse operator output and embedded ethereum address in transaction outputs in tx
-    //
-    // @param expectedOperatorPKH - operator public key hash to look for
-    // @param txBytes - tx byte array
-    // @param pos - position to start parsing txBytes
-    // Outputs
-    // @return output value of operator output
-    // @return output index of operator output
-    // @return lockDestinationEthAddress - Lock destination address if operator output and OP_RETURN output found, 0 otherwise
-    //
-    // Returns output amount, index and ethereum address
+    /**
+     * Parse operator output and embedded ethereum address in transaction outputs in tx
+     *
+     * @param expectedOperatorPKH - operator public key hash to look for
+     * @param txBytes - tx byte array
+     * @param pos - position to start parsing txBytes
+     * Outputs
+     * @return output value of operator output
+     * @return lockDestinationEthAddress - Lock destination address if operator output and OP_RETURN output found, 0 otherwise
+     *
+     * Returns output amount, index and ethereum address
+     */
     function parseLockTxOutputs(
         bytes20 expectedOperatorPKH,
         bytes memory txBytes,
@@ -766,12 +766,12 @@ library DogeMessageLibrary {
     // returns true if the bytes located in txBytes by pos and
     // script_len represent a P2PKH script
     function isP2PKH(bytes memory txBytes, uint pos, uint script_len) private pure returns (bool) {
-        return (script_len == 25)           // 20 byte pubkeyhash + 5 bytes of script
-            && (txBytes[pos] == 0x76)       // OP_DUP
-            && (txBytes[pos + 1] == 0xa9)   // OP_HASH160
-            && (txBytes[pos + 2] == 0x14)   // bytes to push
-            && (txBytes[pos + 23] == 0x88)  // OP_EQUALVERIFY
-            && (txBytes[pos + 24] == 0xac); // OP_CHECKSIG
+        return (script_len == 25)              // 20 byte pubkeyhash + 5 bytes of script
+            && (txBytes[pos] == 0x76)          // OP_DUP
+            && (txBytes[pos + 1] == 0xa9)      // OP_HASH160
+            && (uint8(txBytes[pos + 2]) == 20) // bytes to push
+            && (txBytes[pos + 23] == 0x88)     // OP_EQUALVERIFY
+            && (txBytes[pos + 24] == 0xac);    // OP_CHECKSIG
     }
 
     // Get the pubkeyhash from an output script. Assumes
