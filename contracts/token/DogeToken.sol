@@ -43,7 +43,6 @@ contract DogeToken is StandardToken, TransactionProcessor {
     uint constant ERR_OPERATOR_HAS_BALANCE = 60030;
     uint constant ERR_OPERATOR_WITHDRAWAL_NOT_ENOUGH_BALANCE = 60040;
     uint constant ERR_OPERATOR_WITHDRAWAL_COLLATERAL_WOULD_BE_TOO_LOW = 60050;
-    uint constant ERR_LOCK_MIN_LOCK_VALUE = 60180;
 
     // Token name
     string public constant name = "DogeToken";
@@ -271,21 +270,21 @@ contract DogeToken is StandardToken, TransactionProcessor {
         uint32 outputIndex;
         (value, lockDestinationEthAddress, outputIndex) = DogeMessageLibrary.parseLockTransaction(dogeTx, operatorPublicKeyHash);
 
+        require(value >= MIN_LOCK_VALUE, "Lock value is too low.");
+
         // Add utxo
-        if (value > 0) {
-            operator.utxos.push(Utxo(value, dogeTxHash, outputIndex));
-        }
+        operator.utxos.push(Utxo(value, dogeTxHash, outputIndex));
 
         // Update operator's doge balance
         operator.dogeAvailableBalance = operator.dogeAvailableBalance.add(value);
 
-        if (value < MIN_LOCK_VALUE) {
-            emit ErrorDogeToken(ERR_LOCK_MIN_LOCK_VALUE);
-            return;
-        }
 
-        distributeTokensAfterLock(lockDestinationEthAddress, value,
-                               operator.ethAddress, superblockSubmitterAddress);
+        distributeTokensAfterLock(
+            lockDestinationEthAddress,
+            value,
+            operator.ethAddress,
+            superblockSubmitterAddress
+        );
     }
 
     function processUnlockTransaction(
