@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 pragma solidity ^0.7.6;
+pragma abicoder v2;
 
 import {DogeMessageLibrary} from './DogeMessageLibrary.sol';
 
@@ -85,44 +86,23 @@ contract DogeMessageLibraryForTests {
         return out;
     }
 
-    function parseLockTransaction(bytes calldata txBytes, bytes20 expected_output_public_key_hash) public pure
+    function parseLockTransaction(bytes calldata txBytes, bytes20 expectedOutputPublicKeyHash) public pure
              returns (uint, address, uint32) {
-        return DogeMessageLibrary.parseLockTransaction(txBytes, expected_output_public_key_hash);
+        return DogeMessageLibrary.parseLockTransaction(txBytes, expectedOutputPublicKeyHash);
     }
 
-    // Placeholder until parseUnlockTransaction is implemented
-    // function parseUnlockTransaction(bytes calldata txBytes, bytes20 expected_output_public_key_hash) public view
-    //          returns (uint, address, uint16) {
-    //     return DogeMessageLibrary.parseUnlockTransaction(txBytes, expected_output_public_key_hash);
-    // }
+    function parseUnlockTransaction(bytes calldata txBytes, uint amountOfInputs, uint amountOfOutputs) public pure
+             returns (DogeMessageLibrary.Outpoint[] memory outpoints, DogeMessageLibrary.P2PKHOutput[] memory outputs) {
+        return DogeMessageLibrary.parseUnlockTransaction(txBytes, amountOfInputs, amountOfOutputs);
+    }
 
     //
     // Error / failure codes
     //
 
     // error codes for storeBlockHeader
-    uint constant ERR_DIFFICULTY =  10010;  // difficulty didn't match current difficulty
-    uint constant ERR_RETARGET = 10020;  // difficulty didn't match retarget
-    uint constant ERR_NO_PREV_BLOCK = 10030;
-    uint constant ERR_BLOCK_ALREADY_EXISTS = 10040;
-    uint constant ERR_INVALID_HEADER = 10050;
     uint constant ERR_COINBASE_INDEX = 10060; // coinbase tx index within Litecoin merkle isn't 0
     uint constant ERR_NOT_MERGE_MINED = 10070; // trying to check AuxPoW on a block that wasn't merge mined
-    uint constant ERR_FOUND_TWICE = 10080; // 0xfabe6d6d found twice
-    uint constant ERR_NO_MERGE_HEADER = 10090; // 0xfabe6d6d not found
-    uint constant ERR_NOT_IN_FIRST_20 = 10100; // chain Merkle root not within first 20 bytes of coinbase tx
     uint constant ERR_CHAIN_MERKLE = 10110;
     uint constant ERR_PARENT_MERKLE = 10120;
-    uint constant ERR_PROOF_OF_WORK = 10130;
-
-    // error codes for verifyTx
-    uint constant ERR_BAD_FEE = 20010;
-    uint constant ERR_CONFIRMATIONS = 20020;
-    uint constant ERR_CHAIN = 20030;
-    uint constant ERR_SUPERBLOCK = 20040;
-    uint constant ERR_MERKLE_ROOT = 20050;
-    uint constant ERR_TX_64BYTE = 20060;
-
-    // error codes for relayTx
-    uint constant ERR_RELAY_VERIFY = 30010;
 }
