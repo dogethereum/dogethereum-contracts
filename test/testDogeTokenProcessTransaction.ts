@@ -9,11 +9,35 @@ import {
   buildDogeTransaction,
   dogeAddressFromKeyPair,
   dogeKeyPairFromWIF,
+  DogeTxDescriptor,
   expectFailure,
   isolateEachTest,
   isolateTests,
   publicKeyHashFromKeyPair,
 } from "./utils";
+
+interface UnlockTest {
+  /**
+   * Name of the test
+   */
+  name: string;
+  /**
+   * Value of the utxo used
+   */
+  utxoValue: number;
+  /**
+   * Value requested to unlock
+   */
+  requestValue: number;
+  /**
+   * Raw signed Dogecoin tx
+   */
+  data: string;
+  /**
+   * Dogecoin tx hash
+   */
+  hash: string;
+}
 
 describe("Token transaction processing", function () {
   let signers: SignerWithAddress[];
@@ -223,7 +247,7 @@ describe("Token transaction processing", function () {
       ],
     });
 
-    const unlockTxWithChange = buildDogeTransaction({
+    const unlockTxWithChangeDescriptor: DogeTxDescriptor = {
       signer: operatorKeypair,
       inputs: [utxoRef],
       outputs: [
@@ -234,7 +258,8 @@ describe("Token transaction processing", function () {
         },
         { type: "payment", address: operatorDogeAddress, value: change },
       ],
-    });
+    };
+    const unlockTxWithChange = buildDogeTransaction(unlockTxWithChangeDescriptor);
     const unlockRequests = [
       {
         name: "unlock without change",
@@ -260,24 +285,7 @@ describe("Token transaction processing", function () {
 
     for (const unlockRequest of unlockRequests) {
       it(`valid ${unlockRequest.name} output`, async function () {
-        await dogeToken.addOperatorSimple(
-          operatorPublicKeyHash,
-          operatorEthAddress
-        );
-        await dogeToken.addUtxo(
-          operatorPublicKeyHash,
-          unlockRequest.utxoValue,
-          `0x${utxoRef.txId}`,
-          utxoRef.index
-        );
-        await dogeToken.assign(userEthSigner.address, value);
-
-        const unlockIndex = await dogeToken.callStatic.unlockIdx();
-        await userDogeToken.doUnlock(
-          userPublicKeyHash,
-          unlockRequest.requestValue,
-          operatorPublicKeyHash
-        );
+        const unlockIndex = await prepareUnlock(unlockRequest);
 
         const tx: ContractTransaction = await dogeToken.processUnlockTransaction(
           unlockRequest.data,
@@ -295,6 +303,151 @@ describe("Token transaction processing", function () {
           "Errors occurred while processing unlock."
         );
       });
+    }
+
+    it(`should fail when missing the change output`, async function () {
+      const unlockRequest = { ...unlockRequests[0] };
+      assert.equal(
+        unlockRequest.requestValue - operatorFee,
+        unlockRequest.utxoValue,
+        "The unlock request this test is based on needs to have no change output associated with it"
+      );
+      unlockRequest.utxoValue *= 3;
+      unlockRequest.requestValue *= 2;
+      const unlockIndex = await prepareUnlock(unlockRequest);
+
+      await expectFailure(
+        () =>
+          dogeToken.processUnlockTransaction(
+            unlockRequest.data,
+            unlockRequest.hash,
+            operatorPublicKeyHash,
+            unlockIndex
+          ),
+        (error) => {
+          assert.include(
+            error.message,
+            "transaction doesn't have enough outputs"
+          );
+        }
+      );
+    });
+
+    it(`should fail when the user output value is wrong`, async function () {
+      const unlockRequest = { ...unlockRequests[1] };
+      unlockRequest.utxoValue *= 3;
+      unlockRequest.requestValue *= 2;
+      const unlockIndex = await prepareUnlock(unlockRequest);
+
+      await expectFailure(
+        () =>
+          dogeToken.processUnlockTransaction(
+            unlockRequest.data,
+            unlockRequest.hash,
+            operatorPublicKeyHash,
+            unlockIndex
+          ),
+        (error) => {
+          assert.include(
+            error.message,
+            "Wrong amount of dogecoins sent to user"
+          );
+        }
+      );
+    });
+
+    it(`should fail when the user output address is wrong`, async function () {
+      const unlockRequest = { ...unlockRequests[1] };
+      const wrongAddressDescriptor: DogeTxDescriptor = {
+        signer: operatorKeypair,
+        inputs: [utxoRef],
+        outputs: [
+          {
+            type: "payment",
+            address: operatorDogeAddress,
+            value: value - operatorFee - dogeTxFeeOneInput,
+          },
+          { type: "payment", address: operatorDogeAddress, value: change },
+        ],
+      }
+      const wrongAddressTx = buildDogeTransaction(wrongAddressDescriptor);
+      unlockRequest.data = `0x${wrongAddressTx.toHex()}`;
+      unlockRequest.hash = `0x${wrongAddressTx.getId()}`;
+      const unlockIndex = await prepareUnlock(unlockRequest);
+
+      await expectFailure(
+        () =>
+          dogeToken.processUnlockTransaction(
+            unlockRequest.data,
+            unlockRequest.hash,
+            operatorPublicKeyHash,
+            unlockIndex
+          ),
+        (error) => {
+          assert.include(
+            error.message,
+            "Wrong dogecoin public key hash for user"
+          );
+        }
+      );
+    });
+
+    it(`should fail when the operator output address is wrong`, async function () {
+      const unlockRequest = { ...unlockRequests[1] };
+      const wrongAddressDescriptor: DogeTxDescriptor = {
+        signer: operatorKeypair,
+        inputs: [utxoRef],
+        outputs: [
+          {
+            type: "payment",
+            address: userAddress,
+            value: value - operatorFee - dogeTxFeeOneInput,
+          },
+          { type: "payment", address: userAddress, value: change },
+        ],
+      }
+      const wrongAddressTx = buildDogeTransaction(wrongAddressDescriptor);
+      unlockRequest.data = `0x${wrongAddressTx.toHex()}`;
+      unlockRequest.hash = `0x${wrongAddressTx.getId()}`;
+      const unlockIndex = await prepareUnlock(unlockRequest);
+
+      await expectFailure(
+        () =>
+          dogeToken.processUnlockTransaction(
+            unlockRequest.data,
+            unlockRequest.hash,
+            operatorPublicKeyHash,
+            unlockIndex
+          ),
+        (error) => {
+          assert.include(
+            error.message,
+            "Wrong dogecoin public key hash for operator"
+          );
+        }
+      );
+    });
+
+    async function prepareUnlock(unlockRequest: UnlockTest) {
+      await dogeToken.addOperatorSimple(
+        operatorPublicKeyHash,
+        operatorEthAddress
+      );
+      await dogeToken.addUtxo(
+        operatorPublicKeyHash,
+        unlockRequest.utxoValue,
+        `0x${utxoRef.txId}`,
+        utxoRef.index
+      );
+      await dogeToken.assign(userEthSigner.address, unlockRequest.requestValue);
+
+      const unlockIndex = await dogeToken.callStatic.unlockIdx();
+      await userDogeToken.doUnlock(
+        userPublicKeyHash,
+        unlockRequest.requestValue,
+        operatorPublicKeyHash
+      );
+      return unlockIndex;
     }
   });
 

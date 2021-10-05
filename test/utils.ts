@@ -25,6 +25,21 @@ interface MerkleProof {
   sibling: string[];
 }
 
+export interface DogeTxDescriptor {
+  /**
+   * Signer of the transaction.
+   */
+  signer: bitcoin.ECPair.Signer;
+  /**
+   * List of tx inputs.
+   */
+  inputs: TxInput[];
+  /**
+   * List of tx outputs. Can contain payment or data outputs.
+   */
+  outputs: TxOutput[];
+}
+
 export const OPTIONS_DOGE_REGTEST = {
   DURATION: 600, // 10 minute
   DELAY: 60, // 1 minute
@@ -378,20 +393,7 @@ function isDataTxOutput(txOut: any): txOut is DataTxOutput {
  * TODO: support testnet and regtest?
  * @param txDetails Descriptor for tx inputs, outputs and the signing private key.
  */
-export function buildDogeTransaction(txDetails: {
-  /**
-   * Signer of the transaction.
-   */
-  signer: bitcoin.ECPair.Signer;
-  /**
-   * List of tx inputs.
-   */
-  inputs: TxInput[];
-  /**
-   * List of tx outputs. Can contain payment or data outputs.
-   */
-  outputs: TxOutput[];
-}): bitcoin.Transaction {
+export function buildDogeTransaction(txDetails: DogeTxDescriptor): bitcoin.Transaction {
   const txBuilder = prepareDogeTransaction(txDetails);
   for (let i = 0; i < txDetails.inputs.length; i++) {
     txBuilder.sign(i, txDetails.signer);
