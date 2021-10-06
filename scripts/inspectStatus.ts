@@ -227,13 +227,14 @@ async function printUnlockEvent(events: Event[], dogeToken: Contract) {
     const {
       from,
       dogeAddress,
-      value,
-      operatorFee,
+      valueToUser,
+      operatorChange,
       timestamp,
+      superblockHeight,
       selectedUtxos,
-      dogeTxFee,
       operatorPublicKeyHash,
-    } = await dogeToken.getUnlockPendingInvestorProof(event.args!.id, {
+      completed,
+    } = await dogeToken.getUnlock(event.args!.id, {
       blockTag: event.blockNumber,
     });
     console.log(`- tx hash: ${event.transactionHash} log index: ${
@@ -246,12 +247,13 @@ async function printUnlockEvent(events: Event[], dogeToken: Contract) {
   unlock info:
   - from: ${from}
     dogecoin address: ${dogeAddress}
-    value: ${value}
-    operator fee: ${operatorFee}
+    value: ${valueToUser}
+    operator change: ${operatorChange}
     timestamp: ${timestamp}
+    superblockchain height: ${superblockHeight}
     selectedUtxos: ${selectedUtxos}
-    doge tx fee: ${dogeTxFee}
-    operator public key hash: ${operatorPublicKeyHash}`);
+    operator public key hash: ${operatorPublicKeyHash}
+    completed: ${completed}`);
   }
 }
 
