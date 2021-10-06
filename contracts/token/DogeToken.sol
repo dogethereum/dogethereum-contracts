@@ -273,7 +273,7 @@ contract DogeToken is StandardToken, TransactionProcessor {
         require(value >= MIN_LOCK_VALUE, "Lock value is too low.");
 
         // Add utxo
-        operator.utxos.push(Utxo(value, dogeTxHash, outputIndex));
+        operator.utxos.push(Utxo({value: value, txHash: dogeTxHash, index: outputIndex}));
 
         // Update operator's doge balance
         operator.dogeAvailableBalance = operator.dogeAvailableBalance.add(value);
