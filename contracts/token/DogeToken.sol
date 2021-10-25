@@ -33,6 +33,8 @@ contract DogeToken is StandardToken, TransactionProcessor {
     // 1 fee point = 0.1% of tx value
     uint public constant DOGETHEREUM_FEE_FRACTION = 1000;
 
+    // Note: ideally, these state variables would be Solidity immutables but the upgrades plugin
+    // doesn't play nice with Solidity immutables in logic contracts yet.
     // Ethereum time lapse in which the operator can complete an unlock without repercussions.
     uint256 public ethereumTimeGracePeriod;
     // Amount of superblocks that need to be confirmed before an unlock can be reported as missing.
@@ -61,6 +63,8 @@ contract DogeToken is StandardToken, TransactionProcessor {
     // We separate these roles to write some tests more easily
     DogeSuperblocks public superblocks;
 
+    // Note: ideally, these state variables would be Solidity immutables but the upgrades plugin
+    // doesn't play nice with Solidity immutables in logic contracts yet.
     // Doge-Eth price oracle to trust.
     AggregatorV3Interface public dogeUsdOracle;
     AggregatorV3Interface public ethUsdOracle;
