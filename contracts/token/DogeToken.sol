@@ -69,7 +69,17 @@ contract DogeToken is StandardToken, TransactionProcessor {
     AggregatorV3Interface public dogeUsdOracle;
     AggregatorV3Interface public ethUsdOracle;
     // Number of times the eth collateral operator should cover her doge holdings
-    uint8 public collateralRatio;
+    // An operator is not allowed to withdraw collateral if the resulting ratio is lower than this.
+    // Additionally, lock implementors should avoid requesting locks that would result in an operator
+    // falling below this ratio.
+    uint256 public lockCollateralRatio;
+    // Liquidation threshold for the eth collateral of an operator.
+    // If an operator has a collateral ratio below this threshold, her collateral is liable to liquidation.
+    // This ratio is expressed in thousandths of the ether to dogecoin ratio.
+    // For example, if the ether to dogecoin ratio is 1.5, this would be stored as 1.5 * 1000 = 1500
+    uint256 public liquidationThreshold;
+    // Used when interpreting
+    uint256 public constant DOGETHEREUM_COLLATERAL_RATIO_FRACTION = 1000;
 
 
     // counter for next unlock
@@ -139,7 +149,8 @@ contract DogeToken is StandardToken, TransactionProcessor {
         DogeSuperblocks initSuperblocks,
         AggregatorV3Interface initDogeUsdOracle,
         AggregatorV3Interface initEthUsdOracle,
-        uint8 initCollateralRatio,
+        uint256 initLockCollateralRatio,
+        uint256 initLiquidationThreshold,
         uint256 timeGracePeriod,
         uint256 superblocksGracePeriod
     ) external {
@@ -149,6 +160,14 @@ contract DogeToken is StandardToken, TransactionProcessor {
         require(address(initSuperblocks) != address(0), "Superblockchain contract must be valid.");
         require(address(initDogeUsdOracle) != address(0), "Doge-Usd price oracle must be valid.");
         require(address(initEthUsdOracle) != address(0), "Eth-Usd price oracle must be valid.");
+        require(
+            initLockCollateralRatio > initLiquidationThreshold,
+            "The lock and withdrawal threshold ratio should be greater than the liquidation threshold."
+        );
+        require(
+            initLiquidationThreshold > DOGETHEREUM_COLLATERAL_RATIO_FRACTION,
+            "The liquidation threshold ratio should be greater than 1."
+        );
         require(timeGracePeriod > 0, "Time grace period should be greater than 0.");
         require(superblocksGracePeriod > 0, "Superblocks grace period should be greater than 0.");
 
@@ -156,7 +175,8 @@ contract DogeToken is StandardToken, TransactionProcessor {
         superblocks = initSuperblocks;
         dogeUsdOracle = initDogeUsdOracle;
         ethUsdOracle = initEthUsdOracle;
-        collateralRatio = initCollateralRatio;
+        liquidationThreshold = initLiquidationThreshold;
+        lockCollateralRatio = initLockCollateralRatio;
         ethereumTimeGracePeriod = timeGracePeriod;
         superblocksHeightGracePeriod = superblocksGracePeriod;
     }
@@ -251,8 +271,8 @@ contract DogeToken is StandardToken, TransactionProcessor {
             return;
         }
         uint256 ethPostWithdrawal = operator.ethBalance.sub(value);
-        if (ethPostWithdrawal.div(dogeEthPrice()) <
-            (operator.dogeAvailableBalance.add(operator.dogePendingBalance)).mul(collateralRatio)) {
+        if (ethPostWithdrawal.mul(DOGETHEREUM_COLLATERAL_RATIO_FRACTION).div(dogeEthPrice()) <
+            (operator.dogeAvailableBalance.add(operator.dogePendingBalance)).mul(lockCollateralRatio)) {
             emit ErrorDogeToken(ERR_OPERATOR_WITHDRAWAL_COLLATERAL_WOULD_BE_TOO_LOW);
             return;
         }
@@ -391,6 +411,25 @@ contract DogeToken is StandardToken, TransactionProcessor {
             superblockchainHeight > unlock.superblockHeight.add(superblocksHeightGracePeriod),
             "The unlock is still within the superblockchain height grace period."
         );
+
+        liquidateOperator(operatorPublicKeyHash, operator);
+    }
+
+    /**
+     * Reports that an operator does not have enough collateral.
+     */
+    function reportOperatorUnsafeCollateral(
+        bytes20 operatorPublicKeyHash
+    ) external {
+        Operator storage operator = getValidOperator(operatorPublicKeyHash);
+
+        uint256 totalDogeBalance = operator.dogeAvailableBalance
+            .add(operator.dogePendingBalance)
+            .mul(DOGETHEREUM_COLLATERAL_RATIO_FRACTION);
+        uint256 collateralValue = operator.ethBalance
+            .mul(liquidationThreshold)
+            .div(dogeEthPrice());
+        require(collateralValue < totalDogeBalance, "The operator has enough collateral to be considered safe.");
 
         liquidateOperator(operatorPublicKeyHash, operator);
     }
