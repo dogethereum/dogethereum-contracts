@@ -446,7 +446,7 @@ function prepareDogeTransaction({
   return txBuilder;
 }
 
-export function remove0x(str: string) {
+export function remove0x(str: string): string {
   return str.startsWith("0x") ? str.substring(2) : str;
 }
 

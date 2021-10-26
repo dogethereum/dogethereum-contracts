@@ -21,13 +21,11 @@ import {
   mineBlocks,
 } from "./utils";
 
-const toSession = (data: any) => ({
-  lowStep: data[0],
-  medStep: data[1],
-  highStep: data[2],
-  input: data[3],
-  medHash: data[4],
-});
+interface ComputeStep {
+  state: string;
+  proof: string;
+  stateHash: string;
+}
 
 describe("verifyScryptHash", function () {
   let owner: SignerWithAddress;
@@ -46,7 +44,7 @@ describe("verifyScryptHash", function () {
 
   let proposedSuperblock;
   let proposedSuperblockHash: string;
-  let battleSessionId: any;
+  let battleSessionId: string;
 
   isolateTests();
 
@@ -80,8 +78,12 @@ describe("verifyScryptHash", function () {
     const genesisSuperblockHash = genesisSuperblock.superblockHash;
     assert.equal(genesisSuperblockHash, best, "Best superblock should match");
 
-    submitterSuperblockClaims = superBlockchain.superblockClaims.connect(submitter);
-    challengerSuperblockClaims = superBlockchain.superblockClaims.connect(challenger);
+    submitterSuperblockClaims = superBlockchain.superblockClaims.connect(
+      submitter
+    );
+    challengerSuperblockClaims = superBlockchain.superblockClaims.connect(
+      challenger
+    );
     submitterBattleManager = superBlockchain.battleManager.connect(submitter);
     challengerBattleManager = superBlockchain.battleManager.connect(challenger);
     submitterScryptVerifier = superBlockchain.scryptVerifier!.connect(
@@ -262,9 +264,9 @@ describe("verifyScryptHash", function () {
     let claimId: string;
     let sessionId: string;
     let step: number;
-    let computeStep: any;
-    let computeStep1030: any;
-    let computeStep1031: any;
+    let computeStep: ComputeStep;
+    let computeStep1030: ComputeStep;
+    let computeStep1031: ComputeStep;
 
     describe("Confirm valid block scrypt hash", () => {
       before(async () => {
@@ -332,8 +334,8 @@ describe("verifyScryptHash", function () {
           claimId,
           challenger.address
         );
-        let session = toSession(
-          await challengerScryptVerifier.callStatic.getSession(sessionId)
+        let session = await challengerScryptVerifier.callStatic.getSession(
+          sessionId
         );
         assert.equal(session.lowStep.toNumber(), 0);
         assert.equal(session.medStep.toNumber(), 0);
@@ -347,8 +349,8 @@ describe("verifyScryptHash", function () {
         step = 1030;
         await challengerScryptVerifier.query(sessionId, step);
 
-        session = toSession(
-          await challengerScryptVerifier.callStatic.getSession(sessionId)
+        session = await challengerScryptVerifier.callStatic.getSession(
+          sessionId
         );
         assert.equal(session.lowStep.toNumber(), 0);
         assert.equal(session.medStep.toNumber(), 1030);
@@ -377,8 +379,8 @@ describe("verifyScryptHash", function () {
           computeStep.stateHash
         );
 
-        const session = toSession(
-          await submitterScryptVerifier.callStatic.getSession(sessionId)
+        const session = await submitterScryptVerifier.callStatic.getSession(
+          sessionId
         );
         assert.equal(session.lowStep.toNumber(), 0);
         assert.equal(session.medStep.toNumber(), 1030);
@@ -390,8 +392,8 @@ describe("verifyScryptHash", function () {
         step = 1031;
         await challengerScryptVerifier.query(sessionId, step);
 
-        const session = toSession(
-          await challengerScryptVerifier.callStatic.getSession(sessionId)
+        const session = await challengerScryptVerifier.callStatic.getSession(
+          sessionId
         );
         assert.equal(session.lowStep.toNumber(), 1030);
         assert.equal(session.medStep.toNumber(), 1031);
@@ -419,8 +421,8 @@ describe("verifyScryptHash", function () {
           computeStep.stateHash
         );
 
-        const session = toSession(
-          await submitterScryptVerifier.callStatic.getSession(sessionId)
+        const session = await submitterScryptVerifier.callStatic.getSession(
+          sessionId
         );
         assert.equal(session.lowStep.toNumber(), 1030);
         assert.equal(session.medStep.toNumber(), 1031);
@@ -433,8 +435,8 @@ describe("verifyScryptHash", function () {
         step = 1030;
         await challengerScryptVerifier.query(sessionId, step);
 
-        const session = toSession(
-          await challengerScryptVerifier.callStatic.getSession(sessionId)
+        const session = await challengerScryptVerifier.callStatic.getSession(
+          sessionId
         );
         assert.equal(session.lowStep.toNumber(), 1030);
         assert.equal(session.medStep.toNumber(), 1031);
@@ -482,7 +484,9 @@ describe("verifyScryptHash", function () {
         );
 
         // Confirm superblock
-        await blockchainTimeoutSeconds(2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout);
+        await blockchainTimeoutSeconds(
+          2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout
+        );
         result = await submitterSuperblockClaims.checkClaimFinished(
           proposedSuperblockHash
         );
@@ -560,8 +564,8 @@ describe("verifyScryptHash", function () {
         );
 
         // Start session
-        let session = toSession(
-          await challengerScryptVerifier.callStatic.getSession(sessionId)
+        let session = await challengerScryptVerifier.callStatic.getSession(
+          sessionId
         );
         assert.equal(session.lowStep.toNumber(), 0);
         assert.equal(session.medStep.toNumber(), 0);
@@ -575,8 +579,8 @@ describe("verifyScryptHash", function () {
         step = 1030;
         await challengerScryptVerifier.query(sessionId, step);
 
-        session = toSession(
-          await challengerScryptVerifier.callStatic.getSession(sessionId)
+        session = await challengerScryptVerifier.callStatic.getSession(
+          sessionId
         );
         assert.equal(session.lowStep.toNumber(), 0);
         assert.equal(session.medStep.toNumber(), 1030);
@@ -605,8 +609,8 @@ describe("verifyScryptHash", function () {
           computeStep.stateHash
         );
 
-        const session = toSession(
-          await challengerScryptVerifier.callStatic.getSession(sessionId)
+        const session = await challengerScryptVerifier.callStatic.getSession(
+          sessionId
         );
         assert.equal(session.lowStep.toNumber(), 0);
         assert.equal(session.medStep.toNumber(), 1030);
@@ -618,8 +622,8 @@ describe("verifyScryptHash", function () {
         step = 1031;
         await challengerScryptVerifier.query(sessionId, step);
 
-        const session = toSession(
-          await challengerScryptVerifier.callStatic.getSession(sessionId)
+        const session = await challengerScryptVerifier.callStatic.getSession(
+          sessionId
         );
         assert.equal(session.lowStep.toNumber(), 1030);
         assert.equal(session.medStep.toNumber(), 1031);
@@ -637,8 +641,8 @@ describe("verifyScryptHash", function () {
           computeStep.stateHash
         );
 
-        const session = toSession(
-          await submitterScryptVerifier.callStatic.getSession(sessionId)
+        const session = await submitterScryptVerifier.callStatic.getSession(
+          sessionId
         );
         assert.equal(session.lowStep.toNumber(), 1030);
         assert.equal(session.medStep.toNumber(), 1031);
@@ -651,8 +655,8 @@ describe("verifyScryptHash", function () {
         step = 1030;
         await challengerScryptVerifier.query(sessionId, step);
 
-        const session = toSession(
-          await challengerScryptVerifier.callStatic.getSession(sessionId)
+        const session = await challengerScryptVerifier.callStatic.getSession(
+          sessionId
         );
         assert.equal(session.lowStep.toNumber(), 1030);
         assert.equal(session.medStep.toNumber(), 1031);
@@ -683,7 +687,9 @@ describe("verifyScryptHash", function () {
 
       it("Reject scrypt hash claim", async () => {
         // Reject scrypt hash
-        await blockchainTimeoutSeconds(2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout);
+        await blockchainTimeoutSeconds(
+          2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout
+        );
         const result = await challengerScryptChecker.checkClaimSuccessful(
           claimId
         );
@@ -705,7 +711,9 @@ describe("verifyScryptHash", function () {
           "Superblock failed"
         );
         // Confirm superblock
-        await blockchainTimeoutSeconds(2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout);
+        await blockchainTimeoutSeconds(
+          2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout
+        );
         result = await challengerSuperblockClaims.checkClaimFinished(
           proposedSuperblockHash
         );
@@ -755,7 +763,9 @@ describe("verifyScryptHash", function () {
           "Timeout did not elapse"
         );
 
-        await blockchainTimeoutSeconds(2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout);
+        await blockchainTimeoutSeconds(
+          2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout
+        );
         result = await challengerBattleManager.timeout(battleSessionId);
         receipt = await result.wait();
         assert.ok(
@@ -765,7 +775,9 @@ describe("verifyScryptHash", function () {
       });
 
       it("Confirm superblock", async () => {
-        await blockchainTimeoutSeconds(2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout);
+        await blockchainTimeoutSeconds(
+          2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout
+        );
         const result = await challengerSuperblockClaims.checkClaimFinished(
           proposedSuperblockHash
         );
@@ -839,7 +851,9 @@ describe("verifyScryptHash", function () {
           "Timeout did not elapse"
         );
 
-        await blockchainTimeoutSeconds(2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout);
+        await blockchainTimeoutSeconds(
+          2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout
+        );
         result = await submitterBattleManager.timeout(battleSessionId);
         receipt = await result.wait();
         assert.ok(
@@ -849,7 +863,9 @@ describe("verifyScryptHash", function () {
       });
 
       it("Confirm superblock", async () => {
-        await blockchainTimeoutSeconds(2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout);
+        await blockchainTimeoutSeconds(
+          2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout
+        );
         const result = await challengerSuperblockClaims.checkClaimFinished(
           proposedSuperblockHash
         );

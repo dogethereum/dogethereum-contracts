@@ -2,7 +2,7 @@ import hre from "hardhat";
 import { loadDeployment } from "../deploy";
 import { getWalletFor, Role } from "./signers";
 
-export async function main() {
+export async function main(): Promise<void> {
   const {
     dogeToken: { contract: dogeToken },
   } = await loadDeployment(hre);

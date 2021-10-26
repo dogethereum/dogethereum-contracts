@@ -202,7 +202,7 @@ describe("SuperblockClaims", () => {
   describe("Confirm superblock after block header verification", function () {
     let genesisSuperblockHash: string;
     let proposedSuperblockHash: string;
-    let battleSessionId: any;
+    let battleSessionId: string;
     before(initSuperblockChain);
 
     it("Initialized", async () => {
@@ -380,7 +380,7 @@ describe("SuperblockClaims", () => {
   describe("Challenge superblock", () => {
     let genesisSuperblockHash: string;
     let proposedSuperblockHash: string;
-    let battleSessionId: any;
+    let battleSessionId: string;
     before(initSuperblockChain);
 
     it("Initialize", async () => {
@@ -532,7 +532,7 @@ describe("SuperblockClaims", () => {
   // The fact that it shares variables with the other suites makes it a bit confusing.
   describe("Challenge timeouts", () => {
     let proposedSuperblockHash: string;
-    let battleSessionId: any;
+    let battleSessionId: string;
     const beginNewChallenge = async () => {
       const superBlockchain = await deploySuperblockChain(hre, {
         network: DogecoinNetworkId.Mainnet,

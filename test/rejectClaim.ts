@@ -23,7 +23,7 @@ import {
 const SEMI_APPROVED = 3;
 const INVALID = 5;
 
-describe("rejectClaim", () => {
+describe("rejectClaim", function () {
     let owner: SignerWithAddress;
     let submitter: SignerWithAddress;
     let challenger: SignerWithAddress;
@@ -107,7 +107,7 @@ describe("rejectClaim", () => {
         challenger = signers[2];
     });
 
-    describe("Propose superblocks and reject fork", () => {
+    describe("Propose superblocks and reject fork", function () {
         let superblock0Id: string;
         let superblock1Id: string;
         let superblock2Id: string;
@@ -116,9 +116,9 @@ describe("rejectClaim", () => {
         let superblockR0Id: string;
         let superblockR1Id: string;
 
-        let session1: any;
+        let session1: string;
 
-        before(async () => {
+        before(async function () {
             const superBlockchain = await initSuperblockChain(hre, {
                 network: DogecoinNetworkId.Regtest,
                 params: SUPERBLOCK_OPTIONS_LOCAL,
@@ -151,14 +151,14 @@ describe("rejectClaim", () => {
             });
         });
 
-        it("Initialized", async () => {
+        it("Initialized", async function () {
             superblock0Id = superblock0.superblockHash;
             const best = await superblocks.getBestSuperblock();
             assert.equal(superblock0Id, best, "Best superblock should match");
         });
 
         // Propose initial superblock
-        it("Propose superblock 1", async () => {
+        it("Propose superblock 1", async function () {
             const response = await submitterSuperblockClaims.proposeSuperblock(
                 superblock1.merkleRoot,
                 superblock1.accumulatedWork,
@@ -177,7 +177,7 @@ describe("rejectClaim", () => {
             superblock1Id = superblockClaimCreatedEvent!.args!.superblockHash;
         });
 
-        it("Confirm superblock 1", async () => {
+        it("Confirm superblock 1", async function () {
             await blockchainTimeoutSeconds(
                 2 * SUPERBLOCK_OPTIONS_LOCAL.timeout
             );
@@ -193,7 +193,7 @@ describe("rejectClaim", () => {
             assert.equal(superblock1Id, best, "Best superblock should match");
         });
 
-        it("Claim does not exist", async () => {
+        it("Claim does not exist", async function () {
             const response = await submitterSuperblockClaims.rejectClaim(
                 superblockR0.superblockHash
             );
@@ -205,7 +205,7 @@ describe("rejectClaim", () => {
         });
 
         // Propose an alternate superblock
-        it("Propose fork", async () => {
+        it("Propose fork", async function () {
             const response = await submitterSuperblockClaims.proposeSuperblock(
                 superblockR0.merkleRoot,
                 superblockR0.accumulatedWork,
@@ -224,7 +224,7 @@ describe("rejectClaim", () => {
             superblockR0Id = superblockClaimCreatedEvent!.args!.superblockHash;
         });
 
-        it("Missing confirmations after one superblock", async () => {
+        it("Missing confirmations after one superblock", async function () {
             const response = await submitterSuperblockClaims.rejectClaim(
                 superblockR0Id
             );
@@ -236,7 +236,7 @@ describe("rejectClaim", () => {
         });
 
         // Propose two more superblocks
-        it("Propose superblock 2", async () => {
+        it("Propose superblock 2", async function () {
             await submitterSuperblockClaims.makeDeposit({
                 value: DEPOSITS.MIN_PROPOSAL_DEPOSIT,
             });
@@ -258,7 +258,7 @@ describe("rejectClaim", () => {
             superblock2Id = superblockClaimCreatedEvent!.args!.superblockHash;
         });
 
-        it("Confirm superblock 2", async () => {
+        it("Confirm superblock 2", async function () {
             await blockchainTimeoutSeconds(
                 2 * SUPERBLOCK_OPTIONS_LOCAL.timeout
             );
@@ -275,7 +275,7 @@ describe("rejectClaim", () => {
             assert.equal(superblock2Id, best, "Best superblock should match");
         });
 
-        it("Missing confirmations after two superblocks", async () => {
+        it("Missing confirmations after two superblocks", async function () {
             const response = await submitterSuperblockClaims.rejectClaim(
                 superblockR0Id,
                 { from: submitter.address }
@@ -287,7 +287,7 @@ describe("rejectClaim", () => {
             );
         });
 
-        it("Propose superblock 3", async () => {
+        it("Propose superblock 3", async function () {
             const response = await submitterSuperblockClaims.proposeSuperblock(
                 superblock3.merkleRoot,
                 superblock3.accumulatedWork,
@@ -306,7 +306,7 @@ describe("rejectClaim", () => {
             superblock3Id = superblockClaimCreatedEvent!.args!.superblockHash;
         });
 
-        it("Confirm superblock 3", async () => {
+        it("Confirm superblock 3", async function () {
             await blockchainTimeoutSeconds(
                 2 * SUPERBLOCK_OPTIONS_LOCAL.timeout
             );
@@ -322,7 +322,7 @@ describe("rejectClaim", () => {
             assert.equal(superblock3Id, best, "Best superblock should match");
         });
 
-        it("Propose superblock 4", async () => {
+        it("Propose superblock 4", async function () {
             const response = await submitterSuperblockClaims.proposeSuperblock(
                 superblock4.merkleRoot,
                 superblock4.accumulatedWork,
@@ -341,7 +341,7 @@ describe("rejectClaim", () => {
             superblock4Id = superblockClaimCreatedEvent!.args!.superblockHash;
         });
 
-        it("Confirm superblock 4", async () => {
+        it("Confirm superblock 4", async function () {
             await blockchainTimeoutSeconds(
                 2 * SUPERBLOCK_OPTIONS_LOCAL.timeout
             );
@@ -358,7 +358,7 @@ describe("rejectClaim", () => {
         });
 
         // This should raise an error because the superblock is neither InBattle nor SemiApproved
-        it("Try to reject without challenges", async () => {
+        it("Try to reject without challenges", async function () {
             // TODO: check that this test is correct.
             // It previously used the default account for the rejectClaim transaction.
             const response = await submitterSuperblockClaims.rejectClaim(
@@ -372,7 +372,7 @@ describe("rejectClaim", () => {
         });
 
         // Challenge fork
-        it("Challenge fork", async () => {
+        it("Challenge fork", async function () {
             const response = await challengerSuperblockClaims.challengeSuperblock(
                 superblockR0Id
             );
@@ -395,7 +395,7 @@ describe("rejectClaim", () => {
         });
 
         // Don't reject claim if it's undecided
-        it("Try to reject undecided claim", async () => {
+        it("Try to reject undecided claim", async function () {
             const response = await submitterSuperblockClaims.rejectClaim(
                 superblockR0Id
             );
@@ -406,7 +406,7 @@ describe("rejectClaim", () => {
             );
         });
 
-        it("Query and verify hashes", async () => {
+        it("Query and verify hashes", async function () {
             await challengerSuperblockClaims.makeDeposit({
                 value: DEPOSITS.RESPOND_MERKLE_COST,
             });
@@ -435,7 +435,7 @@ describe("rejectClaim", () => {
             );
         });
 
-        it("Query and reply block header", async () => {
+        it("Query and reply block header", async function () {
             await challengerSuperblockClaims.makeDeposit({
                 value: DEPOSITS.RESPOND_HEADER_COST,
             });
@@ -497,7 +497,7 @@ describe("rejectClaim", () => {
             );
         });
 
-        it("Verify forked superblock", async () => {
+        it("Verify forked superblock", async function () {
             const response = await challengerBattleManager.verifySuperblock(
                 session1
             );
@@ -509,7 +509,7 @@ describe("rejectClaim", () => {
         });
 
         // Call rejectClaim on superblocks that aren't semi approved
-        it("Try to reject unconfirmed superblock", async () => {
+        it("Try to reject unconfirmed superblock", async function () {
             const response = await submitterSuperblockClaims.rejectClaim(
                 superblockR0Id
             );
@@ -520,7 +520,7 @@ describe("rejectClaim", () => {
             );
         });
 
-        it("Confirm forked superblock", async () => {
+        it("Confirm forked superblock", async function () {
             await blockchainTimeoutSeconds(
                 2 * SUPERBLOCK_OPTIONS_LOCAL.timeout
             );
@@ -543,7 +543,7 @@ describe("rejectClaim", () => {
         });
 
         // Propose another superblock in the fork
-        it("Propose superblock R1", async () => {
+        it("Propose superblock R1", async function () {
             const response: ContractTransaction = await submitterSuperblockClaims.proposeSuperblock(
                 superblockR1.merkleRoot,
                 superblockR1.accumulatedWork,
@@ -565,7 +565,7 @@ describe("rejectClaim", () => {
             superblockR1Id = claimCreationEvents[0].args!.superblockHash;
         });
 
-        it("Confirm superblock R1", async () => {
+        it("Confirm superblock R1", async function () {
             await blockchainTimeoutSeconds(
                 2 * SUPERBLOCK_OPTIONS_LOCAL.timeout
             );
@@ -588,7 +588,7 @@ describe("rejectClaim", () => {
         });
 
         // Invalidate superblock and reject claim
-        it("Reject superblock R0", async () => {
+        it("Reject superblock R0", async function () {
             const response = await submitterSuperblockClaims.rejectClaim(
                 superblockR0Id
             );
@@ -607,7 +607,7 @@ describe("rejectClaim", () => {
             assert.equal(status, INVALID, "Superblock was not invalidated");
         });
 
-        it("Reject superblock R1", async () => {
+        it("Reject superblock R1", async function () {
             const response = await submitterSuperblockClaims.rejectClaim(
                 superblockR1Id
             );

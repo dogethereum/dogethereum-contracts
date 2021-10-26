@@ -125,7 +125,7 @@ describe("approveDescendant", function () {
         let superblock2Id: string;
         let superblock3Id: string;
 
-        let session1: any;
+        let session1: string;
 
         before(initSuperblockChain);
 
@@ -461,7 +461,7 @@ describe("approveDescendant", function () {
         let superblock2Id: string;
         let superblock3Id: string;
 
-        let session1: any;
+        let session1: string;
 
         before(initSuperblockChain);
 
