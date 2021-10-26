@@ -26,7 +26,8 @@ describe("DogeToken - Operators", function () {
   let ethUsdPriceOracle: Contract;
   let trustedRelayerContract: string;
   const tokenOptions: TokenOptions = {
-    collateralRatio: 2,
+    lockCollateralRatio: "2000",
+    liquidationThresholdCollateralRatio: "1500",
     unlockEthereumTimeGracePeriod: 4 * 60 * 60,
     unlockSuperblocksHeightGracePeriod: 4,
   };
@@ -346,6 +347,53 @@ describe("DogeToken - Operators", function () {
         operator.ethBalance,
         5000,
         "Operator eth balance was modified"
+      );
+    });
+  });
+
+  describe("reportOperatorUnsafeCollateral", function () {
+    it("reporting an undercollateralized operator should liquidate her ether", async function () {
+      await dogeToken.addOperatorSimple(
+        operatorPublicKeyHash,
+        operatorSigner.address
+      );
+      const utxoValue = 10_000_000;
+      await dogeToken.addUtxo(operatorPublicKeyHash, utxoValue, 1, 1);
+      await operatorDogeToken.addOperatorDeposit(operatorPublicKeyHash, {
+        value: 1,
+      });
+
+      const tx: ContractTransaction = await dogeToken.reportOperatorUnsafeCollateral(
+        operatorPublicKeyHash
+      );
+      const receipt = await tx.wait();
+      const liquidationEvents = receipt.events!.filter(({ event }) => {
+        return event === "OperatorLiquidated";
+      });
+
+      assert.lengthOf(
+        liquidationEvents,
+        1,
+        "Expected the operator to be liquidated."
+      );
+    });
+
+    it("reporting a sufficiently collateralized operator should fail", async function () {
+      await dogeToken.addOperatorSimple(
+        operatorPublicKeyHash,
+        operatorSigner.address
+      );
+      const utxoValue = 10_000_000;
+      await dogeToken.addUtxo(operatorPublicKeyHash, utxoValue, 1, 1);
+      await operatorDogeToken.addOperatorDeposit(operatorPublicKeyHash, {
+        value: "100000000000000000000",
+      });
+
+      await expectFailure(
+        () => dogeToken.reportOperatorUnsafeCollateral(operatorPublicKeyHash),
+        (error) => {
+          assert.include(error.message, "operator has enough collateral to be considered safe");
+        }
       );
     });
   });

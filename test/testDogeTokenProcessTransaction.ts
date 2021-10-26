@@ -45,7 +45,8 @@ describe("Token transaction processing", function () {
   let operatorEthAddress: string;
   let superblockSubmitterAddress: string;
   const tokenOptions: TokenOptions = {
-    collateralRatio: 2,
+    lockCollateralRatio: "2000",
+    liquidationThresholdCollateralRatio: "1500",
     unlockEthereumTimeGracePeriod: 4 * 60 * 60,
     unlockSuperblocksHeightGracePeriod: 4,
   };

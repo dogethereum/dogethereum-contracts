@@ -129,8 +129,15 @@ export interface TokenOptions {
   /**
    * Ratio that indicates how many value in ether wei should the operator hold in relation
    * to Dogecoin satoshis.
+   * Operators can't withdraw collateral if their ratio would fall below this level by doing so.
    */
-  collateralRatio: number;
+  lockCollateralRatio: string;
+
+  /**
+   * Operators that have a collateral ratio below this value are liable to liquidation.
+   * This is expressed in thousandths of ethers to doges ratio. E.g. a ratio of 1.5 is expressed as 1500.
+   */
+  liquidationThresholdCollateralRatio: string;
 }
 
 export interface SuperblockOptions {
@@ -271,7 +278,8 @@ const integrationSuperblockGenesis: SuperblockHeader = {
 //   reward: 10,
 //   unlockEthereumTimeGracePeriod: 24 * 60 * 60,
 //   unlockSuperblocksHeightGracePeriod: 24,
-//   collateralRatio: 2,
+//   lockCollateralRatio: "2000",
+//   liquidationThresholdCollateralRatio: "1500",
 // };
 
 export const SUPERBLOCK_OPTIONS_INTEGRATION_SLOW_SYNC: SuperblockchainOptions = {
@@ -283,7 +291,8 @@ export const SUPERBLOCK_OPTIONS_INTEGRATION_SLOW_SYNC: SuperblockchainOptions = 
   genesis: integrationSuperblockGenesis,
   unlockEthereumTimeGracePeriod: 4 * 60 * 60,
   unlockSuperblocksHeightGracePeriod: 4,
-  collateralRatio: 2,
+  lockCollateralRatio: "2000",
+  liquidationThresholdCollateralRatio: "1500",
 };
 
 /**
@@ -298,7 +307,8 @@ export const SUPERBLOCK_OPTIONS_INTEGRATION_FAST_SYNC: SuperblockchainOptions = 
   genesis: integrationSuperblockGenesis,
   unlockEthereumTimeGracePeriod: 4 * 60 * 60,
   unlockSuperblocksHeightGracePeriod: 4,
-  collateralRatio: 2,
+  lockCollateralRatio: "2000",
+  liquidationThresholdCollateralRatio: "1500",
 };
 
 /**
@@ -313,7 +323,8 @@ export const SUPERBLOCK_OPTIONS_LOCAL: SuperblockchainOptions = {
   genesis: localSuperblockGenesis,
   unlockEthereumTimeGracePeriod: 10 * 60,
   unlockSuperblocksHeightGracePeriod: 1,
-  collateralRatio: 2,
+  lockCollateralRatio: "2000",
+  liquidationThresholdCollateralRatio: "1500",
 };
 
 /**
@@ -328,7 +339,8 @@ export const SUPERBLOCK_OPTIONS_CLAIM_TESTS: SuperblockchainOptions = {
   genesis: localSuperblockGenesis,
   unlockEthereumTimeGracePeriod: 4 * 60 * 60,
   unlockSuperblocksHeightGracePeriod: 4,
-  collateralRatio: 2,
+  lockCollateralRatio: "2000",
+  liquidationThresholdCollateralRatio: "1500",
 };
 
 export function getDogecoinNetworkId(networkName: string): DogecoinNetworkId {
@@ -348,7 +360,8 @@ export async function deployToken(
   txRelayerContract: string,
   superblocksAddress: string,
   {
-    collateralRatio,
+    lockCollateralRatio,
+    liquidationThresholdCollateralRatio,
     unlockEthereumTimeGracePeriod,
     unlockSuperblocksHeightGracePeriod,
   }: TokenOptions,
@@ -376,7 +389,8 @@ export async function deployToken(
         superblocksAddress,
         dogeUsdPriceOracle,
         ethUsdPriceOracle,
-        collateralRatio,
+        lockCollateralRatio,
+        liquidationThresholdCollateralRatio,
         unlockEthereumTimeGracePeriod,
         unlockSuperblocksHeightGracePeriod
       ],
