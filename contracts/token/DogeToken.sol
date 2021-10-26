@@ -396,7 +396,7 @@ contract DogeToken is StandardToken, TransactionProcessor {
     function reportOperatorMissingUnlock(
         bytes20 operatorPublicKeyHash,
         uint256 unlockIndex
-    ) public {
+    ) external {
         Operator storage operator = getValidOperator(operatorPublicKeyHash);
 
         Unlock storage unlock = getValidUnlock(unlockIndex);
