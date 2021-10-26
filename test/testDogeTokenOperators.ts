@@ -99,8 +99,8 @@ describe("DogeToken - Operators", function () {
     operatorDogeToken = dogeToken.connect(opSigner);
   });
 
-  describe("addOperator", () => {
-    it("addOperator success", async () => {
+  describe("addOperator", function () {
+    it("addOperator success", async function () {
       await sendAddOperator(dogeToken);
       const operator = await dogeToken.operators(operatorPublicKeyHash);
       assert.equal(
@@ -119,7 +119,7 @@ describe("DogeToken - Operators", function () {
       assert.equal(operatorsLength, 1, "operatorsLength not what expected");
     });
 
-    it("addOperator fail - try adding the same operator twice", async () => {
+    it("addOperator fail - try adding the same operator twice", async function () {
       await sendAddOperator(dogeToken);
       await expectFailure(
         () => sendAddOperator(dogeToken),
@@ -145,8 +145,8 @@ describe("DogeToken - Operators", function () {
     });
   });
 
-  describe("addOperatorDeposit", () => {
-    it("addOperatorDeposit success", async () => {
+  describe("addOperatorDeposit", function () {
+    it("addOperatorDeposit success", async function () {
       await sendAddOperator(dogeToken);
       await operatorDogeToken.addOperatorDeposit(operatorPublicKeyHash, {
         value: "1000000000000000000",
@@ -159,7 +159,7 @@ describe("DogeToken - Operators", function () {
       );
     });
 
-    it("addOperatorDeposit fail - operator not created", async () => {
+    it("addOperatorDeposit fail - operator not created", async function () {
       const addOperatorDepositTxResponse = await operatorDogeToken.addOperatorDeposit(
         operatorPublicKeyHash,
         { value: "1000000000000000000" }
@@ -174,7 +174,7 @@ describe("DogeToken - Operators", function () {
       assert.equal(operator.ethBalance, 0, "Deposit credited");
     });
 
-    it("addOperatorDeposit fail - wrong sender", async () => {
+    it("addOperatorDeposit fail - wrong sender", async function () {
       await sendAddOperator(dogeToken);
       const addOperatorDepositTxResponse = await dogeToken.addOperatorDeposit(
         operatorPublicKeyHash,
@@ -191,8 +191,8 @@ describe("DogeToken - Operators", function () {
     });
   });
 
-  describe("deleteOperator", () => {
-    it("deleteOperator success", async () => {
+  describe("deleteOperator", function () {
+    it("deleteOperator success", async function () {
       await sendAddOperator(dogeToken);
       await operatorDogeToken.deleteOperator(operatorPublicKeyHash);
       const operator = await dogeToken.operators(operatorPublicKeyHash);
@@ -208,7 +208,7 @@ describe("DogeToken - Operators", function () {
       assert.equal(operatorsLength, 1, "operatorsLength not what expected");
     });
 
-    it("deleteOperator fail - operator has eth balance", async () => {
+    it("deleteOperator fail - operator has eth balance", async function () {
       await sendAddOperator(dogeToken);
       await operatorDogeToken.addOperatorDeposit(operatorPublicKeyHash, {
         value: "1000000000000000000",
@@ -231,8 +231,8 @@ describe("DogeToken - Operators", function () {
     });
   });
 
-  describe("withdrawOperatorDeposit", () => {
-    it("withdrawOperatorDeposit success - no utxo", async () => {
+  describe("withdrawOperatorDeposit", function () {
+    it("withdrawOperatorDeposit success - no utxo", async function () {
       await sendAddOperator(dogeToken);
       await operatorDogeToken.addOperatorDeposit(operatorPublicKeyHash, {
         value: "1000000000000000000",
@@ -268,7 +268,7 @@ describe("DogeToken - Operators", function () {
       );
     });
 
-    it("withdrawOperatorDeposit success - with utxos", async () => {
+    it("withdrawOperatorDeposit success - with utxos", async function () {
       await sendAddOperator(dogeToken);
       await operatorDogeToken.addOperatorDeposit(operatorPublicKeyHash, {
         value: 5000,
@@ -301,7 +301,7 @@ describe("DogeToken - Operators", function () {
       );
     });
 
-    it("withdrawOperatorDeposit fail - not enough balance", async () => {
+    it("withdrawOperatorDeposit fail - not enough balance", async function () {
       await sendAddOperator(dogeToken);
       await operatorDogeToken.addOperatorDeposit(operatorPublicKeyHash, {
         value: "1000000000000000000",
@@ -325,7 +325,7 @@ describe("DogeToken - Operators", function () {
       );
     });
 
-    it("withdrawOperatorDeposit fail - deposit would be too low", async () => {
+    it("withdrawOperatorDeposit fail - deposit would be too low", async function () {
       await sendAddOperator(dogeToken);
       await operatorDogeToken.addOperatorDeposit(operatorPublicKeyHash, {
         value: 5000,
@@ -392,7 +392,10 @@ describe("DogeToken - Operators", function () {
       await expectFailure(
         () => dogeToken.reportOperatorUnsafeCollateral(operatorPublicKeyHash),
         (error) => {
-          assert.include(error.message, "operator has enough collateral to be considered safe");
+          assert.include(
+            error.message,
+            "operator has enough collateral to be considered safe"
+          );
         }
       );
     });
