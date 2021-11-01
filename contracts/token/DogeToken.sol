@@ -78,7 +78,7 @@ contract DogeToken is StandardToken, TransactionProcessor {
     // This ratio is expressed in thousandths of the ether to dogecoin ratio.
     // For example, if the ether to dogecoin ratio is 1.5, this would be stored as 1.5 * 1000 = 1500
     uint256 public liquidationThreshold;
-    // Used when interpreting
+    // Used when interpreting collateral ratios like lockCollateralRatio and liquidationThreshold.
     uint256 public constant DOGETHEREUM_COLLATERAL_RATIO_FRACTION = 1000;
 
 
