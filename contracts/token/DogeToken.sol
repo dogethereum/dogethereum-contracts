@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 pragma solidity ^0.7.6;
+pragma abicoder v2;
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@chainlink/contracts/src/v0.7/interfaces/AggregatorV3Interface.sol";
@@ -12,8 +13,9 @@ import "../DogeSuperblocks.sol";
 
 import "./StandardToken.sol";
 import "./Set.sol";
+import "./EtherAuction.sol";
 
-contract DogeToken is StandardToken, TransactionProcessor {
+contract DogeToken is StandardToken, TransactionProcessor, EtherAuction {
 
     using SafeMath for uint;
 
@@ -97,6 +99,8 @@ contract DogeToken is StandardToken, TransactionProcessor {
     event NewToken(address indexed user, uint value);
     event UnlockRequest(uint256 id, bytes20 operatorPublicKeyHash);
     event OperatorLiquidated(bytes20 operatorPublicKeyHash);
+    event LiquidationBid(bytes20 operatorPublicKeyHash, address bidder, uint256 bid);
+    event OperatorCollateralAuctioned(bytes20 operatorPublicKeyHash, address winner, uint256 tokensBurned, uint256 etherSold);
 
     // Represents an unlock request
     struct Unlock {
@@ -137,6 +141,7 @@ contract DogeToken is StandardToken, TransactionProcessor {
         uint32 nextUnspentUtxoIndex;
         uint ethBalance;
         uint24 operatorKeyIndex;
+        Auction auction;
     }
 
     struct OperatorKey {
@@ -287,7 +292,7 @@ contract DogeToken is StandardToken, TransactionProcessor {
         address superblockSubmitterAddress
     ) override public {
         transactionPreliminaryChecks(dogeTxHash);
-        Operator storage operator = getValidOperator(operatorPublicKeyHash);
+        Operator storage operator = getActiveOperator(operatorPublicKeyHash);
 
         uint value;
         address lockDestinationEthAddress;
@@ -318,7 +323,7 @@ contract DogeToken is StandardToken, TransactionProcessor {
         uint256 unlockIndex
     ) override public {
         transactionPreliminaryChecks(dogeTxHash);
-        Operator storage operator = getValidOperator(operatorPublicKeyHash);
+        Operator storage operator = getActiveOperator(operatorPublicKeyHash);
         Unlock storage unlock = getValidUnlock(unlockIndex);
 
         // Expected number of outputs for this unlock
@@ -375,7 +380,7 @@ contract DogeToken is StandardToken, TransactionProcessor {
         uint32 unlawfulTxInputIndex
     ) override public {
         transactionPreliminaryChecks(dogeTxHash);
-        Operator storage operator = getValidOperator(operatorPublicKeyHash);
+        Operator storage operator = getActiveOperator(operatorPublicKeyHash);
 
         require(operator.nextUnspentUtxoIndex <= operatorTxOutputReference, "The UTXO is already reserved or spent.");
         Utxo storage utxo = operator.utxos[operatorTxOutputReference];
@@ -397,7 +402,7 @@ contract DogeToken is StandardToken, TransactionProcessor {
         bytes20 operatorPublicKeyHash,
         uint256 unlockIndex
     ) external {
-        Operator storage operator = getValidOperator(operatorPublicKeyHash);
+        Operator storage operator = getActiveOperator(operatorPublicKeyHash);
 
         Unlock storage unlock = getValidUnlock(unlockIndex);
 
@@ -421,7 +426,7 @@ contract DogeToken is StandardToken, TransactionProcessor {
     function reportOperatorUnsafeCollateral(
         bytes20 operatorPublicKeyHash
     ) external {
-        Operator storage operator = getValidOperator(operatorPublicKeyHash);
+        Operator storage operator = getActiveOperator(operatorPublicKeyHash);
 
         uint256 totalDogeBalance = operator.dogeAvailableBalance
             .add(operator.dogePendingBalance)
@@ -448,6 +453,12 @@ contract DogeToken is StandardToken, TransactionProcessor {
     function getValidOperator(bytes20 operatorPublicKeyHash) internal view returns (Operator storage) {
         Operator storage operator = operators[operatorPublicKeyHash];
         require(operator.ethAddress != address(0), "Operator is not registered.");
+        return operator;
+    }
+
+    function getActiveOperator(bytes20 operatorPublicKeyHash) internal view returns (Operator storage) {
+        Operator storage operator = getValidOperator(operatorPublicKeyHash);
+        require(auctionIsInexistent(operator.auction), "Operator is liquidated.");
         return operator;
     }
 
@@ -479,9 +490,60 @@ contract DogeToken is StandardToken, TransactionProcessor {
     }
 
     function liquidateOperator(bytes20 operatorPublicKeyHash, Operator storage operator) internal {
-        // TODO: implement
+        auctionOpen(operator.auction);
         emit OperatorLiquidated(operatorPublicKeyHash);
     }
+
+    /*  Auction section  */
+
+    /**
+     * Bid in the collateral auction of a liquidated operator.
+     * The sender must have enough tokens for the bid.
+     */
+    function liquidationBid(bytes20 operatorPublicKeyHash, uint256 tokenAmount) external {
+        Operator storage operator = getValidOperator(operatorPublicKeyHash);
+
+        auctionBid(operator.auction, msg.sender, tokenAmount);
+
+        emit LiquidationBid(operatorPublicKeyHash, msg.sender, tokenAmount);
+    }
+
+    function takeTokens(address bidder, uint256 tokenAmount) override internal {
+        require(balances[bidder] >= tokenAmount, "Not enough tokens for bid.");
+        balances[bidder] = balances[bidder].sub(tokenAmount);
+    }
+
+    function releaseTokens(address bidder, uint256 tokenAmount) override internal {
+        balances[bidder] = balances[bidder].add(tokenAmount);
+    }
+
+    /**
+     * Close the auction.
+     * This triggers a payment to the winner.
+     * The winning account needs to be able to receive an ether transfer with 2300 gas.
+     */
+    function closeLiquidationAuction(bytes20 operatorPublicKeyHash) external {
+        Operator storage operator = getValidOperator(operatorPublicKeyHash);
+
+        address payable winner;
+        uint256 winningBid;
+        // We don't need to update token balances since we already guarantee
+        // that the tokens are unavailable at this point.
+        (winner, winningBid) = auctionClose(operator.auction);
+
+        uint collateral = operator.ethBalance;
+        operator.ethBalance = 0;
+
+        winner.transfer(collateral);
+
+        // Doge tokens burn event
+        // Hack to make etherscan show the event
+        emit Transfer(winner, address(0), winningBid);
+
+        emit OperatorCollateralAuctioned(operatorPublicKeyHash, winner, winningBid, collateral);
+    }
+
+    /*  End of auction section  */
 
     // Unlock section begin
 
@@ -490,7 +552,7 @@ contract DogeToken is StandardToken, TransactionProcessor {
         require(value >= MIN_UNLOCK_VALUE, "Can't unlock small amounts.");
         require(balances[msg.sender] >= value, "User doesn't have enough token balance.");
 
-        Operator storage operator = getValidOperator(operatorPublicKeyHash);
+        Operator storage operator = getActiveOperator(operatorPublicKeyHash);
 
         // Check that operator available balance is enough
         uint operatorFee = value.mul(OPERATOR_UNLOCK_FEE).div(DOGETHEREUM_FEE_FRACTION);
