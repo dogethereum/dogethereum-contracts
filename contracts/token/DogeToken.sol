@@ -297,7 +297,11 @@ contract DogeToken is StandardToken, TransactionProcessor, EtherAuction {
         uint value;
         address lockDestinationEthAddress;
         uint32 outputIndex;
-        (value, lockDestinationEthAddress, outputIndex) = DogeMessageLibrary.parseLockTransaction(dogeTx, operatorPublicKeyHash);
+        (
+            value,
+            lockDestinationEthAddress,
+            outputIndex
+        ) = DogeMessageLibrary.parseLockTransaction(dogeTx, operatorPublicKeyHash);
 
         require(value >= MIN_LOCK_VALUE, "Lock value is too low.");
 
@@ -354,7 +358,10 @@ contract DogeToken is StandardToken, TransactionProcessor, EtherAuction {
         if (numberOfOutputs > 1) {
             uint32 operatorOutputIndex = 1;
             uint operatorValue = outputs[operatorOutputIndex].value;
-            require(outputs[operatorOutputIndex].publicKeyHash == unlock.operatorPublicKeyHash, "Wrong dogecoin public key hash for operator.");
+            require(
+                outputs[operatorOutputIndex].publicKeyHash == unlock.operatorPublicKeyHash,
+                "Wrong dogecoin public key hash for operator."
+            );
             require(operatorValue == unlock.operatorChange, "Wrong change amount for the operator.");
 
             // Add utxo
