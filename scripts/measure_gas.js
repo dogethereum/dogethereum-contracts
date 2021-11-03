@@ -3,6 +3,7 @@
 const fs = require("fs");
 const solc = require('solc');
 const linker = require('solc/linker');
+// TODO: use ethers
 let Web3 = require('web3');
 
 let web3 = new Web3();

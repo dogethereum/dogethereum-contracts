@@ -119,7 +119,7 @@ async function printDogeTokenStatus(
     dogeAvailableBalance: ${dogeAvailableBalance}
     dogePendingBalance: ${dogePendingBalance}
     nextUnspentUtxoIndex: ${nextUnspentUtxoIndex}
-    ethBalance: ${hre.web3.utils.fromWei(ethBalance.toString())}
+    ethBalance: ${hre.ethers.utils.formatEther(ethBalance)}
     utxosLength: ${utxosLength}`
       );
       for (let j = 0; j < utxosLength; j++) {

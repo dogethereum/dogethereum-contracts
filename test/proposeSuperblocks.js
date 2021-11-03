@@ -1,8 +1,8 @@
 // 140 = 128 + 12 = 16*8 + 12 = 0x8c
 const fs = require('fs');
 const utils = require('./utils');
-const DogeSuperblocks = artifacts.require('DogeSuperblocks');
-const SuperblockClaims = artifacts.require('SuperblockClaims');
+// const DogeSuperblocks = artifacts.require('DogeSuperblocks');
+// const SuperblockClaims = artifacts.require('SuperblockClaims');
 
 let superblock1MerkleRoot = "0xdb7aea0bb3c1c5eef58997bf75de93173fb914b807b85df50671790627471e99";
 let superblock1ChainWork = "0x7c";
