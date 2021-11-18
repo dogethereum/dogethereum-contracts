@@ -20,7 +20,7 @@ abstract contract EtherAuction {
         uint256 bestBid;
         address payable bestBidder;
         AuctionStatus status;
-        uint256 startTimestamp;
+        uint256 endTimestamp;
     }
 
     function auctionIsInexistent(Auction storage auction) view internal returns (bool) {
@@ -35,10 +35,12 @@ abstract contract EtherAuction {
         return auction.status == AuctionStatus.Closed;
     }
 
-    function auctionOpen(Auction storage auction) internal {
+    function auctionOpen(Auction storage auction) internal returns (uint256) {
         require(auction.status == AuctionStatus.Uninitialized, "The auction must be uninitialized.");
         auction.status = AuctionStatus.Open;
-        auction.startTimestamp = block.timestamp;
+        uint256 endTimestamp = block.timestamp.add(auctionMinimumDuration);
+        auction.endTimestamp = endTimestamp;
+        return endTimestamp;
     }
 
     /**
@@ -64,7 +66,7 @@ abstract contract EtherAuction {
         require(auction.status == AuctionStatus.Open, "The auction must be open.");
         require(auction.bestBidder != address(0), "The auction can't be closed without a bid.");
         require(
-            auction.startTimestamp.add(auctionMinimumDuration) < block.timestamp,
+            auction.endTimestamp < block.timestamp,
             "The auction can't close before the minimum time window is expired."
         );
 

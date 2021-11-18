@@ -98,8 +98,12 @@ contract DogeToken is StandardToken, TransactionProcessor, EtherAuction {
     event ErrorDogeToken(uint err);
     event NewToken(address indexed user, uint value);
     event UnlockRequest(uint256 id, bytes20 operatorPublicKeyHash);
-    event OperatorLiquidated(bytes20 operatorPublicKeyHash);
+    // Indicates that a collateral auction was started for the operator.
+    // The auction can be closed if the block timestamp is higher than `endTimestamp`.
+    event OperatorLiquidated(bytes20 operatorPublicKeyHash, uint256 endTimestamp);
+    // Collateral auction bid
     event LiquidationBid(bytes20 operatorPublicKeyHash, address bidder, uint256 bid);
+    // End of the collateral auction.
     event OperatorCollateralAuctioned(bytes20 operatorPublicKeyHash, address winner, uint256 tokensBurned, uint256 etherSold);
 
     // Represents an unlock request
@@ -497,8 +501,8 @@ contract DogeToken is StandardToken, TransactionProcessor, EtherAuction {
     }
 
     function liquidateOperator(bytes20 operatorPublicKeyHash, Operator storage operator) internal {
-        auctionOpen(operator.auction);
-        emit OperatorLiquidated(operatorPublicKeyHash);
+        uint256 endTimestamp = auctionOpen(operator.auction);
+        emit OperatorLiquidated(operatorPublicKeyHash, endTimestamp);
     }
 
     /*  Auction section  */
