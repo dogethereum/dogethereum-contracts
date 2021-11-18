@@ -1,0 +1,6 @@
+{
+  "rules": {
+    // We disable this because chai typings don't inform about asserts yet.
+    "@typescript-eslint/no-non-null-assertion": 0
+  }
+}
