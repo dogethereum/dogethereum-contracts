@@ -13,7 +13,9 @@ import { keccak256 } from "js-sha3";
 import scryptsy from "scryptsy";
 
 import bitcoin = require("bitcoinjs-lib");
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const bitcoreLib = require("bitcore-lib");
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const btcProof = require("bitcoin-proof");
 const ECDSA = bitcoreLib.crypto.ECDSA;
 

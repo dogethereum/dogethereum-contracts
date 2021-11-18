@@ -25,7 +25,6 @@ describe("DogeToken - Collateral auctions", function () {
 
   let dogeUsdPriceOracle: Contract;
   let ethUsdPriceOracle: Contract;
-  let trustedRelayerContract: string;
   const tokenOptions: TokenOptions = {
     lockCollateralRatio: "2000",
     liquidationThresholdCollateralRatio: "1500",
@@ -35,8 +34,8 @@ describe("DogeToken - Collateral auctions", function () {
 
   let operatorSigner: SignerWithAddress;
   const operatorPublicKeyHash = "0x03cd041b0139d3240607b9fd1b2d1b691e22b5d6";
-  const operatorPrivateKeyString =
-    "105bd30419904ef409e9583da955037097f22b6b23c57549fe38ab8ffa9deaa3";
+  // const operatorPrivateKeyString =
+  //   "105bd30419904ef409e9583da955037097f22b6b23c57549fe38ab8ffa9deaa3";
   const operatorDeposit = 10 ** 9;
 
   let userASigner: SignerWithAddress;
@@ -57,8 +56,6 @@ describe("DogeToken - Collateral auctions", function () {
       thirdSigner,
       fourthSigner,
     ] = await hre.ethers.getSigners();
-    // Tell DogeToken to trust the first account as a price oracle and relayer contract
-    trustedRelayerContract = signer.address;
 
     const { superblockClaims } = await deployFixture(hre);
 
@@ -81,7 +78,7 @@ describe("DogeToken - Collateral auctions", function () {
       signer,
       dogeUsdPriceOracle.address,
       ethUsdPriceOracle.address,
-      trustedRelayerContract,
+      signer.address,
       superblockClaims.address,
       tokenOptions
     );
@@ -184,11 +181,11 @@ describe("DogeToken - Collateral auctions", function () {
       const tokenAmount2 = 10_000;
       await dogeToken.assign(userBSigner.address, tokenAmount2);
 
-      let tx: ContractTransaction = await userAdogeToken.liquidationBid(
+      const tx: ContractTransaction = await userAdogeToken.liquidationBid(
         operatorPublicKeyHash,
         tokenAmount
       );
-      let { events: liquidationBids } = await getEvents(tx, "LiquidationBid");
+      const { events: liquidationBids } = await getEvents(tx, "LiquidationBid");
 
       assert.lengthOf(
         liquidationBids,
@@ -210,11 +207,11 @@ describe("DogeToken - Collateral auctions", function () {
       await dogeToken.assign(userASigner.address, tokenAmount);
       await dogeToken.assign(userBSigner.address, tokenAmount);
 
-      let tx: ContractTransaction = await userAdogeToken.liquidationBid(
+      const tx: ContractTransaction = await userAdogeToken.liquidationBid(
         operatorPublicKeyHash,
         tokenAmount
       );
-      let { events: liquidationBids } = await getEvents(tx, "LiquidationBid");
+      const { events: liquidationBids } = await getEvents(tx, "LiquidationBid");
 
       assert.lengthOf(
         liquidationBids,
@@ -245,7 +242,7 @@ describe("DogeToken - Collateral auctions", function () {
       const closeTx: ContractTransaction = await dogeToken.closeLiquidationAuction(
         operatorPublicKeyHash
       );
-      const { receipt: closeReceipt, events: closeEvents } = await getEvents(
+      const { events: closeEvents } = await getEvents(
         closeTx,
         "OperatorCollateralAuctioned"
       );
