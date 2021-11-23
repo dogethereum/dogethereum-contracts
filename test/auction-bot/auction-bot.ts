@@ -11,7 +11,12 @@ import {
   deployToken,
   TokenOptions,
 } from "../../deploy";
-import { isolateEachTest, isolateTests } from "../utils";
+import {
+  blockchainTimeoutSeconds,
+  mineBlocks,
+  isolateEachTest,
+  isolateTests,
+} from "../utils";
 
 describe("Auction bot", function () {
   isolateTests();
@@ -81,9 +86,11 @@ describe("Auction bot", function () {
     );
     const utxoValue = 100_000_000;
     await dogeToken.addUtxo(operatorPublicKeyHash, utxoValue, 1, 1);
-    await dogeToken.connect(operatorSigner).addOperatorDeposit(operatorPublicKeyHash, {
-      value: operatorDeposit,
-    });
+    await dogeToken
+      .connect(operatorSigner)
+      .addOperatorDeposit(operatorPublicKeyHash, {
+        value: operatorDeposit,
+      });
     const tokenBalance = hre.ethers.BigNumber.from(bidAmount).mul(10);
     await dogeToken.assign(collateralBuyer.address, tokenBalance);
     await dogeToken.assign(competitor.address, tokenBalance);
@@ -150,7 +157,11 @@ describe("Auction bot", function () {
       const postBlockNumber = await hre.ethers.provider.getBlockNumber();
 
       const bidFilter = dogeToken.filters.LiquidationBid();
-      const bidEvents = await dogeToken.queryFilter(bidFilter, preBlockNumber, postBlockNumber);
+      const bidEvents = await dogeToken.queryFilter(
+        bidFilter,
+        preBlockNumber,
+        postBlockNumber
+      );
       assert.lengthOf(bidEvents, 1);
     });
 
@@ -162,13 +173,19 @@ describe("Auction bot", function () {
       const preBlockNumber = await hre.ethers.provider.getBlockNumber();
 
       const biggerBid = hre.ethers.BigNumber.from(bidAmount).mul(2);
-      await dogeToken.connect(competitor).liquidationBid(operatorPublicKeyHash, biggerBid);
+      await dogeToken
+        .connect(competitor)
+        .liquidationBid(operatorPublicKeyHash, biggerBid);
 
       await bot.processNextBlocks();
       const postBlockNumber = await hre.ethers.provider.getBlockNumber();
 
       const bidFilter = dogeToken.filters.LiquidationBid();
-      const bidEvents = await dogeToken.queryFilter(bidFilter, preBlockNumber, postBlockNumber);
+      const bidEvents = await dogeToken.queryFilter(
+        bidFilter,
+        preBlockNumber,
+        postBlockNumber
+      );
       assert.lengthOf(bidEvents, 1);
     });
 
@@ -180,13 +197,19 @@ describe("Auction bot", function () {
       const preBlockNumber = await hre.ethers.provider.getBlockNumber();
 
       const biggerBid = hre.ethers.BigNumber.from(bidAmount);
-      await dogeToken.connect(competitor).liquidationBid(operatorPublicKeyHash, biggerBid);
+      await dogeToken
+        .connect(competitor)
+        .liquidationBid(operatorPublicKeyHash, biggerBid);
 
       await bot.processNextBlocks();
       const postBlockNumber = await hre.ethers.provider.getBlockNumber();
 
       const bidFilter = dogeToken.filters.LiquidationBid();
-      const bidEvents = await dogeToken.queryFilter(bidFilter, preBlockNumber, postBlockNumber);
+      const bidEvents = await dogeToken.queryFilter(
+        bidFilter,
+        preBlockNumber,
+        postBlockNumber
+      );
       assert.lengthOf(bidEvents, 1);
     });
 
@@ -198,14 +221,45 @@ describe("Auction bot", function () {
       const preBlockNumber = await hre.ethers.provider.getBlockNumber();
 
       const lowerBid = hre.ethers.BigNumber.from(bidAmount).div(2);
-      await dogeToken.connect(competitor).liquidationBid(operatorPublicKeyHash, lowerBid);
+      await dogeToken
+        .connect(competitor)
+        .liquidationBid(operatorPublicKeyHash, lowerBid);
 
       await bot.processNextBlocks();
       const postBlockNumber = await hre.ethers.provider.getBlockNumber();
 
       const bidFilter = dogeToken.filters.LiquidationBid();
-      const bidEvents = await dogeToken.queryFilter(bidFilter, preBlockNumber, postBlockNumber);
+      const bidEvents = await dogeToken.queryFilter(
+        bidFilter,
+        preBlockNumber,
+        postBlockNumber
+      );
       assert.lengthOf(bidEvents, 2);
+    });
+  });
+
+  describe("Auction closing", function () {
+    it("Closes auction when winning", async function () {
+      const config = testingConfig();
+      const bot = await AuctionBot.create(collateralBuyer, config, hre.ethers);
+
+      await dogeToken.reportOperatorUnsafeCollateral(operatorPublicKeyHash);
+      const preBlockNumber = await hre.ethers.provider.getBlockNumber();
+
+      await bot.processNextBlocks();
+
+      await blockchainTimeoutSeconds(2 * 60 * 60 + 1);
+      await mineBlocks(1);
+      await bot.processNextBlocks();
+      const postBlockNumber = await hre.ethers.provider.getBlockNumber();
+
+      const closeFilter = dogeToken.filters.OperatorCollateralAuctioned();
+      const closeEvents = await dogeToken.queryFilter(
+        closeFilter,
+        preBlockNumber,
+        postBlockNumber
+      );
+      assert.lengthOf(closeEvents, 1);
     });
   });
 });
