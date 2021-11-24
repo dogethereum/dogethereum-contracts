@@ -120,7 +120,7 @@ export class AuctionBot {
 
     await this.bidInAuctions(newAuctionEvents, bidAmount);
 
-    // TODO: close auctions that have ended their lifetime
+    await this.closeAuctions(upperBoundBlock);
 
     state.lastIndexedBlock = upperBoundBlock;
     await state.save();
@@ -219,6 +219,23 @@ export class AuctionBot {
         operatorPublicKeyHash: open.args.operatorPublicKeyHash,
         endTimestamp: open.args.endTimestamp,
       });
+    }
+  }
+
+  private async closeAuctions(latestBlockNumber: number): Promise<void> {
+    const auctions = await this.db.ActiveAuctionModel.findAll();
+    const block = await this.ethProvider.getBlock(latestBlockNumber);
+    const currentTimestamp = block.timestamp;
+    if (typeof currentTimestamp !== "number")
+      throw new Error("Unexpected type in timestamp.");
+    for (const auction of auctions) {
+      if (auction.endTimestamp >= currentTimestamp) continue;
+
+      await this.auctionContract.closeLiquidationAuction(
+        auction.operatorPublicKeyHash
+      );
+
+      await auction.destroy();
     }
   }
 }
