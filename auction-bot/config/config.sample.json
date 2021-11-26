@@ -1,0 +1,9 @@
+{
+  "startingBlock": "latest",
+  "numberOfConfirmations": 10,
+  "dbPath": "./auctions.db",
+  "bidAmount": "1000000",
+  "auctionAddress": "0xabedcaabedcaabedcaabedcaedcaabedcaabedca",
+  "bidderPrivateKey": "0xabedcf",
+  "ethereumNodeURL": "ws://127.0.0.1:8545"
+}
