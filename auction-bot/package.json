@@ -1,0 +1,32 @@
+{
+  "name": "dogethereum-auction-bot",
+  "version": "0.1.0",
+  "description": "",
+  "dependencies": {
+    "ethers": "^5.5.1",
+    "sequelize": "^6.9.0",
+    "sqlite3": "^5.0.2",
+    "yargs": "^17.2.1"
+  },
+  "devDependencies": {
+    "@types/node": "^14.14.31",
+    "@types/validator": "^13.7.0",
+    "@types/yargs": "^17.0.7",
+    "sequelize-cli": "^6.3.0",
+    "ts-node": "^10.4.0",
+    "typescript": "^4.4.4"
+  },
+  "scripts": {
+    "start": "TS_NODE_TRANSPILE_ONLY=true ts-node cli.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dogethereum/dogethereum-contracts.git"
+  },
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/dogethereum/dogethereum-contracts/issues"
+  },
+  "homepage": "https://github.com/dogethereum/dogethereum-contracts/tree/master/auction-bot#readme"
+}
