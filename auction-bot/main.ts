@@ -1,9 +1,8 @@
 import type ethersT from "ethers";
-// import type {} from "sequelize";
 
+import auctionAbi from "./auction-abi.json";
 import type { Config } from "./config";
 import { AuctionDb, initializeDb } from "./db";
-import auctionAbi from "./auction-abi.json";
 
 const MAXIMUM_BLOCK_INTERVAL = 16;
 

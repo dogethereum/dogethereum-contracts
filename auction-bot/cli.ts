@@ -1,4 +1,4 @@
-import {ethers, getDefaultProvider} from "ethers";
+import { ethers } from "ethers";
 import yargs from "yargs";
 import fs from "fs/promises";
 
@@ -8,7 +8,11 @@ import { AuctionBot } from "./main";
 const pollingPeriod = 3000;
 
 async function main() {
-  const args = await yargs.alias("c", "config").string("config").demandOption("config").parse();
+  const args = await yargs
+    .alias("c", "config")
+    .string("config")
+    .demandOption("config")
+    .parse();
   const json = await fs.readFile(args.config, {
     encoding: "utf8",
   });
