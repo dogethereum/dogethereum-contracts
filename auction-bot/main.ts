@@ -9,8 +9,6 @@ const MAXIMUM_BLOCK_INTERVAL = 16;
 
 // TODO: use db transactions
 export class AuctionBot {
-  private stopped = false;
-
   private constructor(
     public readonly config: Config,
     private readonly ethers: typeof ethersT.ethers,
