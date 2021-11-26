@@ -57,7 +57,7 @@
     "url": "git+https://github.com/dogethereum/dogethereum-contracts.git"
   },
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/dogethereum/dogethereum-contracts/issues"
   },
