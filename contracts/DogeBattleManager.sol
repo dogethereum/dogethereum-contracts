@@ -156,18 +156,23 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
 
     event ErrorBattle(bytes32 sessionId, uint err);
 
-    modifier onlyFrom(address sender) {
-        require(msg.sender == sender);
+    modifier onlyScryptChecker() {
+        require(msg.sender == address(trustedScryptChecker), "ERR_AUTH_ONLY_SCRYPTCHECKER");
+        _;
+    }
+
+    modifier onlySuperblockClaims() {
+        require(msg.sender == address(trustedSuperblockClaims), "ERR_AUTH_ONLY_SUPERBLOCKCLAIMS");
         _;
     }
 
     modifier onlyClaimant(bytes32 sessionId) {
-        require(msg.sender == sessions[sessionId].submitter);
+        require(msg.sender == sessions[sessionId].submitter, "ERR_AUTH_ONLY_CLAIMANT");
         _;
     }
 
     modifier onlyChallenger(bytes32 sessionId) {
-        require(msg.sender == sessions[sessionId].challenger);
+        require(msg.sender == sessions[sessionId].challenger, "ERR_AUTH_ONLY_CHALLENGER");
         _;
     }
 
@@ -225,7 +230,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
      * @dev - Start a battle session
      */
     function beginBattleSession(bytes32 superblockHash, address submitter, address challenger)
-    public onlyFrom(address(trustedSuperblockClaims)) returns (bytes32) {
+    external onlySuperblockClaims returns (bytes32) {
         bytes32 sessionId = keccak256(abi.encode(superblockHash, msg.sender, sessionsCount));
         BattleSession storage session = sessions[sessionId];
         session.id = sessionId;
@@ -244,123 +249,111 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
         return sessionId;
     }
 
-    // @dev - Challenger makes a query for superblock hashes
-    function doQueryMerkleRootHashes(BattleSession storage session) internal returns (uint) {
-        if (!hasDeposit(msg.sender, respondMerkleRootHashesCost)) {
-            return ERR_SUPERBLOCK_MIN_DEPOSIT;
-        }
-        if (session.challengeState != ChallengeState.Challenged) {
-            return ERR_SUPERBLOCK_BAD_STATUS;
-        }
-
-        session.challengeState = ChallengeState.QueryMerkleRootHashes;
-        assert(msg.sender == session.challenger);
-        (uint err, ) = bondDeposit(session.superblockHash, msg.sender, respondMerkleRootHashesCost);
-        if (err != ERR_SUPERBLOCK_OK) {
-            return err;
-        }
-        return ERR_SUPERBLOCK_OK;
-    }
-
-    // @dev - Challenger makes a query for superblock hashes
+    /**
+     * @dev Challenger makes a query for superblock hashes
+     */
     function queryMerkleRootHashes(bytes32 superblockHash, bytes32 sessionId) public onlyChallenger(sessionId) {
         BattleSession storage session = sessions[sessionId];
-        uint err = doQueryMerkleRootHashes(session);
-        if (err != ERR_SUPERBLOCK_OK) {
-            emit ErrorBattle(sessionId, err);
-        } else {
-            session.actionsCounter += 1;
-            session.lastActionTimestamp = block.timestamp;
-            session.lastActionChallenger = session.actionsCounter;
-            emit QueryMerkleRootHashes(superblockHash, sessionId, session.submitter);
-        }
+
+        // This is redundant. If the challenger doesn't have enough eth deposited, `bondDeposit` will fail.
+        // However, it allows giving a custom error message here.
+        // Error: There is not enough eth deposited to bond for the payment of the next step in the battle.
+        require(hasDeposit(msg.sender, respondMerkleRootHashesCost), "ERR_QUERY_MERKLE_NEEDS_DEPOSIT");
+        // Error: The battle does not allow querying the merkle root hashes of the blocks now.
+        require(session.challengeState == ChallengeState.Challenged, "ERR_QUERY_MERKLE_INCORRECT_STEP");
+
+        session.challengeState = ChallengeState.QueryMerkleRootHashes;
+        bondDeposit(session.superblockHash, msg.sender, respondMerkleRootHashesCost);
+
+        session.actionsCounter += 1;
+        session.lastActionTimestamp = block.timestamp;
+        session.lastActionChallenger = session.actionsCounter;
+        emit QueryMerkleRootHashes(superblockHash, sessionId, session.submitter);
     }
 
-    // @dev - Submitter sends hashes to verify superblock merkle root
-    function doVerifyMerkleRootHashes(BattleSession storage session, bytes32[] memory blockHashes) internal returns (uint) {
-        if (!hasDeposit(msg.sender, verifySuperblockCost)) {
-            return ERR_SUPERBLOCK_MIN_DEPOSIT;
-        }
-        require(session.blockHashes.length == 0);
-        if (session.challengeState != ChallengeState.QueryMerkleRootHashes) {
-            return ERR_SUPERBLOCK_BAD_STATUS;
-        }
+    /**
+     * @dev Submitter sends hashes to verify superblock merkle root
+     * For the submitter to respond to challenger queries
+     */
+    function respondMerkleRootHashes(
+        bytes32 superblockHash,
+        bytes32 sessionId,
+        bytes32[] calldata blockHashes
+    ) public onlyClaimant(sessionId) {
+        BattleSession storage session = sessions[sessionId];
+
+        // Error: There is not enough eth deposited to bond for the payment of the next step in the battle.
+        require(hasDeposit(msg.sender, verifySuperblockCost), "ERR_VERIFY_MERKLE_NEEDS_DEPOSIT");
+
+        // Error: A superblock must contain at least one block.
+        require(session.blockHashes.length == 0, "ERR_VERIFY_MERKLE_BLOCK_HASHES_MISSING");
+        // Error: The battle does not allow verifying the merkle root hashes of the blocks now.
+        require(session.challengeState == ChallengeState.QueryMerkleRootHashes, "ERR_VERIFY_MERKLE_INCORRECT_STEP");
 
         (bytes32 merkleRoot, , , , bytes32 lastHash, , , , ) = getSuperblockInfo(session.superblockHash);
-        if (lastHash != blockHashes[blockHashes.length - 1]) {
-            return ERR_SUPERBLOCK_BAD_LASTBLOCK;
-        }
-        if (merkleRoot != DogeMessageLibrary.makeMerkle(blockHashes)) {
-            return ERR_SUPERBLOCK_INVALID_MERKLE;
-        }
-        (uint err, ) = bondDeposit(session.superblockHash, msg.sender, verifySuperblockCost);
-        if (err != ERR_SUPERBLOCK_OK) {
-            return err;
-        }
+        // Error: The last block hash is inconsistent with the one submitted for this superblock.
+        require(lastHash == blockHashes[blockHashes.length - 1], "ERR_VERIFY_MERKLE_BAD_LASTBLOCK");
+        // Error: The merkle root of block hashes is inconsistent with the one submitted for this superblock.
+        require(merkleRoot == DogeMessageLibrary.makeMerkle(blockHashes), "ERR_VERIFY_MERKLE_INVALID_MERKLE");
+
+        bondDeposit(session.superblockHash, msg.sender, verifySuperblockCost);
+
         session.blockHashes = blockHashes;
         session.challengeState = ChallengeState.RespondMerkleRootHashes;
-        return ERR_SUPERBLOCK_OK;
+
+        session.actionsCounter += 1;
+        session.lastActionTimestamp = block.timestamp;
+        session.lastActionClaimant = session.actionsCounter;
+
+        // Map blocks to prevent a malicious challenger from requesting one that doesn't exist
+        for (uint i = 0; i < blockHashes.length; ++i) {
+            session.blocksInfo[blockHashes[i]].status = BlockInfoStatus.Uninitialized;
+        }
+
+        emit RespondMerkleRootHashes(superblockHash, sessionId, session.challenger, blockHashes);
     }
 
-    // @dev - For the submitter to respond to challenger queries
-    function respondMerkleRootHashes(bytes32 superblockHash, bytes32 sessionId, bytes32[] calldata blockHashes)
-    public onlyClaimant(sessionId) {
+    /**
+     * @dev Challenger queries the block header data for a hash
+     */
+    function queryBlockHeader(
+        bytes32 superblockHash,
+        bytes32 sessionId,
+        bytes32 blockHash
+    ) public onlyChallenger(sessionId) {
         BattleSession storage session = sessions[sessionId];
-        uint err = doVerifyMerkleRootHashes(session, blockHashes);
-        if (err != 0) {
-            emit ErrorBattle(sessionId, err);
-        } else {
-            session.actionsCounter += 1;
-            session.lastActionTimestamp = block.timestamp;
-            session.lastActionClaimant = session.actionsCounter;
 
-            // Map blocks to prevent a malicious challenger from requesting one that doesn't exist
-            for (uint i = 0; i < blockHashes.length; ++i) {
-                session.blocksInfo[blockHashes[i]].status = BlockInfoStatus.Uninitialized;
-            }
+        // Error: There is not enough eth deposited to bond for the payment of the next step in the battle.
+        require(hasDeposit(msg.sender, respondBlockHeaderCost), "ERR_QUERY_BLOCK_NEEDS_DEPOSIT");
 
-            emit RespondMerkleRootHashes(superblockHash, sessionId, session.challenger, blockHashes);
-        }
-    }
-
-    // @dev - Challenger makes a query for block header data for a hash
-    function doQueryBlockHeader(BattleSession storage session, bytes32 blockHash) internal returns (uint) {
-        if (!hasDeposit(msg.sender, respondBlockHeaderCost)) {
-            return ERR_SUPERBLOCK_MIN_DEPOSIT;
-        }
         if (session.challengeState == ChallengeState.VerifyScryptHash) {
             skipScryptHashVerification(session);
         }
-        // TODO: see if this condition is worth refactoring
-        if ((session.countBlockHeaderQueries == 0 && session.challengeState == ChallengeState.RespondMerkleRootHashes)
-        || (session.countBlockHeaderQueries > 0 && session.challengeState == ChallengeState.RespondBlockHeader)) {
-            require(session.countBlockHeaderQueries < session.blockHashes.length);
-            require(session.blocksInfo[blockHash].status == BlockInfoStatus.Uninitialized);
-            (uint err, ) = bondDeposit(session.superblockHash, msg.sender, respondBlockHeaderCost);
-            if (err != ERR_SUPERBLOCK_OK) {
-                return err;
-            }
-            session.countBlockHeaderQueries += 1;
-            session.blocksInfo[blockHash].status = BlockInfoStatus.Requested;
-            session.challengeState = ChallengeState.QueryBlockHeader;
-            return ERR_SUPERBLOCK_OK;
-        }
-        return ERR_SUPERBLOCK_BAD_STATUS;
-    }
 
-    // @dev - For the challenger to start a query
-    function queryBlockHeader(bytes32 superblockHash, bytes32 sessionId, bytes32 blockHash)
-    public onlyChallenger(sessionId) {
-        BattleSession storage session = sessions[sessionId];
-        uint err = doQueryBlockHeader(session, blockHash);
-        if (err != ERR_SUPERBLOCK_OK) {
-            emit ErrorBattle(sessionId, err);
-        } else {
-            session.actionsCounter += 1;
-            session.lastActionTimestamp = block.timestamp;
-            session.lastActionChallenger = session.actionsCounter;
-            emit QueryBlockHeader(superblockHash, sessionId, session.submitter, blockHash);
-        }
+        // Error: The battle does not allow querying a block header now. 
+        require(
+            (session.countBlockHeaderQueries == 0 && session.challengeState == ChallengeState.RespondMerkleRootHashes) ||
+            (session.countBlockHeaderQueries > 0 && session.challengeState == ChallengeState.RespondBlockHeader),
+            "ERR_QUERY_BLOCK_INCORRECT_STEP"
+        );
+
+        // Error: All block headers were queried already.
+        require(session.countBlockHeaderQueries < session.blockHashes.length, "ERR_QUERY_BLOCK_ALL_BLOCKS_QUERIED");
+        // Error: This block header was queried already.
+        require(
+            session.blocksInfo[blockHash].status == BlockInfoStatus.Uninitialized,
+            "ERR_QUERY_BLOCK_ALREADY_QUERIED"
+        );
+
+        bondDeposit(session.superblockHash, msg.sender, respondBlockHeaderCost);
+        session.countBlockHeaderQueries += 1;
+        session.blocksInfo[blockHash].status = BlockInfoStatus.Requested;
+        session.challengeState = ChallengeState.QueryBlockHeader;
+
+        session.actionsCounter += 1;
+        session.lastActionTimestamp = block.timestamp;
+        session.lastActionChallenger = session.actionsCounter;
+        emit QueryBlockHeader(superblockHash, sessionId, session.submitter, blockHash);
     }
 
     // @dev - Verify that block timestamp is in the superblock timestamp interval
@@ -455,10 +448,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
 
         blockInfo.status = BlockInfoStatus.ScryptHashPending;
 
-        (err, ) = bondDeposit(session.superblockHash, msg.sender, respondBlockHeaderCost);
-        if (err != ERR_SUPERBLOCK_OK) {
-            return (err, new bytes(0));
-        }
+        bondDeposit(session.superblockHash, msg.sender, respondBlockHeaderCost);
 
         bytes32 pendingScryptHashId = doVerifyScryptHash(
             sessionId,
@@ -492,54 +482,39 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
         emit RespondBlockHeader(superblockHash, sessionId, session.challenger, blockScryptHash, blockHeader, powBlockHeader);
     }
 
-    // @dev - Notify submitter to start scrypt hash verification
-    function doRequestScryptHashValidation(
-        BattleSession storage session,
-        bytes32 superblockHash,
-        bytes32 sessionId,
-        bytes32 blockSha256Hash
-    ) internal returns (uint) {
-        if (!hasDeposit(msg.sender, queryMerkleRootHashesCost)) {
-            return ERR_SUPERBLOCK_MIN_DEPOSIT;
-        }
-
-        if (session.challengeState != ChallengeState.VerifyScryptHash) {
-            return ERR_SUPERBLOCK_BAD_STATUS;
-        }
-
-        BlockInfo storage blockInfo = session.blocksInfo[blockSha256Hash];
-        if (blockInfo.status != BlockInfoStatus.ScryptHashPending) {
-            return ERR_SUPERBLOCK_BAD_STATUS;
-        }
-
-        (uint err, ) = bondDeposit(session.superblockHash, msg.sender, queryMerkleRootHashesCost);
-        if (err != ERR_SUPERBLOCK_OK) {
-            return err;
-        }
-
-        emit RequestScryptHashValidation(superblockHash, sessionId, blockInfo.scryptHash, blockInfo.powBlockHeader, session.pendingScryptHashId, session.submitter);
-        session.challengeState = ChallengeState.RequestScryptVerification;
-        return ERR_SUPERBLOCK_OK;
-    }
-
-    // @dev - Challenger requests to start scrypt hash verification
+    /**
+     * @dev - Challenger requests to start scrypt hash verification
+     */
     function requestScryptHashValidation(
         bytes32 superblockHash,
         bytes32 sessionId,
         bytes32 blockSha256Hash
     ) public onlyChallenger(sessionId) {
         BattleSession storage session = sessions[sessionId];
-        uint err = doRequestScryptHashValidation(session, superblockHash, sessionId, blockSha256Hash);
-        if (err != 0) {
-            emit ErrorBattle(sessionId, err);
-        } else {
-            session.actionsCounter += 1;
-            session.lastActionTimestamp = block.timestamp;
-            session.lastActionChallenger = session.actionsCounter;
-        }
+
+        // Error: There is not enough eth deposited to bond for the payment of the next step in the battle.
+        require(hasDeposit(msg.sender, queryMerkleRootHashesCost), "ERR_REQUEST_SCRYPT_NEEDS_DEPOSIT");
+
+        // Error: The battle does not allow requesting validation of a scrypt hash now.
+        require(session.challengeState == ChallengeState.VerifyScryptHash, "ERR_REQUEST_SCRYPT_INCORRECT_STEP");
+
+        BlockInfo storage blockInfo = session.blocksInfo[blockSha256Hash];
+        // Error: This block is either already verified or its header wasn't requested yet.
+        require(blockInfo.status == BlockInfoStatus.ScryptHashPending, "ERR_REQUEST_SCRYPT_INCORRECT_BLOCK_STEP");
+
+        bondDeposit(session.superblockHash, msg.sender, queryMerkleRootHashesCost);
+
+        emit RequestScryptHashValidation(superblockHash, sessionId, blockInfo.scryptHash, blockInfo.powBlockHeader, session.pendingScryptHashId, session.submitter);
+        session.challengeState = ChallengeState.RequestScryptVerification;
+
+        session.actionsCounter += 1;
+        session.lastActionTimestamp = block.timestamp;
+        session.lastActionChallenger = session.actionsCounter;
     }
 
-    // @dev - Validate superblock information from last blocks
+    /**
+     * @dev - Validate superblock information from last blocks
+     */
     function validateLastBlocks(BattleSession storage session) internal view returns (uint) {
         if (session.blockHashes.length <= 0) {
             return ERR_SUPERBLOCK_BAD_LASTBLOCK;
@@ -570,7 +545,9 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
         return ERR_SUPERBLOCK_OK;
     }
 
-    // @dev - Validate superblock accumulated work
+    /**
+     * @dev - Validate superblock accumulated work
+     */
     function validateProofOfWork(BattleSession storage session) internal view returns (uint) {
         uint accWork;
         uint parentWork;
@@ -628,9 +605,8 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
         }
 
         // If the superblock is not ready for the final verification, we shouldn't do anything.
-        if (session.challengeState != ChallengeState.PendingVerification) {
-            return 0;
-        }
+        // Error: Either the superblock cannot be verified yet or it was already verified.
+        require(session.challengeState == ChallengeState.PendingVerification, "ERR_VERIFY_SUPERBLOCK_INCORRECT_STEP");
 
         uint err;
         err = validateLastBlocks(session);
@@ -660,10 +636,12 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
     // @dev - Trigger conviction if response is not received in time
     function timeout(bytes32 sessionId) public returns (uint) {
         BattleSession storage session = sessions[sessionId];
-        if (session.challengeState == ChallengeState.PendingScryptVerification) {
-            emit ErrorBattle(sessionId, ERR_SUPERBLOCK_NO_TIMEOUT);
-            return ERR_SUPERBLOCK_NO_TIMEOUT;
-        }
+        // Error: The battle can't be timed out during scrypt verification.
+        require(
+            session.challengeState != ChallengeState.PendingScryptVerification,
+            "ERR_BATTLE_TIMEOUT_PENDING_SCRYPT_VERIFICATION"
+        );
+
         if (session.challengeState == ChallengeState.SuperblockFailed ||
             (session.lastActionChallenger > session.lastActionClaimant &&
             block.timestamp > session.lastActionTimestamp + superblockTimeout)) {
@@ -674,8 +652,8 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
             convictChallenger(sessionId, session.challenger, session.superblockHash);
             return ERR_SUPERBLOCK_OK;
         }
-        emit ErrorBattle(sessionId, ERR_SUPERBLOCK_NO_TIMEOUT);
-        return ERR_SUPERBLOCK_NO_TIMEOUT;
+        // Error: No timeout can be enacted at this point in the battle.
+        revert("ERR_BATTLE_TIMEOUT_NO_TIMEOUT");
     }
 
     // @dev - To be called when a challenger is convicted
@@ -775,7 +753,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
         bytes32 scryptHash,
         bytes calldata data,
         address submitter
-    ) override external onlyFrom(address(trustedScryptChecker)) {
+    ) override external onlyScryptChecker {
         require(data.length == 80);
         ScryptHashVerification storage verification = scryptHashVerifications[scryptChallengeId];
         BattleSession storage session = sessions[verification.sessionId];
@@ -815,12 +793,12 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
     }
 
     // @dev - Scrypt verification succeeded
-    function scryptVerified(bytes32 scryptChallengeId) override external onlyFrom(address(trustedScryptChecker)) {
+    function scryptVerified(bytes32 scryptChallengeId) override external onlyScryptChecker {
         doNotifyScryptVerificationResult(scryptChallengeId, true);
     }
 
     // @dev - Scrypt verification failed
-    function scryptFailed(bytes32 scryptChallengeId) override external onlyFrom(address(trustedScryptChecker)) {
+    function scryptFailed(bytes32 scryptChallengeId) override external onlyScryptChecker {
         doNotifyScryptVerificationResult(scryptChallengeId, false);
     }
 
@@ -871,7 +849,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
     }
 
     // @dev – locks up part of a user's deposit into a claim.
-    function bondDeposit(bytes32 superblockHash, address account, uint amount) internal returns (uint, uint) {
+    function bondDeposit(bytes32 superblockHash, address account, uint amount) internal returns (uint) {
         return trustedSuperblockClaims.bondDeposit(superblockHash, account, amount);
     }
 }

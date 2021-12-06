@@ -95,7 +95,6 @@ contract DogeToken is StandardToken, TransactionProcessor, EtherAuction {
     // Doge transactions that were already processed by processTransaction()
     Set.Data dogeTxHashesAlreadyProcessed;
 
-    event ErrorDogeToken(uint err);
     event NewToken(address indexed user, uint value);
     event UnlockRequest(uint256 id, bytes20 operatorPublicKeyHash);
     // Indicates that a collateral auction was started for the operator.
@@ -242,14 +241,15 @@ contract DogeToken is StandardToken, TransactionProcessor, EtherAuction {
 
     function deleteOperator(bytes20 operatorPublicKeyHash) public {
         Operator storage operator = operators[operatorPublicKeyHash];
-        if (operator.ethAddress != msg.sender) {
-            emit ErrorDogeToken(ERR_OPERATOR_NOT_CREATED_OR_WRONG_SENDER);
-            return;
-        }
-        if (operator.dogeAvailableBalance != 0 || operator.dogePendingBalance != 0 || operator.ethBalance != 0) {
-            emit ErrorDogeToken(ERR_OPERATOR_HAS_BALANCE);
-            return;
-        }
+        // Error: The operator doesn't exist or the sender is not authorized to delete this operator.
+        require(operator.ethAddress == msg.sender, "ERR_DELETE_OPERATOR_NOT_CREATED_OR_WRONG_SENDER");
+        // Error: The operator has some dogecoin or ether balance.
+        require(
+            operator.dogeAvailableBalance == 0 &&
+            operator.dogePendingBalance == 0 &&
+            operator.ethBalance == 0,
+            "ERR_DELETE_OPERATOR_HAS_BALANCE"
+        );
 
         OperatorKey storage operatorKey = operatorKeys[operator.operatorKeyIndex];
         operatorKey.deleted = true;
@@ -262,29 +262,25 @@ contract DogeToken is StandardToken, TransactionProcessor, EtherAuction {
 
     function addOperatorDeposit(bytes20 operatorPublicKeyHash) public payable {
         Operator storage operator = operators[operatorPublicKeyHash];
-        if (operator.ethAddress != msg.sender) {
-            emit ErrorDogeToken(ERR_OPERATOR_NOT_CREATED_OR_WRONG_SENDER);
-            return;
-        }
+        // Error: The operator doesn't exist or the sender is not authorized to add deposit for this operator.
+        require(operator.ethAddress == msg.sender, "ERR_ADD_DEPOSIT_OPERATOR_NOT_CREATED_OR_WRONG_SENDER");
         operator.ethBalance = operator.ethBalance.add(msg.value);
     }
 
     function withdrawOperatorDeposit(bytes20 operatorPublicKeyHash, uint value) public {
         Operator storage operator = operators[operatorPublicKeyHash];
-        if (operator.ethAddress != msg.sender) {
-            emit ErrorDogeToken(ERR_OPERATOR_NOT_CREATED_OR_WRONG_SENDER);
-            return;
-        }
-        if (operator.ethBalance < value) {
-            emit ErrorDogeToken(ERR_OPERATOR_WITHDRAWAL_NOT_ENOUGH_BALANCE);
-            return;
-        }
+        // Error: The operator doesn't exist or the sender is not authorized to withdraw deposit for this operator.
+        require(operator.ethAddress == msg.sender, "ERR_WITHDRAW_DEPOSIT_OPERATOR_NOT_CREATED_OR_WRONG_SENDER");
+
+        // Error: The operator doesn't have enough balance.
+        require(operator.ethBalance >= value, "ERR_WITHDRAW_DEPOSIT_NOT_ENOUGH_BALANCE");
         uint256 ethPostWithdrawal = operator.ethBalance.sub(value);
-        if (ethPostWithdrawal.mul(DOGETHEREUM_COLLATERAL_RATIO_FRACTION).div(dogeEthPrice()) <
-            (operator.dogeAvailableBalance.add(operator.dogePendingBalance)).mul(lockCollateralRatio)) {
-            emit ErrorDogeToken(ERR_OPERATOR_WITHDRAWAL_COLLATERAL_WOULD_BE_TOO_LOW);
-            return;
-        }
+        // Error: The resulting collateral of the operator would be too low.
+        require(
+            ethPostWithdrawal.mul(DOGETHEREUM_COLLATERAL_RATIO_FRACTION).div(dogeEthPrice()) >=
+            (operator.dogeAvailableBalance.add(operator.dogePendingBalance)).mul(lockCollateralRatio),
+            "ERR_WITHDRAW_DEPOSIT_COLLATERAL_WOULD_BE_TOO_LOW"
+        );
         operator.ethBalance = ethPostWithdrawal;
         msg.sender.transfer(value);
     }

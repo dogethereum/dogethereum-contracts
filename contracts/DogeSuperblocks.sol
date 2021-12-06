@@ -46,15 +46,14 @@ contract DogeSuperblocks is DogeErrorCodes {
     event SemiApprovedSuperblock(bytes32 superblockHash, address who);
     event InvalidSuperblock(bytes32 superblockHash, address who);
 
-    event ErrorSuperblock(bytes32 superblockHash, uint err);
-
     event RelayTransaction(bytes32 txHash);
 
     // SuperblockClaims
     address public trustedSuperblockClaims;
 
     modifier onlySuperblockClaims() {
-        require(msg.sender == trustedSuperblockClaims);
+        // Error: Only the SuperblockClaims contract can access this function.
+        require(msg.sender == trustedSuperblockClaims, "ERR_AUTH_ONLY_SUPERBLOCKCLAIMS");
         _;
     }
 
@@ -77,7 +76,7 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @param lastHash Hash of the last block in the superblock
     // @param lastBits Difficulty bits of the last block in the superblock
     // @param parentId Id of the parent superblock
-    // @return Error code and superblockHash
+    // @return superblockHash
     function initialize(
         bytes32 blocksMerkleRoot,
         uint accumulatedWork,
@@ -86,7 +85,7 @@ contract DogeSuperblocks is DogeErrorCodes {
         bytes32 lastHash,
         uint32 lastBits,
         bytes32 parentId
-    ) public returns (uint, bytes32) {
+    ) public returns (bytes32) {
         require(bestSuperblock == 0);
         require(parentId == 0);
 
@@ -119,7 +118,7 @@ contract DogeSuperblocks is DogeErrorCodes {
 
         emit ApprovedSuperblock(superblockHash, msg.sender);
 
-        return (ERR_SUPERBLOCK_OK, superblockHash);
+        return superblockHash;
     }
 
     // @dev - Proposes a new superblock
@@ -144,25 +143,19 @@ contract DogeSuperblocks is DogeErrorCodes {
         uint32 lastBits,
         bytes32 parentId,
         address submitter
-    ) public returns (uint, bytes32) {
-        if (msg.sender != trustedSuperblockClaims) {
-            emit ErrorSuperblock(0, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
-            return (ERR_SUPERBLOCK_NOT_CLAIMMANAGER, 0);
-        }
-
+    ) onlySuperblockClaims public returns (bytes32) {
         bytes32 superblockHash = calcSuperblockHash(blocksMerkleRoot, accumulatedWork, timestamp, prevTimestamp, lastHash, lastBits, parentId);
 
         SuperblockInfo storage parent = superblocks[parentId];
-        if (parent.status != Status.SemiApproved && parent.status != Status.Approved) {
-            emit ErrorSuperblock(superblockHash, ERR_SUPERBLOCK_BAD_PARENT);
-            return (ERR_SUPERBLOCK_BAD_PARENT, 0);
-        }
+        // Error: The parent superblock must be approved or semiapproved.
+        require(
+            parent.status == Status.SemiApproved || parent.status == Status.Approved,
+            "ERR_PROPOSED_SUPERBLOCK_BAD_PARENT_STATUS"
+        );
 
         SuperblockInfo storage superblock = superblocks[superblockHash];
-        if (superblock.status != Status.Uninitialized) {
-            emit ErrorSuperblock(superblockHash, ERR_SUPERBLOCK_EXIST);
-            return (ERR_SUPERBLOCK_EXIST, 0);
-        }
+        // Error: The superblock must not exist already.
+        require(superblock.status == Status.Uninitialized, "ERR_PROPOSED_SUPERBLOCK_EXISTS");
 
         indexSuperblock[indexNextSuperblock] = superblockHash;
 
@@ -183,7 +176,7 @@ contract DogeSuperblocks is DogeErrorCodes {
 
         emit NewSuperblock(superblockHash, submitter);
 
-        return (ERR_SUPERBLOCK_OK, superblockHash);
+        return superblockHash;
     }
 
     // @dev - Confirm a proposed superblock
@@ -195,28 +188,23 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @param superblockHash Id of the superblock to confirm
     // @param validator Address requesting superblock confirmation
     // @return Error code and superblockHash
-    function confirm(bytes32 superblockHash, address validator) public returns (uint, bytes32) {
-        if (msg.sender != trustedSuperblockClaims) {
-            emit ErrorSuperblock(superblockHash, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
-            return (ERR_SUPERBLOCK_NOT_CLAIMMANAGER, 0);
-        }
+    function confirm(bytes32 superblockHash, address validator) onlySuperblockClaims public returns (bytes32) {
         SuperblockInfo storage superblock = superblocks[superblockHash];
-        if (superblock.status != Status.New && superblock.status != Status.SemiApproved) {
-            emit ErrorSuperblock(superblockHash, ERR_SUPERBLOCK_BAD_STATUS);
-            return (ERR_SUPERBLOCK_BAD_STATUS, 0);
-        }
+        // Error: The superblock must be new or semiapproved.
+        require(
+            superblock.status == Status.New || superblock.status == Status.SemiApproved,
+            "ERR_CONFIRM_SUPERBLOCK_BAD_STATUS"
+        );
         SuperblockInfo storage parent = superblocks[superblock.parentId];
-        if (parent.status != Status.Approved) {
-            emit ErrorSuperblock(superblockHash, ERR_SUPERBLOCK_BAD_PARENT);
-            return (ERR_SUPERBLOCK_BAD_PARENT, 0);
-        }
+        // Error: The parent superblock must be approved.
+        require(parent.status == Status.Approved, "ERR_CONFIRM_SUPERBLOCK_BAD_PARENT_STATUS");
         superblock.status = Status.Approved;
         if (superblock.accumulatedWork > bestSuperblockAccumulatedWork) {
             bestSuperblock = superblockHash;
             bestSuperblockAccumulatedWork = superblock.accumulatedWork;
         }
         emit ApprovedSuperblock(superblockHash, validator);
-        return (ERR_SUPERBLOCK_OK, superblockHash);
+        return superblockHash;
     }
 
     // @dev - Challenge a proposed superblock
@@ -227,19 +215,16 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @param superblockHash Id of the superblock to challenge
     // @param challenger Address requesting a challenge
     // @return Error code and superblockHash
-    function challenge(bytes32 superblockHash, address challenger) public returns (uint, bytes32) {
-        if (msg.sender != trustedSuperblockClaims) {
-            emit ErrorSuperblock(superblockHash, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
-            return (ERR_SUPERBLOCK_NOT_CLAIMMANAGER, 0);
-        }
+    function challenge(bytes32 superblockHash, address challenger) onlySuperblockClaims public returns (bytes32) {
         SuperblockInfo storage superblock = superblocks[superblockHash];
-        if (superblock.status != Status.New && superblock.status != Status.InBattle) {
-            emit ErrorSuperblock(superblockHash, ERR_SUPERBLOCK_BAD_STATUS);
-            return (ERR_SUPERBLOCK_BAD_STATUS, 0);
-        }
+        // Error: Superblocks can only be challenged if new.
+        require(
+            superblock.status == Status.New || superblock.status == Status.InBattle,
+            "ERR_CHALLENGE_SUPERBLOCK_BAD_STATUS"
+        );
         superblock.status = Status.InBattle;
         emit ChallengeSuperblock(superblockHash, challenger);
-        return (ERR_SUPERBLOCK_OK, superblockHash);
+        return superblockHash;
     }
 
     // @dev - Semi-approve a challenged superblock
@@ -251,20 +236,17 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @param superblockHash Id of the superblock to semi-approve
     // @param validator Address requesting semi approval
     // @return Error code and superblockHash
-    function semiApprove(bytes32 superblockHash, address validator) public returns (uint, bytes32) {
-        if (msg.sender != trustedSuperblockClaims) {
-            emit ErrorSuperblock(superblockHash, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
-            return (ERR_SUPERBLOCK_NOT_CLAIMMANAGER, 0);
-        }
+    function semiApprove(bytes32 superblockHash, address validator) onlySuperblockClaims public returns (bytes32) {
         SuperblockInfo storage superblock = superblocks[superblockHash];
 
-        if (superblock.status != Status.InBattle && superblock.status != Status.New) {
-            emit ErrorSuperblock(superblockHash, ERR_SUPERBLOCK_BAD_STATUS);
-            return (ERR_SUPERBLOCK_BAD_STATUS, 0);
-        }
+        // Error: Only new or challenged superblocks can be semiapproved.
+        require(
+            superblock.status == Status.InBattle || superblock.status == Status.New,
+            "ERR_SEMIAPPROVE_SUPERBLOCK_BAD_STATUS"
+        );
         superblock.status = Status.SemiApproved;
         emit SemiApprovedSuperblock(superblockHash, validator);
-        return (ERR_SUPERBLOCK_OK, superblockHash);
+        return superblockHash;
     }
 
     // @dev - Invalidates a superblock
@@ -277,27 +259,19 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @param superblockHash Id of the superblock to invalidate
     // @param validator Address requesting superblock invalidation
     // @return Error code and superblockHash
-    function invalidate(bytes32 superblockHash, address validator) public returns (uint, bytes32) {
-        if (msg.sender != trustedSuperblockClaims) {
-            emit ErrorSuperblock(superblockHash, ERR_SUPERBLOCK_NOT_CLAIMMANAGER);
-            return (ERR_SUPERBLOCK_NOT_CLAIMMANAGER, 0);
-        }
+    function invalidate(bytes32 superblockHash, address validator) onlySuperblockClaims public returns (bytes32) {
         SuperblockInfo storage superblock = superblocks[superblockHash];
-        if (superblock.status != Status.InBattle && superblock.status != Status.SemiApproved) {
-            emit ErrorSuperblock(superblockHash, ERR_SUPERBLOCK_BAD_STATUS);
-            return (ERR_SUPERBLOCK_BAD_STATUS, 0);
-        }
+        // Error: The superblock must be in battle or semiapproved to be invalidated.
+        require(
+            superblock.status == Status.InBattle || superblock.status == Status.SemiApproved,
+            "ERR_INVALIDATE_SUPERBLOCK_BAD_STATUS"
+        );
         superblock.status = Status.Invalid;
         emit InvalidSuperblock(superblockHash, validator);
-        return (ERR_SUPERBLOCK_OK, superblockHash);
+        return superblockHash;
     }
 
     // @dev - relays transaction `txBytes` to `untrustedMethod`.
-    // Also logs the value returned by the method.
-    // Note: callers cannot be 100% certain when an ERR_RELAY_VERIFY occurs because
-    // it may also have been returned by processTransaction(). Callers should be
-    // aware of the contract that they are relaying transactions to and
-    // understand what that contract's processTransaction method returns.
     //
     // @param txBytes - transaction bytes
     // @param operatorPublicKeyHash
