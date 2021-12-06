@@ -130,18 +130,14 @@ describe("rejectClaim", function () {
 
             superblocks = superBlockchain.superblocks;
 
-            submitterSuperblockClaims = superBlockchain.superblockClaims.connect(
-                submitter
-            );
-            challengerSuperblockClaims = superBlockchain.superblockClaims.connect(
-                challenger
-            );
-            submitterBattleManager = superBlockchain.battleManager.connect(
-                submitter
-            );
-            challengerBattleManager = superBlockchain.battleManager.connect(
-                challenger
-            );
+            submitterSuperblockClaims =
+                superBlockchain.superblockClaims.connect(submitter);
+            challengerSuperblockClaims =
+                superBlockchain.superblockClaims.connect(challenger);
+            submitterBattleManager =
+                superBlockchain.battleManager.connect(submitter);
+            challengerBattleManager =
+                superBlockchain.battleManager.connect(challenger);
 
             //FIXME: ganache-cli creates the same transaction hash if two account send the same amount
             await submitterSuperblockClaims.makeDeposit({
@@ -380,9 +376,10 @@ describe("rejectClaim", function () {
 
         // Challenge fork
         it("Challenge fork", async function () {
-            const response = await challengerSuperblockClaims.challengeSuperblock(
-                superblockR0Id
-            );
+            const response =
+                await challengerSuperblockClaims.challengeSuperblock(
+                    superblockR0Id
+                );
             const result = await response.wait();
             const superblockClaimChallengedEvent = findEvent(
                 result.events,
@@ -534,9 +531,10 @@ describe("rejectClaim", function () {
             await blockchainTimeoutSeconds(
                 2 * SUPERBLOCK_OPTIONS_LOCAL.timeout
             );
-            const response = await challengerSuperblockClaims.checkClaimFinished(
-                superblockR0Id
-            );
+            const response =
+                await challengerSuperblockClaims.checkClaimFinished(
+                    superblockR0Id
+                );
             const result = await response.wait();
             assert.ok(
                 findEvent(result.events, "SuperblockClaimPending"),
@@ -554,15 +552,16 @@ describe("rejectClaim", function () {
 
         // Propose another superblock in the fork
         it("Propose superblock R1", async function () {
-            const response: ContractTransaction = await submitterSuperblockClaims.proposeSuperblock(
-                superblockR1.merkleRoot,
-                superblockR1.accumulatedWork,
-                superblockR1.timestamp,
-                superblockR1.prevTimestamp,
-                superblockR1.lastHash,
-                superblockR1.lastBits,
-                superblockR1.parentId
-            );
+            const response: ContractTransaction =
+                await submitterSuperblockClaims.proposeSuperblock(
+                    superblockR1.merkleRoot,
+                    superblockR1.accumulatedWork,
+                    superblockR1.timestamp,
+                    superblockR1.prevTimestamp,
+                    superblockR1.lastHash,
+                    superblockR1.lastBits,
+                    superblockR1.parentId
+                );
             const result = await response.wait();
             const claimCreationEvents = result.events!.filter(
                 (event) => event.event === "SuperblockClaimCreated"

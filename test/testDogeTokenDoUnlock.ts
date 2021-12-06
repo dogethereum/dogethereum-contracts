@@ -144,7 +144,7 @@ describe("testDogeTokenDoUnlock", function () {
     );
   });
 
-  it("doUnlock whith multiple utxos", async function () {
+  it("doUnlock with multiple utxos", async function () {
     const utxos = [
       { value: 400000000, txHash: 1 },
       { value: 200000000, txHash: 2 },

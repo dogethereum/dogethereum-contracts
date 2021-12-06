@@ -50,8 +50,10 @@ describe("SuperblockClaims", () => {
 
     superblocks = superBlockchain.superblocks;
 
-    submitterSuperblockClaims = superBlockchain.superblockClaims.connect(submitter);
-    challengerSuperblockClaims = superBlockchain.superblockClaims.connect(challenger);
+    submitterSuperblockClaims =
+      superBlockchain.superblockClaims.connect(submitter);
+    challengerSuperblockClaims =
+      superBlockchain.superblockClaims.connect(challenger);
     submitterBattleManager = superBlockchain.battleManager.connect(submitter);
     challengerBattleManager = superBlockchain.battleManager.connect(challenger);
 
@@ -119,8 +121,8 @@ describe("SuperblockClaims", () => {
         "SuperblockClaimCreated"
       );
       assert.ok(superblockClaimCreatedEvent, "New superblock proposed");
-      proposedSuperblockHash = superblockClaimCreatedEvent!.args!
-        .superblockHash;
+      proposedSuperblockHash =
+        superblockClaimCreatedEvent!.args!.superblockHash;
     });
 
     it("Try to confirm without waiting", async () => {
@@ -148,7 +150,9 @@ describe("SuperblockClaims", () => {
     });
 
     it("Confirm", async () => {
-      await blockchainTimeoutSeconds(2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout);
+      await blockchainTimeoutSeconds(
+        2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout
+      );
       const response = await challengerSuperblockClaims.checkClaimFinished(
         proposedSuperblockHash
       );
@@ -188,12 +192,14 @@ describe("SuperblockClaims", () => {
         "SuperblockClaimCreated"
       );
       assert.ok(superblockClaimCreatedEvent, "New superblock proposed");
-      proposedForkSuperblockHash = superblockClaimCreatedEvent!.args!
-        .superblockHash;
+      proposedForkSuperblockHash =
+        superblockClaimCreatedEvent!.args!.superblockHash;
     });
 
     it("Confirm fork", async () => {
-      await blockchainTimeoutSeconds(2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout);
+      await blockchainTimeoutSeconds(
+        2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout
+      );
       const response = await challengerSuperblockClaims.checkClaimFinished(
         proposedForkSuperblockHash
       );
@@ -245,8 +251,8 @@ describe("SuperblockClaims", () => {
         "SuperblockClaimCreated"
       );
       assert.ok(superblockClaimCreatedEvent, "New superblock proposed");
-      proposedSuperblockHash = superblockClaimCreatedEvent!.args!
-        .superblockHash;
+      proposedSuperblockHash =
+        superblockClaimCreatedEvent!.args!.superblockHash;
     });
 
     it("Challenge", async () => {
@@ -307,11 +313,12 @@ describe("SuperblockClaims", () => {
       await challengerSuperblockClaims.makeDeposit({
         value: DEPOSITS.RESPOND_HEADER_COST,
       });
-      let response: ContractTransaction = await challengerBattleManager.queryBlockHeader(
-        proposedSuperblockHash,
-        battleSessionId,
-        hashes[0]
-      );
+      let response: ContractTransaction =
+        await challengerBattleManager.queryBlockHeader(
+          proposedSuperblockHash,
+          battleSessionId,
+          hashes[0]
+        );
       let result = await response.wait();
       assert.ok(
         findEvent(result.events, "QueryBlockHeader"),
@@ -377,7 +384,9 @@ describe("SuperblockClaims", () => {
     });
 
     it("Confirm", async () => {
-      await blockchainTimeoutSeconds(2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout);
+      await blockchainTimeoutSeconds(
+        2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout
+      );
       const response = await challengerSuperblockClaims.checkClaimFinished(
         proposedSuperblockHash
       );
@@ -424,8 +433,8 @@ describe("SuperblockClaims", () => {
         "SuperblockClaimCreated"
       );
       assert.ok(superblockClaimCreatedEvent, "New superblock proposed");
-      proposedSuperblockHash = superblockClaimCreatedEvent!.args!
-        .superblockHash;
+      proposedSuperblockHash =
+        superblockClaimCreatedEvent!.args!.superblockHash;
     });
 
     it("Challenge", async () => {
@@ -528,7 +537,9 @@ describe("SuperblockClaims", () => {
     });
 
     it("Accept superblock", async () => {
-      await blockchainTimeoutSeconds(2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout);
+      await blockchainTimeoutSeconds(
+        2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout
+      );
       const response = await submitterSuperblockClaims.checkClaimFinished(
         proposedSuperblockHash
       );
@@ -556,12 +567,13 @@ describe("SuperblockClaims", () => {
 
       superblocks = superBlockchain.superblocks;
 
-      submitterSuperblockClaims = superBlockchain.superblockClaims.connect(submitter);
-      challengerSuperblockClaims = superBlockchain.superblockClaims.connect(challenger);
+      submitterSuperblockClaims =
+        superBlockchain.superblockClaims.connect(submitter);
+      challengerSuperblockClaims =
+        superBlockchain.superblockClaims.connect(challenger);
       submitterBattleManager = superBlockchain.battleManager.connect(submitter);
-      challengerBattleManager = superBlockchain.battleManager.connect(
-        challenger
-      );
+      challengerBattleManager =
+        superBlockchain.battleManager.connect(challenger);
 
       await submitterSuperblockClaims.makeDeposit({
         value: DEPOSITS.MIN_PROPOSAL_DEPOSIT,
@@ -590,8 +602,8 @@ describe("SuperblockClaims", () => {
         result.events,
         "SuperblockClaimCreated"
       );
-      proposedSuperblockHash = superblockClaimCreatedEvent!.args!
-        .superblockHash;
+      proposedSuperblockHash =
+        superblockClaimCreatedEvent!.args!.superblockHash;
 
       // Challenge
       await challengerSuperblockClaims.makeDeposit({
@@ -696,7 +708,9 @@ describe("SuperblockClaims", () => {
         }
       );
 
-      await blockchainTimeoutSeconds(2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout);
+      await blockchainTimeoutSeconds(
+        2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout
+      );
       response = await submitterBattleManager.timeout(battleSessionId);
       result = await response.wait();
       assert.ok(
@@ -753,7 +767,9 @@ describe("SuperblockClaims", () => {
         }
       );
 
-      await blockchainTimeoutSeconds(2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout);
+      await blockchainTimeoutSeconds(
+        2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout
+      );
       response = await challengerBattleManager.timeout(battleSessionId);
       result = await response.wait();
       assert.ok(
@@ -827,7 +843,9 @@ describe("SuperblockClaims", () => {
         }
       );
 
-      await blockchainTimeoutSeconds(2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout);
+      await blockchainTimeoutSeconds(
+        2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout
+      );
       response = await submitterBattleManager.timeout(battleSessionId);
       result = await response.wait();
       assert.ok(
