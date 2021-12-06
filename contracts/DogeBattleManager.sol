@@ -92,20 +92,28 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
         bytes32 superblockHash;
         address submitter;
         address challenger;
-        uint lastActionTimestamp;         // Last action timestamp
-        uint lastActionClaimant;          // Number last action submitter
-        uint lastActionChallenger;        // Number last action challenger
-        uint actionsCounter;              // Counter session actions
+        // Last action timestamp
+        uint lastActionTimestamp;
+        // Number last action submitter
+        uint lastActionClaimant;
+        // Number last action challenger
+        uint lastActionChallenger;
+        // Counter session actions
+        uint actionsCounter;
 
-        bytes32[] blockHashes;            // Block hashes
-        uint countBlockHeaderQueries;     // Number of block header queries
-        uint countBlockHeaderResponses;   // Number of block header responses
+        // Block hashes
+        bytes32[] blockHashes;
+        // Number of block header queries
+        uint countBlockHeaderQueries;
+        // Number of block header responses
+        uint countBlockHeaderResponses;
 
         mapping (bytes32 => BlockInfo) blocksInfo;
 
         bytes32 pendingScryptHashId;
 
-        ChallengeState challengeState;    // Claim state
+        // Claim state
+        ChallengeState challengeState;
     }
 
     struct ScryptHashVerification {
@@ -117,8 +125,10 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
 
     uint public sessionsCount;
 
-    uint public superblockDuration;         // Superblock duration (in seconds)
-    uint public superblockTimeout;          // Timeout action (in seconds)
+    // Superblock duration (in seconds)
+    uint public superblockDuration;
+    // Timeout action (in seconds)
+    uint public superblockTimeout;
 
     // Pending Scrypt Hash verifications
     uint public numScryptHashVerifications;
@@ -144,13 +154,13 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
     event QueryMerkleRootHashes(bytes32 superblockHash, bytes32 sessionId, address submitter);
     event RespondMerkleRootHashes(bytes32 superblockHash, bytes32 sessionId, address challenger, bytes32[] blockHashes);
     event QueryBlockHeader(bytes32 superblockHash, bytes32 sessionId, address submitter, bytes32 blockSha256Hash);
-    
+
     event RespondBlockHeader(bytes32 superblockHash, bytes32 sessionId, address challenger, bytes32 blockScryptHash,
     bytes blockHeader, bytes powBlockHeader);
-    
+
     event RequestScryptHashValidation(bytes32 superblockHash, bytes32 sessionId, bytes32 blockScryptHash,
     bytes blockHeader, bytes32 proposalId, address submitter);
-    
+
     event ResolvedScryptHashValidation(bytes32 superblockHash, bytes32 sessionId, bytes32 blockScryptHash,
     bytes32 blockSha256Hash, bytes32 proposalId, address challenger, bool valid);
 
@@ -239,7 +249,8 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
         session.challenger = challenger;
         session.lastActionTimestamp = block.timestamp;
         session.lastActionChallenger = 0;
-        session.lastActionClaimant = 1;     // Force challenger to start
+        // Force challenger to start
+        session.lastActionClaimant = 1;
         session.actionsCounter = 1;
         session.challengeState = ChallengeState.Challenged;
 
@@ -564,10 +575,11 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
         // We may need to allow partial computation of this verification.
         while (idx < session.blockHashes.length) {
             bytes32 blockSha256Hash = session.blockHashes[idx];
-            uint32 bits = session.blocksInfo[blockSha256Hash].bits;
+            // TODO: add missing test for this case.
             if (session.blocksInfo[blockSha256Hash].prevBlock != prevBlock) {
                 return ERR_SUPERBLOCK_BAD_PARENT;
             }
+            uint32 bits = session.blocksInfo[blockSha256Hash].bits;
             if (net != DogeMessageLibrary.Network.REGTEST) {
                 uint32 newBits = DogeMessageLibrary.calculateDigishieldDifficulty(
                     int64(parentTimestamp) - int64(gpTimestamp), prevBits);

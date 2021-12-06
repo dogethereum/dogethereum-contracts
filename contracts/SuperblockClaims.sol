@@ -17,22 +17,33 @@ contract SuperblockClaims is DogeDepositsManager, DogeErrorCodes {
     using SafeMath for uint;
 
     struct SuperblockClaim {
-        bytes32 superblockHash;                       // Superblock Id
-        address submitter;                           // Superblock submitter
-        uint createdAt;                             // Superblock creation time
+        // Superblock Id
+        bytes32 superblockHash;
+        // Superblock submitter
+        address submitter;
+        // Superblock creation time
+        uint createdAt;
 
-        address[] challengers;                      // List of challengers
-        mapping (address => uint) bondedDeposits;   // Deposit associated to challengers
+        // List of challengers
+        address[] challengers;
+        // Deposit associated to challengers
+        mapping (address => uint) bondedDeposits;
 
-        uint currentChallenger;                     // Index of challenger in current session
-        mapping (address => bytes32) sessions;      // Challenge sessions
+        // Index of challenger in current session
+        uint currentChallenger;
+        // Challenge sessions
+        mapping (address => bytes32) sessions;
 
-        uint challengeTimeout;                      // Claim timeout
+        // Claim timeout
+        uint challengeTimeout;
 
-        bool verificationOngoing;                   // Challenge session has started
+        // Challenge session has started
+        bool verificationOngoing;
 
-        bool decided;                               // If the claim was decided
-        bool invalid;                               // If superblock is invalid
+        // If the claim was decided
+        bool decided;
+        // If superblock is invalid
+        bool invalid;
     }
 
     // Active superblock claims
@@ -58,6 +69,7 @@ contract SuperblockClaims is DogeDepositsManager, DogeErrorCodes {
      * Delay required to submit superblocks (in seconds)
      */
     uint public superblockDelay;
+
     /**
      * Timeout for action (in seconds)
      */
@@ -360,7 +372,7 @@ contract SuperblockClaims is DogeDepositsManager, DogeErrorCodes {
         return true;
     }
 
-    // @dev – confirms a range of semi approved superblocks.
+    // @dev – Confirms a superblock. Optionally confirms the entire range of semi approved superblocks if they weren't challenged.
     //
     // The range of superblocks is given by a semi approved superblock and one of its descendants.
     // This will attempt to confirm all superblocks in between them.
