@@ -1,6 +1,6 @@
 import hre from "hardhat";
 import { assert } from "chai";
-import type { Contract } from "ethers";
+import type { Contract, ContractTransaction } from "ethers";
 import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 import {
@@ -15,7 +15,9 @@ import {
   calcBlockSha256Hash,
   calcHeaderPoW,
   DEPOSITS,
+  expectFailure,
   findEvent,
+  getEvents,
   isolateTests,
   makeSuperblock,
   mineBlocks,
@@ -755,23 +757,24 @@ describe("verifyScryptHash", function () {
         proposalId = requestScryptHashValidation!.args!.proposalId;
       });
 
-      it("Timeout without sumitting to scrypt checker", async () => {
-        let result = await challengerBattleManager.timeout(battleSessionId);
-        let receipt = await result.wait();
-        assert.ok(
-          findEvent(receipt.events, "ErrorBattle"),
-          "Timeout did not elapse"
+      it("Timeout without submitting to scrypt checker", async function () {
+        await expectFailure(
+          () => challengerBattleManager.timeout(battleSessionId),
+          (error) => {
+            assert.include(error.message, "ERR_BATTLE_TIMEOUT_NO_TIMEOUT");
+          }
         );
 
         await blockchainTimeoutSeconds(
           2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout
         );
-        result = await challengerBattleManager.timeout(battleSessionId);
-        receipt = await result.wait();
-        assert.ok(
-          findEvent(receipt.events, "SubmitterConvicted"),
-          "Scrypt hash failed"
+        const result: ContractTransaction =
+          await challengerBattleManager.timeout(battleSessionId);
+        const { events: convictedEvents } = await getEvents(
+          result,
+          "SubmitterConvicted"
         );
+        assert.lengthOf(convictedEvents, 1, "Scrypt hash failed");
       });
 
       it("Confirm superblock", async () => {
@@ -843,23 +846,24 @@ describe("verifyScryptHash", function () {
         );
       });
 
-      it("Timeout after challenger abandoned", async () => {
-        let result = await submitterBattleManager.timeout(battleSessionId);
-        let receipt = await result.wait();
-        assert.ok(
-          findEvent(receipt.events, "ErrorBattle"),
-          "Timeout did not elapse"
+      it("Timeout after challenger abandoned", async function () {
+        await expectFailure(
+          () => submitterBattleManager.timeout(battleSessionId),
+          (error) => {
+            assert.include(error.message, "ERR_BATTLE_TIMEOUT_NO_TIMEOUT");
+          }
         );
 
         await blockchainTimeoutSeconds(
           2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout
         );
-        result = await submitterBattleManager.timeout(battleSessionId);
-        receipt = await result.wait();
-        assert.ok(
-          findEvent(receipt.events, "ChallengerConvicted"),
-          "Challenger abandoned"
+        const result: ContractTransaction =
+          await submitterBattleManager.timeout(battleSessionId);
+        const { events: convictedEvents } = await getEvents(
+          result,
+          "ChallengerConvicted"
         );
+        assert.lengthOf(convictedEvents, 1, "Challenger abandoned");
       });
 
       it("Confirm superblock", async () => {

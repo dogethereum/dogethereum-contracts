@@ -14,6 +14,7 @@ import {
     calcBlockSha256Hash,
     calcHeaderPoW,
     DEPOSITS,
+    expectFailure,
     findEvent,
     makeSuperblock,
     isolateTests,
@@ -370,15 +371,12 @@ describe("approveDescendant", function () {
         });
 
         it("Missing confirmations", async () => {
-            const response = await submitterSuperblockClaims.confirmClaim(
+            await expectFailure(() => submitterSuperblockClaims.confirmClaim(
                 superblock1Id,
                 superblock2Id
-            );
-            const result = await response.wait();
-            assert.ok(
-                findEvent(result.events, "ErrorClaim"),
-                "No ErrorClaim event found"
-            );
+            ), (error) => {
+                assert.include(error.message, "ERR_CONFIRM_CLAIM_MISSING_CONFIRMATIONS");
+            });
         });
 
         it("Propose superblock 3", async () => {

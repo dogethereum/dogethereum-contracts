@@ -1,6 +1,6 @@
 import hre from "hardhat";
 import { assert } from "chai";
-import type { Contract } from "ethers";
+import type { Contract, ContractTransaction } from "ethers";
 import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 import {
@@ -14,6 +14,7 @@ import {
   calcBlockSha256Hash,
   calcHeaderPoW,
   DEPOSITS,
+  expectFailure,
   findEvent,
   isolateTests,
   makeSuperblock,
@@ -654,15 +655,17 @@ describe("validateSuperblocks", function () {
       await submitterSuperblockClaims.makeDeposit({
         value: DEPOSITS.VERIFY_SUPERBLOCK_COST,
       });
-      result = await submitterBattleManager.respondMerkleRootHashes(
-        proposesSuperblockHash,
-        battleSessionId,
-        hashes
+      await expectFailure(
+        () =>
+          submitterBattleManager.respondMerkleRootHashes(
+            proposesSuperblockHash,
+            battleSessionId,
+            hashes
+          ),
+        (error) => {
+          assert.include(error.message, "ERR_VERIFY_MERKLE_BAD_LASTBLOCK");
+        }
       );
-      receipt = await result.wait();
-      const errorBattleEvent = findEvent(receipt.events, "ErrorBattle");
-      assert.ok(errorBattleEvent, "Respond merkle root hashes");
-      assert.equal(errorBattleEvent!.args!.err, "50150", "Bad last hash");
 
       await blockchainTimeoutSeconds(2 * SUPERBLOCK_OPTIONS_LOCAL.timeout);
       result = await challengerBattleManager.timeout(battleSessionId);

@@ -14,6 +14,7 @@ import {
   calcBlockSha256Hash,
   calcHeaderPoW,
   DEPOSITS,
+  expectFailure,
   findEvent,
   isolateTests,
   makeSuperblock,
@@ -122,17 +123,28 @@ describe("SuperblockClaims", () => {
         .superblockHash;
     });
 
-    it("Try to confirm whitout waiting", async () => {
-      let response = await challengerSuperblockClaims.checkClaimFinished(
-        "0x0000000000000000000000000000000000000000000000000000000000000002"
+    it("Try to confirm without waiting", async () => {
+      // TODO: Why is this here?
+      await expectFailure(
+        () =>
+          challengerSuperblockClaims.checkClaimFinished(
+            "0x0000000000000000000000000000000000000000000000000000000000000002"
+          ),
+        (error) => {
+          assert.include(error.message, "ERR_CHECK_CLAIM_DOES_NOT_EXIST");
+        }
       );
-      let result = await response.wait();
-      assert.ok(findEvent(result.events, "ErrorClaim"), "Invalid claim");
-      response = await challengerSuperblockClaims.checkClaimFinished(
-        proposedSuperblockHash
+
+      await expectFailure(
+        () =>
+          challengerSuperblockClaims.checkClaimFinished(proposedSuperblockHash),
+        (error) => {
+          assert.include(
+            error.message,
+            "ERR_CHECK_CLAIM_NO_TIMEOUT"
+          );
+        }
       );
-      result = await response.wait();
-      assert.ok(findEvent(result.events, "ErrorClaim"), "Invalid timeout");
     });
 
     it("Confirm", async () => {
@@ -602,13 +614,19 @@ describe("SuperblockClaims", () => {
     });
 
     it("Timeout query hashes", async () => {
-      let response = await submitterBattleManager.timeout(battleSessionId);
-      let result = await response.wait();
-      assert.ok(findEvent(result.events, "ErrorBattle"), "Timeout too early");
-      await blockchainTimeoutSeconds(2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout);
-      response = await submitterBattleManager.timeout(battleSessionId);
-      result = await response.wait();
-      assert.ok(
+      await expectFailure(
+        () => submitterBattleManager.timeout(battleSessionId),
+        (error) => {
+          assert.include(error.message, "ERR_BATTLE_TIMEOUT_NO_TIMEOUT");
+        }
+      );
+      await blockchainTimeoutSeconds(
+        2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout
+      );
+      const response: ContractTransaction =
+        await submitterBattleManager.timeout(battleSessionId);
+      const result = await response.wait();
+      assert.isDefined(
         findEvent(result.events, "ChallengerConvicted"),
         "Should convict challenger"
       );
@@ -624,10 +642,17 @@ describe("SuperblockClaims", () => {
         findEvent(result.events, "QueryMerkleRootHashes"),
         "Query merkle root hashes"
       );
-      response = await challengerBattleManager.timeout(battleSessionId);
-      result = await response.wait();
-      assert.ok(findEvent(result.events, "ErrorBattle"), "Timeout too early");
-      await blockchainTimeoutSeconds(2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout);
+
+      await expectFailure(
+        () => challengerBattleManager.timeout(battleSessionId),
+        (error) => {
+          assert.include(error.message, "ERR_BATTLE_TIMEOUT_NO_TIMEOUT");
+        }
+      );
+
+      await blockchainTimeoutSeconds(
+        2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout
+      );
       response = await challengerBattleManager.timeout(battleSessionId);
       result = await response.wait();
       assert.ok(
@@ -664,9 +689,12 @@ describe("SuperblockClaims", () => {
         "Respond merkle root hashes"
       );
 
-      response = await submitterBattleManager.timeout(battleSessionId);
-      result = await response.wait();
-      assert.ok(findEvent(result.events, "ErrorBattle"), "Timeout too early");
+      await expectFailure(
+        () => submitterBattleManager.timeout(battleSessionId),
+        (error) => {
+          assert.include(error.message, "ERR_BATTLE_TIMEOUT_NO_TIMEOUT");
+        }
+      );
 
       await blockchainTimeoutSeconds(2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout);
       response = await submitterBattleManager.timeout(battleSessionId);
@@ -718,9 +746,12 @@ describe("SuperblockClaims", () => {
         findEvent(result.events, "QueryBlockHeader"),
         "Query block header"
       );
-      response = await challengerBattleManager.timeout(battleSessionId);
-      result = await response.wait();
-      assert.ok(findEvent(result.events, "ErrorBattle"), "Timeout too early");
+      await expectFailure(
+        () => challengerBattleManager.timeout(battleSessionId),
+        (error) => {
+          assert.include(error.message, "ERR_BATTLE_TIMEOUT_NO_TIMEOUT");
+        }
+      );
 
       await blockchainTimeoutSeconds(2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout);
       response = await challengerBattleManager.timeout(battleSessionId);
@@ -789,9 +820,12 @@ describe("SuperblockClaims", () => {
         "Respond block header"
       );
 
-      response = await submitterBattleManager.timeout(battleSessionId);
-      result = await response.wait();
-      assert.ok(findEvent(result.events, "ErrorBattle"), "Timeout too early");
+      await expectFailure(
+        () => submitterBattleManager.timeout(battleSessionId),
+        (error) => {
+          assert.include(error.message, "ERR_BATTLE_TIMEOUT_NO_TIMEOUT");
+        }
+      );
 
       await blockchainTimeoutSeconds(2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout);
       response = await submitterBattleManager.timeout(battleSessionId);

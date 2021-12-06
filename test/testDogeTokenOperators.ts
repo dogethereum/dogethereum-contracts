@@ -160,15 +160,17 @@ describe("DogeToken - Operators", function () {
     });
 
     it("addOperatorDeposit fail - operator not created", async function () {
-      const addOperatorDepositTxResponse = await operatorDogeToken.addOperatorDeposit(
-        operatorPublicKeyHash,
-        { value: "1000000000000000000" }
-      );
-      const addOperatorDepositTxReceipt = await addOperatorDepositTxResponse.wait();
-      assert.equal(
-        60020,
-        addOperatorDepositTxReceipt.events[0].args.err,
-        "Expected ERR_OPERATOR_NOT_CREATED_OR_WRONG_SENDER error"
+      await expectFailure(
+        () =>
+          operatorDogeToken.addOperatorDeposit(operatorPublicKeyHash, {
+            value: "1000000000000000000",
+          }),
+        (error) => {
+          assert.include(
+            error.message,
+            "ERR_ADD_DEPOSIT_OPERATOR_NOT_CREATED_OR_WRONG_SENDER"
+          );
+        }
       );
       const operator = await dogeToken.operators(operatorPublicKeyHash);
       assert.equal(operator.ethBalance, 0, "Deposit credited");
@@ -176,16 +178,19 @@ describe("DogeToken - Operators", function () {
 
     it("addOperatorDeposit fail - wrong sender", async function () {
       await sendAddOperator(dogeToken);
-      const addOperatorDepositTxResponse = await dogeToken.addOperatorDeposit(
-        operatorPublicKeyHash,
-        { value: "1000000000000000000" }
+      await expectFailure(
+        () =>
+          dogeToken.addOperatorDeposit(operatorPublicKeyHash, {
+            value: "1000000000000000000",
+          }),
+        (error) => {
+          assert.include(
+            error.message,
+            "ERR_ADD_DEPOSIT_OPERATOR_NOT_CREATED_OR_WRONG_SENDER"
+          );
+        }
       );
-      const addOperatorDepositTxReceipt = await addOperatorDepositTxResponse.wait();
-      assert.equal(
-        60020,
-        addOperatorDepositTxReceipt.events[0].args.err,
-        "Expected ERR_OPERATOR_NOT_CREATED_OR_WRONG_SENDER error"
-      );
+
       const operator = await dogeToken.operators(operatorPublicKeyHash);
       assert.equal(operator.ethBalance, 0, "Deposit credited");
     });
@@ -213,15 +218,13 @@ describe("DogeToken - Operators", function () {
       await operatorDogeToken.addOperatorDeposit(operatorPublicKeyHash, {
         value: "1000000000000000000",
       });
-      const deleteOperatorTxResponse = await operatorDogeToken.deleteOperator(
-        operatorPublicKeyHash
+      await expectFailure(
+        () => operatorDogeToken.deleteOperator(operatorPublicKeyHash),
+        (error) => {
+          assert.include(error.message, "ERR_DELETE_OPERATOR_HAS_BALANCE");
+        }
       );
-      const deleteOperatorTxReceipt = await deleteOperatorTxResponse.wait();
-      assert.equal(
-        60030,
-        deleteOperatorTxReceipt.events[0].args.err,
-        "Expected ERR_OPERATOR_HAS_BALANCE error"
-      );
+
       const operator = await dogeToken.operators(operatorPublicKeyHash);
       assert.equal(
         operator.ethAddress,
@@ -307,16 +310,20 @@ describe("DogeToken - Operators", function () {
         value: "1000000000000000000",
       });
       await dogeUsdPriceOracle.setPrice(1);
-      const withdrawOperatorDepositTxResponse = await operatorDogeToken.withdrawOperatorDeposit(
-        operatorPublicKeyHash,
-        "2000000000000000000"
+      await expectFailure(
+        () =>
+          operatorDogeToken.withdrawOperatorDeposit(
+            operatorPublicKeyHash,
+            "2000000000000000000"
+          ),
+        (error) => {
+          assert.include(
+            error.message,
+            "ERR_WITHDRAW_DEPOSIT_NOT_ENOUGH_BALANCE"
+          );
+        }
       );
-      const withdrawOperatorDepositTxReceipt = await withdrawOperatorDepositTxResponse.wait();
-      assert.equal(
-        60040,
-        withdrawOperatorDepositTxReceipt.events[0].args.err,
-        "Expected ERR_OPERATOR_WITHDRAWAL_NOT_ENOUGH_BALANCE error"
-      );
+
       const operator = await dogeToken.operators(operatorPublicKeyHash);
       assert.equal(
         operator.ethBalance,
@@ -332,16 +339,13 @@ describe("DogeToken - Operators", function () {
       });
       await dogeUsdPriceOracle.setPrice(3);
       await dogeToken.addUtxo(operatorPublicKeyHash, 400, 1, 1);
-      const withdrawOperatorDepositTxResponse = await operatorDogeToken.withdrawOperatorDeposit(
-        operatorPublicKeyHash,
-        3000
-      );
-      const withdrawOperatorDepositTxReceipt = await withdrawOperatorDepositTxResponse.wait();
-      assert.equal(
-        60050,
-        withdrawOperatorDepositTxReceipt.events[0].args.err,
-        "Expected ERR_OPERATOR_WITHDRAWAL_COLLATERAL_WOULD_BE_TOO_LOW error"
-      );
+      await expectFailure(() => operatorDogeToken.withdrawOperatorDeposit(
+                operatorPublicKeyHash,
+                3000
+              ), (error) => {
+        assert.include(error.message, "ERR_WITHDRAW_DEPOSIT_COLLATERAL_WOULD_BE_TOO_LOW");
+      });
+
       const operator = await dogeToken.operators(operatorPublicKeyHash);
       assert.equal(
         operator.ethBalance,

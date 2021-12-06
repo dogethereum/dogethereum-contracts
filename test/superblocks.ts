@@ -7,6 +7,7 @@ import { deployFixture, deployContract } from "../deploy";
 
 import {
   calcSuperblockHash,
+  expectFailure,
   getEvents,
   makeMerkle,
   isolateTests,
@@ -216,45 +217,44 @@ describe("DogeSuperblocks", function () {
       id1 = newSuperblockEvents[0].args!.superblockHash;
     });
 
-    it("Bad propose", async function () {
-      const tx: ContractTransaction = await claimerSuperblocks.propose(
-        merkleRoot,
-        accumulatedWork,
-        timestamp,
-        prevTimestamp,
-        lastHash,
-        lastBits,
-        id0,
-        superblockClaims.address
+    it("Existing superblock proposal should fail", async function () {
+      await expectFailure(
+        () =>
+          claimerSuperblocks.propose(
+            merkleRoot,
+            accumulatedWork,
+            timestamp,
+            prevTimestamp,
+            lastHash,
+            lastBits,
+            id0,
+            superblockClaims.address
+          ),
+        (error) => {
+          assert.include(error.message, "ERR_PROPOSED_SUPERBLOCK_EXISTS");
+        }
       );
-      const { events: errorSuperblockEvents } = await getEvents(
-        tx,
-        "ErrorSuperblock"
-      );
-
-      assert.lengthOf(errorSuperblockEvents, 1, "Superblock already exists");
     });
 
     it("Bad parent", async function () {
-      const tx: ContractTransaction = await claimerSuperblocks.propose(
-        merkleRoot,
-        accumulatedWork,
-        timestamp,
-        prevTimestamp,
-        lastHash,
-        lastBits,
-        "0x0000000000000000000000000000000000000000000000000000000000000000",
-        superblockClaims.address
-      );
-      const { events: errorSuperblockEvents } = await getEvents(
-        tx,
-        "ErrorSuperblock"
-      );
-
-      assert.lengthOf(
-        errorSuperblockEvents,
-        1,
-        "Superblock parent does not exist"
+      await expectFailure(
+        () =>
+          claimerSuperblocks.propose(
+            merkleRoot,
+            accumulatedWork,
+            timestamp,
+            prevTimestamp,
+            lastHash,
+            lastBits,
+            "0x0000000000000000000000000000000000000000000000000000000000000000",
+            superblockClaims.address
+          ),
+        (error) => {
+          assert.include(
+            error.message,
+            "ERR_PROPOSED_SUPERBLOCK_BAD_PARENT_STATUS"
+          );
+        }
       );
     });
 
@@ -328,13 +328,16 @@ describe("DogeSuperblocks", function () {
       assert.lengthOf(approvedEvents, 1, "Superblock confirmed");
     });
 
-    it("Invalidate bad", async function () {
-      const tx: ContractTransaction = await claimerSuperblocks.invalidate(
-        id2,
-        superblockClaims.address
+    it("should fail to invalidate approved superblock", async function () {
+      await expectFailure(
+        () => claimerSuperblocks.invalidate(id2, superblockClaims.address),
+        (error) => {
+          assert.include(
+            error.message,
+            "ERR_INVALIDATE_SUPERBLOCK_BAD_STATUS"
+          );
+        }
       );
-      const { events: errorEvents } = await getEvents(tx, "ErrorSuperblock");
-      assert.lengthOf(errorEvents, 1, "Superblock cannot invalidate");
     });
 
     it("Propose tris", async function () {
@@ -380,16 +383,16 @@ describe("DogeSuperblocks", function () {
       assert.lengthOf(invalidSuperblockEvents, 1, "Superblock invalidated");
     });
 
-    it("Approve bad", async function () {
-      const tx: ContractTransaction = await claimerSuperblocks.confirm(
-        id3,
-        superblockClaims.address
+    it("should fail to approve invalidated superblock", async function () {
+      await expectFailure(
+        () => claimerSuperblocks.confirm(id3, superblockClaims.address),
+        (error) => {
+          assert.include(
+            error.message,
+            "ERR_CONFIRM_SUPERBLOCK_BAD_STATUS"
+          );
+        }
       );
-      const { events: errorSuperblockEvents } = await getEvents(
-        tx,
-        "ErrorSuperblock"
-      );
-      assert.lengthOf(errorSuperblockEvents, 1, "Superblock cannot approve");
     });
   });
 
@@ -431,27 +434,27 @@ describe("DogeSuperblocks", function () {
     });
 
     it("Propose", async function () {
-      let result: ContractTransaction = await superblocks.propose(
-        merkleRoot,
-        accumulatedWork,
-        timestamp,
-        prevTimestamp,
-        lastHash,
-        lastBits,
-        id0,
-        superblockClaims.address
-      );
-      const { events: errorSuperblockEvents } = await getEvents(
-        result,
-        "ErrorSuperblock"
-      );
-      assert.lengthOf(
-        errorSuperblockEvents,
-        1,
-        "Only superblockClaims can propose"
+      await expectFailure(
+        () =>
+          superblocks.propose(
+            merkleRoot,
+            accumulatedWork,
+            timestamp,
+            prevTimestamp,
+            lastHash,
+            lastBits,
+            id0,
+            superblockClaims.address
+          ),
+        (error) => {
+          assert.include(
+            error.message,
+            "ERR_AUTH_ONLY_SUPERBLOCKCLAIMS"
+          );
+        }
       );
 
-      result = await claimerSuperblocks.propose(
+      const tx: ContractTransaction = await claimerSuperblocks.propose(
         merkleRoot,
         accumulatedWork,
         timestamp,
@@ -462,7 +465,7 @@ describe("DogeSuperblocks", function () {
         superblockClaims.address
       );
       const { events: newSuperblockEvents } = await getEvents(
-        result,
+        tx,
         "NewSuperblock"
       );
       assert.lengthOf(newSuperblockEvents, 1, "SuperblockClaims can propose");
@@ -470,23 +473,22 @@ describe("DogeSuperblocks", function () {
     });
 
     it("Approve", async function () {
-      let result: ContractTransaction = await superblocks.confirm(
+      await expectFailure(
+        () => superblocks.confirm(id1, superblockClaims.address),
+        (error) => {
+          assert.include(
+            error.message,
+            "ERR_AUTH_ONLY_SUPERBLOCKCLAIMS"
+          );
+        }
+      );
+
+      const tx: ContractTransaction = await claimerSuperblocks.confirm(
         id1,
         superblockClaims.address
       );
-      const { events: errorSuperblockEvents } = await getEvents(
-        result,
-        "ErrorSuperblock"
-      );
-      assert.lengthOf(
-        errorSuperblockEvents,
-        1,
-        "Only superblockClaims can propose"
-      );
-
-      result = await claimerSuperblocks.confirm(id1, superblockClaims.address);
       const { events: approvedEvents } = await getEvents(
-        result,
+        tx,
         "ApprovedSuperblock"
       );
       assert.lengthOf(approvedEvents, 1, "Only superblockClaims can confirm");
@@ -510,15 +512,14 @@ describe("DogeSuperblocks", function () {
       assert.lengthOf(newSuperblockEvents, 1, "SuperblockClaims can propose");
       id2 = newSuperblockEvents[0].args!.superblockHash;
 
-      result = await superblocks.challenge(id2, superblockClaims.address);
-      const { events: errorSuperblockEvents } = await getEvents(
-        result,
-        "ErrorSuperblock"
-      );
-      assert.lengthOf(
-        errorSuperblockEvents,
-        1,
-        "Only superblockClaims can propose"
+      await expectFailure(
+        () => superblocks.challenge(id2, superblockClaims.address),
+        (error) => {
+          assert.include(
+            error.message,
+            "ERR_AUTH_ONLY_SUPERBLOCKCLAIMS"
+          );
+        }
       );
 
       result = await claimerSuperblocks.challenge(
@@ -533,21 +534,17 @@ describe("DogeSuperblocks", function () {
     });
 
     it("Semi-Approve", async function () {
-      let result: ContractTransaction = await superblocks.semiApprove(
-        id2,
-        superblockClaims.address
-      );
-      const { events: errorSuperblockEvents } = await getEvents(
-        result,
-        "ErrorSuperblock"
-      );
-      assert.lengthOf(
-        errorSuperblockEvents,
-        1,
-        "Only superblockClaims can semi-approve"
+      await expectFailure(
+        () => superblocks.semiApprove(id2, superblockClaims.address),
+        (error) => {
+          assert.include(
+            error.message,
+            "ERR_AUTH_ONLY_SUPERBLOCKCLAIMS"
+          );
+        }
       );
 
-      result = await claimerSuperblocks.semiApprove(
+      let result: ContractTransaction = await claimerSuperblocks.semiApprove(
         id2,
         superblockClaims.address
       );
@@ -593,15 +590,14 @@ describe("DogeSuperblocks", function () {
       );
       assert.lengthOf(challengeEvents, 1, "Superblock challenged");
 
-      result = await superblocks.invalidate(id3, superblockClaims.address);
-      const { events: errorSuperblockEvents } = await getEvents(
-        result,
-        "ErrorSuperblock"
-      );
-      assert.lengthOf(
-        errorSuperblockEvents,
-        1,
-        "Only superblockClaims can invalidate"
+      await expectFailure(
+        () => superblocks.invalidate(id3, superblockClaims.address),
+        (error) => {
+          assert.include(
+            error.message,
+            "ERR_AUTH_ONLY_SUPERBLOCKCLAIMS"
+          );
+        }
       );
 
       result = await claimerSuperblocks.invalidate(
