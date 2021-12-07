@@ -19,4 +19,8 @@ ganachelog.txt
 # Used by upgrades plugin
 .openzeppelin/
 
+#local testing
 scripts/set-environment-variables.sh
+
+
+/deployment

@@ -42,6 +42,21 @@ export interface DogethereumFixture {
   dogeToken: ethers.Contract;
 }
 
+export interface SuperblockInfo {
+  blocksMerkleRoot: string;
+  accumulatedWork: string;
+  timestamp: string;
+  prevTimestamp: string;
+  lastHash: string;
+  parentId: string;
+  submitter: string;
+  ancestors: string;
+  lastBits: string;
+  index: string;
+  height: string;
+  status: string;
+}
+
 interface ContractInfo {
   abi: any[];
   contractName: string;
@@ -282,34 +297,36 @@ const integrationSuperblockGenesis: SuperblockHeader = {
 //   liquidationThresholdCollateralRatio: "1500",
 // };
 
-export const SUPERBLOCK_OPTIONS_INTEGRATION_SLOW_SYNC: SuperblockchainOptions = {
-  duration: 10 * 60,
-  delay: 5 * 60,
-  timeout: 60,
-  confirmations: 1,
-  reward: 10,
-  genesis: integrationSuperblockGenesis,
-  unlockEthereumTimeGracePeriod: 4 * 60 * 60,
-  unlockSuperblocksHeightGracePeriod: 4,
-  lockCollateralRatio: "2000",
-  liquidationThresholdCollateralRatio: "1500",
-};
+export const SUPERBLOCK_OPTIONS_INTEGRATION_SLOW_SYNC: SuperblockchainOptions =
+  {
+    duration: 10 * 60,
+    delay: 5 * 60,
+    timeout: 60,
+    confirmations: 1,
+    reward: 10,
+    genesis: integrationSuperblockGenesis,
+    unlockEthereumTimeGracePeriod: 4 * 60 * 60,
+    unlockSuperblocksHeightGracePeriod: 4,
+    lockCollateralRatio: "2000",
+    liquidationThresholdCollateralRatio: "1500",
+  };
 
 /**
  * These options are typically used in testnets like ropsten, rinkeby.
  */
-export const SUPERBLOCK_OPTIONS_INTEGRATION_FAST_SYNC: SuperblockchainOptions = {
-  duration: 10 * 60,
-  delay: 5 * 60,
-  timeout: 30,
-  confirmations: 1,
-  reward: 10,
-  genesis: integrationSuperblockGenesis,
-  unlockEthereumTimeGracePeriod: 4 * 60 * 60,
-  unlockSuperblocksHeightGracePeriod: 4,
-  lockCollateralRatio: "2000",
-  liquidationThresholdCollateralRatio: "1500",
-};
+export const SUPERBLOCK_OPTIONS_INTEGRATION_FAST_SYNC: SuperblockchainOptions =
+  {
+    duration: 10 * 60,
+    delay: 5 * 60,
+    timeout: 30,
+    confirmations: 1,
+    reward: 10,
+    genesis: integrationSuperblockGenesis,
+    unlockEthereumTimeGracePeriod: 4 * 60 * 60,
+    unlockSuperblocksHeightGracePeriod: 4,
+    lockCollateralRatio: "2000",
+    liquidationThresholdCollateralRatio: "1500",
+  };
 
 /**
  * These options are used for most tests.
@@ -392,7 +409,7 @@ export async function deployToken(
         lockCollateralRatio,
         liquidationThresholdCollateralRatio,
         unlockEthereumTimeGracePeriod,
-        unlockSuperblocksHeightGracePeriod
+        unlockSuperblocksHeightGracePeriod,
       ],
       hre,
       {
@@ -418,7 +435,7 @@ function deployTokenForCoreSystem(
     dogeUsdPriceOracle,
     ethUsdPriceOracle,
     useProxy,
-    superblockOptions
+    superblockOptions,
   }: DeploymentOptions,
   { superblocks }: DogethereumCoreSystem
 ): Promise<DogethereumTokenSystem> {
