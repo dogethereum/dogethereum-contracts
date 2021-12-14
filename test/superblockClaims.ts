@@ -20,7 +20,7 @@ import {
   makeSuperblock,
 } from "./utils";
 
-describe("SuperblockClaims", () => {
+describe("SuperblockClaims", function () {
   let owner: SignerWithAddress;
   let submitter: SignerWithAddress;
   let challenger: SignerWithAddress;
@@ -86,19 +86,19 @@ describe("SuperblockClaims", () => {
     initAccumulatedWork
   );
 
-  describe("Confirm superblock after timeout", () => {
+  describe("Confirm superblock after timeout", function () {
     let genesisSuperblockHash: string;
     let proposedSuperblockHash: string;
     let proposedForkSuperblockHash: string;
     before(initSuperblockChain);
 
-    it("Initialize", async () => {
+    it("Initialize", async function () {
       genesisSuperblockHash = genesisSuperblock.superblockHash;
       const best = await superblocks.getBestSuperblock();
       assert.equal(genesisSuperblockHash, best, "Best superblock should match");
     });
 
-    it("Propose", async () => {
+    it("Propose", async function () {
       const proposedSuperblock = makeSuperblock(
         headers.slice(0, 3),
         genesisSuperblock.superblockHash,
@@ -120,12 +120,12 @@ describe("SuperblockClaims", () => {
         result.events,
         "SuperblockClaimCreated"
       );
-      assert.ok(superblockClaimCreatedEvent, "New superblock proposed");
+      assert.isDefined(superblockClaimCreatedEvent, "New superblock proposed");
       proposedSuperblockHash =
         superblockClaimCreatedEvent!.args!.superblockHash;
     });
 
-    it("Try to confirm without waiting", async () => {
+    it("Try to confirm without waiting", async function () {
       // TODO: Why is this here?
       await expectFailure(
         () =>
@@ -141,15 +141,12 @@ describe("SuperblockClaims", () => {
         () =>
           challengerSuperblockClaims.checkClaimFinished(proposedSuperblockHash),
         (error) => {
-          assert.include(
-            error.message,
-            "ERR_CHECK_CLAIM_NO_TIMEOUT"
-          );
+          assert.include(error.message, "ERR_CHECK_CLAIM_NO_TIMEOUT");
         }
       );
     });
 
-    it("Confirm", async () => {
+    it("Confirm", async function () {
       await blockchainTimeoutSeconds(
         2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout
       );
@@ -157,7 +154,7 @@ describe("SuperblockClaims", () => {
         proposedSuperblockHash
       );
       const result = await response.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(result.events, "SuperblockClaimSuccessful"),
         "Superblock challenged"
       );
@@ -169,7 +166,7 @@ describe("SuperblockClaims", () => {
       );
     });
 
-    it("Propose fork", async () => {
+    it("Propose fork", async function () {
       const proposedSuperblock = makeSuperblock(
         headers.slice(0, 2),
         genesisSuperblock.superblockHash,
@@ -191,12 +188,12 @@ describe("SuperblockClaims", () => {
         result.events,
         "SuperblockClaimCreated"
       );
-      assert.ok(superblockClaimCreatedEvent, "New superblock proposed");
+      assert.isDefined(superblockClaimCreatedEvent, "New superblock proposed");
       proposedForkSuperblockHash =
         superblockClaimCreatedEvent!.args!.superblockHash;
     });
 
-    it("Confirm fork", async () => {
+    it("Confirm fork", async function () {
       await blockchainTimeoutSeconds(
         2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout
       );
@@ -204,7 +201,7 @@ describe("SuperblockClaims", () => {
         proposedForkSuperblockHash
       );
       const result = await response.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(result.events, "SuperblockClaimSuccessful"),
         "Superblock challenged"
       );
@@ -223,13 +220,13 @@ describe("SuperblockClaims", () => {
     let battleSessionId: string;
     before(initSuperblockChain);
 
-    it("Initialized", async () => {
+    it("Initialized", async function () {
       genesisSuperblockHash = genesisSuperblock.superblockHash;
       const best = await superblocks.getBestSuperblock();
       assert.equal(genesisSuperblockHash, best, "Best superblock should match");
     });
 
-    it("Propose", async () => {
+    it("Propose", async function () {
       const proposedSuperblock = makeSuperblock(
         headers.slice(0, 2),
         genesisSuperblock.superblockHash,
@@ -250,12 +247,12 @@ describe("SuperblockClaims", () => {
         result.events,
         "SuperblockClaimCreated"
       );
-      assert.ok(superblockClaimCreatedEvent, "New superblock proposed");
+      assert.isDefined(superblockClaimCreatedEvent, "New superblock proposed");
       proposedSuperblockHash =
         superblockClaimCreatedEvent!.args!.superblockHash;
     });
 
-    it("Challenge", async () => {
+    it("Challenge", async function () {
       await challengerSuperblockClaims.makeDeposit({
         value: DEPOSITS.SUPERBLOCK_COST,
       });
@@ -267,7 +264,7 @@ describe("SuperblockClaims", () => {
         result.events,
         "SuperblockClaimChallenged"
       );
-      assert.ok(superblockClaimChallengedEvent, "Superblock challenged");
+      assert.isDefined(superblockClaimChallengedEvent, "Superblock challenged");
       assert.equal(
         proposedSuperblockHash,
         superblockClaimChallengedEvent!.args!.superblockHash
@@ -276,11 +273,11 @@ describe("SuperblockClaims", () => {
         result.events,
         "VerificationGameStarted"
       );
-      assert.ok(verificationGameStartedEvent, "Battle started");
+      assert.isDefined(verificationGameStartedEvent, "Battle started");
       battleSessionId = verificationGameStartedEvent!.args!.sessionId;
     });
 
-    it("Query and verify hashes", async () => {
+    it("Query and verify hashes", async function () {
       await challengerSuperblockClaims.makeDeposit({
         value: DEPOSITS.RESPOND_MERKLE_COST,
       });
@@ -289,7 +286,7 @@ describe("SuperblockClaims", () => {
         battleSessionId
       );
       let result = await response.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(result.events, "QueryMerkleRootHashes"),
         "Query merkle root hashes"
       );
@@ -303,13 +300,13 @@ describe("SuperblockClaims", () => {
         hashes.slice(0, 2)
       );
       result = await response.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(result.events, "RespondMerkleRootHashes"),
         "Respond merkle root hashes"
       );
     });
 
-    it("Query and reply block header", async () => {
+    it("Query and reply block header", async function () {
       await challengerSuperblockClaims.makeDeposit({
         value: DEPOSITS.RESPOND_HEADER_COST,
       });
@@ -320,7 +317,7 @@ describe("SuperblockClaims", () => {
           hashes[0]
         );
       let result = await response.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(result.events, "QueryBlockHeader"),
         "Query block header"
       );
@@ -336,7 +333,7 @@ describe("SuperblockClaims", () => {
         `0x${headers[0]}`
       );
       result = await response.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(result.events, "RespondBlockHeader"),
         "Respond block header"
       );
@@ -350,7 +347,7 @@ describe("SuperblockClaims", () => {
         hashes[1]
       );
       result = await response.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(result.events, "QueryBlockHeader"),
         "Query block header"
       );
@@ -366,24 +363,24 @@ describe("SuperblockClaims", () => {
         `0x${headers[1]}`
       );
       result = await response.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(result.events, "RespondBlockHeader"),
         "Respond block header"
       );
     });
 
-    it("Verify superblock", async () => {
+    it("Verify superblock", async function () {
       const response = await challengerBattleManager.verifySuperblock(
         battleSessionId
       );
       const result = await response.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(result.events, "ChallengerConvicted"),
         "Challenger failed"
       );
     });
 
-    it("Confirm", async () => {
+    it("Confirm", async function () {
       await blockchainTimeoutSeconds(
         2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout
       );
@@ -391,26 +388,26 @@ describe("SuperblockClaims", () => {
         proposedSuperblockHash
       );
       const result = await response.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(result.events, "SuperblockClaimPending"),
         "Superblock challenged"
       );
     });
   });
 
-  describe("Challenge superblock", () => {
+  describe("Challenge superblock", function () {
     let genesisSuperblockHash: string;
     let proposedSuperblockHash: string;
     let battleSessionId: string;
     before(initSuperblockChain);
 
-    it("Initialize", async () => {
+    it("Initialize", async function () {
       genesisSuperblockHash = genesisSuperblock.superblockHash;
       const best = await superblocks.getBestSuperblock();
       assert.equal(genesisSuperblockHash, best, "Best superblock should match");
     });
 
-    it("Propose", async () => {
+    it("Propose", async function () {
       const proposeSuperblock = makeSuperblock(
         headers,
         genesisSuperblock.superblockHash,
@@ -432,12 +429,12 @@ describe("SuperblockClaims", () => {
         result.events,
         "SuperblockClaimCreated"
       );
-      assert.ok(superblockClaimCreatedEvent, "New superblock proposed");
+      assert.isDefined(superblockClaimCreatedEvent, "New superblock proposed");
       proposedSuperblockHash =
         superblockClaimCreatedEvent!.args!.superblockHash;
     });
 
-    it("Challenge", async () => {
+    it("Challenge", async function () {
       const response = await challengerSuperblockClaims.challengeSuperblock(
         proposedSuperblockHash
       );
@@ -446,7 +443,7 @@ describe("SuperblockClaims", () => {
         result.events,
         "SuperblockClaimChallenged"
       );
-      assert.ok(superblockClaimChallengedEvent, "Superblock challenged");
+      assert.isDefined(superblockClaimChallengedEvent, "Superblock challenged");
       assert.equal(
         proposedSuperblockHash,
         superblockClaimChallengedEvent!.args!.superblockHash
@@ -455,11 +452,11 @@ describe("SuperblockClaims", () => {
         result.events,
         "VerificationGameStarted"
       );
-      assert.ok(verificationGameStartedEvent, "Battle started");
+      assert.isDefined(verificationGameStartedEvent, "Battle started");
       battleSessionId = verificationGameStartedEvent!.args!.sessionId;
     });
 
-    it("Query hashes", async () => {
+    it("Query hashes", async function () {
       const session = await challengerSuperblockClaims.getSession(
         proposedSuperblockHash,
         challenger.address
@@ -470,13 +467,13 @@ describe("SuperblockClaims", () => {
         battleSessionId
       );
       const result = await response.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(result.events, "QueryMerkleRootHashes"),
         "Query merkle root hashes"
       );
     });
 
-    it("Verify hashes", async () => {
+    it("Verify hashes", async function () {
       await submitterSuperblockClaims.makeDeposit({
         value: DEPOSITS.VERIFY_SUPERBLOCK_COST,
       });
@@ -486,27 +483,27 @@ describe("SuperblockClaims", () => {
         hashes
       );
       const result = await response.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(result.events, "RespondMerkleRootHashes"),
         "Respond merkle root hashes"
       );
     });
 
     hashes.forEach((hash, idx) => {
-      it(`Query block header ${hash.slice(0, 20)}..`, async () => {
+      it(`Query block header ${hash.slice(0, 20)}..`, async function () {
         const response = await challengerBattleManager.queryBlockHeader(
           proposedSuperblockHash,
           battleSessionId,
           hash
         );
         const result = await response.wait();
-        assert.ok(
+        assert.isDefined(
           findEvent(result.events, "QueryBlockHeader"),
           "Query block header"
         );
       });
 
-      it(`Answer block header ${hash.slice(0, 20)}..`, async () => {
+      it(`Answer block header ${hash.slice(0, 20)}..`, async function () {
         const scryptHash = `0x${calcHeaderPoW(headers[idx])}`;
         await submitterSuperblockClaims.makeDeposit({
           value: DEPOSITS.VERIFY_SUPERBLOCK_COST,
@@ -518,25 +515,25 @@ describe("SuperblockClaims", () => {
           `0x${headers[idx]}`
         );
         const result = await response.wait();
-        assert.ok(
+        assert.isDefined(
           findEvent(result.events, "RespondBlockHeader"),
           "Respond block header"
         );
       });
     });
 
-    it("Verify superblock", async () => {
+    it("Verify superblock", async function () {
       const response = await challengerBattleManager.verifySuperblock(
         battleSessionId
       );
       const result = await response.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(result.events, "ChallengerConvicted"),
         "Superblock verified"
       );
     });
 
-    it("Accept superblock", async () => {
+    it("Accept superblock", async function () {
       await blockchainTimeoutSeconds(
         2 * SUPERBLOCK_OPTIONS_CLAIM_TESTS.timeout
       );
@@ -544,7 +541,7 @@ describe("SuperblockClaims", () => {
         proposedSuperblockHash
       );
       const result = await response.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(result.events, "SuperblockClaimPending"),
         "Superblock accepted"
       );
@@ -553,7 +550,7 @@ describe("SuperblockClaims", () => {
 
   // TODO: perhaps move this into a separate describe suite?
   // The fact that it shares variables with the other suites makes it a bit confusing.
-  describe("Challenge timeouts", () => {
+  describe("Challenge timeouts", function () {
     let proposedSuperblockHash: string;
     let battleSessionId: string;
     const beginNewChallenge = async () => {
@@ -617,15 +614,15 @@ describe("SuperblockClaims", () => {
         result.events,
         "VerificationGameStarted"
       );
-      assert.ok(verificationGameStartedEvent, "Battle started");
+      assert.isDefined(verificationGameStartedEvent, "Battle started");
       battleSessionId = verificationGameStartedEvent!.args!.sessionId;
     };
 
-    beforeEach(() => {
+    beforeEach(function () {
       return beginNewChallenge();
     });
 
-    it("Timeout query hashes", async () => {
+    it("Timeout query hashes", async function () {
       await expectFailure(
         () => submitterBattleManager.timeout(battleSessionId),
         (error) => {
@@ -644,13 +641,14 @@ describe("SuperblockClaims", () => {
       );
     });
 
-    it("Timeout reply hashes", async () => {
-      let response = await challengerBattleManager.queryMerkleRootHashes(
-        proposedSuperblockHash,
-        battleSessionId
-      );
+    it("Timeout reply hashes", async function () {
+      let response: ContractTransaction =
+        await challengerBattleManager.queryMerkleRootHashes(
+          proposedSuperblockHash,
+          battleSessionId
+        );
       let result = await response.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(result.events, "QueryMerkleRootHashes"),
         "Query merkle root hashes"
       );
@@ -667,13 +665,13 @@ describe("SuperblockClaims", () => {
       );
       response = await challengerBattleManager.timeout(battleSessionId);
       result = await response.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(result.events, "SubmitterConvicted"),
         "Should convict claimant"
       );
     });
 
-    it("Timeout query block headers", async () => {
+    it("Timeout query block headers", async function () {
       await challengerSuperblockClaims.makeDeposit({
         value: DEPOSITS.RESPOND_MERKLE_COST,
       });
@@ -682,7 +680,7 @@ describe("SuperblockClaims", () => {
         battleSessionId
       );
       let result = await response.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(result.events, "QueryMerkleRootHashes"),
         "Query merkle root hashes"
       );
@@ -696,7 +694,7 @@ describe("SuperblockClaims", () => {
         hashes.slice(0, 2)
       );
       result = await response.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(result.events, "RespondMerkleRootHashes"),
         "Respond merkle root hashes"
       );
@@ -713,13 +711,13 @@ describe("SuperblockClaims", () => {
       );
       response = await submitterBattleManager.timeout(battleSessionId);
       result = await response.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(result.events, "ChallengerConvicted"),
         "Should convict challenger"
       );
     });
 
-    it("Timeout reply block headers", async () => {
+    it("Timeout reply block headers", async function () {
       await challengerSuperblockClaims.makeDeposit({
         value: DEPOSITS.RESPOND_MERKLE_COST,
       });
@@ -728,7 +726,7 @@ describe("SuperblockClaims", () => {
         battleSessionId
       );
       let result = await response.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(result.events, "QueryMerkleRootHashes"),
         "Query merkle root hashes"
       );
@@ -742,7 +740,7 @@ describe("SuperblockClaims", () => {
         hashes.slice(0, 2)
       );
       result = await response.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(result.events, "RespondMerkleRootHashes"),
         "Respond merkle root hashes"
       );
@@ -756,7 +754,7 @@ describe("SuperblockClaims", () => {
         hashes[0]
       );
       result = await response.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(result.events, "QueryBlockHeader"),
         "Query block header"
       );
@@ -772,13 +770,13 @@ describe("SuperblockClaims", () => {
       );
       response = await challengerBattleManager.timeout(battleSessionId);
       result = await response.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(result.events, "SubmitterConvicted"),
         "Should convict claimant"
       );
     });
 
-    it("Timeout verify superblock", async () => {
+    it("Timeout verify superblock", async function () {
       await challengerSuperblockClaims.makeDeposit({
         value: DEPOSITS.RESPOND_MERKLE_COST,
       });
@@ -787,7 +785,7 @@ describe("SuperblockClaims", () => {
         battleSessionId
       );
       let result = await response.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(result.events, "QueryMerkleRootHashes"),
         "Query merkle root hashes"
       );
@@ -801,7 +799,7 @@ describe("SuperblockClaims", () => {
         hashes.slice(0, 2)
       );
       result = await response.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(result.events, "RespondMerkleRootHashes"),
         "Respond merkle root hashes"
       );
@@ -815,7 +813,7 @@ describe("SuperblockClaims", () => {
         hashes[0]
       );
       result = await response.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(result.events, "QueryBlockHeader"),
         "Query block header"
       );
@@ -831,7 +829,7 @@ describe("SuperblockClaims", () => {
         `0x${headers[0]}`
       );
       result = await response.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(result.events, "RespondBlockHeader"),
         "Respond block header"
       );
@@ -848,13 +846,13 @@ describe("SuperblockClaims", () => {
       );
       response = await submitterBattleManager.timeout(battleSessionId);
       result = await response.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(result.events, "ChallengerConvicted"),
         "Should convict challenger"
       );
     });
 
-    it("Verify superblock", async () => {
+    it("Verify superblock", async function () {
       await challengerSuperblockClaims.makeDeposit({
         value: DEPOSITS.RESPOND_MERKLE_COST,
       });
@@ -863,7 +861,7 @@ describe("SuperblockClaims", () => {
         battleSessionId
       );
       let result = await response.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(result.events, "QueryMerkleRootHashes"),
         "Query merkle root hashes"
       );
@@ -877,7 +875,7 @@ describe("SuperblockClaims", () => {
         hashes.slice(0, 2)
       );
       result = await response.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(result.events, "RespondMerkleRootHashes"),
         "Respond merkle root hashes"
       );
@@ -891,7 +889,7 @@ describe("SuperblockClaims", () => {
         hashes[0]
       );
       result = await response.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(result.events, "QueryBlockHeader"),
         "Query block header"
       );
@@ -907,7 +905,7 @@ describe("SuperblockClaims", () => {
         `0x${headers[0]}`
       );
       result = await response.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(result.events, "RespondBlockHeader"),
         "Respond block header"
       );
@@ -921,7 +919,7 @@ describe("SuperblockClaims", () => {
         hashes[1]
       );
       result = await response.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(result.events, "QueryBlockHeader"),
         "Query block header"
       );
@@ -934,7 +932,7 @@ describe("SuperblockClaims", () => {
         `0x${headers[1]}`
       );
       result = await response.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(result.events, "RespondBlockHeader"),
         "Respond block header"
       );
@@ -943,7 +941,7 @@ describe("SuperblockClaims", () => {
         battleSessionId
       );
       result = await response.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(result.events, "ChallengerConvicted"),
         "Should convict challenger"
       );

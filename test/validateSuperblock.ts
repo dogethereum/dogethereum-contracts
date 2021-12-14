@@ -84,12 +84,13 @@ describe("validateSuperblocks", function () {
       const genesisSuperblockHash = genesisSuperblock.superblockHash;
       assert.equal(genesisSuperblockHash, best, "Best superblock should match");
 
-      submitterSuperblockClaims = superBlockchain.superblockClaims.connect(submitter);
-      challengerSuperblockClaims = superBlockchain.superblockClaims.connect(challenger);
+      submitterSuperblockClaims =
+        superBlockchain.superblockClaims.connect(submitter);
+      challengerSuperblockClaims =
+        superBlockchain.superblockClaims.connect(challenger);
       submitterBattleManager = superBlockchain.battleManager.connect(submitter);
-      challengerBattleManager = superBlockchain.battleManager.connect(
-        challenger
-      );
+      challengerBattleManager =
+        superBlockchain.battleManager.connect(challenger);
 
       await submitterSuperblockClaims.makeDeposit({
         value: DEPOSITS.MIN_PROPOSAL_DEPOSIT,
@@ -103,24 +104,25 @@ describe("validateSuperblocks", function () {
       await submitterSuperblockClaims.makeDeposit({
         value: DEPOSITS.MIN_PROPOSAL_DEPOSIT,
       });
-      let result = await submitterSuperblockClaims.proposeSuperblock(
-        proposedSuperblock.merkleRoot,
-        proposedSuperblock.accumulatedWork,
-        proposedSuperblock.timestamp,
-        proposedSuperblock.prevTimestamp,
-        proposedSuperblock.lastHash,
-        proposedSuperblock.lastBits,
-        proposedSuperblock.parentId
-      );
+      let result: ContractTransaction =
+        await submitterSuperblockClaims.proposeSuperblock(
+          proposedSuperblock.merkleRoot,
+          proposedSuperblock.accumulatedWork,
+          proposedSuperblock.timestamp,
+          proposedSuperblock.prevTimestamp,
+          proposedSuperblock.lastHash,
+          proposedSuperblock.lastBits,
+          proposedSuperblock.parentId
+        );
       let receipt = await result.wait();
 
       const superblockClaimCreatedEvent = findEvent(
         receipt.events,
         "SuperblockClaimCreated"
       );
-      assert.ok(superblockClaimCreatedEvent, "New superblock proposed");
-      proposesSuperblockHash = superblockClaimCreatedEvent!.args!
-        .superblockHash;
+      assert.isDefined(superblockClaimCreatedEvent, "New superblock proposed");
+      proposesSuperblockHash =
+        superblockClaimCreatedEvent!.args!.superblockHash;
 
       const claim1 = proposesSuperblockHash;
       await challengerSuperblockClaims.makeDeposit({
@@ -134,7 +136,7 @@ describe("validateSuperblocks", function () {
         receipt.events,
         "SuperblockClaimChallenged"
       );
-      assert.ok(superblockClaimChallengedEvent, "Superblock challenged");
+      assert.isDefined(superblockClaimChallengedEvent, "Superblock challenged");
       assert.equal(
         claim1,
         superblockClaimChallengedEvent!.args!.superblockHash
@@ -144,7 +146,7 @@ describe("validateSuperblocks", function () {
         receipt.events,
         "VerificationGameStarted"
       );
-      assert.ok(verificationGameStartedEvent, "Battle started");
+      assert.isDefined(verificationGameStartedEvent, "Battle started");
 
       battleSessionId = verificationGameStartedEvent!.args!.sessionId;
       await challengerSuperblockClaims.makeDeposit({
@@ -155,7 +157,7 @@ describe("validateSuperblocks", function () {
         battleSessionId
       );
       receipt = await result.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(receipt.events, "QueryMerkleRootHashes"),
         "Query merkle root hashes"
       );
@@ -169,7 +171,7 @@ describe("validateSuperblocks", function () {
         hashes
       );
       receipt = await result.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(receipt.events, "RespondMerkleRootHashes"),
         "Respond merkle root hashes"
       );
@@ -183,7 +185,7 @@ describe("validateSuperblocks", function () {
         hashes[0]
       );
       receipt = await result.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(receipt.events, "QueryBlockHeader"),
         "Query block header"
       );
@@ -199,7 +201,7 @@ describe("validateSuperblocks", function () {
         `0x${headers[0]}`
       );
       receipt = await result.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(receipt.events, "RespondBlockHeader"),
         "Respond block header"
       );
@@ -207,7 +209,7 @@ describe("validateSuperblocks", function () {
       // Verify superblock
       result = await submitterBattleManager.verifySuperblock(battleSessionId);
       receipt = await result.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(receipt.events, "ChallengerConvicted"),
         "Challenger failed"
       );
@@ -218,31 +220,32 @@ describe("validateSuperblocks", function () {
         proposesSuperblockHash
       );
       receipt = await result.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(receipt.events, "SuperblockClaimPending"),
         "Superblock semi approved"
       );
     });
 
     it("Reject invalid block bits", async () => {
-      let result = await submitterSuperblockClaims.proposeSuperblock(
-        proposedSuperblock.merkleRoot,
-        proposedSuperblock.accumulatedWork,
-        proposedSuperblock.timestamp,
-        proposedSuperblock.prevTimestamp,
-        proposedSuperblock.lastHash,
-        0, // proposedSuperblock.lastBits,
-        proposedSuperblock.parentId
-      );
+      let result: ContractTransaction =
+        await submitterSuperblockClaims.proposeSuperblock(
+          proposedSuperblock.merkleRoot,
+          proposedSuperblock.accumulatedWork,
+          proposedSuperblock.timestamp,
+          proposedSuperblock.prevTimestamp,
+          proposedSuperblock.lastHash,
+          0, // proposedSuperblock.lastBits,
+          proposedSuperblock.parentId
+        );
       let receipt = await result.wait();
 
       const superblockClaimCreatedEvent = findEvent(
         receipt.events,
         "SuperblockClaimCreated"
       );
-      assert.ok(superblockClaimCreatedEvent, "New superblock proposed");
-      proposesSuperblockHash = superblockClaimCreatedEvent!.args!
-        .superblockHash;
+      assert.isDefined(superblockClaimCreatedEvent, "New superblock proposed");
+      proposesSuperblockHash =
+        superblockClaimCreatedEvent!.args!.superblockHash;
       const claim1 = proposesSuperblockHash;
 
       await challengerSuperblockClaims.makeDeposit({
@@ -256,7 +259,7 @@ describe("validateSuperblocks", function () {
         receipt.events,
         "SuperblockClaimChallenged"
       );
-      assert.ok(superblockClaimChallengedEvent, "Superblock challenged");
+      assert.isDefined(superblockClaimChallengedEvent, "Superblock challenged");
       assert.equal(
         claim1,
         superblockClaimChallengedEvent!.args!.superblockHash
@@ -266,7 +269,7 @@ describe("validateSuperblocks", function () {
         receipt.events,
         "VerificationGameStarted"
       );
-      assert.ok(verificationGameStartedEvent, "Battle started");
+      assert.isDefined(verificationGameStartedEvent, "Battle started");
 
       battleSessionId = verificationGameStartedEvent!.args!.sessionId;
       await challengerSuperblockClaims.makeDeposit({
@@ -277,7 +280,7 @@ describe("validateSuperblocks", function () {
         battleSessionId
       );
       receipt = await result.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(receipt.events, "QueryMerkleRootHashes"),
         "Query merkle root hashes"
       );
@@ -291,7 +294,7 @@ describe("validateSuperblocks", function () {
         hashes
       );
       receipt = await result.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(receipt.events, "RespondMerkleRootHashes"),
         "Respond merkle root hashes"
       );
@@ -305,7 +308,7 @@ describe("validateSuperblocks", function () {
         hashes[0]
       );
       receipt = await result.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(receipt.events, "QueryBlockHeader"),
         "Query block header"
       );
@@ -321,7 +324,7 @@ describe("validateSuperblocks", function () {
         `0x${headers[0]}`
       );
       receipt = await result.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(receipt.events, "RespondBlockHeader"),
         "Respond block header"
       );
@@ -330,9 +333,9 @@ describe("validateSuperblocks", function () {
       result = await challengerBattleManager.verifySuperblock(battleSessionId);
       receipt = await result.wait();
       const errorBattleEvent = findEvent(receipt.events, "ErrorBattle");
-      assert.ok(errorBattleEvent, "Error verifying superblock");
+      assert.isDefined(errorBattleEvent, "Error verifying superblock");
       assert.equal(errorBattleEvent!.args!.err, "50130", "Bad bits");
-      assert.ok(
+      assert.isDefined(
         findEvent(receipt.events, "SubmitterConvicted"),
         "Submitter failed"
       );
@@ -343,32 +346,33 @@ describe("validateSuperblocks", function () {
         proposesSuperblockHash
       );
       receipt = await result.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(receipt.events, "SuperblockClaimFailed"),
         "Superblock rejected"
       );
     });
 
     it("Reject invalid prev timestamp", async () => {
-      let result = await submitterSuperblockClaims.proposeSuperblock(
-        proposedSuperblock.merkleRoot,
-        proposedSuperblock.accumulatedWork,
-        proposedSuperblock.timestamp,
-        0, // proposedSuperblock.prevTimestamp,
-        proposedSuperblock.lastHash,
-        proposedSuperblock.lastBits,
-        proposedSuperblock.parentId
-      );
+      let result: ContractTransaction =
+        await submitterSuperblockClaims.proposeSuperblock(
+          proposedSuperblock.merkleRoot,
+          proposedSuperblock.accumulatedWork,
+          proposedSuperblock.timestamp,
+          0, // proposedSuperblock.prevTimestamp,
+          proposedSuperblock.lastHash,
+          proposedSuperblock.lastBits,
+          proposedSuperblock.parentId
+        );
       let receipt = await result.wait();
 
       const superblockClaimCreatedEvent = findEvent(
         receipt.events,
         "SuperblockClaimCreated"
       );
-      assert.ok(superblockClaimCreatedEvent, "New superblock proposed");
+      assert.isDefined(superblockClaimCreatedEvent, "New superblock proposed");
 
-      proposesSuperblockHash = superblockClaimCreatedEvent!.args!
-        .superblockHash;
+      proposesSuperblockHash =
+        superblockClaimCreatedEvent!.args!.superblockHash;
       const claim1 = proposesSuperblockHash;
       await challengerSuperblockClaims.makeDeposit({
         value: DEPOSITS.MIN_CHALLENGE_DEPOSIT,
@@ -381,7 +385,7 @@ describe("validateSuperblocks", function () {
         receipt.events,
         "SuperblockClaimChallenged"
       );
-      assert.ok(superblockClaimChallengedEvent, "Superblock challenged");
+      assert.isDefined(superblockClaimChallengedEvent, "Superblock challenged");
       assert.equal(
         claim1,
         superblockClaimChallengedEvent!.args!.superblockHash
@@ -390,7 +394,7 @@ describe("validateSuperblocks", function () {
         receipt.events,
         "VerificationGameStarted"
       );
-      assert.ok(verificationGameStartedEvent, "Battle started");
+      assert.isDefined(verificationGameStartedEvent, "Battle started");
 
       battleSessionId = verificationGameStartedEvent!.args!.sessionId;
       await challengerSuperblockClaims.makeDeposit({
@@ -401,7 +405,7 @@ describe("validateSuperblocks", function () {
         battleSessionId
       );
       receipt = await result.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(receipt.events, "QueryMerkleRootHashes"),
         "Query merkle root hashes"
       );
@@ -415,7 +419,7 @@ describe("validateSuperblocks", function () {
         hashes
       );
       receipt = await result.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(receipt.events, "RespondMerkleRootHashes"),
         "Respond merkle root hashes"
       );
@@ -429,7 +433,7 @@ describe("validateSuperblocks", function () {
         hashes[0]
       );
       receipt = await result.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(receipt.events, "QueryBlockHeader"),
         "Query block header"
       );
@@ -445,7 +449,7 @@ describe("validateSuperblocks", function () {
         `0x${headers[0]}`
       );
       receipt = await result.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(receipt.events, "RespondBlockHeader"),
         "Respond block header"
       );
@@ -454,9 +458,9 @@ describe("validateSuperblocks", function () {
       result = await challengerBattleManager.verifySuperblock(battleSessionId);
       receipt = await result.wait();
       const errorBattleEvent = findEvent(receipt.events, "ErrorBattle");
-      assert.ok(errorBattleEvent, "Error verifying superblock");
+      assert.isDefined(errorBattleEvent, "Error verifying superblock");
       assert.equal(errorBattleEvent!.args!.err, "50035", "Bad timestamp");
-      assert.ok(
+      assert.isDefined(
         findEvent(receipt.events, "SubmitterConvicted"),
         "Submitter failed"
       );
@@ -467,32 +471,33 @@ describe("validateSuperblocks", function () {
         proposesSuperblockHash
       );
       receipt = await result.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(receipt.events, "SuperblockClaimFailed"),
         "Superblock rejected"
       );
     });
 
     it("Reject invalid timestamp", async () => {
-      let result = await submitterSuperblockClaims.proposeSuperblock(
-        proposedSuperblock.merkleRoot,
-        proposedSuperblock.accumulatedWork,
-        proposedSuperblock.timestamp + 1,
-        proposedSuperblock.prevTimestamp,
-        proposedSuperblock.lastHash,
-        proposedSuperblock.lastBits,
-        proposedSuperblock.parentId
-      );
+      let result: ContractTransaction =
+        await submitterSuperblockClaims.proposeSuperblock(
+          proposedSuperblock.merkleRoot,
+          proposedSuperblock.accumulatedWork,
+          proposedSuperblock.timestamp + 1,
+          proposedSuperblock.prevTimestamp,
+          proposedSuperblock.lastHash,
+          proposedSuperblock.lastBits,
+          proposedSuperblock.parentId
+        );
       let receipt = await result.wait();
 
       const superblockClaimCreatedEvent = findEvent(
         receipt.events,
         "SuperblockClaimCreated"
       );
-      assert.ok(superblockClaimCreatedEvent, "New superblock proposed");
+      assert.isDefined(superblockClaimCreatedEvent, "New superblock proposed");
 
-      proposesSuperblockHash = superblockClaimCreatedEvent!.args!
-        .superblockHash;
+      proposesSuperblockHash =
+        superblockClaimCreatedEvent!.args!.superblockHash;
       const claim1 = proposesSuperblockHash;
       result = await challengerSuperblockClaims.challengeSuperblock(
         proposesSuperblockHash
@@ -502,7 +507,7 @@ describe("validateSuperblocks", function () {
         receipt.events,
         "SuperblockClaimChallenged"
       );
-      assert.ok(superblockClaimChallengedEvent, "Superblock challenged");
+      assert.isDefined(superblockClaimChallengedEvent, "Superblock challenged");
       assert.equal(
         claim1,
         superblockClaimChallengedEvent!.args!.superblockHash
@@ -512,7 +517,7 @@ describe("validateSuperblocks", function () {
         receipt.events,
         "VerificationGameStarted"
       );
-      assert.ok(verificationGameStartedEvent, "Battle started");
+      assert.isDefined(verificationGameStartedEvent, "Battle started");
 
       battleSessionId = verificationGameStartedEvent!.args!.sessionId;
       await challengerSuperblockClaims.makeDeposit({
@@ -523,7 +528,7 @@ describe("validateSuperblocks", function () {
         battleSessionId
       );
       receipt = await result.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(receipt.events, "QueryMerkleRootHashes"),
         "Query merkle root hashes"
       );
@@ -537,7 +542,7 @@ describe("validateSuperblocks", function () {
         hashes
       );
       receipt = await result.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(receipt.events, "RespondMerkleRootHashes"),
         "Respond merkle root hashes"
       );
@@ -551,7 +556,7 @@ describe("validateSuperblocks", function () {
         hashes[0]
       );
       receipt = await result.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(receipt.events, "QueryBlockHeader"),
         "Query block header"
       );
@@ -567,7 +572,7 @@ describe("validateSuperblocks", function () {
         `0x${headers[0]}`
       );
       receipt = await result.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(receipt.events, "RespondBlockHeader"),
         "Respond block header"
       );
@@ -576,9 +581,9 @@ describe("validateSuperblocks", function () {
       result = await challengerBattleManager.verifySuperblock(battleSessionId);
       receipt = await result.wait();
       const errorBattleEvent = findEvent(receipt.events, "ErrorBattle");
-      assert.ok(errorBattleEvent, "Error verifying superblock");
+      assert.isDefined(errorBattleEvent, "Error verifying superblock");
       assert.equal(errorBattleEvent!.args!.err, "50035", "Bad timestamp");
-      assert.ok(
+      assert.isDefined(
         findEvent(receipt.events, "SubmitterConvicted"),
         "Submitter failed"
       );
@@ -589,32 +594,33 @@ describe("validateSuperblocks", function () {
         proposesSuperblockHash
       );
       receipt = await result.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(receipt.events, "SuperblockClaimFailed"),
         "Superblock rejected"
       );
     });
 
     it("Reject invalid last hash", async () => {
-      let result = await submitterSuperblockClaims.proposeSuperblock(
-        proposedSuperblock.merkleRoot,
-        proposedSuperblock.accumulatedWork,
-        proposedSuperblock.timestamp + 1,
-        proposedSuperblock.prevTimestamp,
-        "0x0000000000000000000000000000000000000000000000000000000000000000", // proposedSuperblock.lastHash,
-        proposedSuperblock.lastBits,
-        proposedSuperblock.parentId
-      );
+      let result: ContractTransaction =
+        await submitterSuperblockClaims.proposeSuperblock(
+          proposedSuperblock.merkleRoot,
+          proposedSuperblock.accumulatedWork,
+          proposedSuperblock.timestamp + 1,
+          proposedSuperblock.prevTimestamp,
+          "0x0000000000000000000000000000000000000000000000000000000000000000", // proposedSuperblock.lastHash,
+          proposedSuperblock.lastBits,
+          proposedSuperblock.parentId
+        );
       let receipt = await result.wait();
 
       const superblockClaimCreatedEvent = findEvent(
         receipt.events,
         "SuperblockClaimCreated"
       );
-      assert.ok(superblockClaimCreatedEvent, "New superblock proposed");
+      assert.isDefined(superblockClaimCreatedEvent, "New superblock proposed");
 
-      proposesSuperblockHash = superblockClaimCreatedEvent!.args!
-        .superblockHash;
+      proposesSuperblockHash =
+        superblockClaimCreatedEvent!.args!.superblockHash;
       await challengerSuperblockClaims.makeDeposit({
         value: DEPOSITS.MIN_CHALLENGE_DEPOSIT,
       });
@@ -626,7 +632,7 @@ describe("validateSuperblocks", function () {
         receipt.events,
         "SuperblockClaimChallenged"
       );
-      assert.ok(superblockClaimChallengedEvent, "Superblock challenged");
+      assert.isDefined(superblockClaimChallengedEvent, "Superblock challenged");
       assert.equal(
         proposesSuperblockHash,
         superblockClaimChallengedEvent!.args!.superblockHash
@@ -636,7 +642,7 @@ describe("validateSuperblocks", function () {
         receipt.events,
         "VerificationGameStarted"
       );
-      assert.ok(verificationGameStartedEvent, "Battle started");
+      assert.isDefined(verificationGameStartedEvent, "Battle started");
 
       battleSessionId = verificationGameStartedEvent!.args!.sessionId;
       await challengerSuperblockClaims.makeDeposit({
@@ -647,7 +653,7 @@ describe("validateSuperblocks", function () {
         battleSessionId
       );
       receipt = await result.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(receipt.events, "QueryMerkleRootHashes"),
         "Query merkle root hashes"
       );
@@ -670,7 +676,7 @@ describe("validateSuperblocks", function () {
       await blockchainTimeoutSeconds(2 * SUPERBLOCK_OPTIONS_LOCAL.timeout);
       result = await challengerBattleManager.timeout(battleSessionId);
       receipt = await result.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(receipt.events, "SubmitterConvicted"),
         "Submitter failed"
       );
@@ -679,7 +685,7 @@ describe("validateSuperblocks", function () {
         proposesSuperblockHash
       );
       receipt = await result.wait();
-      assert.ok(
+      assert.isDefined(
         findEvent(receipt.events, "SuperblockClaimFailed"),
         "Superblock rejected"
       );

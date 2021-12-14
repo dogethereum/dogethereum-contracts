@@ -52,10 +52,11 @@ describe("DogeToken - Operators", function () {
       signature += "ff";
     }
     const operatorDogeToken = dogeToken.connect(operatorSigner);
-    const addOperatorTxResponse: ContractTransaction = await operatorDogeToken.addOperator(
-      operatorPublicKeyCompressedString,
-      signature
-    );
+    const addOperatorTxResponse: ContractTransaction =
+      await operatorDogeToken.addOperator(
+        operatorPublicKeyCompressedString,
+        signature
+      );
     const addOperatorTxReceipt = await addOperatorTxResponse.wait();
     return addOperatorTxReceipt;
   }
@@ -240,18 +241,18 @@ describe("DogeToken - Operators", function () {
       await operatorDogeToken.addOperatorDeposit(operatorPublicKeyHash, {
         value: "1000000000000000000",
       });
-      const operatorEthAddressBalanceBeforeWithdraw = await hre.ethers.provider.getBalance(
-        operatorSigner.address
-      );
+      const operatorEthAddressBalanceBeforeWithdraw =
+        await hre.ethers.provider.getBalance(operatorSigner.address);
       await dogeUsdPriceOracle.setPrice(1);
-      const withdrawOperatorDepositTxResponse = await operatorDogeToken.withdrawOperatorDeposit(
-        operatorPublicKeyHash,
-        "400000000000000000"
-      );
-      const withdrawOperatorDepositTxReceipt = await withdrawOperatorDepositTxResponse.wait();
-      const operatorEthAddressBalanceAfterWithdraw = await hre.ethers.provider.getBalance(
-        operatorSigner.address
-      );
+      const withdrawOperatorDepositTxResponse =
+        await operatorDogeToken.withdrawOperatorDeposit(
+          operatorPublicKeyHash,
+          "400000000000000000"
+        );
+      const withdrawOperatorDepositTxReceipt =
+        await withdrawOperatorDepositTxResponse.wait();
+      const operatorEthAddressBalanceAfterWithdraw =
+        await hre.ethers.provider.getBalance(operatorSigner.address);
       const operator = await dogeToken.operators(operatorPublicKeyHash);
       assert.equal(
         operator.ethBalance,
@@ -276,19 +277,19 @@ describe("DogeToken - Operators", function () {
       await operatorDogeToken.addOperatorDeposit(operatorPublicKeyHash, {
         value: 5000,
       });
-      const operatorEthAddressBalanceBeforeWithdraw = await hre.ethers.provider.getBalance(
-        operatorSigner.address
-      );
+      const operatorEthAddressBalanceBeforeWithdraw =
+        await hre.ethers.provider.getBalance(operatorSigner.address);
       await dogeUsdPriceOracle.setPrice(3);
       await dogeToken.addUtxo(operatorPublicKeyHash, 400, 1, 1);
-      const withdrawOperatorDepositTxResponse = await operatorDogeToken.withdrawOperatorDeposit(
-        operatorPublicKeyHash,
-        100
-      );
-      const withdrawOperatorDepositTxReceipt = await withdrawOperatorDepositTxResponse.wait();
-      const operatorEthAddressBalanceAfterWithdraw = await hre.ethers.provider.getBalance(
-        operatorSigner.address
-      );
+      const withdrawOperatorDepositTxResponse =
+        await operatorDogeToken.withdrawOperatorDeposit(
+          operatorPublicKeyHash,
+          100
+        );
+      const withdrawOperatorDepositTxReceipt =
+        await withdrawOperatorDepositTxResponse.wait();
+      const operatorEthAddressBalanceAfterWithdraw =
+        await hre.ethers.provider.getBalance(operatorSigner.address);
       const operator = await dogeToken.operators(operatorPublicKeyHash);
       assert.equal(operator.ethBalance, 4900, "Deposit not what expected");
       const txCost = withdrawOperatorDepositTxReceipt.cumulativeGasUsed.mul(
@@ -367,9 +368,8 @@ describe("DogeToken - Operators", function () {
         value: 1,
       });
 
-      const tx: ContractTransaction = await dogeToken.reportOperatorUnsafeCollateral(
-        operatorPublicKeyHash
-      );
+      const tx: ContractTransaction =
+        await dogeToken.reportOperatorUnsafeCollateral(operatorPublicKeyHash);
       const receipt = await tx.wait();
       const liquidationEvents = receipt.events!.filter(({ event }) => {
         return event === "OperatorLiquidated";
