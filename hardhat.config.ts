@@ -1,6 +1,7 @@
 import "@nomiclabs/hardhat-ethers";
 import type { HardhatUserConfig } from "hardhat/types";
 import "@openzeppelin/hardhat-upgrades";
+import "hardhat-gas-reporter";
 
 import "./tasks/superblock-cli";
 
@@ -34,6 +35,9 @@ const config: HardhatUserConfig = {
     solidity: {
         version: "0.7.6",
         settings: { optimizer: { enabled: true, runs: 200 } },
+    },
+    gasReporter: {
+        enabled: process.env.REPORT_GAS ? true : false,
     },
 };
 
