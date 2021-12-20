@@ -14,6 +14,7 @@ Eventually, the auction will be closed by the bot if it has the winning bid. At 
 ## Prerequisites
 
 To run the bot you need to install the following:
+
 - [nodejs](https://nodejs.org) [latest LTS](https://nodejs.org/en/about/releases/) or above. This is currently fermium (v14).
 
 ## Installing
@@ -37,15 +38,18 @@ To run the bot, you need to configure it first. There's a [sample](config/config
 - `ethereumNodeURL`: The URL to an Ethereum JSON-RPC endpoint. It is recommended to use a WebSocket URL, e.g. `ws://127.0.0.1:8545` assuming there's a local Ethereum node running.
 
 The following are optional:
+
 - `startingBlock`: Block tag or block number describing the block that the bot will use to start monitoring events. It is recommended to only set it when you need it.
 - `numberOfConfirmations`: The bot will only watch for new events in blocks that have been confirmed at least this number of times.
 
 ### Starting up the bot
 
 Once the bot is configured, all you need to do is run:
+
 ```sh
 npm run start -- --config $PATH_TO_CONFIG
 ```
+
 where `$PATH_TO_CONFIG` is the path of the configuration JSON you built in the previous step.
 
 ## Running the Tests
