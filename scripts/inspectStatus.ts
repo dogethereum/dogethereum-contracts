@@ -148,7 +148,12 @@ async function printDogeTokenStatus(
   );
   await printUnlockEvent(unlockRequestEvents, dogeToken.contract);
 
-  const dogeTokenEventNames = ["NewToken", "ErrorDogeToken"];
+  const dogeTokenEventNames = [
+    "NewToken",
+    "OperatorLiquidated",
+    "LiquidationBid",
+    "OperatorCollateralAuctioned",
+  ];
 
   await printContractEvents(dogeTokenEventNames, dogeToken);
 }
@@ -184,7 +189,6 @@ async function printSuperblockchainStatus({
     "SuperblockClaimPending",
     "SuperblockClaimSuccessful",
     "SuperblockClaimFailed",
-    "ErrorClaim",
   ];
   await printContractEvents(superblockClaimEvents, superblockClaims);
   console.log("");
