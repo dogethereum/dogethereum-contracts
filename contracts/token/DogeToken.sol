@@ -125,8 +125,8 @@ contract DogeToken is StandardToken, TransactionProcessor, EtherAuction {
     event LiquidationBid(bytes20 operatorPublicKeyHash, address bidder, uint256 bid);
     // End of the collateral auction.
     event OperatorCollateralAuctioned(bytes20 operatorPublicKeyHash, address winner, uint256 tokensBurned, uint256 etherSold);     
-    event LockedToken(address indexed user, uint value);
-    event UnlockedToken(address indexed user, uint value);
+    event LockedToken(address indexed user, uint256 value, uint256 OperatorFee, uint256 superblockSubmitterFee);
+    event UnlockedToken(address indexed user, uint256 value, uint256 OperatorFee);
 
 
     // Represents an unlock request
@@ -342,8 +342,7 @@ contract DogeToken is StandardToken, TransactionProcessor, EtherAuction {
             operator.ethAddress,
             superblockSubmitterAddress
         );
-        // new lock
-        emit LockedToken(lockDestinationEthAddress, value);
+        
     }
 
     function processUnlockTransaction(
@@ -400,9 +399,7 @@ contract DogeToken is StandardToken, TransactionProcessor, EtherAuction {
 
         // Mark the unlock as completed.
         unlock.completed = true;
-        
-        //new unclock
-        emit UnlockedToken(operator.ethAddress, unlock.valueToUser);
+                
     }
 
     /**
@@ -520,6 +517,8 @@ contract DogeToken is StandardToken, TransactionProcessor, EtherAuction {
 
         // Update the total supply with the sum of the three minted amounts.
         totalSupply = totalSupply.add(value);
+        // new lock
+        emit LockedToken(operatorEthAddress, value, operatorFee, superblockSubmitterFee);
     }
 
     /**
@@ -651,6 +650,11 @@ contract DogeToken is StandardToken, TransactionProcessor, EtherAuction {
         operator.dogePendingBalance = operator.dogePendingBalance.add(changeValue);
         operator.nextUnspentUtxoIndex += uint32(selectedUtxos.length);
         unlockIdx++;
+        
+
+        //new unclock
+        emit UnlockedToken(operator.ethAddress, unlockValue, dogeTxFee);
+
     }
 
     function selectUtxosAndFee(
