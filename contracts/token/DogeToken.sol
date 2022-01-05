@@ -500,6 +500,7 @@ contract DogeToken is StandardToken, TransactionProcessor, EtherAuction {
         address operatorEthAddress,
         address superblockSubmitterAddress
     ) private {
+        // TODO: optimize gas costs when superblock submitter and operator are the same address?
         uint operatorFee = value.mul(OPERATOR_LOCK_FEE).div(DOGETHEREUM_FEE_FRACTION);
         mintTokens(operatorEthAddress, operatorFee);
 
