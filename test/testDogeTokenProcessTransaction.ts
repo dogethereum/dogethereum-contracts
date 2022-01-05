@@ -234,7 +234,11 @@ describe("Token transaction processing", function () {
 
   describe("processUnlockTransaction", function () {
     const operatorFee = Math.floor(value * 0.01);
-    const dogeTxFeeOneInput = 150000000;
+    const dogeTxFeeRate = 1_000;
+    const dogeTxSizeOneInputOneOutput = 148 + 34 + 10;
+    const dogeTxSizeOneInputTwoOutputs = 148 + 34 * 2 + 10;
+    const dogeTxFeeOneInputOneOutput = dogeTxFeeRate * dogeTxSizeOneInputOneOutput;
+    const dogeTxFeeOneInputTwoOutputs = dogeTxFeeRate * dogeTxSizeOneInputTwoOutputs;
 
     const unlockTx = buildDogeTransaction({
       signer: operatorKeypair,
@@ -243,7 +247,7 @@ describe("Token transaction processing", function () {
         {
           type: "payment",
           address: userAddress,
-          value: value - operatorFee - dogeTxFeeOneInput,
+          value: value - operatorFee - dogeTxFeeOneInputOneOutput,
         },
       ],
     });
@@ -255,7 +259,7 @@ describe("Token transaction processing", function () {
         {
           type: "payment",
           address: userAddress,
-          value: value - operatorFee - dogeTxFeeOneInput,
+          value: value - operatorFee - dogeTxFeeOneInputTwoOutputs,
         },
         { type: "payment", address: operatorDogeAddress, value: change },
       ],
@@ -366,7 +370,7 @@ describe("Token transaction processing", function () {
           {
             type: "payment",
             address: operatorDogeAddress,
-            value: value - operatorFee - dogeTxFeeOneInput,
+            value: value - operatorFee - dogeTxFeeOneInputTwoOutputs,
           },
           { type: "payment", address: operatorDogeAddress, value: change },
         ],
@@ -402,7 +406,7 @@ describe("Token transaction processing", function () {
           {
             type: "payment",
             address: userAddress,
-            value: value - operatorFee - dogeTxFeeOneInput,
+            value: value - operatorFee - dogeTxFeeOneInputTwoOutputs,
           },
           { type: "payment", address: userAddress, value: change },
         ],
