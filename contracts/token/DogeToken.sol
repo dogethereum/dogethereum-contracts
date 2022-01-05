@@ -19,6 +19,18 @@ contract DogeToken is StandardToken, TransactionProcessor, EtherAuction {
 
     using SafeMath for uint;
 
+    /** Dogecoin and bridge fee constants **/
+
+    // Care must be taken when modifying these constants.
+    // In particular, there is a delicate balance between the dogecoin dust limit,
+    // the operator fee and the minimum unlock value.
+    // These should be set so that for all unlock transactions that have a change value
+    // under the dust limit, the change amount can be taken out of the operator fees.
+    // Concisely, if the operator change is dust, the following equation must hold:
+    // dust < MIN_UNLOCK_VALUE * OPERATOR_UNLOCK_FEE / DOGETHEREUM_FEE_FRACTION
+    // This ensures that the amount of circulating DogeTokens coincides with
+    // the amount of dogecoins locked with operators.
+
     // Lock constants
     uint public constant MIN_LOCK_VALUE = 300000000; // 3 doges
     uint public constant OPERATOR_LOCK_FEE = 10;
@@ -27,13 +39,28 @@ contract DogeToken is StandardToken, TransactionProcessor, EtherAuction {
     // Unlock constants
     uint public constant MIN_UNLOCK_VALUE = 300000000; // 3 doges
     uint public constant OPERATOR_UNLOCK_FEE = 10;
-    // These are Dogecoin network fees required in unlock transactions
-    uint public constant DOGE_TX_BASE_FEE = 50000000; // 0.5 doge
-    uint public constant DOGE_TX_FEE_PER_INPUT = 100000000; // 1 doge
+
+    // Tx fee rate is the amount of satoshis per byte paid to the miner in a given transaction.
+    // 0.01 doge/kB = 0.00001 doge/B
+    uint public constant DOGE_TX_FEE_RATE = 1000;
+    // Soft dust limit. Values under this limit are considered dust and must pay additional fees.
+    // See https://github.com/dogecoin/dogecoin/blob/master/doc/fee-recommendation.md
+    uint public constant DOGE_DUST = 1000000;
+    // Tx input with P2PKH redeem script size in bytes
+    uint public constant DOGE_TX_INPUT_SIZE = 148;
+    // Tx output with P2PKH lock script size in bytes
+    uint public constant DOGE_TX_OUTPUT_SIZE = 34;
+    // This is the size in bytes of the constant sized parts of a Dogecoin tx.
+    // We assume that var ints for amounts of inputs and outputs are at most 1 byte long.
+    // This implies that there are both less than 0xfd = 253 inputs and 253 outputs.
+    // s(version) + s(n_tx_in) + s(n_tx_out) + s(lock_time)
+    uint public constant DOGE_TX_FIXED_SIZE = 4 + 1 + 1 + 4;
 
     // Used when calculating the operator and submitter fees for lock and unlock txs.
     // 1 fee point = 0.1% of tx value
     uint public constant DOGETHEREUM_FEE_FRACTION = 1000;
+
+    /** End of economics sensitive constants **/
 
     // Note: ideally, these state variables would be Solidity immutables but the upgrades plugin
     // doesn't play nice with Solidity immutables in logic contracts yet.
@@ -566,7 +593,10 @@ contract DogeToken is StandardToken, TransactionProcessor, EtherAuction {
         uint unlockValue = value.sub(operatorFee);
         require(operator.dogeAvailableBalance >= unlockValue, "Operator doesn't have enough balance.");
 
-        (uint32[] memory selectedUtxos, uint dogeTxFee, uint changeValue) = selectUtxosAndFee(unlockValue, operator);
+        (uint32[] memory selectedUtxos, uint dogeTxFee, uint changeValue, uint dust) = selectUtxosAndFee(unlockValue, operator);
+        // If the resulting change is dust, it's taken out of the operator fee to maintain
+        // the ratio between DogeTokens and dogecoins locked by operators.
+        operatorFee = operatorFee.sub(dust);
 
         balances[operator.ethAddress] = balances[operator.ethAddress].add(operatorFee);
         emit Transfer(msg.sender, operator.ethAddress, operatorFee);
@@ -591,7 +621,7 @@ contract DogeToken is StandardToken, TransactionProcessor, EtherAuction {
             false
         );
         // Update operator's doge balance
-        operator.dogeAvailableBalance = operator.dogeAvailableBalance.sub(unlockValue.add(changeValue));
+        operator.dogeAvailableBalance = operator.dogeAvailableBalance.sub(unlockValue.add(changeValue)).sub(dust);
         operator.dogePendingBalance = operator.dogePendingBalance.add(changeValue);
         operator.nextUnspentUtxoIndex += uint32(selectedUtxos.length);
         unlockIdx++;
@@ -603,30 +633,48 @@ contract DogeToken is StandardToken, TransactionProcessor, EtherAuction {
     ) private pure returns (
         uint32[] memory selectedUtxos,
         uint dogeTxFee,
-        uint changeValue
+        uint changeValue,
+        uint dust
     ) {
         // There should be at least 1 utxo available
         require(operator.nextUnspentUtxoIndex < operator.utxos.length, "No available UTXOs for this operator.");
 
-        dogeTxFee = DOGE_TX_BASE_FEE;
         uint selectedUtxosValue;
         uint32 firstSelectedUtxo = operator.nextUnspentUtxoIndex;
         uint32 lastSelectedUtxo = firstSelectedUtxo;
         while (selectedUtxosValue < valueToSend && (lastSelectedUtxo < operator.utxos.length)) {
             selectedUtxosValue = selectedUtxosValue.add(operator.utxos[lastSelectedUtxo].value);
-            dogeTxFee = dogeTxFee.add(DOGE_TX_FEE_PER_INPUT);
             lastSelectedUtxo++;
         }
         require(selectedUtxosValue >= valueToSend, "Available UTXOs don't cover requested unlock amount.");
-        require(valueToSend > dogeTxFee, "Requested unlock amount can't cover tx fees.");
 
         uint32 numberOfSelectedUtxos = lastSelectedUtxo - firstSelectedUtxo;
         selectedUtxos = new uint32[](numberOfSelectedUtxos);
         for (uint32 i = 0; i < numberOfSelectedUtxos; i++) {
             selectedUtxos[i] = i + firstSelectedUtxo;
         }
+
+        uint256 dogeTxSize = DOGE_TX_FIXED_SIZE;
+        dogeTxSize = dogeTxSize.add(DOGE_TX_INPUT_SIZE.mul(numberOfSelectedUtxos));
+
         changeValue = selectedUtxosValue.sub(valueToSend);
-        return (selectedUtxos, dogeTxFee, changeValue);
+        dust = 0;
+
+        if (changeValue < DOGE_DUST) {
+            dust = changeValue;
+            changeValue = 0;
+        }
+
+        if (changeValue > 0) {
+            dogeTxSize = dogeTxSize.add(DOGE_TX_OUTPUT_SIZE.mul(2));
+        } else {
+            dogeTxSize = dogeTxSize.add(DOGE_TX_OUTPUT_SIZE);
+        }
+
+        dogeTxFee = dust.add(DOGE_TX_FEE_RATE.mul(dogeTxSize));
+
+        require(valueToSend > dogeTxFee, "Requested unlock amount can't cover tx fees.");
+        return (selectedUtxos, dogeTxFee, changeValue, dust);
     }
 
     function getValidUnlock(uint256 index) internal view returns (Unlock storage) {
