@@ -69,12 +69,6 @@ contract DogeToken is StandardToken, TransactionProcessor, EtherAuction {
     // Amount of superblocks that need to be confirmed before an unlock can be reported as missing.
     uint256 public superblocksHeightGracePeriod;
 
-    // Error codes
-    uint constant ERR_OPERATOR_NOT_CREATED_OR_WRONG_SENDER = 60020;
-    uint constant ERR_OPERATOR_HAS_BALANCE = 60030;
-    uint constant ERR_OPERATOR_WITHDRAWAL_NOT_ENOUGH_BALANCE = 60040;
-    uint constant ERR_OPERATOR_WITHDRAWAL_COLLATERAL_WOULD_BE_TOO_LOW = 60050;
-
     // Token name
     string public constant name = "DogeToken";
     // Decimals for display purposes
