@@ -42,7 +42,8 @@ async function printScryptStatus(
   await printContractEvents(scryptClaimEvents, scryptChecker);
   console.log("");
 
-  const scryptVerifierAddress = await scryptChecker.contract.callStatic.scryptVerifier();
+  const scryptVerifierAddress =
+    await scryptChecker.contract.callStatic.scryptVerifier();
   const scryptVerifierName = "ScryptVerifier";
   const scryptVerifier = await hre.ethers.getContractAt(
     scryptVerifierName,
@@ -174,11 +175,13 @@ async function printSuperblockchainStatus({
     bestSuperblockHash
   );
   console.log(`lastHash: ${lastHash}`);
-  const indexNextSuperblock = await superblocks.callStatic.getIndexNextSuperblock();
+  const indexNextSuperblock =
+    await superblocks.callStatic.getIndexNextSuperblock();
   console.log(`indexNextSuperblock: ${indexNextSuperblock}`);
-  const newSuperblockEventTimestamp = await superblockClaims.contract.callStatic.getNewSuperblockEventTimestamp(
-    bestSuperblockHash
-  );
+  const newSuperblockEventTimestamp =
+    await superblockClaims.contract.callStatic.getNewSuperblockEventTimestamp(
+      bestSuperblockHash
+    );
   console.log(`newSuperblockEventTimestamp: ${newSuperblockEventTimestamp}`);
   // idea: merge these into a single list and sort them by tx execution order?
   const superblockClaimEvents = [
