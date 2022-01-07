@@ -1,6 +1,6 @@
 import hre from "hardhat";
 import { assert } from "chai";
-import type { Contract, ContractTransaction } from "ethers";
+import type { BigNumber, Contract, ContractTransaction } from "ethers";
 import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 import {
@@ -50,12 +50,8 @@ describe("DogeToken - Collateral auctions", function () {
   let userBdogeToken: Contract;
 
   before(async function () {
-    const [
-      signer,
-      opSigner,
-      thirdSigner,
-      fourthSigner,
-    ] = await hre.ethers.getSigners();
+    const [signer, opSigner, thirdSigner, fourthSigner] =
+      await hre.ethers.getSigners();
 
     const { superblockClaims } = await deployFixture(hre);
 
@@ -102,9 +98,8 @@ describe("DogeToken - Collateral auctions", function () {
       value: operatorDeposit,
     });
 
-    const tx: ContractTransaction = await dogeToken.reportOperatorUnsafeCollateral(
-      operatorPublicKeyHash
-    );
+    const tx: ContractTransaction =
+      await dogeToken.reportOperatorUnsafeCollateral(operatorPublicKeyHash);
 
     const { events: liquidationEvents } = await getEvents(
       tx,
@@ -233,15 +228,21 @@ describe("DogeToken - Collateral auctions", function () {
       const tokenAmount = 100_000;
       await dogeToken.assign(userASigner.address, tokenAmount);
 
+      const totalSupplyPre: BigNumber = await dogeToken.totalSupply();
+      assert.equal(
+        totalSupplyPre.toString(),
+        tokenAmount.toString(),
+        "Unexpected token total supply before auction"
+      );
+
       await userAdogeToken.liquidationBid(operatorPublicKeyHash, tokenAmount);
 
       await blockchainTimeoutSeconds(2 * 60 * 60 + 1);
 
       const preBalance = await userASigner.getBalance();
 
-      const closeTx: ContractTransaction = await dogeToken.closeLiquidationAuction(
-        operatorPublicKeyHash
-      );
+      const closeTx: ContractTransaction =
+        await dogeToken.closeLiquidationAuction(operatorPublicKeyHash);
       const { events: closeEvents } = await getEvents(
         closeTx,
         "OperatorCollateralAuctioned"
@@ -258,6 +259,13 @@ describe("DogeToken - Collateral auctions", function () {
 
       const { ethBalance } = await dogeToken.operators(operatorPublicKeyHash);
       assert.equal(ethBalance.toString(), "0");
+
+      const totalSupplyPost: BigNumber = await dogeToken.totalSupply();
+      assert.equal(
+        totalSupplyPre.sub(tokenAmount).toString(),
+        totalSupplyPost.toString(),
+        "Unexpected token total supply after auction"
+      );
     });
 
     it("closing before enough time has passed should fail", async function () {

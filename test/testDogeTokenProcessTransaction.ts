@@ -7,6 +7,7 @@ import { deployFixture, deployToken, TokenOptions } from "../deploy";
 
 import {
   buildDogeTransaction,
+  checkDogeTokenInvariant,
   dogeAddressFromKeyPair,
   dogeKeyPairFromWIF,
   DogeTxDescriptor,
@@ -131,6 +132,8 @@ describe("Token transaction processing", function () {
         operatorEthAddress
       );
 
+      await checkDogeTokenInvariant(dogeToken);
+
       const superblockSubmitterAddress = signers[4].address;
       await dogeToken.processLockTransaction(
         lockTxData,
@@ -138,6 +141,8 @@ describe("Token transaction processing", function () {
         operatorPublicKeyHash,
         superblockSubmitterAddress
       );
+
+      await checkDogeTokenInvariant(dogeToken);
 
       const operatorFee = Math.floor(value / 100);
       const superblockSubmitterFee = Math.floor(value / 100);

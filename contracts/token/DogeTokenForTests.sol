@@ -3,12 +3,15 @@
 pragma solidity ^0.7.6;
 pragma abicoder v2;
 
+import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./DogeToken.sol";
 
 contract DogeTokenForTests is DogeToken {
+    using SafeMath for uint256;
 
     function assign(address to, uint256 value) public {
-        balances[to] += value;
+        balances[to] = balances[to].add(value);
+        totalSupply = totalSupply.add(value);
     }
 
     // Similar to DogeToken.addOperator() but makes no checks before adding the operator

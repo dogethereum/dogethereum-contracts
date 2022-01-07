@@ -609,19 +609,20 @@ Original error: ${error.stack || error}`);
 export async function checkDogeTokenInvariant(
   dogeToken: Contract
 ): Promise<void> {
+  let totalOperatorDogecoins = hre.ethers.BigNumber.from(0);
   const operatorKeysLength = await dogeToken.callStatic.getOperatorsLength();
   const operatorPendingBalances: Record<string, BigNumber> = {};
   for (let i = 0; i < operatorKeysLength; i++) {
-    const { key: publicKeyHash, deleted } = await dogeToken.callStatic.operatorKeys(i);
+    const { key: publicKeyHash, deleted } =
+      await dogeToken.callStatic.operatorKeys(i);
     if (deleted) continue;
 
-    const {
-      dogeAvailableBalance,
-      dogePendingBalance,
-      nextUnspentUtxoIndex,
-    } = await dogeToken.callStatic.operators(publicKeyHash);
+    const { dogeAvailableBalance, dogePendingBalance, nextUnspentUtxoIndex } =
+      await dogeToken.callStatic.operators(publicKeyHash);
 
-    const utxosLength = (await dogeToken.callStatic.getUtxosLength(publicKeyHash)).toNumber();
+    const utxosLength = (
+      await dogeToken.callStatic.getUtxosLength(publicKeyHash)
+    ).toNumber();
 
     let utxoValues = hre.ethers.BigNumber.from(0);
     for (
@@ -639,27 +640,26 @@ export async function checkDogeTokenInvariant(
       "Operator balance is inconsistent with available utxos."
     );
 
+    totalOperatorDogecoins = totalOperatorDogecoins
+      .add(dogeAvailableBalance)
+      .add(dogePendingBalance);
     operatorPendingBalances[publicKeyHash] = dogePendingBalance;
   }
 
   const totalUnlocks = (await dogeToken.callStatic.unlockIdx()).toNumber();
   const operatorChangeSumPendingUnlocks: Record<string, BigNumber> = {};
   for (let unlockIndex = 0; unlockIndex < totalUnlocks; unlockIndex++) {
-    const {
-      completed,
-      operatorPublicKeyHash,
-      operatorChange,
-    } = await dogeToken.callStatic.unlocks(unlockIndex);
+    const { completed, operatorPublicKeyHash, operatorChange } =
+      await dogeToken.callStatic.unlocks(unlockIndex);
     if (completed) continue;
 
     if (operatorChangeSumPendingUnlocks[operatorPublicKeyHash] === undefined) {
       operatorChangeSumPendingUnlocks[operatorPublicKeyHash] = operatorChange;
     } else {
-      operatorChangeSumPendingUnlocks[
-        operatorPublicKeyHash
-      ] = operatorChangeSumPendingUnlocks[operatorPublicKeyHash].add(
-        operatorChange
-      );
+      operatorChangeSumPendingUnlocks[operatorPublicKeyHash] =
+        operatorChangeSumPendingUnlocks[operatorPublicKeyHash].add(
+          operatorChange
+        );
     }
   }
 
@@ -682,4 +682,11 @@ export async function checkDogeTokenInvariant(
       "Pending balance is inconsistent with sum of change outputs in pending unlocks"
     );
   }
+
+  const totalTokenSupply: BigNumber = await dogeToken.totalSupply();
+  assert.equal(
+    totalOperatorDogecoins.toString(),
+    totalTokenSupply.toString(),
+    "Total operator dogecoins should be equal to the token supply"
+  );
 }
