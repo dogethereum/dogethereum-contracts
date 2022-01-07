@@ -36,7 +36,7 @@ abstract contract EtherAuction {
     }
 
     function auctionOpen(Auction storage auction) internal returns (uint256) {
-        require(auction.status == AuctionStatus.Uninitialized, "The auction must be uninitialized.");
+        require(auctionIsInexistent(auction), "The auction must be uninitialized.");
         auction.status = AuctionStatus.Open;
         uint256 endTimestamp = block.timestamp.add(auctionMinimumDuration);
         auction.endTimestamp = endTimestamp;
@@ -48,7 +48,7 @@ abstract contract EtherAuction {
      * We allow outbidding against oneself.
      */
     function auctionBid(Auction storage auction, address payable bidder, uint256 tokenAmount) internal {
-        require(auction.status == AuctionStatus.Open, "The auction must be open.");
+        require(auctionIsOpen(auction), "The auction must be open.");
         require(auction.bestBid < tokenAmount, "The bid must be higher than the best bid.");
 
         address lastBidder = auction.bestBidder;
@@ -63,7 +63,7 @@ abstract contract EtherAuction {
     }
 
     function auctionClose(Auction storage auction) internal returns (address payable, uint256) {
-        require(auction.status == AuctionStatus.Open, "The auction must be open.");
+        require(auctionIsOpen(auction), "The auction must be open.");
         require(auction.bestBidder != address(0), "The auction can't be closed without a bid.");
         require(
             auction.endTimestamp < block.timestamp,

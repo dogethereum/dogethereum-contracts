@@ -545,11 +545,19 @@ contract DogeToken is StandardToken, TransactionProcessor, EtherAuction {
         emit LiquidationBid(operatorPublicKeyHash, msg.sender, tokenAmount);
     }
 
+    /**
+     * @dev Used in the Auction bidding logic.
+     * Total supply is updated once the auction is closed.
+     */
     function takeTokens(address bidder, uint256 tokenAmount) override internal {
         require(balances[bidder] >= tokenAmount, "Not enough tokens for bid.");
         balances[bidder] = balances[bidder].sub(tokenAmount);
     }
 
+    /**
+     * @dev Used in the Auction bidding logic.
+     * Total supply is updated once the auction is closed.
+     */
     function releaseTokens(address bidder, uint256 tokenAmount) override internal {
         balances[bidder] = balances[bidder].add(tokenAmount);
     }
