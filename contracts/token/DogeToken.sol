@@ -509,10 +509,18 @@ contract DogeToken is StandardToken, TransactionProcessor, EtherAuction {
 
         uint userValue = value.sub(operatorFee).sub(superblockSubmitterFee);
         mintTokens(destinationAddress, userValue);
+
+        // Update the total supply with the sum of the three minted amounts.
+        totalSupply = totalSupply.add(value);
     }
 
+    /**
+     * @dev Note that this doesn't update the total supply.
+     * The total supply must be updated accordingly by the caller.
+     */
     function mintTokens(address destination, uint amount) private {
         balances[destination] = balances[destination].add(amount);
+
         emit NewToken(destination, amount);
         // Hack to make etherscan show the event
         emit Transfer(address(0), destination, amount);
@@ -562,6 +570,8 @@ contract DogeToken is StandardToken, TransactionProcessor, EtherAuction {
 
         uint collateral = operator.ethBalance;
         operator.ethBalance = 0;
+        // Here we burn the tokens in the bid.
+        totalSupply = totalSupply.sub(winningBid);
 
         winner.transfer(collateral);
 
@@ -591,13 +601,18 @@ contract DogeToken is StandardToken, TransactionProcessor, EtherAuction {
         (uint32[] memory selectedUtxos, uint dogeTxFee, uint changeValue, uint dust) = selectUtxosAndFee(unlockValue, operator);
         // If the resulting change is dust, it's taken out of the operator fee to maintain
         // the ratio between DogeTokens and dogecoins locked by operators.
+        // Note that the dust should always be less than the operator fee.
         operatorFee = operatorFee.sub(dust);
+
+        balances[msg.sender] = balances[msg.sender].sub(value);
 
         balances[operator.ethAddress] = balances[operator.ethAddress].add(operatorFee);
         emit Transfer(msg.sender, operator.ethAddress, operatorFee);
-        balances[msg.sender] = balances[msg.sender].sub(value);
+
+        uint256 burnt = unlockValue.add(dust);
+        totalSupply = totalSupply.sub(burnt);
         // Hack to make etherscan show the event
-        emit Transfer(msg.sender, address(0), unlockValue);
+        emit Transfer(msg.sender, address(0), burnt);
 
         // Get superblockchain height
         uint superblockchainHeight = superblocks.getChainHeight();
