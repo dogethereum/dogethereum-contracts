@@ -361,8 +361,8 @@ describe("testDogeTokenDoUnlock", function () {
   });
 
   it("doUnlock avoids dust outputs in operator change", async function () {
-    const utxo1Value = hre.ethers.BigNumber.from(2000000000);
-    const utxo2Value = hre.ethers.BigNumber.from(100000000);
+    const utxo1Value = hre.ethers.BigNumber.from(2_000_000_000);
+    const utxo2Value = hre.ethers.BigNumber.from(100_000_000);
     const userBalance = utxo1Value.add(utxo2Value);
     const utxos = [
       createUtxo("0x01", utxo1Value),

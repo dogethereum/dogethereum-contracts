@@ -126,7 +126,7 @@ describe("Token transaction processing", function () {
       lockTxHash = `0x${lockTx.getId()}`;
     });
 
-    it("processLockTransaction success", async () => {
+    it("processLockTransaction success", async function () {
       await dogeToken.addOperatorSimple(
         operatorPublicKeyHash,
         operatorEthAddress
@@ -188,7 +188,7 @@ describe("Token transaction processing", function () {
       );
     });
 
-    it("processLockTransaction fail - operator not created", async () => {
+    it("processLockTransaction fail - operator not created", async function () {
       await expectFailure(
         () => {
           return dogeToken.processLockTransaction(
@@ -207,7 +207,7 @@ describe("Token transaction processing", function () {
       );
     });
 
-    it("processLockTransaction fail - tx already processed", async () => {
+    it("processLockTransaction fail - tx already processed", async function () {
       await dogeToken.addOperatorSimple(
         operatorPublicKeyHash,
         operatorEthAddress
@@ -242,8 +242,10 @@ describe("Token transaction processing", function () {
     const dogeTxFeeRate = 1_000;
     const dogeTxSizeOneInputOneOutput = 148 + 34 + 10;
     const dogeTxSizeOneInputTwoOutputs = 148 + 34 * 2 + 10;
-    const dogeTxFeeOneInputOneOutput = dogeTxFeeRate * dogeTxSizeOneInputOneOutput;
-    const dogeTxFeeOneInputTwoOutputs = dogeTxFeeRate * dogeTxSizeOneInputTwoOutputs;
+    const dogeTxFeeOneInputOneOutput =
+      dogeTxFeeRate * dogeTxSizeOneInputOneOutput;
+    const dogeTxFeeOneInputTwoOutputs =
+      dogeTxFeeRate * dogeTxSizeOneInputTwoOutputs;
 
     const unlockTx = buildDogeTransaction({
       signer: operatorKeypair,
@@ -269,7 +271,9 @@ describe("Token transaction processing", function () {
         { type: "payment", address: operatorDogeAddress, value: change },
       ],
     };
-    const unlockTxWithChange = buildDogeTransaction(unlockTxWithChangeDescriptor);
+    const unlockTxWithChange = buildDogeTransaction(
+      unlockTxWithChangeDescriptor
+    );
     const unlockRequests = [
       {
         name: "unlock without change",
@@ -297,12 +301,13 @@ describe("Token transaction processing", function () {
       it(`valid ${unlockRequest.name} output`, async function () {
         const unlockIndex = await prepareUnlock(unlockRequest);
 
-        const tx: ContractTransaction = await dogeToken.processUnlockTransaction(
-          unlockRequest.data,
-          unlockRequest.hash,
-          operatorPublicKeyHash,
-          unlockIndex
-        );
+        const tx: ContractTransaction =
+          await dogeToken.processUnlockTransaction(
+            unlockRequest.data,
+            unlockRequest.hash,
+            operatorPublicKeyHash,
+            unlockIndex
+          );
         const receipt = await tx.wait();
         const errorEvents = receipt.events!.filter(({ event }) => {
           event === "ErrorDogeToken";
@@ -379,7 +384,7 @@ describe("Token transaction processing", function () {
           },
           { type: "payment", address: operatorDogeAddress, value: change },
         ],
-      }
+      };
       const wrongAddressTx = buildDogeTransaction(wrongAddressDescriptor);
       unlockRequest.data = `0x${wrongAddressTx.toHex()}`;
       unlockRequest.hash = `0x${wrongAddressTx.getId()}`;
@@ -415,7 +420,7 @@ describe("Token transaction processing", function () {
           },
           { type: "payment", address: userAddress, value: change },
         ],
-      }
+      };
       const wrongAddressTx = buildDogeTransaction(wrongAddressDescriptor);
       unlockRequest.data = `0x${wrongAddressTx.toHex()}`;
       unlockRequest.hash = `0x${wrongAddressTx.getId()}`;
@@ -502,13 +507,14 @@ describe("Token transaction processing", function () {
         utxoRef.index
       );
 
-      const tx: ContractTransaction = await dogeToken.processReportOperatorFreeUtxoSpend(
-        dogeTx.data,
-        dogeTx.hash,
-        operatorPublicKeyHash,
-        utxoRef.index,
-        dogeTx.rogueInputIndex
-      );
+      const tx: ContractTransaction =
+        await dogeToken.processReportOperatorFreeUtxoSpend(
+          dogeTx.data,
+          dogeTx.hash,
+          operatorPublicKeyHash,
+          utxoRef.index,
+          dogeTx.rogueInputIndex
+        );
       const receipt = await tx.wait();
       const liquidateEvents = receipt.events!.filter(({ event }) => {
         return event === "OperatorLiquidated";
@@ -588,13 +594,14 @@ describe("Token transaction processing", function () {
         utxoRef.index
       );
 
-      const tx: ContractTransaction = await dogeToken.processReportOperatorFreeUtxoSpend(
-        dogeTx.data,
-        dogeTx.hash,
-        operatorPublicKeyHash,
-        utxoRef.index,
-        dogeTx.rogueInputIndex
-      );
+      const tx: ContractTransaction =
+        await dogeToken.processReportOperatorFreeUtxoSpend(
+          dogeTx.data,
+          dogeTx.hash,
+          operatorPublicKeyHash,
+          utxoRef.index,
+          dogeTx.rogueInputIndex
+        );
       const receipt = await tx.wait();
       const liquidateEvents = receipt.events!.filter(({ event }) => {
         return event === "OperatorLiquidated";

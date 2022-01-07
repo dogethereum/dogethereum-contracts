@@ -395,7 +395,9 @@ function isDataTxOutput(txOut: any): txOut is DataTxOutput {
  * TODO: support testnet and regtest?
  * @param txDetails Descriptor for tx inputs, outputs and the signing private key.
  */
-export function buildDogeTransaction(txDetails: DogeTxDescriptor): bitcoin.Transaction {
+export function buildDogeTransaction(
+  txDetails: DogeTxDescriptor
+): bitcoin.Transaction {
   const txBuilder = prepareDogeTransaction(txDetails);
   for (let i = 0; i < txDetails.inputs.length; i++) {
     txBuilder.sign(i, txDetails.signer);
