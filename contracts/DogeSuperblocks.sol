@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma experimental ABIEncoderV2;
+pragma abicoder v2;
 pragma solidity ^0.7.6;
 
 import {DogeMessageLibrary} from "./DogeParser/DogeMessageLibrary.sol";
@@ -711,15 +711,5 @@ contract DogeSuperblocks is DogeErrorCodes {
         uint height = getSuperblockHeight(superblockHash);
         if (height == 0) return false;
         return (getSuperblockAt(height) == superblockHash);
-    }
-
-   // @dev - looks up for suberBlockInfo 
-    //
-    // @param superblockHash - hash of the block being searched for in the main chain
-    // @return - SuperBlockInfoHash
-    function getSuperBlockInfo(bytes32 superblockHash) external view returns (SuperblockInfo memory) {        
-        return superblocks[superblockHash];        
-    }
-
-    
+    }    
 }
