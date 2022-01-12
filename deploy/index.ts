@@ -42,21 +42,6 @@ export interface DogethereumFixture {
   dogeToken: ethers.Contract;
 }
 
-export interface SuperblockInfo {
-  blocksMerkleRoot: string;
-  accumulatedWork: string;
-  timestamp: string;
-  prevTimestamp: string;
-  lastHash: string;
-  parentId: string;
-  submitter: string;
-  ancestors: string;
-  lastBits: string;
-  index: string;
-  height: string;
-  status: string;
-}
-
 interface ContractInfo {
   abi: any[];
   contractName: string;
@@ -244,8 +229,7 @@ export interface ScryptCheckerDeployment {
 
 export type DeploymentOptions = Required<UserDogethereumDeploymentOptions> &
   ScryptCheckerDeployment;
-export type UserDeploymentOptions = UserDogethereumDeploymentOptions &
-  ScryptCheckerDeployment;
+export type UserDeploymentOptions = UserDogethereumDeploymentOptions & ScryptCheckerDeployment;
 
 export const DEPLOYMENT_JSON_NAME = "deployment.json";
 
@@ -259,29 +243,23 @@ export enum DogecoinNetworkId {
 // These don't actually need to have specific values for our test suites.
 // We just need them to initialize the superblockchain with a known state.
 const localSuperblockGenesis: SuperblockHeader = {
-  merkleRoot:
-    "0x3d2160a3b5dc4a9d62e7e66a295f70313ac808440ef7400d6c0772171ce973a5",
+  merkleRoot: "0x3d2160a3b5dc4a9d62e7e66a295f70313ac808440ef7400d6c0772171ce973a5",
   accumulatedWork: "0",
   timestamp: 1296688602,
   prevTimestamp: 0,
-  lastHash:
-    "0x3d2160a3b5dc4a9d62e7e66a295f70313ac808440ef7400d6c0772171ce973a5",
+  lastHash: "0x3d2160a3b5dc4a9d62e7e66a295f70313ac808440ef7400d6c0772171ce973a5",
   lastBits: 0x207fffff,
-  parentId:
-    "0x0000000000000000000000000000000000000000000000000000000000000000",
+  parentId: "0x0000000000000000000000000000000000000000000000000000000000000000",
 };
 
 const integrationSuperblockGenesis: SuperblockHeader = {
-  merkleRoot:
-    "0x629417921bc4ab79db4a4a02b4d7946a4d0dbc6a3c5bca898dd12eacaeb8b353",
+  merkleRoot: "0x629417921bc4ab79db4a4a02b4d7946a4d0dbc6a3c5bca898dd12eacaeb8b353",
   accumulatedWork: "4266257060811936889868",
   timestamp: 1535743139,
   prevTimestamp: 1535743100,
-  lastHash:
-    "0xe2a056368784e63b9b5f9c17b613718ef7388a799e8535ab59be397019eff798",
+  lastHash: "0xe2a056368784e63b9b5f9c17b613718ef7388a799e8535ab59be397019eff798",
   lastBits: 436759445,
-  parentId:
-    "0x0000000000000000000000000000000000000000000000000000000000000000",
+  parentId: "0x0000000000000000000000000000000000000000000000000000000000000000",
 };
 
 // TODO: define adequate parameters
@@ -297,36 +275,34 @@ const integrationSuperblockGenesis: SuperblockHeader = {
 //   liquidationThresholdCollateralRatio: "1500",
 // };
 
-export const SUPERBLOCK_OPTIONS_INTEGRATION_SLOW_SYNC: SuperblockchainOptions =
-  {
-    duration: 10 * 60,
-    delay: 5 * 60,
-    timeout: 60,
-    confirmations: 1,
-    reward: 10,
-    genesis: integrationSuperblockGenesis,
-    unlockEthereumTimeGracePeriod: 4 * 60 * 60,
-    unlockSuperblocksHeightGracePeriod: 4,
-    lockCollateralRatio: "2000",
-    liquidationThresholdCollateralRatio: "1500",
-  };
+export const SUPERBLOCK_OPTIONS_INTEGRATION_SLOW_SYNC: SuperblockchainOptions = {
+  duration: 10 * 60,
+  delay: 5 * 60,
+  timeout: 60,
+  confirmations: 1,
+  reward: 10,
+  genesis: integrationSuperblockGenesis,
+  unlockEthereumTimeGracePeriod: 4 * 60 * 60,
+  unlockSuperblocksHeightGracePeriod: 4,
+  lockCollateralRatio: "2000",
+  liquidationThresholdCollateralRatio: "1500",
+};
 
 /**
  * These options are typically used in testnets like ropsten, rinkeby.
  */
-export const SUPERBLOCK_OPTIONS_INTEGRATION_FAST_SYNC: SuperblockchainOptions =
-  {
-    duration: 10 * 60,
-    delay: 5 * 60,
-    timeout: 30,
-    confirmations: 1,
-    reward: 10,
-    genesis: integrationSuperblockGenesis,
-    unlockEthereumTimeGracePeriod: 4 * 60 * 60,
-    unlockSuperblocksHeightGracePeriod: 4,
-    lockCollateralRatio: "2000",
-    liquidationThresholdCollateralRatio: "1500",
-  };
+export const SUPERBLOCK_OPTIONS_INTEGRATION_FAST_SYNC: SuperblockchainOptions = {
+  duration: 10 * 60,
+  delay: 5 * 60,
+  timeout: 30,
+  confirmations: 1,
+  reward: 10,
+  genesis: integrationSuperblockGenesis,
+  unlockEthereumTimeGracePeriod: 4 * 60 * 60,
+  unlockSuperblocksHeightGracePeriod: 4,
+  lockCollateralRatio: "2000",
+  liquidationThresholdCollateralRatio: "1500",
+};
 
 /**
  * These options are used for most tests.
@@ -578,12 +554,8 @@ async function deployMainSystem(
     name: superblockClaimsContractName,
   };
 
-  await superblocks.contract.setSuperblockClaims(
-    superblockClaims.contract.address
-  );
-  await battleManager.contract.setSuperblockClaims(
-    superblockClaims.contract.address
-  );
+  await superblocks.contract.setSuperblockClaims(superblockClaims.contract.address);
+  await battleManager.contract.setSuperblockClaims(superblockClaims.contract.address);
 
   return {
     superblocks,
@@ -632,22 +604,12 @@ export async function deployDogethereum(
   }
   if (dogeUsdPriceOracle === undefined) {
     const dogeUsdPrice = 29214072;
-    const oracle = await deployOracleMock(
-      hre,
-      dogeUsdPrice,
-      deployAccount,
-      confirmations
-    );
+    const oracle = await deployOracleMock(hre, dogeUsdPrice, deployAccount, confirmations);
     dogeUsdPriceOracle = oracle.address;
   }
   if (ethUsdPriceOracle === undefined) {
     const ethUsdPrice = 323316156333;
-    const oracle = await deployOracleMock(
-      hre,
-      ethUsdPrice,
-      deployAccount,
-      confirmations
-    );
+    const oracle = await deployOracleMock(hre, ethUsdPrice, deployAccount, confirmations);
     ethUsdPriceOracle = oracle.address;
   }
 
@@ -665,11 +627,7 @@ export async function deployDogethereum(
 
   const dogethereumMain = await deployMainSystem(hre, deployOptions);
 
-  const dogeTokenContracts = await deployTokenForCoreSystem(
-    hre,
-    deployOptions,
-    dogethereumMain
-  );
+  const dogeTokenContracts = await deployTokenForCoreSystem(hre, deployOptions, dogethereumMain);
 
   return {
     ...dogethereumMain,
@@ -677,9 +635,7 @@ export async function deployDogethereum(
   };
 }
 
-export function getDefaultDeploymentPath(
-  hre: HardhatRuntimeEnvironment
-): string {
+export function getDefaultDeploymentPath(hre: HardhatRuntimeEnvironment): string {
   return path.join(hre.config.paths.root, "deployment", hre.network.name);
 }
 
@@ -756,32 +712,16 @@ export async function loadDeployment(
 
   return {
     superblocks: await reifyContract(hre, deploymentInfo.contracts.superblocks),
-    dogeMessageLibrary: await reifyContract(
-      hre,
-      deploymentInfo.contracts.dogeMessageLibrary
-    ),
+    dogeMessageLibrary: await reifyContract(hre, deploymentInfo.contracts.dogeMessageLibrary),
     dogeToken: await reifyContract(hre, deploymentInfo.contracts.dogeToken),
-    scryptChecker: await reifyContract(
-      hre,
-      deploymentInfo.contracts.scryptChecker
-    ),
-    superblockClaims: await reifyContract(
-      hre,
-      deploymentInfo.contracts.superblockClaims
-    ),
-    battleManager: await reifyContract(
-      hre,
-      deploymentInfo.contracts.battleManager
-    ),
+    scryptChecker: await reifyContract(hre, deploymentInfo.contracts.scryptChecker),
+    superblockClaims: await reifyContract(hre, deploymentInfo.contracts.superblockClaims),
+    battleManager: await reifyContract(hre, deploymentInfo.contracts.battleManager),
     setLibrary: await reifyContract(hre, deploymentInfo.contracts.setLibrary),
   };
 }
 
-const deployProxy: DeployF = async (
-  hre,
-  factory,
-  { initArguments, confirmations }
-) => {
+const deployProxy: DeployF = async (hre, factory, { initArguments, confirmations }) => {
   const contract = await hre.upgrades.deployProxy(factory, initArguments, {
     kind: "transparent",
     // We use a couple of external libraries so we need to tell the upgrades plugin
@@ -793,26 +733,16 @@ const deployProxy: DeployF = async (
   return contract;
 };
 
-const deployPlain: DeployF = async (
-  hre,
-  factory,
-  { initArguments, confirmations }
-) => {
+const deployPlain: DeployF = async (hre, factory, { initArguments, confirmations }) => {
   const contract = await factory.deploy(...initArguments);
   await contract.deployTransaction.wait(confirmations);
   return contract;
 };
 
-const deployPlainWithInit: DeployF = async (
-  hre,
-  factory,
-  { initArguments, confirmations }
-) => {
+const deployPlainWithInit: DeployF = async (hre, factory, { initArguments, confirmations }) => {
   const contract = await factory.deploy();
   await contract.deployTransaction.wait(confirmations);
-  const initTx = (await contract.initialize(
-    ...initArguments
-  )) as ethers.ContractTransaction;
+  const initTx = (await contract.initialize(...initArguments)) as ethers.ContractTransaction;
   await initTx.wait(confirmations);
   return contract;
 };
@@ -851,14 +781,9 @@ export async function initSuperblockChain(
   const deployPrimitive = deployPlainWithInit;
   const deploySigner = await hre.ethers.getSigner(options.from);
 
-  const dogeMessageLibrary = await deployContract(
-    "DogeMessageLibrary",
-    [],
-    hre,
-    {
-      signer: deploySigner,
-    }
-  );
+  const dogeMessageLibrary = await deployContract("DogeMessageLibrary", [], hre, {
+    signer: deploySigner,
+  });
 
   const superblocks = await deployContract(
     "DogeSuperblocks",
@@ -962,9 +887,7 @@ let dogethereumFixture: DogethereumFixture;
  * In particular, it will deploy the DogeTokenForTests and ScryptCheckerDummy contracts.
  * @param hre The Hardhat runtime environment where the deploy takes place.
  */
-export async function deployFixture(
-  hre: HardhatRuntimeEnvironment
-): Promise<DogethereumFixture> {
+export async function deployFixture(hre: HardhatRuntimeEnvironment): Promise<DogethereumFixture> {
   if (dogethereumFixture === undefined) {
     const { scryptChecker } = await deployScryptCheckerDummy(hre);
     const dogethereum = await deployDogethereum(hre, {
