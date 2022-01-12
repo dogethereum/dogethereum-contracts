@@ -124,10 +124,9 @@ contract DogeToken is StandardToken, TransactionProcessor, EtherAuction {
     // Collateral auction bid
     event LiquidationBid(bytes20 operatorPublicKeyHash, address bidder, uint256 bid);
     // End of the collateral auction.
-    event OperatorCollateralAuctioned(bytes20 operatorPublicKeyHash, address winner, uint256 tokensBurned, uint256 etherSold);     
+    event OperatorCollateralAuctioned(bytes20 operatorPublicKeyHash, address winner, uint256 tokensBurned, uint256 etherSold);
     event LockedToken(address indexed user, uint256 value, uint256 OperatorFee, uint256 superblockSubmitterFee);
     event UnlockedToken(address indexed user, uint256 value, uint256 OperatorFee);
-
 
     // Represents an unlock request
     struct Unlock {
@@ -341,8 +340,7 @@ contract DogeToken is StandardToken, TransactionProcessor, EtherAuction {
             value,
             operator.ethAddress,
             superblockSubmitterAddress
-        );
-        
+        );        
     }
 
     function processUnlockTransaction(
@@ -399,7 +397,6 @@ contract DogeToken is StandardToken, TransactionProcessor, EtherAuction {
 
         // Mark the unlock as completed.
         unlock.completed = true;
-                
     }
 
     /**
@@ -649,12 +646,10 @@ contract DogeToken is StandardToken, TransactionProcessor, EtherAuction {
         operator.dogeAvailableBalance = operator.dogeAvailableBalance.sub(unlockValue.add(changeValue)).sub(dust);
         operator.dogePendingBalance = operator.dogePendingBalance.add(changeValue);
         operator.nextUnspentUtxoIndex += uint32(selectedUtxos.length);
-        unlockIdx++;
-        
+        unlockIdx++;        
 
         //new unclock
         emit UnlockedToken(operator.ethAddress, unlockValue, dogeTxFee);
-
     }
 
     function selectUtxosAndFee(
