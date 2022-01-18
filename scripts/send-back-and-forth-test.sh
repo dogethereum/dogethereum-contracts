@@ -78,6 +78,17 @@ fi
 npm run ganache > ganachelog.txt &
 ganacheNode=$!
 
+# # Stop hardhat network
+# GANACHE_PROCESSES="$(pgrep -f '^node.*hardhat node')" || echo "No ganache processes found"
+# if [[ $GANACHE_PROCESSES ]]; then
+# 	# kill fails if passed an empty string
+# 	kill "$GANACHE_PROCESSES"
+# 	sleep 1s
+# fi
+# # Start hardhat network
+# npm run hh-network > hh-network.txt &
+# ganacheNode=$!
+
 # Compile and deploy contracts
 npx hardhat compile --quiet
 
