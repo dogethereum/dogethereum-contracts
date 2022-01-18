@@ -154,6 +154,7 @@ export interface SuperblockOptions {
   /**
    * Battle timeout used in the superblock DogeBattleManager and ScryptClaims.
    * This timeout is used in the challenge response protocols for superblocks.
+   * The timeout is expressed in seconds.
    */
   timeout: number;
 
