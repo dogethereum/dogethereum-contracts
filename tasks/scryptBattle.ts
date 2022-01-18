@@ -1,10 +1,5 @@
 import hre from "hardhat";
-import type {
-  Contract,
-  ContractTransaction,
-  ContractReceipt,
-  Event,
-} from "ethers";
+import type { Contract, ContractTransaction, ContractReceipt, Event } from "ethers";
 import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 import { DogethereumSystem, loadDeployment } from "../deploy";
@@ -44,11 +39,7 @@ export class ScryptBattle {
     }
 
     const lastEvent = events[events.length - 1];
-    return ScryptBattle.challengeClaimCreatedEvent(
-      deployment,
-      lastEvent,
-      challenger
-    );
+    return ScryptBattle.challengeClaimCreatedEvent(deployment, lastEvent, challenger);
   }
 
   static async challengeClaimCreatedEvent(
@@ -59,9 +50,7 @@ export class ScryptBattle {
     const eventArgs = event.args!;
     const claimId = eventArgs.claimId;
     const scryptClaims = deployment.scryptChecker.contract.connect(challenger);
-    let tx: ContractTransaction = await scryptClaims.functions.challengeClaim(
-      claimId
-    );
+    let tx: ContractTransaction = await scryptClaims.functions.challengeClaim(claimId);
     let receipt = await tx.wait();
 
     tx = await scryptClaims.functions.runNextVerificationGame(claimId);
@@ -78,17 +67,9 @@ export class ScryptBattle {
     const sessionId = gameStartedEvent.args!.sessionId;
 
     const scryptVerifierAddress = await scryptClaims.callStatic.scryptVerifier();
-    const scryptVerifier = await hre.ethers.getContractAt(
-      "ScryptVerifier",
-      scryptVerifierAddress
-    );
+    const scryptVerifier = await hre.ethers.getContractAt("ScryptVerifier", scryptVerifierAddress);
 
-    const battle = new ScryptBattle(
-      scryptVerifier,
-      challenger,
-      claimId,
-      sessionId
-    );
+    const battle = new ScryptBattle(scryptVerifier, challenger, claimId, sessionId);
     return battle;
   }
 

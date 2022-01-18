@@ -1,13 +1,10 @@
 import { task, types } from "hardhat/config";
 import { ActionType } from "hardhat/types";
+import type { BigNumber, Contract, ContractTransaction, Event, providers } from "ethers";
+
 import { loadDeployment, DogethereumSystem } from "../deploy";
-import type {
-  BigNumber,
-  Contract,
-  ContractTransaction,
-  Event,
-  providers,
-} from "ethers";
+
+import { Battle, BridgeEvent } from "./battle";
 
 // TODO: separate this into two modules: one for the status task and another for the challenge task.
 
@@ -129,6 +126,7 @@ interface SuperblockClaim {
 }
 
 interface ChallengeTaskArguments {
+  advanceBattle: boolean;
   superblockId?: string;
   challenger?: string;
   deposit?: string;
@@ -152,83 +150,112 @@ const STATUS_TASK = `${DOGETHEREUM_SUPERCLI}.status`;
 const CHALLENGE_TASK = `${DOGETHEREUM_SUPERCLI}.challenge`;
 const WAIT_UTXO_TASK = `${DOGETHEREUM_SUPERCLI}.waitUtxo`;
 
+function decodeBattleEvent(battleManager: Contract, event: Event): BridgeEvent {
+  if (event.event !== undefined) {
+    if (event.args === undefined) throw new Error("Invalid event.");
+
+    return {
+      name: event.event,
+      args: event.args,
+    };
+  }
+
+  try {
+    const log = battleManager.interface.parseLog(event);
+    return {
+      name: log.name,
+      args: log.args,
+    };
+  } catch {
+    return {
+      name: "Unknown",
+      args: [],
+    };
+  }
+}
+
 async function challengeNextSuperblock(
   superblocks: Contract,
   superblockClaims: Contract,
+  battleManager: Contract,
   challenger: string,
   superblockId?: string,
   deposit?: number | string
 ) {
   console.log(`Making a challenge from: ${challenger}`);
-  let balance = await superblockClaims.getDeposit(challenger);
+  let balance = await superblockClaims.callStatic.getDeposit(challenger);
   if (balance.eq(0)) {
     deposit = deposit ?? 1000;
   }
   if (deposit !== undefined) {
     await superblockClaims.makeDeposit({ value: deposit });
-    balance = await superblockClaims.getDeposit(challenger);
+    balance = await superblockClaims.callStatic.getDeposit(challenger);
   }
   console.log(`Deposits: ${balance.toString()}`);
 
-  const bestSuperblockHash = await superblocks.getBestSuperblock();
+  const bestSuperblockHash: string = await superblocks.getBestSuperblock();
   const bestSuperblock = await superblocks.getSuperblock(bestSuperblockHash);
 
-  const height = await superblocks.getSuperblockHeight(bestSuperblockHash);
+  const height: number = await superblocks.getSuperblockHeight(bestSuperblockHash);
 
   console.log("----------");
   console.log(`Last superblock: ${bestSuperblockHash}`);
   console.log(`Height: ${height}`);
-  console.log(`Date: ${new Date(bestSuperblock[2] * 1000)}`);
-  console.log(`Last doge hash: ${bestSuperblock[4]}`);
+  console.log(`Date: ${new Date(bestSuperblock.timestamp * 1000)}`);
+  console.log(`Last doge hash: ${bestSuperblock.lastHash}`);
   console.log("----------");
 
-  superblockId = await nextSuperblockEvent(superblocks, superblockId);
+  superblockId = await nextSuperblockEvent(superblocks, bestSuperblockHash, superblockId);
 
-  const findEvent = (events: Event[], eventName: string) => {
-    return events.find(({ event }) => {
-      return event === eventName;
+  const findEvent = (events: BridgeEvent[], eventName: string) => {
+    return events.find(({ name }) => {
+      return name === eventName;
     });
   };
 
-  const response: ContractTransaction = await superblockClaims.challengeSuperblock(
-    superblockId
-  );
+  const response: ContractTransaction = await superblockClaims.challengeSuperblock(superblockId);
   const receipt = await response.wait();
   if (receipt.events === undefined) {
     throw new Error("Couldn't find events in the transaction sent.");
   }
-  const challengeEvent = findEvent(receipt.events, "SuperblockClaimChallenged");
-  const newBattleEvent = findEvent(receipt.events, "NewBattle");
+
+  // Only superblockClaims events are decoded,
+  // so we need to decode battleManager events here.
+  const events = receipt.events.map((event) => decodeBattleEvent(battleManager, event));
+  const challengeEvent = findEvent(events, "SuperblockClaimChallenged");
+  const newBattleEvent = findEvent(events, "NewBattle");
   if (challengeEvent === undefined) {
     console.log("Failed to challenge next superblock");
   } else {
-    console.log(
-      `Challenged superblock: ${challengeEvent.args!.superblockHash}`
-    );
-    const nextSuperblock = await superblocks.getSuperblock(
-      challengeEvent.args!.superblockHash
-    );
+    if (challengeEvent.args === undefined) {
+      throw new Error("Bad challenge event.");
+    }
+
+    console.log(`Challenged superblock: ${challengeEvent.args.superblockHash}`);
+    const nextSuperblock = await superblocks.getSuperblock(challengeEvent.args.superblockHash);
     if (newBattleEvent !== undefined) {
       console.log("Battle started");
-      console.log(`sessionId: ${newBattleEvent.args!.sessionId}`);
-      console.log(`submitter: ${newBattleEvent.args!.submitter}`);
-      console.log(`challenger: ${newBattleEvent.args!.challenger}`);
+      console.log(`sessionId: ${newBattleEvent.args.sessionId}`);
+      console.log(`submitter: ${newBattleEvent.args.submitter}`);
+      console.log(`challenger: ${newBattleEvent.args.challenger}`);
     } else {
       console.log("Superblock");
-      console.log(`submitter: ${nextSuperblock[7]}`);
-      console.log(`challenger: ${challengeEvent.args!.challenger}`);
+      console.log(`submitter: ${nextSuperblock.submitter}`);
+      console.log(`challenger: ${challengeEvent.args.challenger}`);
     }
   }
   console.log("----------");
+  return { challengeEvent, newBattleEvent };
 }
 
 async function nextSuperblockEvent(
   superblocks: Contract,
+  bestSuperblockId: string,
   superblockId?: string
 ): Promise<string> {
   if (typeof superblockId === "string") {
-    const superblock = await superblocks.getSuperblock(superblockId);
-    if (superblock[8] !== STATUS_UNINITIALIZED) {
+    const { status } = await superblocks.superblocks(superblockId);
+    if (status !== STATUS_UNINITIALIZED) {
       return superblockId;
     }
   }
@@ -244,6 +271,7 @@ async function nextSuperblockEvent(
       // submitter,
       // event
     ) => {
+      if (newSuperblockId === bestSuperblockId) return;
       if (superblockId === undefined || newSuperblockId === superblockId) {
         superblocks.off(newSuperblockFilter, listener);
         resolve(newSuperblockId);
@@ -254,7 +282,7 @@ async function nextSuperblockEvent(
 }
 
 const challengeCommand: ActionType<ChallengeTaskArguments> = async function (
-  { superblockId, challenger, deposit },
+  { advanceBattle, superblockId, challenger, deposit },
   hre
 ) {
   console.log("challenge the next superblock");
@@ -269,18 +297,43 @@ const challengeCommand: ActionType<ChallengeTaskArguments> = async function (
   const deployment = await loadDeployment(hre);
   const superblocks = deployment.superblocks.contract;
   const superblockClaims = deployment.superblockClaims.contract.connect(signer);
+  const battleManager = deployment.battleManager.contract.connect(signer);
 
-  await challengeNextSuperblock(
+  const { newBattleEvent } = await challengeNextSuperblock(
     superblocks,
     superblockClaims,
+    battleManager,
     signer.address,
     superblockId,
     deposit
   );
+
   console.log("challenge the next superblock complete");
+
+  if (advanceBattle && newBattleEvent !== undefined) {
+    const battle = await Battle.createFromEvent(battleManager, newBattleEvent);
+    console.log("Querying block hashes...");
+    let receipt = await battle.queryMerkleRootHashes();
+    await battle.nextResponse(receipt.blockNumber + 1);
+    const hashes = await battle.getBlockHashes();
+    const firstHashes = hashes.slice(0, 5);
+    for (const hash of firstHashes) {
+      console.log(`Querying block header ${hash}...`);
+      receipt = await battle.queryBlockHeader(hash);
+      await battle.nextResponse(receipt.blockNumber + 1);
+    }
+
+    console.log("Finished querying! Challenge abandoned.");
+  }
 };
 
 task(CHALLENGE_TASK, "Submit a challenge to a superblock")
+  .addOptionalParam(
+    "advanceBattle",
+    "Queries the first five hashes in the battle, then abandons the battle.",
+    false,
+    types.boolean
+  )
   .addOptionalParam(
     "superblockId",
     "Superblock ID to challenge. If the superblock was not submitted yet it will wait for it. When this option is not specified, the next superblock is challenged instead.",
@@ -317,10 +370,8 @@ function challengeStateToText(state: ChallengeState) {
     [ChallengeState.QueryBlockHeader]: "Block header queried",
     [ChallengeState.RespondBlockHeader]: "Block header replied",
     [ChallengeState.VerifyScryptHash]: "Waiting scrypt hash request",
-    [ChallengeState.RequestScryptVerification]:
-      "Scrypt hash verification requested",
-    [ChallengeState.PendingScryptVerification]:
-      "Scrypt hash Verification pending",
+    [ChallengeState.RequestScryptVerification]: "Scrypt hash verification requested",
+    [ChallengeState.PendingScryptVerification]: "Scrypt hash Verification pending",
     [ChallengeState.PendingVerification]: "Superblock verification pending",
     [ChallengeState.SuperblockVerified]: "Superblock verified",
     [ChallengeState.SuperblockFailed]: "Superblock failed",
@@ -362,15 +413,10 @@ async function getBattleStatus(
   superblockHash: string,
   challenger: string
 ): Promise<BattleStatus> {
-  const sessionId = await superblockClaims.getSession(
-    superblockHash,
-    challenger
-  );
-  const [
+  const sessionId = await superblockClaims.getSession(superblockHash, challenger);
+  const {
     id,
-    ,
     submitter,
-    ,
     lastActionTimestamp,
     lastActionClaimant,
     lastActionChallenger,
@@ -379,7 +425,7 @@ async function getBattleStatus(
     countBlockHeaderResponses,
     pendingScryptHashId,
     challengeState,
-  ] = await battleManager.sessions(sessionId);
+  } = await battleManager.sessions(sessionId);
   return {
     sessionId,
     battle: {
@@ -399,15 +445,9 @@ async function getBattleStatus(
   };
 }
 
-function getBattles(
-  dogethereum: DogethereumSystem,
-  superblockHash: string,
-  challengers: string[]
-) {
+function getBattles(dogethereum: DogethereumSystem, superblockHash: string, challengers: string[]) {
   return Promise.all(
-    challengers.map((challenger) =>
-      getBattleStatus(dogethereum, superblockHash, challenger)
-    )
+    challengers.map((challenger) => getBattleStatus(dogethereum, superblockHash, challenger))
   );
 }
 
@@ -415,8 +455,7 @@ async function getClaimInfo(
   { superblockClaims: { contract: superblockClaims } }: DogethereumSystem,
   superblockHash: string
 ): Promise<SuperblockClaim> {
-  const [
-    ,
+  const {
     submitter,
     createdAt,
     currentChallenger,
@@ -424,7 +463,7 @@ async function getClaimInfo(
     verificationOngoing,
     decided,
     invalid,
-  ] = await superblockClaims.claims(superblockHash);
+  } = await superblockClaims.claims(superblockHash);
   return {
     superblockHash,
     submitter,
@@ -439,29 +478,20 @@ async function getClaimInfo(
 
 function displayBattle(battle: BattleStatus["battle"]) {
   console.log(
-    `        Last action timestamp: ${new Date(
-      battle.lastActionTimestamp.mul(1000).toString()
-    )}`
+    `        Last action timestamp: ${new Date(battle.lastActionTimestamp.mul(1000).toString())}`
   );
   console.log(
     `        Last action: ${
-      battle.lastActionClaimant.gt(battle.lastActionChallenger)
-        ? "claimant"
-        : "challenger"
+      battle.lastActionClaimant.gt(battle.lastActionChallenger) ? "claimant" : "challenger"
     }`
   );
   console.log(`        State: ${challengeStateToText(battle.challengeState)}`);
 }
 
-async function displaySuperblock(
-  dogethereum: DogethereumSystem,
-  superblockHash: string
-) {
-  const {
-    timestamp,
-    submitter,
-    status,
-  } = await dogethereum.superblocks.contract.getSuperblock(superblockHash);
+async function displaySuperblock(dogethereum: DogethereumSystem, superblockHash: string) {
+  const { timestamp, submitter, status } = await dogethereum.superblocks.contract.getSuperblock(
+    superblockHash
+  );
   const challengers: string[] = await dogethereum.superblockClaims.contract.getClaimChallengers(
     superblockHash
   );
@@ -469,27 +499,15 @@ async function displaySuperblock(
   const battles = await getBattles(dogethereum, superblockHash, challengers);
   console.log(`Superblock: ${superblockHash}`);
   console.log(`Submitter: ${submitter}`);
-  console.log(
-    `Last block Timestamp: ${new Date(timestamp.mul(1000).toString())}`
-  );
+  console.log(`Last block Timestamp: ${new Date(timestamp.mul(1000).toString())}`);
   console.log(`Status: ${statusToText(status)}`);
-  console.log(
-    `Superblock submitted: ${new Date(claim.createdAt.mul(1000).toString())}`
-  );
+  console.log(`Superblock submitted: ${new Date(claim.createdAt.mul(1000).toString())}`);
   console.log(`Challengers: ${challengers.length}`);
-  console.log(
-    `Challengers Timeout: ${new Date(
-      claim.challengeTimeout.mul(1000).toString()
-    )}`
-  );
+  console.log(`Challengers Timeout: ${new Date(claim.challengeTimeout.mul(1000).toString())}`);
   if (claim.decided) {
     console.log(`Claim decided: ${claim.invalid ? "invalid" : "valid"}`);
   } else {
-    console.log(
-      `Verification: ${
-        claim.verificationOngoing ? "ongoing" : "paused/stopped"
-      }`
-    );
+    console.log(`Verification: ${claim.verificationOngoing ? "ongoing" : "paused/stopped"}`);
   }
   if (challengers.length > 0) {
     console.log(`Current challenger: ${claim.currentChallenger}`);
@@ -500,15 +518,11 @@ async function displaySuperblock(
       console.log(`    Battle session: ${battles[idx].sessionId}`);
       if (claim.currentChallenger.eq(idx + 1)) {
         if (claim.decided) {
-          console.log(
-            `    Challenge state: ${claim.invalid ? "succeeded" : "failed"}`
-          );
+          console.log(`    Challenge state: ${claim.invalid ? "succeeded" : "failed"}`);
         } else if (claim.verificationOngoing) {
           displayBattle(battles[idx].battle);
           console.log(
-            `    Challenge state: ${challengeStateToText(
-              battles[idx].battle.challengeState
-            )}`
+            `    Challenge state: ${challengeStateToText(battles[idx].battle.challengeState)}`
           );
         } else {
           console.log("    Challenge state: waiting");
@@ -549,12 +563,7 @@ task(
     undefined,
     types.string
   )
-  .addOptionalParam(
-    "fromBlock",
-    "Lower bound of the interval of blocks to query.",
-    0,
-    types.string
-  )
+  .addOptionalParam("fromBlock", "Lower bound of the interval of blocks to query.", 0, types.string)
   .addOptionalParam(
     "toBlock",
     "Upper bound of the interval of blocks to query.",
@@ -571,17 +580,13 @@ const waitUtxoCommand: ActionType<WaitUtxoTaskArguments> = async function (
     dogeToken: { contract: dogeToken },
   } = await loadDeployment(hre);
   let utxosLength = await dogeToken.getUtxosLength(operatorPublicKeyHash);
-  console.log(
-    `Utxo length of operator ${operatorPublicKeyHash} : ${utxosLength}`
-  );
+  console.log(`Utxo length of operator ${operatorPublicKeyHash} : ${utxosLength}`);
 
   while (utxosLength < expectedUtxoLength) {
     await delay(2000);
     utxosLength = await dogeToken.getUtxosLength(operatorPublicKeyHash);
   }
-  console.log(
-    `Utxo length of operator ${operatorPublicKeyHash} : ${utxosLength}`
-  );
+  console.log(`Utxo length of operator ${operatorPublicKeyHash} : ${utxosLength}`);
 };
 
 function delay(milliseconds: number) {
@@ -590,20 +595,12 @@ function delay(milliseconds: number) {
   });
 }
 
-task(
-  WAIT_UTXO_TASK,
-  "Wait until a particular operator has a specific amount of UTXOs."
-)
+task(WAIT_UTXO_TASK, "Wait until a particular operator has a specific amount of UTXOs.")
   .addParam(
     "operatorPublicKeyHash",
     "Hash of the public key of the operator that should be monitored",
     undefined,
     types.string
   )
-  .addParam(
-    "utxoLength",
-    "Minimum amount of UTXOs expected.",
-    undefined,
-    types.int
-  )
+  .addParam("utxoLength", "Minimum amount of UTXOs expected.", undefined, types.int)
   .setAction(waitUtxoCommand);
