@@ -159,10 +159,6 @@ contract SuperblockClaims is DogeDepositsManager, DogeErrorCodes {
         return claim.bondedDeposits[account];
     }
 
-    function getDeposit(address account) override public view returns (uint) {
-        return deposits[account];
-    }
-
     // @dev – unlocks a user's bonded deposits from a claim.
     // @param superblockHash – claim id.
     // @param account – user's address.
@@ -204,7 +200,7 @@ contract SuperblockClaims is DogeDepositsManager, DogeErrorCodes {
         bytes32 parentHash
     ) public returns (bytes32) {
         // TODO: this address validity check looks out of place here
-        require(address(trustedSuperblocks) != address(0));
+        require(address(trustedSuperblocks) != address(0), "ERR_PROPOSE_UNINITIALIZED");
 
         // Error: The submitter must deposit some ether as collateral to propose a superblock.
         require(
@@ -246,7 +242,7 @@ contract SuperblockClaims is DogeDepositsManager, DogeErrorCodes {
     // @return - Error code and claim Id
     function challengeSuperblock(bytes32 superblockHash) public returns (bytes32) {
         // TODO: this address validity check looks out of place here
-        require(address(trustedSuperblocks) != address(0));
+        require(address(trustedSuperblocks) != address(0), "ERR_CHALLENGE_UNINITIALIZED");
 
         SuperblockClaim storage claim = claims[superblockHash];
 
