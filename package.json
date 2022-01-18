@@ -16,7 +16,7 @@
     "solc": "^0.7.6"
   },
   "devDependencies": {
-    "@nomiclabs/hardhat-ethers": "^2.0.2",
+    "@nomiclabs/hardhat-ethers": "^2.0.4",
     "@openzeppelin/hardhat-upgrades": "^1.11.0",
     "@types/chai": "^4.2.17",
     "@types/fs-extra": "^9.0.7",
@@ -31,10 +31,10 @@
     "bn.js": "^5.2.0",
     "chai": "^4.3.4",
     "eslint": "^8.1.0",
-    "ethers": "^5.5.1",
+    "ethers": "^5.5.3",
     "fs-extra": "^9.1.0",
     "ganache-cli": "^6.12.2",
-    "hardhat": "^2.6.7",
+    "hardhat": "^2.8.2",
     "hardhat-gas-reporter": "^1.0.6",
     "mocha": "^7.2.0",
     "prettier": "^2.2.1",
