@@ -130,7 +130,7 @@ curl --user $dogecoinQtRpcuser:$dogecoinQtRpcpassword  --data-binary '{"jsonrpc"
 echo "Please, start the agent..."
 
 # Challenge the next superblock
-npx hardhat --network integrationDogeScrypt dogethereum.challenge --challenger 0xB50a77BF193245E431b29CdD70b354119eb75Fd2 --deposit 1000000000
+npx hardhat --network $NETWORK dogethereum.challenge --challenger 0xB50a77BF193245E431b29CdD70b354119eb75Fd2 --deposit 1000000000 --advance-battle true
 
 # Here the superblock agent is active and ready for tests
 

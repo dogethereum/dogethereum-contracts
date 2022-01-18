@@ -100,6 +100,18 @@ curl --user $dogecoinQtRpcuser:$dogecoinQtRpcpassword  --data-binary '{"jsonrpc"
 
 echo "Please, start the agent..."
 
+# Challenge the next superblock
+#HH network: 0x9965507d1a55bcc2695c58ba16fb37d819b0a4dc
+#ganache: 0xB50a77BF193245E431b29CdD70b354119eb75Fd2
+npx hardhat --network $NETWORK dogethereum.challenge --challenger 0x9965507d1a55bcc2695c58ba16fb37d819b0a4dc --deposit 1000000000 --advance-battle true
+
+# This should be enough to timeout the challenger
+sleep 7s
+# It is necessary to mine a block so that the superblock defender agent sees that it can timeout the challenger
+curl --request POST --data '{"jsonrpc":"2.0","method":"evm_mine","params":[],"id":74}' http://localhost:8545;
+# Mine 10 doge blocks so doge unlock tx has enough confirmations
+curl --user $dogecoinQtRpcuser:$dogecoinQtRpcpassword  --data-binary '{"jsonrpc": "1.0", "id":"curltest", "method": "generate", "params": [10] }' -H 'content-type: text/plain;' http://127.0.0.1:41200/
+
 # Wait for agent to relay doge lock tx to eth and dogetokens minted
 npx hardhat run --network $NETWORK scripts/wait_token_balance.ts
 
