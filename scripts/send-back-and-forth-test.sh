@@ -114,7 +114,7 @@ echo "Please, start the agent..."
 # Challenge the next superblock
 #HH network: 0x9965507d1a55bcc2695c58ba16fb37d819b0a4dc
 #ganache: 0xB50a77BF193245E431b29CdD70b354119eb75Fd2
-npx hardhat --network $NETWORK dogethereum.challenge --challenger 0x9965507d1a55bcc2695c58ba16fb37d819b0a4dc --deposit 1000000000 --advance-battle true
+npx hardhat --network $NETWORK dogethereum.challenge --challenger 0xB50a77BF193245E431b29CdD70b354119eb75Fd2 --deposit 1000000000 --advance-battle true
 
 # This should be enough to timeout the challenger
 sleep 7s
