@@ -86,12 +86,12 @@ contract SuperblockClaims is DogeDepositsManager, DogeErrorCodes {
     event VerificationGameStarted(bytes32 superblockHash, address submitter, address challenger, bytes32 sessionId);
 
     modifier onlyBattleManager() {
-        require(msg.sender == address(trustedDogeBattleManager));
+        require(msg.sender == address(trustedDogeBattleManager), "ERR_AUTH_ONLY_BATTLEMANAGER");
         _;
     }
 
     modifier onlyMeOrBattleManager() {
-        require(msg.sender == address(trustedDogeBattleManager) || msg.sender == address(this));
+        require(msg.sender == address(trustedDogeBattleManager) || msg.sender == address(this), "ERR_AUTH_ONLY_BATTLEMANAGER_OR_SELF");
         _;
     }
 
