@@ -516,6 +516,9 @@ export function operatorSignItsEthAddress(
     fromHex(operatorEthAddress)
   );
 
+  // Some tests fail unexpectedly with "Bad operator signature" sometimes.
+  // Could the signing logic be bad?
+  // TODO: use ed25519 instead to ensure determinism in signatures.
   // Operator private key uncompressed sign msg
   const ecdsa = new ECDSA();
   ecdsa.hashbuf = operatorEthAddressHash;
