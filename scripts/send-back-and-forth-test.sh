@@ -117,7 +117,7 @@ echo "Please, start the agent..."
 npx hardhat --network $NETWORK dogethereum.challenge --challenger 0xB50a77BF193245E431b29CdD70b354119eb75Fd2 --deposit 1000000000 --advance-battle true
 
 # This should be enough to timeout the challenger
-sleep 7s
+sleep 10s
 # It is necessary to mine a block so that the superblock defender agent sees that it can timeout the challenger
 curl --request POST --data '{"jsonrpc":"2.0","method":"evm_mine","params":[],"id":74}' http://localhost:8545;
 # Mine 10 doge blocks so doge unlock tx has enough confirmations
