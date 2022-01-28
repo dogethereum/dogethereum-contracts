@@ -2,6 +2,7 @@ import "@nomiclabs/hardhat-ethers";
 import type { HardhatUserConfig } from "hardhat/types";
 import "@openzeppelin/hardhat-upgrades";
 import "hardhat-gas-reporter";
+import "hardhat-prettier";
 
 import "./tasks/superblock-cli";
 
