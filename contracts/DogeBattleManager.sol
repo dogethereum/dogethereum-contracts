@@ -153,14 +153,13 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
 
     event QueryMerkleRootHashes(bytes32 superblockHash, bytes32 sessionId, address submitter);
     event RespondMerkleRootHashes(bytes32 superblockHash, bytes32 sessionId, address challenger, bytes32[] blockHashes);
-    event QueryBlockHeader(bytes32 superblockHash, bytes32 sessionId, address submitter, bytes32 blockSha256Hash);
 
-    event RespondBlockHeader(bytes32 superblockHash, bytes32 sessionId, address challenger, bytes32 blockScryptHash,
-    bytes blockHeader, bytes powBlockHeader);
+    event QueryBlockHeader(bytes32 superblockHash, bytes32 sessionId, address submitter, bytes32 blockSha256Hash);
+    event RespondBlockHeader(bytes32 superblockHash, bytes32 sessionId, address challenger, bytes32 blockSha256Hash,
+    bytes32 blockScryptHash, bytes blockHeader, bytes powBlockHeader);
 
     event RequestScryptHashValidation(bytes32 superblockHash, bytes32 sessionId, bytes32 blockScryptHash,
     bytes blockHeader, bytes32 proposalId, address submitter);
-
     event ResolvedScryptHashValidation(bytes32 superblockHash, bytes32 sessionId, bytes32 blockScryptHash,
     bytes32 blockSha256Hash, bytes32 proposalId, address challenger, bool valid);
 
@@ -430,32 +429,21 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
         bytes32 sessionId,
         bytes32 proposedBlockScryptHash,
         bytes memory blockHeader
-    ) internal returns (uint, bytes memory) {
+    ) internal returns (bytes memory, bytes32) {
         // TODO: see if this should fund Scrypt verification
-        if (!hasDeposit(msg.sender, respondBlockHeaderCost)) {
-            return (ERR_SUPERBLOCK_MIN_DEPOSIT, new bytes(0));
-        }
+        require(hasDeposit(msg.sender, respondBlockHeaderCost), "ERR_RESPOND_BLOCK_MIN_DEPOSIT");
 
-        // TODO: have this revert instead
-        if (session.challengeState != ChallengeState.QueryBlockHeader) {
-            return (ERR_SUPERBLOCK_BAD_STATUS, new bytes(0));
-        }
+        require(session.challengeState == ChallengeState.QueryBlockHeader, "ERR_RESPOND_BLOCK_INCORRECT_STEP");
 
         bytes32 blockSha256Hash = bytes32(DogeMessageLibrary.dblShaFlipMem(blockHeader, 0, 80));
         BlockInfo storage blockInfo = session.blocksInfo[blockSha256Hash];
-        if (blockInfo.status != BlockInfoStatus.Requested) {
-            return (ERR_SUPERBLOCK_BAD_DOGE_STATUS, new bytes(0));
-        }
+        require(blockInfo.status == BlockInfoStatus.Requested, "ERR_RESPOND_BLOCK_INCORRECT_BLOCK");
 
-        if (!verifyTimestamp(session.superblockHash, blockHeader)) {
-            return (ERR_SUPERBLOCK_BAD_TIMESTAMP, new bytes(0));
-        }
+        require(verifyTimestamp(session.superblockHash, blockHeader), "ERR_SUPERBLOCK_BAD_TIMESTAMP");
 
         (uint err, bytes memory powBlockHeader) =
             verifyBlockAuxPoW(blockInfo, proposedBlockScryptHash, blockHeader);
-        if (err != ERR_SUPERBLOCK_OK) {
-            return (err, new bytes(0));
-        }
+        require(err == ERR_SUPERBLOCK_OK, "ERR_RESPOND_BLOCK_AUX_POW_INVALID");
 
         blockInfo.status = BlockInfoStatus.ScryptHashPending;
 
@@ -472,7 +460,7 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
         session.challengeState = ChallengeState.VerifyScryptHash;
         session.pendingScryptHashId = pendingScryptHashId;
 
-        return (ERR_SUPERBLOCK_OK, powBlockHeader);
+        return (powBlockHeader, blockSha256Hash);
     }
 
     // @dev - For the submitter to respond to challenger queries
@@ -483,14 +471,20 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
         bytes calldata blockHeader
     ) public onlyClaimant(sessionId) {
         BattleSession storage session = sessions[sessionId];
-        (uint err, bytes memory powBlockHeader) = doVerifyBlockHeader(session, sessionId, blockScryptHash, blockHeader);
-        // TODO: add error code with custom errors in Solidity v0.8
-        require(err == 0, "Failed while verifying block header.");
+        (bytes memory powBlockHeader, bytes32 blockSha256Hash) = doVerifyBlockHeader(session, sessionId, blockScryptHash, blockHeader);
 
         session.actionsCounter += 1;
         session.lastActionTimestamp = block.timestamp;
         session.lastActionClaimant = session.actionsCounter;
-        emit RespondBlockHeader(superblockHash, sessionId, session.challenger, blockScryptHash, blockHeader, powBlockHeader);
+        emit RespondBlockHeader({
+            superblockHash: superblockHash,
+            sessionId: sessionId,
+            challenger: session.challenger,
+            blockSha256Hash: blockSha256Hash,
+            blockScryptHash: blockScryptHash,
+            blockHeader: blockHeader,
+            powBlockHeader: powBlockHeader
+        });
     }
 
     /**
