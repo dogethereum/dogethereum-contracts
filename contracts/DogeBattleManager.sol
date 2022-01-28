@@ -255,7 +255,12 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
 
         sessionsCount += 1;
 
-        emit NewBattle(superblockHash, sessionId, submitter, challenger);
+        emit NewBattle({
+            superblockHash: superblockHash,
+            sessionId: sessionId,
+            submitter: submitter,
+            challenger: challenger
+        });
         return sessionId;
     }
 
@@ -278,7 +283,11 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
         session.actionsCounter += 1;
         session.lastActionTimestamp = block.timestamp;
         session.lastActionChallenger = session.actionsCounter;
-        emit QueryMerkleRootHashes(superblockHash, sessionId, session.submitter);
+        emit QueryMerkleRootHashes({
+            superblockHash: superblockHash,
+            sessionId: sessionId,
+            submitter: session.submitter
+        });
     }
 
     /**
@@ -320,7 +329,12 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
             session.blocksInfo[blockHashes[i]].status = BlockInfoStatus.Uninitialized;
         }
 
-        emit RespondMerkleRootHashes(superblockHash, sessionId, session.challenger, blockHashes);
+        emit RespondMerkleRootHashes({
+            superblockHash: superblockHash,
+            sessionId: sessionId,
+            challenger: session.challenger,
+            blockHashes: blockHashes
+        });
     }
 
     /**
@@ -363,7 +377,12 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
         session.actionsCounter += 1;
         session.lastActionTimestamp = block.timestamp;
         session.lastActionChallenger = session.actionsCounter;
-        emit QueryBlockHeader(superblockHash, sessionId, session.submitter, blockHash);
+        emit QueryBlockHeader({
+            superblockHash: superblockHash,
+            sessionId: sessionId,
+            submitter: session.submitter,
+            blockSha256Hash: blockHash
+        });
     }
 
     // @dev - Verify that block timestamp is in the superblock timestamp interval
@@ -509,7 +528,14 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
 
         bondDeposit(session.superblockHash, msg.sender, queryMerkleRootHashesCost);
 
-        emit RequestScryptHashValidation(superblockHash, sessionId, blockInfo.scryptHash, blockInfo.powBlockHeader, session.pendingScryptHashId, session.submitter);
+        emit RequestScryptHashValidation({
+            superblockHash: superblockHash,
+            sessionId: sessionId,
+            blockScryptHash: blockInfo.scryptHash,
+            blockHeader: blockInfo.powBlockHeader,
+            proposalId: session.pendingScryptHashId,
+            submitter: session.submitter
+        });
         session.challengeState = ChallengeState.RequestScryptVerification;
 
         session.actionsCounter += 1;
@@ -617,12 +643,18 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
         uint err;
         err = validateLastBlocks(session);
         if (err != 0) {
-            emit ErrorBattle(sessionId, err);
+            emit ErrorBattle({
+                sessionId: sessionId,
+                err: err
+            });
             return 2;
         }
         err = validateProofOfWork(session);
         if (err != 0) {
-            emit ErrorBattle(sessionId, err);
+            emit ErrorBattle({
+                sessionId: sessionId,
+                err: err
+            });
             return 2;
         }
         return 1;
@@ -668,7 +700,11 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
         BattleSession storage session = sessions[sessionId];
         sessionDecided(sessionId, superblockHash, session.submitter, session.challenger);
         disable(sessionId);
-        emit ChallengerConvicted(superblockHash, sessionId, challenger);
+        emit ChallengerConvicted({
+            superblockHash: superblockHash,
+            sessionId: sessionId,
+            challenger: challenger
+        });
     }
 
     // @dev - To be called when a submitter is convicted
@@ -677,7 +713,11 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
         BattleSession storage session = sessions[sessionId];
         sessionDecided(sessionId, superblockHash, session.challenger, session.submitter);
         disable(sessionId);
-        emit SubmitterConvicted(superblockHash, sessionId, submitter);
+        emit SubmitterConvicted({
+            superblockHash: superblockHash,
+            sessionId: sessionId,
+            submitter: submitter
+        });
     }
 
     // @dev - Disable session
@@ -787,15 +827,15 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
         notifyScryptHashResult(session, verification.blockSha256Hash, succeeded);
         // Restart challenger timeout
         session.lastActionTimestamp = block.timestamp;
-        emit ResolvedScryptHashValidation(
-            session.superblockHash,
-            verification.sessionId,
-            blockInfo.scryptHash,
-            verification.blockSha256Hash,
-            scryptChallengeId,
-            session.challenger,
-            succeeded
-        );
+        emit ResolvedScryptHashValidation({
+            superblockHash: session.superblockHash,
+            sessionId: verification.sessionId,
+            blockScryptHash: blockInfo.scryptHash,
+            blockSha256Hash: verification.blockSha256Hash,
+            proposalId: scryptChallengeId,
+            challenger: session.challenger,
+            valid: succeeded
+        });
     }
 
     // @dev - Scrypt verification succeeded
