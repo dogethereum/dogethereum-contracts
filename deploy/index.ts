@@ -78,12 +78,12 @@ export interface SuperblockHeader {
    */
   accumulatedWork: string;
   /**
-   * Timestamp
+   * Timestamp of the last block in superblock
    * Solidity type: uint256
    */
   timestamp: number;
   /**
-   * Previous superblock timestamp
+   * Timestamp of the second to last block in superblock
    * Solidity type: uint256
    */
   prevTimestamp: number;
