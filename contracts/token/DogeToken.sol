@@ -743,25 +743,26 @@ contract DogeToken is StandardToken, TransactionProcessor, EtherAuction {
         return (utxo.value, utxo.txHash, utxo.index);
     }
 
-    function getListOfOperators() public view returns(Operator[] memory listOfOperators ){       
-         
-        uint256 countEnabledOperators;
+    function getListOfOperators() public view returns (Operator[] memory listOfOperators) {
+        uint256 countEnabledOperators = 0;
 
-        for(uint i = 0; i < operatorKeys.length; i++ )        {
-            if(!operatorKeys[i].deleted){
+        for (uint i = 0; i < operatorKeys.length; i++) {
+            if (!operatorKeys[i].deleted) {
                 countEnabledOperators++;
-            }            
+            }
         }
 
-        Operator[] memory listOfOperators = new Operator[](countEnabledOperators);
-        uint256 j;
+        listOfOperators = new Operator[](countEnabledOperators);
+        uint256 j = 0;
 
-        for(uint i = 0; i < operatorKeys.length; i++ )        {
-            if(!operatorKeys[i].deleted){
-                listOfOperators[j] = operators[operatorKeys[i].key];
-            }            
+        for (uint i = 0; i < operatorKeys.length; i++) {
+            OperatorKey storage opKey = operatorKeys[i];
+            if (!opKey.deleted) {
+                listOfOperators[j] = operators[opKey.key];
+                j++;
+            }
         }
 
-        return (listOfOperators);
+        return listOfOperators;
     }
 }
