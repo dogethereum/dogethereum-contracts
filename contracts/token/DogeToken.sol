@@ -125,8 +125,8 @@ contract DogeToken is StandardToken, TransactionProcessor, EtherAuction {
     event LiquidationBid(bytes20 operatorPublicKeyHash, address bidder, uint256 bid);
     // End of the collateral auction.
     event OperatorCollateralAuctioned(bytes20 operatorPublicKeyHash, address winner, uint256 tokensBurned, uint256 etherSold);
-    event LockedToken(address indexed user, uint256 value, uint256 OperatorFee, uint256 superblockSubmitterFee);
-    event UnlockedToken(address indexed user, uint256 value, uint256 OperatorFee);
+    event LockedToken(address indexed user, uint256 value, uint256 operatorFee, uint256 superblockSubmitterFee);
+    event UnlockedToken(address indexed user, uint256 value, uint256 operatorFee, uint256 dogeTxFee);
 
     // Represents an unlock request
     struct Unlock {
@@ -649,7 +649,7 @@ contract DogeToken is StandardToken, TransactionProcessor, EtherAuction {
         unlockIdx++;        
 
         //new unclock
-        emit UnlockedToken(operator.ethAddress, unlockValue, dogeTxFee);
+        emit UnlockedToken(operator.ethAddress, unlockValue, operatorFee, dogeTxFee);
     }
 
     function selectUtxosAndFee(
