@@ -23,15 +23,15 @@ abstract contract EtherAuction {
         uint256 endTimestamp;
     }
 
-    function auctionIsInexistent(Auction storage auction) view internal returns (bool) {
+    function auctionIsInexistent(Auction storage auction) internal view returns (bool) {
         return auction.status == AuctionStatus.Uninitialized;
     }
 
-    function auctionIsOpen(Auction storage auction) view internal returns (bool) {
+    function auctionIsOpen(Auction storage auction) internal view returns (bool) {
         return auction.status == AuctionStatus.Open;
     }
 
-    function auctionIsClosed(Auction storage auction) view internal returns (bool) {
+    function auctionIsClosed(Auction storage auction) internal view returns (bool) {
         return auction.status == AuctionStatus.Closed;
     }
 
@@ -47,7 +47,11 @@ abstract contract EtherAuction {
      * Registers bid from bidder in auction.
      * We allow outbidding against oneself.
      */
-    function auctionBid(Auction storage auction, address payable bidder, uint256 tokenAmount) internal {
+    function auctionBid(
+        Auction storage auction,
+        address payable bidder,
+        uint256 tokenAmount
+    ) internal {
         require(auctionIsOpen(auction), "The auction must be open.");
         require(auction.bestBid < tokenAmount, "The bid must be higher than the best bid.");
 
@@ -77,10 +81,10 @@ abstract contract EtherAuction {
     /**
      * Ensures the tokens are taken and held only for the auction.
      */
-    function takeTokens(address bidder, uint256 tokenAmount) virtual internal;
+    function takeTokens(address bidder, uint256 tokenAmount) internal virtual;
 
     /**
      * Releases previously held tokens.
      */
-    function releaseTokens(address bidder, uint256 tokenAmount) virtual internal;
+    function releaseTokens(address bidder, uint256 tokenAmount) internal virtual;
 }

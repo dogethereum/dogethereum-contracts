@@ -11,16 +11,22 @@ import {TransactionProcessor} from "./TransactionProcessor.sol";
 //
 // Management of superblocks and status transitions
 contract DogeSuperblocks is DogeErrorCodes {
-
     // @dev - Superblock status
-    enum Status { Uninitialized, New, InBattle, SemiApproved, Approved, Invalid }
+    enum Status {
+        Uninitialized,
+        New,
+        InBattle,
+        SemiApproved,
+        Approved,
+        Invalid
+    }
 
     // TODO: timestamps in dogecoin fit in 64 bits
     struct SuperblockInfo {
         bytes32 blocksMerkleRoot;
-        uint accumulatedWork;
-        uint timestamp;
-        uint prevTimestamp;
+        uint256 accumulatedWork;
+        uint256 timestamp;
+        uint256 prevTimestamp;
         bytes32 lastHash;
         bytes32 parentId;
         address submitter;
@@ -32,14 +38,14 @@ contract DogeSuperblocks is DogeErrorCodes {
     }
 
     // Mapping superblock id => superblock data
-    mapping (bytes32 => SuperblockInfo) public superblocks;
+    mapping(bytes32 => SuperblockInfo) public superblocks;
 
     // Index to superblock id
-    mapping (uint32 => bytes32) private indexSuperblock;
+    mapping(uint32 => bytes32) private indexSuperblock;
     uint32 indexNextSuperblock;
 
     bytes32 public bestSuperblock;
-    uint public bestSuperblockAccumulatedWork;
+    uint256 public bestSuperblockAccumulatedWork;
 
     event NewSuperblock(bytes32 superblockHash, address who);
     event ApprovedSuperblock(bytes32 superblockHash, address who);
@@ -62,7 +68,9 @@ contract DogeSuperblocks is DogeErrorCodes {
     // Once trustedSuperblockClaims has been set, it cannot be changed.
     // @param superblockClaims - address of the SuperblockClaims contract to be associated with
     function setSuperblockClaims(address superblockClaims) public {
-        require(address(trustedSuperblockClaims) == address(0x0) && superblockClaims != address(0x0));
+        require(
+            address(trustedSuperblockClaims) == address(0x0) && superblockClaims != address(0x0)
+        );
         trustedSuperblockClaims = superblockClaims;
     }
 
@@ -80,9 +88,9 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @return superblockHash
     function initialize(
         bytes32 blocksMerkleRoot,
-        uint accumulatedWork,
-        uint timestamp,
-        uint prevTimestamp,
+        uint256 accumulatedWork,
+        uint256 timestamp,
+        uint256 prevTimestamp,
         bytes32 lastHash,
         uint32 lastBits,
         bytes32 parentId
@@ -90,7 +98,15 @@ contract DogeSuperblocks is DogeErrorCodes {
         require(bestSuperblock == 0);
         require(parentId == 0);
 
-        bytes32 superblockHash = calcSuperblockHash(blocksMerkleRoot, accumulatedWork, timestamp, prevTimestamp, lastHash, lastBits, parentId);
+        bytes32 superblockHash = calcSuperblockHash(
+            blocksMerkleRoot,
+            accumulatedWork,
+            timestamp,
+            prevTimestamp,
+            lastHash,
+            lastBits,
+            parentId
+        );
         SuperblockInfo storage superblock = superblocks[superblockHash];
 
         require(superblock.status == Status.Uninitialized);
@@ -137,15 +153,23 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @return Error code and superblockHash
     function propose(
         bytes32 blocksMerkleRoot,
-        uint accumulatedWork,
-        uint timestamp,
-        uint prevTimestamp,
+        uint256 accumulatedWork,
+        uint256 timestamp,
+        uint256 prevTimestamp,
         bytes32 lastHash,
         uint32 lastBits,
         bytes32 parentId,
         address submitter
-    ) onlySuperblockClaims public returns (bytes32) {
-        bytes32 superblockHash = calcSuperblockHash(blocksMerkleRoot, accumulatedWork, timestamp, prevTimestamp, lastHash, lastBits, parentId);
+    ) public onlySuperblockClaims returns (bytes32) {
+        bytes32 superblockHash = calcSuperblockHash(
+            blocksMerkleRoot,
+            accumulatedWork,
+            timestamp,
+            prevTimestamp,
+            lastHash,
+            lastBits,
+            parentId
+        );
 
         SuperblockInfo storage parent = superblocks[parentId];
         // Error: The parent superblock must be approved or semiapproved.
@@ -189,7 +213,11 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @param superblockHash Id of the superblock to confirm
     // @param validator Address requesting superblock confirmation
     // @return Error code and superblockHash
-    function confirm(bytes32 superblockHash, address validator) onlySuperblockClaims public returns (bytes32) {
+    function confirm(bytes32 superblockHash, address validator)
+        public
+        onlySuperblockClaims
+        returns (bytes32)
+    {
         SuperblockInfo storage superblock = superblocks[superblockHash];
         // Error: The superblock must be new or semiapproved.
         require(
@@ -216,7 +244,11 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @param superblockHash Id of the superblock to challenge
     // @param challenger Address requesting a challenge
     // @return Error code and superblockHash
-    function challenge(bytes32 superblockHash, address challenger) onlySuperblockClaims public returns (bytes32) {
+    function challenge(bytes32 superblockHash, address challenger)
+        public
+        onlySuperblockClaims
+        returns (bytes32)
+    {
         SuperblockInfo storage superblock = superblocks[superblockHash];
         // Error: Superblocks can only be challenged if new.
         require(
@@ -237,7 +269,11 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @param superblockHash Id of the superblock to semi-approve
     // @param validator Address requesting semi approval
     // @return Error code and superblockHash
-    function semiApprove(bytes32 superblockHash, address validator) onlySuperblockClaims public returns (bytes32) {
+    function semiApprove(bytes32 superblockHash, address validator)
+        public
+        onlySuperblockClaims
+        returns (bytes32)
+    {
         SuperblockInfo storage superblock = superblocks[superblockHash];
 
         // Error: Only new or challenged superblocks can be semiapproved.
@@ -260,7 +296,11 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @param superblockHash Id of the superblock to invalidate
     // @param validator Address requesting superblock invalidation
     // @return Error code and superblockHash
-    function invalidate(bytes32 superblockHash, address validator) onlySuperblockClaims public returns (bytes32) {
+    function invalidate(bytes32 superblockHash, address validator)
+        public
+        onlySuperblockClaims
+        returns (bytes32)
+    {
         SuperblockInfo storage superblock = superblocks[superblockHash];
         // Error: The superblock must be in battle or semiapproved to be invalidated.
         require(
@@ -286,18 +326,23 @@ contract DogeSuperblocks is DogeErrorCodes {
     function relayTx(
         bytes calldata txBytes,
         bytes20 operatorPublicKeyHash,
-        uint txIndex,
-        uint[] memory txSiblings,
+        uint256 txIndex,
+        uint256[] memory txSiblings,
         bytes memory dogeBlockHeader,
-        uint dogeBlockIndex,
-        uint[] memory dogeBlockSiblings,
+        uint256 dogeBlockIndex,
+        uint256[] memory dogeBlockSiblings,
         bytes32 superblockHash,
-        function (bytes memory, uint, bytes20, address) external untrustedMethod
+        function(bytes memory, uint256, bytes20, address) external untrustedMethod
     ) public {
         verifyBlockMembership(dogeBlockHeader, dogeBlockIndex, dogeBlockSiblings, superblockHash);
 
-        uint txHash = verifyTx(txBytes, txIndex, txSiblings, dogeBlockHeader, superblockHash);
-        untrustedMethod(txBytes, txHash, operatorPublicKeyHash, superblocks[superblockHash].submitter);
+        uint256 txHash = verifyTx(txBytes, txIndex, txSiblings, dogeBlockHeader, superblockHash);
+        untrustedMethod(
+            txBytes,
+            txHash,
+            operatorPublicKeyHash,
+            superblocks[superblockHash].submitter
+        );
         emit RelayTransaction(bytes32(txHash));
     }
 
@@ -317,11 +362,11 @@ contract DogeSuperblocks is DogeErrorCodes {
     function relayLockTx(
         bytes calldata txBytes,
         bytes20 operatorPublicKeyHash,
-        uint txIndex,
-        uint[] memory txSiblings,
+        uint256 txIndex,
+        uint256[] memory txSiblings,
         bytes memory dogeBlockHeader,
-        uint dogeBlockIndex,
-        uint[] memory dogeBlockSiblings,
+        uint256 dogeBlockIndex,
+        uint256[] memory dogeBlockSiblings,
         bytes32 superblockHash,
         TransactionProcessor untrustedTargetContract
     ) public {
@@ -354,19 +399,24 @@ contract DogeSuperblocks is DogeErrorCodes {
     function relayUnlockTx(
         bytes calldata txBytes,
         bytes20 operatorPublicKeyHash,
-        uint txIndex,
-        uint[] memory txSiblings,
+        uint256 txIndex,
+        uint256[] memory txSiblings,
         bytes memory dogeBlockHeader,
-        uint dogeBlockIndex,
-        uint[] memory dogeBlockSiblings,
+        uint256 dogeBlockIndex,
+        uint256[] memory dogeBlockSiblings,
         bytes32 superblockHash,
         TransactionProcessor untrustedTargetContract,
         uint256 unlockIndex
     ) public {
         verifyBlockMembership(dogeBlockHeader, dogeBlockIndex, dogeBlockSiblings, superblockHash);
 
-        uint txHash = verifyTx(txBytes, txIndex, txSiblings, dogeBlockHeader, superblockHash);
-        untrustedTargetContract.processUnlockTransaction(txBytes, txHash, operatorPublicKeyHash, unlockIndex);
+        uint256 txHash = verifyTx(txBytes, txIndex, txSiblings, dogeBlockHeader, superblockHash);
+        untrustedTargetContract.processUnlockTransaction(
+            txBytes,
+            txHash,
+            operatorPublicKeyHash,
+            unlockIndex
+        );
         emit RelayTransaction(bytes32(txHash));
     }
 
@@ -386,11 +436,11 @@ contract DogeSuperblocks is DogeErrorCodes {
     function relayTxAndReportOperatorFreeUtxoSpend(
         bytes calldata txBytes,
         bytes20 operatorPublicKeyHash,
-        uint txIndex,
-        uint[] memory txSiblings,
+        uint256 txIndex,
+        uint256[] memory txSiblings,
         bytes memory dogeBlockHeader,
-        uint dogeBlockIndex,
-        uint[] memory dogeBlockSiblings,
+        uint256 dogeBlockIndex,
+        uint256[] memory dogeBlockSiblings,
         bytes32 superblockHash,
         TransactionProcessor untrustedTargetContract,
         uint32 operatorTxOutputReference,
@@ -398,8 +448,14 @@ contract DogeSuperblocks is DogeErrorCodes {
     ) public {
         verifyBlockMembership(dogeBlockHeader, dogeBlockIndex, dogeBlockSiblings, superblockHash);
 
-        uint txHash = verifyTx(txBytes, txIndex, txSiblings, dogeBlockHeader, superblockHash);
-        untrustedTargetContract.processReportOperatorFreeUtxoSpend(txBytes, txHash, operatorPublicKeyHash, operatorTxOutputReference, unlawfulTxInputIndex);
+        uint256 txHash = verifyTx(txBytes, txIndex, txSiblings, dogeBlockHeader, superblockHash);
+        untrustedTargetContract.processReportOperatorFreeUtxoSpend(
+            txBytes,
+            txHash,
+            operatorPublicKeyHash,
+            operatorTxOutputReference,
+            unlawfulTxInputIndex
+        );
         emit RelayTransaction(bytes32(txHash));
     }
 
@@ -408,15 +464,16 @@ contract DogeSuperblocks is DogeErrorCodes {
      */
     function verifyBlockMembership(
         bytes memory dogeBlockHeader,
-        uint dogeBlockIndex,
-        uint[] memory dogeBlockSiblings,
+        uint256 dogeBlockIndex,
+        uint256[] memory dogeBlockSiblings,
         bytes32 superblockHash
     ) internal view {
-        uint dogeBlockHash = DogeMessageLibrary.dblShaFlip(dogeBlockHeader);
+        uint256 dogeBlockHash = DogeMessageLibrary.dblShaFlip(dogeBlockHeader);
 
         require(
-            bytes32(DogeMessageLibrary.computeMerkle(dogeBlockHash, dogeBlockIndex, dogeBlockSiblings))
-            == getSuperblockMerkleRoot(superblockHash),
+            bytes32(
+                DogeMessageLibrary.computeMerkle(dogeBlockHash, dogeBlockIndex, dogeBlockSiblings)
+            ) == getSuperblockMerkleRoot(superblockHash),
             "Doge block does not belong to superblock"
         );
     }
@@ -433,12 +490,12 @@ contract DogeSuperblocks is DogeErrorCodes {
     // TODO: this can probably be made private
     function verifyTx(
         bytes memory txBytes,
-        uint txIndex,
-        uint[] memory siblings,
+        uint256 txIndex,
+        uint256[] memory siblings,
         bytes memory blockHeader,
         bytes32 superblockHash
-    ) public view returns (uint) {
-        uint txHash = DogeMessageLibrary.dblShaFlip(txBytes);
+    ) public view returns (uint256) {
+        uint256 txHash = DogeMessageLibrary.dblShaFlip(txBytes);
 
         // Attack on Merkle tree mitigations
 
@@ -456,8 +513,8 @@ contract DogeSuperblocks is DogeErrorCodes {
         require(inMainChain(superblockHash), "Superblock is not part of the main chain");
 
         // Verify tx Merkle root
-        uint merkle = DogeMessageLibrary.getHeaderMerkleRoot(blockHeader, 0);
-        uint computedMerkle = DogeMessageLibrary.computeMerkle(txHash, txIndex, siblings);
+        uint256 merkle = DogeMessageLibrary.getHeaderMerkleRoot(blockHeader, 0);
+        uint256 computedMerkle = DogeMessageLibrary.computeMerkle(txHash, txIndex, siblings);
         require(computedMerkle == merkle, "Tx merkle proof is invalid");
         return txHash;
     }
@@ -474,22 +531,25 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @return Superblock id
     function calcSuperblockHash(
         bytes32 blocksMerkleRoot,
-        uint accumulatedWork,
-        uint timestamp,
-        uint prevTimestamp,
+        uint256 accumulatedWork,
+        uint256 timestamp,
+        uint256 prevTimestamp,
         bytes32 lastHash,
         uint32 lastBits,
         bytes32 parentId
     ) public pure returns (bytes32) {
-        return keccak256(abi.encodePacked(
-            blocksMerkleRoot,
-            accumulatedWork,
-            timestamp,
-            prevTimestamp,
-            lastHash,
-            lastBits,
-            parentId
-        ));
+        return
+            keccak256(
+                abi.encodePacked(
+                    blocksMerkleRoot,
+                    accumulatedWork,
+                    timestamp,
+                    prevTimestamp,
+                    lastHash,
+                    lastBits,
+                    parentId
+                )
+            );
     }
 
     // @dev - Returns the confirmed superblock with the most accumulated work
@@ -512,17 +572,21 @@ contract DogeSuperblocks is DogeErrorCodes {
     //   address submitter,
     //   Status status
     // }  Superblock data
-    function getSuperblock(bytes32 superblockHash) public view returns (
-        bytes32 blocksMerkleRoot,
-        uint accumulatedWork,
-        uint timestamp,
-        uint prevTimestamp,
-        bytes32 lastHash,
-        uint32 lastBits,
-        bytes32 parentId,
-        address submitter,
-        Status status
-    ) {
+    function getSuperblock(bytes32 superblockHash)
+        public
+        view
+        returns (
+            bytes32 blocksMerkleRoot,
+            uint256 accumulatedWork,
+            uint256 timestamp,
+            uint256 prevTimestamp,
+            bytes32 lastHash,
+            uint32 lastBits,
+            bytes32 parentId,
+            address submitter,
+            Status status
+        )
+    {
         SuperblockInfo storage superblock = superblocks[superblockHash];
         return (
             superblock.blocksMerkleRoot,
@@ -558,12 +622,12 @@ contract DogeSuperblocks is DogeErrorCodes {
     }
 
     // @dev - Return superblock timestamp
-    function getSuperblockTimestamp(bytes32 superblockHash) public view returns (uint) {
+    function getSuperblockTimestamp(bytes32 superblockHash) public view returns (uint256) {
         return superblocks[superblockHash].timestamp;
     }
 
     // @dev - Return superblock prevTimestamp
-    function getSuperblockPrevTimestamp(bytes32 superblockHash) public view returns (uint) {
+    function getSuperblockPrevTimestamp(bytes32 superblockHash) public view returns (uint256) {
         return superblocks[superblockHash].prevTimestamp;
     }
 
@@ -578,7 +642,7 @@ contract DogeSuperblocks is DogeErrorCodes {
     }
 
     // @dev - Return superblock accumulated work
-    function getSuperblockAccumulatedWork(bytes32 superblockHash) public view returns (uint) {
+    function getSuperblockAccumulatedWork(bytes32 superblockHash) public view returns (uint256) {
         return superblocks[superblockHash].accumulatedWork;
     }
 
@@ -601,7 +665,7 @@ contract DogeSuperblocks is DogeErrorCodes {
         return (getSuperblockStatus(superblockHash) == Status.Approved);
     }
 
-    function getChainHeight() public view returns (uint) {
+    function getChainHeight() public view returns (uint256) {
         return superblocks[bestSuperblock].height;
     }
 
@@ -611,30 +675,38 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @param word - information to be partially overwritten
     // @param position - position to start writing from
     // @param fourBytes - information to be written
-    function writeUint32(bytes32 word, uint position, uint32 fourBytes) private pure returns (bytes32) {
+    function writeUint32(
+        bytes32 word,
+        uint256 position,
+        uint32 fourBytes
+    ) private pure returns (bytes32) {
         bytes32 result;
         assembly {
             let pointer := mload(0x40)
             mstore(pointer, word)
             mstore8(add(pointer, position), byte(28, fourBytes))
-            mstore8(add(pointer, add(position,1)), byte(29, fourBytes))
-            mstore8(add(pointer, add(position,2)), byte(30, fourBytes))
-            mstore8(add(pointer, add(position,3)), byte(31, fourBytes))
+            mstore8(add(pointer, add(position, 1)), byte(29, fourBytes))
+            mstore8(add(pointer, add(position, 2)), byte(30, fourBytes))
+            mstore8(add(pointer, add(position, 3)), byte(31, fourBytes))
             result := mload(pointer)
         }
         return result;
     }
 
-    uint constant ANCESTOR_STEP = 5;
-    uint constant NUM_ANCESTOR_DEPTHS = 8;
+    uint256 constant ANCESTOR_STEP = 5;
+    uint256 constant NUM_ANCESTOR_DEPTHS = 8;
 
     // @dev - Update ancestor to the new height
-    function updateAncestors(bytes32 ancestors, uint32 index, uint height) internal pure returns (bytes32) {
-        uint step = ANCESTOR_STEP;
+    function updateAncestors(
+        bytes32 ancestors,
+        uint32 index,
+        uint256 height
+    ) internal pure returns (bytes32) {
+        uint256 step = ANCESTOR_STEP;
         ancestors = writeUint32(ancestors, 0, index);
-        uint i = 1;
-        while (i<NUM_ANCESTOR_DEPTHS && (height % step == 1)) {
-            ancestors = writeUint32(ancestors, 4*i, index);
+        uint256 i = 1;
+        while (i < NUM_ANCESTOR_DEPTHS && (height % step == 1)) {
+            ancestors = writeUint32(ancestors, 4 * i, index);
             step *= ANCESTOR_STEP;
             ++i;
         }
@@ -654,7 +726,7 @@ contract DogeSuperblocks is DogeErrorCodes {
         bytes32[9] memory locator;
         locator[0] = bestSuperblock;
         bytes32 ancestors = getSuperblockAncestors(bestSuperblock);
-        uint i = NUM_ANCESTOR_DEPTHS;
+        uint256 i = NUM_ANCESTOR_DEPTHS;
         while (i > 0) {
             locator[i] = indexSuperblock[uint32(uint256(ancestors) & 0xFFFFFFFF)];
             ancestors >>= 32;
@@ -664,13 +736,20 @@ contract DogeSuperblocks is DogeErrorCodes {
     }
 
     // @dev - Return ancestor at given index
-    function getSuperblockAncestor(bytes32 superblockHash, uint index) internal view returns (bytes32) {
+    function getSuperblockAncestor(bytes32 superblockHash, uint256 index)
+        internal
+        view
+        returns (bytes32)
+    {
         bytes32 ancestors = superblocks[superblockHash].ancestors;
-        uint32 ancestorsIndex =
-            uint32(uint8(ancestors[4*index + 0])) * 0x1000000 +
-            uint32(uint8(ancestors[4*index + 1])) * 0x10000 +
-            uint32(uint8(ancestors[4*index + 2])) * 0x100 +
-            uint32(uint8(ancestors[4*index + 3])) * 0x1;
+        uint32 ancestorsIndex = uint32(uint8(ancestors[4 * index + 0])) *
+            0x1000000 +
+            uint32(uint8(ancestors[4 * index + 1])) *
+            0x10000 +
+            uint32(uint8(ancestors[4 * index + 2])) *
+            0x100 +
+            uint32(uint8(ancestors[4 * index + 3])) *
+            0x1;
         return indexSuperblock[ancestorsIndex];
     }
 
@@ -678,19 +757,19 @@ contract DogeSuperblocks is DogeErrorCodes {
     //
     // @param index - index of ancestor to be looked up; an integer between 0 and 7
     // @return - depth corresponding to said index, i.e. 5**index
-    function getAncDepth(uint index) private pure returns (uint) {
-        return ANCESTOR_STEP**(uint(index));
+    function getAncDepth(uint256 index) private pure returns (uint256) {
+        return ANCESTOR_STEP**(uint256(index));
     }
 
     // @dev - return superblock hash at a given height in superblock main chain
     //
     // @param height - superblock height
     // @return - hash corresponding to block of given height
-    function getSuperblockAt(uint height) public view returns (bytes32) {
+    function getSuperblockAt(uint256 height) public view returns (bytes32) {
         bytes32 superblockHash = bestSuperblock;
-        uint index = NUM_ANCESTOR_DEPTHS - 1;
+        uint256 index = NUM_ANCESTOR_DEPTHS - 1;
 
-        uint currentHeight = getSuperblockHeight(superblockHash);
+        uint256 currentHeight = getSuperblockHeight(superblockHash);
         while (currentHeight > height) {
             while (currentHeight - height < getAncDepth(index) && index > 0) {
                 index -= 1;
@@ -708,8 +787,8 @@ contract DogeSuperblocks is DogeErrorCodes {
     // @return - true if the block identified by superblockHash is in the main chain,
     // false otherwise
     function inMainChain(bytes32 superblockHash) internal view returns (bool) {
-        uint height = getSuperblockHeight(superblockHash);
+        uint256 height = getSuperblockHeight(superblockHash);
         if (height == 0) return false;
         return (getSuperblockAt(height) == superblockHash);
-    }    
+    }
 }

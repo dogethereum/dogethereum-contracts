@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only    
+// SPDX-License-Identifier: GPL-3.0-only
 
 // Implements ERC 20 Token standard: https://github.com/ethereum/EIPs/blob/master/EIPS/eip-20.md
 pragma solidity ^0.7.6;
@@ -6,13 +6,13 @@ pragma solidity ^0.7.6;
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
 contract StandardToken {
-    using SafeMath for uint;
+    using SafeMath for uint256;
 
     // Total amount of tokens
     // This generates a getter function that conforms to the ERC20 standard.
     uint256 public totalSupply;
-    mapping (address => uint256) balances;
-    mapping (address => mapping (address => uint256)) allowed;
+    mapping(address => uint256) balances;
+    mapping(address => mapping(address => uint256)) allowed;
 
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(address indexed owner, address indexed spender, uint256 value);
@@ -42,7 +42,11 @@ contract StandardToken {
      * @param value The amount of token to be transferred
      * @return success Whether the transfer was successful or not
      */
-    function transferFrom(address from, address to, uint256 value) public returns (bool success) {
+    function transferFrom(
+        address from,
+        address to,
+        uint256 value
+    ) public returns (bool success) {
         //same as above. Replace this line with the following if you want to protect against wrapping uints.
         //require(balances[from] >= value && allowed[from][msg.sender] >= value && balances[to] + value > balances[to]);
         require(balances[from] >= value && allowed[from][msg.sender] >= value);

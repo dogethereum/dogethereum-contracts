@@ -29,7 +29,12 @@ contract DummyTransactionProcessor is TransactionProcessor {
     // @param bytes20 - public key hash of the operator
     // @param address - superblock submitter address
     // @return uint - number of satoshidoges locked in case of a valid lock tx, 0 in any other case.
-    function processLockTransaction(bytes calldata, uint256 txHash, bytes20, address) override public {
+    function processLockTransaction(
+        bytes calldata,
+        uint256 txHash,
+        bytes20,
+        address
+    ) public override {
         console.log("processLockTransaction called");
 
         // only allow trustedRelayerContract, otherwise anyone can provide a fake dogeTx
@@ -55,7 +60,12 @@ contract DummyTransactionProcessor is TransactionProcessor {
     // @param bytes20 - public key hash of the operator
     // @param uint256 - Index of the unlock request
     // @return uint - number of satoshidoges locked in case of a valid lock tx, 0 in any other case.
-    function processUnlockTransaction(bytes calldata, uint256 txHash, bytes20, uint256) override public {
+    function processUnlockTransaction(
+        bytes calldata,
+        uint256 txHash,
+        bytes20,
+        uint256
+    ) public override {
         console.log("processUnlockTransaction called");
 
         // only allow trustedRelayerContract, otherwise anyone can provide a fake dogeTx
@@ -74,12 +84,12 @@ contract DummyTransactionProcessor is TransactionProcessor {
     }
 
     function processReportOperatorFreeUtxoSpend(
-        bytes calldata /*txn*/,
-        uint txHash,
-        bytes20 /*operatorPublicKeyHash*/,
-        uint32 /*operatorTxOutputReference*/,
+        bytes calldata, /*txn*/
+        uint256 txHash,
+        bytes20, /*operatorPublicKeyHash*/
+        uint32, /*operatorTxOutputReference*/
         uint32 /*unlawfulTxInputIndex*/
-    ) override public {
+    ) public override {
         console.log("processReportOperatorFreeUtxoSpend called");
 
         // only allow trustedRelayerContract, otherwise anyone can provide a fake dogeTx

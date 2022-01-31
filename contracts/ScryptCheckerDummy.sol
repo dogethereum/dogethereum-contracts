@@ -10,7 +10,7 @@ contract ScryptCheckerDummy is IScryptChecker {
     bool public acceptAll;
 
     // Mapping from keccak(data) to scryptHash(data)
-    mapping (bytes32 => bytes32) public hashStorage;
+    mapping(bytes32 => bytes32) public hashStorage;
 
     struct ScryptHashRequest {
         bytes data;
@@ -20,8 +20,7 @@ contract ScryptCheckerDummy is IScryptChecker {
     }
 
     // Mapping scryptHash => request
-    mapping (bytes32 => ScryptHashRequest) public pendingRequests;
-
+    mapping(bytes32 => ScryptHashRequest) public pendingRequests;
 
     constructor(bool initAcceptAll) {
         acceptAll = initAcceptAll;
@@ -37,7 +36,12 @@ contract ScryptCheckerDummy is IScryptChecker {
     // @param hash – result of applying scrypt to data.
     // @param submitter – the address of the submitter.
     // @param requestId – request identifier of the call.
-    function checkScrypt(bytes calldata data, bytes32 hash, bytes32 proposalId, IScryptCheckerListener scryptDependent) override external payable {
+    function checkScrypt(
+        bytes calldata data,
+        bytes32 hash,
+        bytes32 proposalId,
+        IScryptCheckerListener scryptDependent
+    ) external payable override {
         if (acceptAll || hashStorage[keccak256(data)] == hash) {
             scryptDependent.scryptSubmitted(proposalId, hash, data, msg.sender);
             scryptDependent.scryptVerified(proposalId);

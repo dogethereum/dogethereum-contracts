@@ -5,13 +5,12 @@ pragma solidity ^0.7.6;
 import "@openzeppelin/contracts/math/SafeMath.sol";
 
 contract DogeDepositsManager {
+    using SafeMath for uint256;
 
-    using SafeMath for uint;
+    mapping(address => uint256) public deposits;
 
-    mapping(address => uint) public deposits;
-
-    event DepositMade(address who, uint amount);
-    event DepositWithdrawn(address who, uint amount);
+    event DepositMade(address who, uint256 amount);
+    event DepositWithdrawn(address who, uint256 amount);
 
     // @dev – fallback to calling makeDeposit when ether is sent directly to contract.
     receive() external payable {
@@ -21,20 +20,20 @@ contract DogeDepositsManager {
     // @dev – returns an account's deposit
     // @param who – the account's address.
     // @return – the account's deposit.
-    function getDeposit(address who) virtual view public returns (uint) {
+    function getDeposit(address who) public view virtual returns (uint256) {
         return deposits[who];
     }
 
     // @dev – allows a user to deposit eth.
     // @return – sender's updated deposit amount.
-    function makeDeposit() public payable returns (uint) {
+    function makeDeposit() public payable returns (uint256) {
         increaseDeposit(msg.sender, msg.value);
         return deposits[msg.sender];
     }
 
     // @dev – increases an account's deposit.
     // @return – the given user's updated deposit amount.
-    function increaseDeposit(address who, uint amount) internal {
+    function increaseDeposit(address who, uint256 amount) internal {
         deposits[who] = deposits[who].add(amount);
         require(deposits[who] <= address(this).balance);
 
@@ -44,7 +43,7 @@ contract DogeDepositsManager {
     // @dev – allows a user to withdraw eth from their deposit.
     // @param amount – how much eth to withdraw
     // @return – sender's updated deposit amount.
-    function withdrawDeposit(uint amount) public returns (uint) {
+    function withdrawDeposit(uint256 amount) public returns (uint256) {
         require(deposits[msg.sender] >= amount);
 
         deposits[msg.sender] = deposits[msg.sender].sub(amount);

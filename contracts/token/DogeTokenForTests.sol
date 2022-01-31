@@ -21,20 +21,24 @@ contract DogeTokenForTests is DogeToken {
         operatorKeys.push(OperatorKey(operatorPublicKeyHash, false));
     }
 
-    function addUtxo(bytes20 operatorPublicKeyHash, uint value, uint txHash, uint16 outputIndex) public {
+    function addUtxo(
+        bytes20 operatorPublicKeyHash,
+        uint256 value,
+        uint256 txHash,
+        uint16 outputIndex
+    ) public {
         Operator storage operator = operators[operatorPublicKeyHash];
         operator.utxos.push(Utxo(value, txHash, outputIndex));
         operator.dogeAvailableBalance += value;
     }
 
-    function addDogeAvailableBalance(bytes20 operatorPublicKeyHash, uint value) public {
+    function addDogeAvailableBalance(bytes20 operatorPublicKeyHash, uint256 value) public {
         Operator storage operator = operators[operatorPublicKeyHash];
         operator.dogeAvailableBalance += value;
     }
 
-    function subtractDogeAvailableBalance(bytes20 operatorPublicKeyHash, uint value) public {
+    function subtractDogeAvailableBalance(bytes20 operatorPublicKeyHash, uint256 value) public {
         Operator storage operator = operators[operatorPublicKeyHash];
         operator.dogeAvailableBalance -= value;
     }
-
 }

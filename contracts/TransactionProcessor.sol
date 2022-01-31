@@ -6,21 +6,23 @@ pragma solidity ^0.7.6;
 abstract contract TransactionProcessor {
     function processLockTransaction(
         bytes calldata txn,
-        uint txHash,
+        uint256 txHash,
         bytes20 operatorPublicKeyHash,
         address superblockSubmitterAddress
-    ) virtual public;
+    ) public virtual;
+
     function processUnlockTransaction(
         bytes calldata txn,
-        uint txHash,
+        uint256 txHash,
         bytes20 operatorPublicKeyHash,
         uint256 unlockIndex
-    ) virtual public;
+    ) public virtual;
+
     function processReportOperatorFreeUtxoSpend(
         bytes calldata txn,
-        uint txHash,
+        uint256 txHash,
         bytes20 operatorPublicKeyHash,
         uint32 operatorTxOutputReference,
         uint32 unlawfulTxInputIndex
-    ) virtual public;
+    ) public virtual;
 }
