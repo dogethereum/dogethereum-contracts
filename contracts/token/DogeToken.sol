@@ -717,7 +717,7 @@ contract DogeToken is StandardToken, TransactionProcessor, EtherAuction {
         unlockIdx++;
 
         //new unclock
-        emit UnlockedToken(operator.ethAddress, unlockValue, operatorFee, dogeTxFee);
+        emit UnlockedToken(operator.ethAddress, value, operatorFee, dogeTxFee);
     }
 
     function selectUtxosAndFee(uint256 valueToSend, Operator memory operator)
