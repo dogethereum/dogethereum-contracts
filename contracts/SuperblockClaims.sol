@@ -87,11 +87,13 @@ contract SuperblockClaims is DogeDepositsManager, DogeErrorCodes {
     );
 
     modifier onlyBattleManager() {
+        // Error: Only the battle manager can call this function.
         require(msg.sender == address(trustedDogeBattleManager), "ERR_AUTH_ONLY_BATTLEMANAGER");
         _;
     }
 
     modifier onlyMeOrBattleManager() {
+        // Error: Only the battle manager or this contract can call this function.
         require(
             msg.sender == address(trustedDogeBattleManager) || msg.sender == address(this),
             "ERR_AUTH_ONLY_BATTLEMANAGER_OR_SELF"
