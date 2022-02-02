@@ -128,12 +128,24 @@ contract DogeToken is StandardToken, TransactionProcessor, EtherAuction {
         uint256 tokensBurned,
         uint256 etherSold
     );
+     /**
+     * @param user Ethereum Operator address
+     * @param value Dogecoins being locked
+     * @param operatorFee Dogecoins paid to Operator
+     * @param superblockSubmitterFee Dogecoins paid to Submitter
+     */
     event LockedToken(
         address indexed user,
         uint256 value,
         uint256 operatorFee,
         uint256 superblockSubmitterFee
     );
+    /**
+     * @param user Ethereum Operator address
+     * @param value Dogecoins being unlocked
+     * @param operatorFee Dogecoins paid to the Operator
+     * @param dogeTxFee Dogecoins paid to Dogecoin Miner
+     */
     event UnlockedToken(
         address indexed user,
         uint256 value,
@@ -567,8 +579,13 @@ contract DogeToken is StandardToken, TransactionProcessor, EtherAuction {
 
         // Update the total supply with the sum of the three minted amounts.
         totalSupply = totalSupply.add(value);
-        // new lock
-        emit LockedToken(operatorEthAddress, value, operatorFee, superblockSubmitterFee);
+        
+        emit LockedToken({
+            user: operatorEthAddress,
+            value: value,
+            operatorFee: operatorFee,
+            superblockSubmitterFee: superblockSubmitterFee
+        });
     }
 
     /**
@@ -715,9 +732,13 @@ contract DogeToken is StandardToken, TransactionProcessor, EtherAuction {
         operator.dogePendingBalance = operator.dogePendingBalance.add(changeValue);
         operator.nextUnspentUtxoIndex += uint32(selectedUtxos.length);
         unlockIdx++;
-
-        //new unclock
-        emit UnlockedToken(operator.ethAddress, value, operatorFee, dogeTxFee);
+        
+        emit UnlockedToken({
+            user: operator.ethAddress,
+            value: value,
+            operatorFee: operatorFee,
+            dogeTxFee: dogeTxFee
+        });
     }
 
     function selectUtxosAndFee(uint256 valueToSend, Operator memory operator)
