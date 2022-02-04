@@ -87,12 +87,7 @@ export class AuctionBot {
       throw new Error("Database not initialized.");
     }
 
-    // TODO: we should be using the following instead but this breaks our unit tests due to
-    // https://github.com/nomiclabs/hardhat/issues/1247
-    // const lastBlockNumber = await this.ethProvider.getBlockNumber();
-    const { number: lastBlockNumber } = await this.ethProvider.getBlock(
-      "latest"
-    );
+    const lastBlockNumber = await this.ethProvider.getBlockNumber();
     const firstBlockNumber = state.lastIndexedBlock + 1;
 
     const delta = Math.min(
