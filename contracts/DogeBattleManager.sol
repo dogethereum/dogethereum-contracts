@@ -196,21 +196,25 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
     event ErrorBattle(bytes32 sessionId, uint256 err);
 
     modifier onlyScryptChecker() {
+        // Error: Only the scrypt checker contract can call this function.
         require(msg.sender == address(trustedScryptChecker), "ERR_AUTH_ONLY_SCRYPTCHECKER");
         _;
     }
 
     modifier onlySuperblockClaims() {
+        // Error: Only the superblock claims contract can call this function.
         require(msg.sender == address(trustedSuperblockClaims), "ERR_AUTH_ONLY_SUPERBLOCKCLAIMS");
         _;
     }
 
     modifier onlyClaimant(bytes32 sessionId) {
+        // Error: Only the claimant can call this function.
         require(msg.sender == sessions[sessionId].submitter, "ERR_AUTH_ONLY_CLAIMANT");
         _;
     }
 
     modifier onlyChallenger(bytes32 sessionId) {
+        // Error: Only the challenger can call this function.
         require(msg.sender == sessions[sessionId].challenger, "ERR_AUTH_ONLY_CHALLENGER");
         _;
     }
