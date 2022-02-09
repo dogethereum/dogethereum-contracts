@@ -32,6 +32,10 @@ dogecoinQtRpcpassword=bbb
 if [[ ! -v agentRootDir ]]; then
 	agentRootDir=/path/agentCodeDir
 fi
+if [[ ! -v agentConfig ]]; then
+	echo "Unknown agent config"
+	exit 1
+fi
 if [[ ! -v agentDataDir ]]; then
 	agentDataDir=/path/agentDataDir
 fi
@@ -46,6 +50,7 @@ export TS_NODE_TRANSPILE_ONLY=true
 # Print instructions on the console
 set -o xtrace -o nounset -o errexit
 
+# TODO: use dogecoind in CI environment
 # Stop dogecoin-qt
 DOGECOIN_PROCESSES="$(pgrep $dogecoinQtProcessName)" || echo "No dogecoin processes found"
 if [[ $DOGECOIN_PROCESSES ]]; then
@@ -109,15 +114,21 @@ utxoValue=$((450000 * 10 ** 8))
 node "$toolsRootDir/user/lock.js" --deployment $dogethereumDeploymentJson --ethereumAddress 0xa3a744d64f5136aC38E2DE221e750f7B0A6b45Ef --value 5000000000 --dogenetwork regtest --dogeport 41200 --dogeuser $dogecoinQtRpcuser --dogepassword $dogecoinQtRpcpassword --dogePrivateKey $dogePrivateKey --utxoTxid "$utxoTxid" --utxoIndex $utxoIndex --utxoValue $utxoValue
 curl --user $dogecoinQtRpcuser:$dogecoinQtRpcpassword  --data-binary '{"jsonrpc": "1.0", "id":"curltest", "method": "generate", "params": [10] }' -H 'content-type: text/plain;' http://127.0.0.1:41200/
 
-echo "Please, start the agent..."
+pushd .
+cd "$agentRootDir"
+# Here we assume that the agent was already built
+mvn exec:java "-Ddogethereum.agents.conf.file=$agentConfig" &
+agentPid=$!
+popd
 
 # Challenge the next superblock
 #HH network: 0x9965507d1a55bcc2695c58ba16fb37d819b0a4dc
 #ganache: 0xB50a77BF193245E431b29CdD70b354119eb75Fd2
 npx hardhat --network $NETWORK dogethereum.challenge --challenger 0xB50a77BF193245E431b29CdD70b354119eb75Fd2 --deposit 1000000000 --advance-battle true
 
+# TODO: avoid hardcoding 10 seconds time delta here
 # This should be enough to timeout the challenger
-sleep 10s
+curl --request POST --data '{"jsonrpc":"2.0","method":"evm_increaseTime","params":[10],"id":74}' http://localhost:8545;
 # It is necessary to mine a block so that the superblock defender agent sees that it can timeout the challenger
 curl --request POST --data '{"jsonrpc":"2.0","method":"evm_mine","params":[],"id":74}' http://localhost:8545;
 # Mine 10 doge blocks so doge unlock tx has enough confirmations
@@ -155,4 +166,4 @@ done
 # Print status after the unlocks were processed
 npx hardhat run --network $NETWORK scripts/debug.ts
 
-kill $dogecoinNode $ganacheNode
+kill $agentPid $dogecoinNode $ganacheNode
