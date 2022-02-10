@@ -73,26 +73,26 @@ curl --user $dogecoinQtRpcuser:$dogecoinQtRpcpassword  --data-binary '{"jsonrpc"
 rm -rf ${agentDataDir:?}/*
 
 # Stop ganache
-GANACHE_PROCESSES="$(pgrep -f '^node.*ganache-cli')" || echo "No ganache processes found"
-if [[ $GANACHE_PROCESSES ]]; then
+ETH_NODE="$(pgrep -f '^node.*ganache-cli')" || echo "No ganache processes found"
+if [[ $ETH_NODE ]]; then
     # kill fails if passed an empty string
-    kill "$GANACHE_PROCESSES"
+    kill "$ETH_NODE"
     sleep 1s
 fi
 # Start ganache
 npm run ganache > ganachelog.txt &
-ganacheNode=$!
+ethNode=$!
 
 # # Stop hardhat network
-# GANACHE_PROCESSES="$(pgrep -f '^node.*hardhat node')" || echo "No ganache processes found"
-# if [[ $GANACHE_PROCESSES ]]; then
+# ETH_NODE="$(pgrep -f '^node.*hardhat node')" || echo "No hardhat network processes found"
+# if [[ $ETH_NODE ]]; then
 #     # kill fails if passed an empty string
-#     kill "$GANACHE_PROCESSES"
+#     kill "$ETH_NODE"
 #     sleep 1s
 # fi
 # # Start hardhat network
 # npm run hh-network > hh-network.txt &
-# ganacheNode=$!
+# ethNode=$!
 
 # Compile and deploy contracts
 npx hardhat compile --quiet
@@ -166,4 +166,4 @@ done
 # Print status after the unlocks were processed
 npx hardhat run --network $NETWORK scripts/debug.ts
 
-kill $agentPid $dogecoinNode $ganacheNode
+kill $agentPid $dogecoinNode $ethNode
