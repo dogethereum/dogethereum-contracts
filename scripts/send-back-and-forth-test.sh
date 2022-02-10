@@ -14,15 +14,15 @@ export NETWORK="integrationDogeRegtest"
 
 if [ $machine == "Mac" ]; then
     dogecoinQtProcessName=Dogecoin-Qt
-	dogecoinQtDatadir=.dogecoin-data
-	dogecoinQtExecutable=/Applications/Dogecoin-Qt.app/Contents/MacOS/Dogecoin-Qt
+    dogecoinQtDatadir=.dogecoin-data
+    dogecoinQtExecutable=/Applications/Dogecoin-Qt.app/Contents/MacOS/Dogecoin-Qt
 elif [ $machine == "Linux" ]; then
     dogecoinQtProcessName=dogecoin-qt
-	dogecoinQtDatadir=.dogecoin-data
-	dogecoinQtExecutable=dogecoin-qt
+    dogecoinQtDatadir=.dogecoin-data
+    dogecoinQtExecutable=dogecoin-qt
 else
-	echo "Unexpected OS: $machine"
-	exit 1
+    echo "Unexpected OS: $machine"
+    exit 1
 fi
 
 dogecoinQtRpcuser=aaa
@@ -30,17 +30,17 @@ dogecoinQtRpcpassword=bbb
 
 # TODO: we probably want to store all temporary data in a single directory so cleanup is straightforward.
 if [[ ! -v agentRootDir ]]; then
-	agentRootDir=/path/agentCodeDir
+    agentRootDir=/path/agentCodeDir
 fi
 if [[ ! -v agentConfig ]]; then
-	echo "Unknown agent config"
-	exit 1
+    echo "Unknown agent config"
+    exit 1
 fi
 if [[ ! -v agentDataDir ]]; then
-	agentDataDir=/path/agentDataDir
+    agentDataDir=/path/agentDataDir
 fi
 if [[ ! -v toolsRootDir ]]; then
-	toolsRootDir=/path/toolsRootDir
+    toolsRootDir=/path/toolsRootDir
 fi
 dogethereumDeploymentJson="deployment/$NETWORK/deployment.json"
 
@@ -54,8 +54,8 @@ set -o xtrace -o nounset -o errexit
 # Stop dogecoin-qt
 DOGECOIN_PROCESSES="$(pgrep $dogecoinQtProcessName)" || echo "No dogecoin processes found"
 if [[ $DOGECOIN_PROCESSES ]]; then
-	kill "$DOGECOIN_PROCESSES"
-	sleep 1s
+    kill "$DOGECOIN_PROCESSES"
+    sleep 1s
 fi
 # Replace dogecoin-qt regtest datadir with the prepared db
 rm -rf "$dogecoinQtDatadir/regtest/"
@@ -75,9 +75,9 @@ rm -rf ${agentDataDir:?}/*
 # Stop ganache
 GANACHE_PROCESSES="$(pgrep -f '^node.*ganache-cli')" || echo "No ganache processes found"
 if [[ $GANACHE_PROCESSES ]]; then
-	# kill fails if passed an empty string
-	kill "$GANACHE_PROCESSES"
-	sleep 1s
+    # kill fails if passed an empty string
+    kill "$GANACHE_PROCESSES"
+    sleep 1s
 fi
 # Start ganache
 npm run ganache > ganachelog.txt &
@@ -86,9 +86,9 @@ ganacheNode=$!
 # # Stop hardhat network
 # GANACHE_PROCESSES="$(pgrep -f '^node.*hardhat node')" || echo "No ganache processes found"
 # if [[ $GANACHE_PROCESSES ]]; then
-# 	# kill fails if passed an empty string
-# 	kill "$GANACHE_PROCESSES"
-# 	sleep 1s
+#     # kill fails if passed an empty string
+#     kill "$GANACHE_PROCESSES"
+#     sleep 1s
 # fi
 # # Start hardhat network
 # npm run hh-network > hh-network.txt &
@@ -142,25 +142,25 @@ npx hardhat run --network $NETWORK scripts/debug.ts
 # Prepare sender address to do unlocks
 npx hardhat run --network $NETWORK scripts/prepare_sender.ts
 for i in {1..2}; do
-	# Print debug.js status
-	npx hardhat run --network $NETWORK scripts/debug.ts
+    # Print debug.js status
+    npx hardhat run --network $NETWORK scripts/debug.ts
 
-	# Send eth unlock tx
-	node "$toolsRootDir/user/unlock.js" --deployment $dogethereumDeploymentJson --privateKey 0xffd02f8d16c657add9aba568c83770cd3f06cebda3ddb544daf313002ca5bd53 --receiver n2z4kV3rWPALTZz4sdoE5ag2UiErsrmJpJ --value 300000000
+    # Send eth unlock tx
+    node "$toolsRootDir/user/unlock.js" --deployment $dogethereumDeploymentJson --privateKey 0xffd02f8d16c657add9aba568c83770cd3f06cebda3ddb544daf313002ca5bd53 --receiver n2z4kV3rWPALTZz4sdoE5ag2UiErsrmJpJ --value 300000000
 
-	# Mine 5 eth blocks so unlock eth tx has enough confirmations
-	for j in {1..5}; do
-		curl --request POST --data '{"jsonrpc":"2.0","method":"evm_mine","params":[],"id":74}' http://localhost:8545;
-	done
+    # Mine 5 eth blocks so unlock eth tx has enough confirmations
+    for j in {1..5}; do
+        curl --request POST --data '{"jsonrpc":"2.0","method":"evm_mine","params":[],"id":74}' http://localhost:8545;
+    done
 
-	# Wait for Eth to Doge agent to sign and broadcast doge unlock tx
-	sleep 30s
+    # Wait for Eth to Doge agent to sign and broadcast doge unlock tx
+    sleep 30s
 
-	# Mine 10 doge blocks so doge unlock tx has enough confirmations
-	curl --user $dogecoinQtRpcuser:$dogecoinQtRpcpassword  --data-binary '{"jsonrpc": "1.0", "id":"curltest", "method": "generate", "params": [10] }' -H 'content-type: text/plain;' http://127.0.0.1:41200/
+    # Mine 10 doge blocks so doge unlock tx has enough confirmations
+    curl --user $dogecoinQtRpcuser:$dogecoinQtRpcpassword  --data-binary '{"jsonrpc": "1.0", "id":"curltest", "method": "generate", "params": [10] }' -H 'content-type: text/plain;' http://127.0.0.1:41200/
 
-	# Wait for agent to relay doge unlock tx to eth and utxo length updated
-	npx hardhat dogethereum.waitUtxo --network $NETWORK --operator-public-key-hash 0x03cd041b0139d3240607b9fd1b2d1b691e22b5d6 --utxo-length $(($i + 1))
+    # Wait for agent to relay doge unlock tx to eth and utxo length updated
+    npx hardhat dogethereum.waitUtxo --network $NETWORK --operator-public-key-hash 0x03cd041b0139d3240607b9fd1b2d1b691e22b5d6 --utxo-length $(($i + 1))
 done
 
 # Print status after the unlocks were processed
