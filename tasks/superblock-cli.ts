@@ -130,6 +130,7 @@ interface ChallengeTaskArguments {
   superblockId?: string;
   challenger?: string;
   deposit?: string;
+  agentPid?: number;
 }
 
 interface StatusTaskArguments {
@@ -180,7 +181,8 @@ async function challengeNextSuperblock(
   battleManager: Contract,
   challenger: string,
   superblockId?: string,
-  deposit?: number | string
+  deposit?: number | string,
+  agentPid?: number
 ) {
   console.log(`Making a challenge from: ${challenger}`);
   let balance = await superblockClaims.callStatic.getDeposit(challenger);
@@ -205,7 +207,7 @@ async function challengeNextSuperblock(
   console.log(`Last doge hash: ${bestSuperblock.lastHash}`);
   console.log("----------");
 
-  superblockId = await nextSuperblockEvent(superblocks, bestSuperblockHash, superblockId);
+  superblockId = await nextSuperblockEvent(superblocks, bestSuperblockHash, superblockId, agentPid);
 
   const findEvent = (events: BridgeEvent[], eventName: string) => {
     return events.find(({ name }) => {
@@ -251,7 +253,8 @@ async function challengeNextSuperblock(
 async function nextSuperblockEvent(
   superblocks: Contract,
   bestSuperblockId: string,
-  superblockId?: string
+  superblockId?: string,
+  agentPid?: number
 ): Promise<string> {
   if (typeof superblockId === "string") {
     const { status } = await superblocks.superblocks(superblockId);
@@ -260,12 +263,31 @@ async function nextSuperblockEvent(
     }
   }
 
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const newSuperblockFilter = superblocks.filters.NewSuperblock();
     // TODO: does it make sense to keep waiting after the first event?
     // This assumes that a future superblock hash was predicted
     // which might be indeed the case in a development environment
     // but might overcomplicate this implementation if it isn't used at all.
+
+    // Monitor agent process to avoid waiting indefinitely.
+    let intervalToken: NodeJS.Timeout;
+    if (agentPid !== undefined) {
+      const agentChecker = () => {
+        // Signal `0` is interpreted by node.js as a test for process existence
+        // See https://nodejs.org/docs/latest-v14.x/api/process.html#process_process_kill_pid_signal
+        try {
+          process.kill(agentPid, 0);
+        } catch {
+          superblocks.off(newSuperblockFilter, listener);
+          clearInterval(intervalToken);
+          reject(new Error("The agent process exited without sending superblocks."));
+          return;
+        }
+      }
+      intervalToken = setInterval(agentChecker, 300);
+    }
+
     const listener: providers.Listener = (
       newSuperblockId
       // submitter,
@@ -274,6 +296,9 @@ async function nextSuperblockEvent(
       if (newSuperblockId === bestSuperblockId) return;
       if (superblockId === undefined || newSuperblockId === superblockId) {
         superblocks.off(newSuperblockFilter, listener);
+        if (intervalToken !== undefined) {
+          clearInterval(intervalToken);
+        }
         resolve(newSuperblockId);
       }
     };
@@ -282,7 +307,7 @@ async function nextSuperblockEvent(
 }
 
 const challengeCommand: ActionType<ChallengeTaskArguments> = async function (
-  { advanceBattle, superblockId, challenger, deposit },
+  { advanceBattle, superblockId, challenger, deposit, agentPid },
   hre
 ) {
   console.log("challenge the next superblock");
@@ -305,7 +330,8 @@ const challengeCommand: ActionType<ChallengeTaskArguments> = async function (
     battleManager,
     signer.address,
     superblockId,
-    deposit
+    deposit,
+    agentPid
   );
 
   console.log("challenge the next superblock complete");
@@ -351,6 +377,13 @@ task(CHALLENGE_TASK, "Submit a challenge to a superblock")
     "The amount of ether deposited in the contract in wei. If the balance is zero and no deposit is specified it will try to deposit 1000 wei.",
     undefined,
     types.string
+  )
+  .addOptionalParam(
+    "agentPid",
+    `The agent PID. When given, the task will monitor the process to see if it's still alive while waiting for the new superblock proposal.
+If the superblock is not proposed by the time the agent is closed, the task fails with an exception.`,
+    undefined,
+    types.int
   )
   .setAction(challengeCommand);
 

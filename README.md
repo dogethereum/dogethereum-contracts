@@ -57,13 +57,17 @@ These tests setup an environment where the contracts are deployed and interacted
 First, you need to set a few environment variables:
 - `agentRootDir`: path to the root of the [dogethereum agents] repository.
 - `agentDataDir`: path to the data directory of the [dogethereum agents]. This is where the agents store a database of the dogecoin and ethereum networks. Specifically, this is the `data.directory` key in the agent configuration.
+- `agentConfig`: path to the agents config file.
 - `toolsRootDir`: path to the root of the [dogethereum tools] repository.
+- `scryptInteractiveDir`: path to the root of the [scrypt-interactive] repository.
 
 To set them, run
 ```shell
 $ export agentRootDir=/your/agent/path
 $ export agentDataDir=/your/agent/path/to/data/dir
+$ export agentConfig=/your/agent/config/path/dogethereum-agents.conf
 $ export toolsRootDir=/your/tools/path
+$ export scryptInteractiveDir=/your/path/to/scrypt-interactive
 ```
 
 Then run `npm run integration-tests`. Note that doing this will launch a dogecoin node in regtest mode with a graphical interface.

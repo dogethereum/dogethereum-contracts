@@ -117,14 +117,14 @@ curl --user $dogecoinQtRpcuser:$dogecoinQtRpcpassword  --data-binary '{"jsonrpc"
 pushd .
 cd "$agentRootDir"
 # Here we assume that the agent was already built
-mvn exec:java "-Ddogethereum.agents.conf.file=$agentConfig" &
+mvn exec:java "-Ddogethereum.agents.conf.file=$agentConfig" > agent.log 2>&1 &
 agentPid=$!
 popd
 
 # Challenge the next superblock
 #HH network: 0x9965507d1a55bcc2695c58ba16fb37d819b0a4dc
 #ganache: 0xB50a77BF193245E431b29CdD70b354119eb75Fd2
-npx hardhat --network $NETWORK dogethereum.challenge --challenger 0xB50a77BF193245E431b29CdD70b354119eb75Fd2 --deposit 1000000000 --advance-battle true
+npx hardhat --network $NETWORK dogethereum.challenge --challenger 0xB50a77BF193245E431b29CdD70b354119eb75Fd2 --deposit 1000000000 --advance-battle true --agent-pid $agentPid
 
 # TODO: avoid hardcoding 10 seconds time delta here
 # This should be enough to timeout the challenger
