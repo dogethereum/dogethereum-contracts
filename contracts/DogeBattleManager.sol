@@ -355,16 +355,16 @@ contract DogeBattleManager is DogeErrorCodes, IScryptCheckerListener {
     ) public onlyClaimant(sessionId) {
         BattleSession storage session = sessions[sessionId];
 
-        // Error: There is not enough eth deposited to bond for the payment of the next step in the battle.
-        require(hasDeposit(msg.sender, verifySuperblockCost), "ERR_VERIFY_MERKLE_NEEDS_DEPOSIT");
-
-        // Error: A superblock must contain at least one block.
-        require(session.blockHashes.length == 0, "ERR_VERIFY_MERKLE_BLOCK_HASHES_MISSING");
         // Error: The battle does not allow verifying the merkle root hashes of the blocks now.
         require(
             session.challengeState == ChallengeState.QueryMerkleRootHashes,
             "ERR_VERIFY_MERKLE_INCORRECT_STEP"
         );
+        // Error: Superblock hashes must not be known yet.
+        require(session.blockHashes.length == 0, "ERR_VERIFY_MERKLE_BLOCK_HASHES_ALREADY_KNOWN");
+
+        // Error: There is not enough eth deposited to bond for the payment of the next step in the battle.
+        require(hasDeposit(msg.sender, verifySuperblockCost), "ERR_VERIFY_MERKLE_NEEDS_DEPOSIT");
 
         (bytes32 merkleRoot, , , , bytes32 lastHash, , , , ) = getSuperblockInfo(
             session.superblockHash
