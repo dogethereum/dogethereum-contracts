@@ -156,7 +156,7 @@ for i in {1..2}; do
     curl --user $dogecoinQtRpcuser:$dogecoinQtRpcpassword  --data-binary '{"jsonrpc": "1.0", "id":"curltest", "method": "generate", "params": [10] }' -H 'content-type: text/plain;' http://127.0.0.1:41200/
 
     # Wait for agent to relay doge unlock tx to eth and utxo length updated
-    npx hardhat dogethereum.waitUtxo --network $NETWORK --operator-public-key-hash 0x03cd041b0139d3240607b9fd1b2d1b691e22b5d6 --utxo-length $(($i + 1))
+    npx hardhat dogethereum.waitUtxo --network $NETWORK --operator-public-key-hash 0x03cd041b0139d3240607b9fd1b2d1b691e22b5d6 --utxo-length $((i + 1))
 done
 
 # Print status after the unlocks were processed
