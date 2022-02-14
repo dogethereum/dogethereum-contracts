@@ -28,19 +28,22 @@ fi
 dogecoinQtRpcuser=aaa
 dogecoinQtRpcpassword=bbb
 
-# TODO: we probably want to store all temporary data in a single directory so cleanup is straightforward.
-if [[ ! -v agentRootDir ]]; then
-    agentRootDir=/path/agentCodeDir
-fi
-if [[ ! -v agentConfig ]]; then
-    echo "Unknown agent config"
+if [[ ! -v agentRootDir || ! -d $agentRootDir ]]; then
+    echo 'Unknown agent root directory. Set the path to the agent root directory with the agentRootDir environment variable.'
     exit 1
 fi
-if [[ ! -v agentDataDir ]]; then
-    agentDataDir=/path/agentDataDir
+if [[ ! -v agentConfig || ! -f $agentConfig ]]; then
+    echo 'Unknown agent config. Set the path to the agent config with the agentConfig environment variable.'
+    exit 1
 fi
-if [[ ! -v toolsRootDir ]]; then
-    toolsRootDir=/path/toolsRootDir
+if [[ ! -v toolsRootDir || ! -d $toolsRootDir ]]; then
+    echo 'Unknown tools root directory. Set the path to the tools root directory with the toolsRootDir environment variable.'
+    exit 1
+fi
+# TODO: we probably want to store all temporary data in a single directory so cleanup is straightforward.
+if [[ ! -v agentDataDir ]]; then
+    echo 'Unknown agent data directory. Set the path to the agent data directory with the agentDataDir environment variable.'
+    exit 1
 fi
 dogethereumDeploymentJson="deployment/$NETWORK/deployment.json"
 
