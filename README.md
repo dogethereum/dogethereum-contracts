@@ -72,6 +72,12 @@ $ export scryptInteractiveDir=/your/path/to/scrypt-interactive
 
 Then run `npm run integration-tests`. Note that doing this will launch a dogecoin node in regtest mode with a graphical interface.
 
+The integration tests will use [ganache-cli] by default but [hardhat network] can be used instead by setting:
+
+```shell
+$ USE_HH_NETWORK=true
+```
+
 At one point, the test will require the manual launch of the [dogethereum agents].
 
 #### Scrypt checker integration
@@ -149,3 +155,5 @@ DOGE: D5q6QoN51z1daFpkreNqpbVq6i6oP6S35m
 [dogethereum tools]: https://github.com/dogethereum/dogethereum-tools
 [dogethereum agents]: https://github.com/dogethereum/dogethereum-agents
 [scrypt-interactive]: https://github.com/dogethereum/scrypt-interactive
+[ganache-cli]: https://www.npmjs.com/package/ganache-cli
+[hardhat network]: https://hardhat.org/hardhat-network/

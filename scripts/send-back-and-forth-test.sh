@@ -75,27 +75,20 @@ curl --user $dogecoinQtRpcuser:$dogecoinQtRpcpassword  --data-binary '{"jsonrpc"
 # TODO: Move this to a launch agent script
 rm -rf "${agentDataDir:?}"/*
 
-# Stop ganache
-ETH_NODE="$(pgrep -f '^node.*ganache-cli')" || echo "No ganache processes found"
-if [[ $ETH_NODE ]]; then
+# Stop previous ethereum node if it is still running
+lingeringEthNode="$(pgrep -f '(^node.*ganache-cli)|(^node.*hardhat node)')" || echo "No ethereum node processes found"
+if [[ $lingeringEthNode ]]; then
     # kill fails if passed an empty string
-    kill "$ETH_NODE"
+    kill "$lingeringEthNode"
     sleep 1s
 fi
-# Start ganache
-npm run ganache > ganachelog.txt &
+# Start ethereum node
+if [[ -v USE_HH_NETWORK ]]; then
+    npm run hh-network > hh-network.txt &
+else
+    npm run ganache > ganachelog.txt &
+fi
 ethNode=$!
-
-# # Stop hardhat network
-# ETH_NODE="$(pgrep -f '^node.*hardhat node')" || echo "No hardhat network processes found"
-# if [[ $ETH_NODE ]]; then
-#     # kill fails if passed an empty string
-#     kill "$ETH_NODE"
-#     sleep 1s
-# fi
-# # Start hardhat network
-# npm run hh-network > hh-network.txt &
-# ethNode=$!
 
 # Compile and deploy contracts
 npx hardhat compile --quiet
