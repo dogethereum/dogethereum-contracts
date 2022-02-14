@@ -51,7 +51,7 @@ dogethereumDeploymentJson="deployment/$NETWORK/deployment.json"
 export TS_NODE_TRANSPILE_ONLY=true
 
 # Print instructions on the console
-set -o xtrace -o nounset -o errexit
+set -o nounset -o errexit # -o xtrace
 
 # TODO: use dogecoind in CI environment
 # Stop dogecoin-qt
@@ -110,12 +110,12 @@ utxoValue=$((450000 * 10 ** 8))
 node "$toolsRootDir/user/lock.js" --deployment $dogethereumDeploymentJson --ethereumAddress 0xa3a744d64f5136aC38E2DE221e750f7B0A6b45Ef --value 5000000000 --dogenetwork regtest --dogeport 41200 --dogeuser $dogecoinQtRpcuser --dogepassword $dogecoinQtRpcpassword --dogePrivateKey $dogePrivateKey --utxoTxid "$utxoTxid" --utxoIndex $utxoIndex --utxoValue $utxoValue
 curl --user $dogecoinQtRpcuser:$dogecoinQtRpcpassword  --data-binary '{"jsonrpc": "1.0", "id":"curltest", "method": "generate", "params": [10] }' -H 'content-type: text/plain;' http://127.0.0.1:41200/
 
-pushd .
+pushd . > /dev/null 2>&1
 cd "$agentRootDir"
 # Here we assume that the agent was already built
 mvn exec:java "-Ddogethereum.agents.conf.file=$agentConfig" > agent.log 2>&1 &
 agentPid=$!
-popd
+popd > /dev/null 2>&1
 
 # Challenge the next superblock
 #HH network: 0x9965507d1a55bcc2695c58ba16fb37d819b0a4dc
