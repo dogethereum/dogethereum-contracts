@@ -12,11 +12,11 @@ esac
 # Declare variables
 export NETWORK="integrationDogeRegtest"
 
-if [ $machine == "Mac" ]; then
+if [ "$machine" == "Mac" ]; then
     dogecoinQtProcessName=Dogecoin-Qt
     dogecoinQtDatadir=.dogecoin-data
     dogecoinQtExecutable=/Applications/Dogecoin-Qt.app/Contents/MacOS/Dogecoin-Qt
-elif [ $machine == "Linux" ]; then
+elif [ "$machine" == "Linux" ]; then
     dogecoinQtProcessName=dogecoin-qt
     dogecoinQtDatadir=.dogecoin-data
     dogecoinQtExecutable=dogecoin-qt
@@ -70,7 +70,7 @@ curl --user $dogecoinQtRpcuser:$dogecoinQtRpcpassword  --data-binary '{"jsonrpc"
 
 # Clear agent data dir
 # TODO: Move this to a launch agent script
-rm -rf ${agentDataDir:?}/*
+rm -rf "${agentDataDir:?}"/*
 
 # Stop ganache
 ETH_NODE="$(pgrep -f '^node.*ganache-cli')" || echo "No ganache processes found"
