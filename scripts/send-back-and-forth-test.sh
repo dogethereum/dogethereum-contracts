@@ -154,7 +154,12 @@ popd > /dev/null 2>&1
 # Challenge the next superblock
 #HH network: 0x9965507d1a55bcc2695c58ba16fb37d819b0a4dc
 #ganache: 0xB50a77BF193245E431b29CdD70b354119eb75Fd2
-npx hardhat --network $NETWORK dogethereum.challenge --challenger 0xB50a77BF193245E431b29CdD70b354119eb75Fd2 --deposit 1000000000 --advance-battle true --agent-pid $agentPid
+npx hardhat dogethereum.challenge \
+    --network $NETWORK \
+    --challenger 0xB50a77BF193245E431b29CdD70b354119eb75Fd2 \
+    --deposit 1000000000 \
+    --advance-battle true \
+    --agent-pid $agentPid
 
 # TODO: avoid hardcoding 10 seconds time delta here
 # This should be enough to timeout the challenger
@@ -179,7 +184,11 @@ for i in {1..2}; do
     npx hardhat run --network $NETWORK scripts/debug.ts
 
     # Send eth unlock tx
-    node "$toolsRootDir/user/unlock.js" --deployment $dogethereumDeploymentJson --privateKey 0xffd02f8d16c657add9aba568c83770cd3f06cebda3ddb544daf313002ca5bd53 --receiver n2z4kV3rWPALTZz4sdoE5ag2UiErsrmJpJ --value 300000000
+    node "$toolsRootDir/user/unlock.js" \
+        --deployment $dogethereumDeploymentJson \
+        --privateKey 0xffd02f8d16c657add9aba568c83770cd3f06cebda3ddb544daf313002ca5bd53 \
+        --receiver n2z4kV3rWPALTZz4sdoE5ag2UiErsrmJpJ \
+        --value 300000000
 
     # Mine 5 eth blocks so unlock eth tx has enough confirmations
     for j in {1..5}; do
@@ -196,7 +205,10 @@ for i in {1..2}; do
         http://127.0.0.1:41200/
 
     # Wait for agent to relay doge unlock tx to eth and utxo length updated
-    npx hardhat dogethereum.waitUtxo --network $NETWORK --operator-public-key-hash 0x03cd041b0139d3240607b9fd1b2d1b691e22b5d6 --utxo-length $((i + 1))
+    npx hardhat dogethereum.waitUtxo \
+        --network $NETWORK \
+        --operator-public-key-hash 0x03cd041b0139d3240607b9fd1b2d1b691e22b5d6 \
+        --utxo-length $((i + 1))
 done
 
 # Print status after the unlocks were processed
