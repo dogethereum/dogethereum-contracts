@@ -195,6 +195,7 @@ for i in {1..2}; do
         curl --request POST --data '{"jsonrpc":"2.0","method":"evm_mine","params":[],"id":74}' http://localhost:8545;
     done
 
+    # TODO: replace this sleep with a typescript script that waits for this
     # Wait for Eth to Doge agent to sign and broadcast doge unlock tx
     sleep 30s
 
