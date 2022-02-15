@@ -89,8 +89,9 @@ $dogecoinExecutable -datadir="$dogecoinDatadir" \
     -rpcpassword=$dogecoinRpcpassword \
     -rpcport=41200 &
 dogecoinNode=$!
-sleep 4s
 
+# TODO: move this sleep into a typescript script that waits for the dogecoin node RPC interface to be available.
+sleep 4s
 # Mine a doge block so dogecoin-qt is fully up and running
 curl --user $dogecoinRpcuser:$dogecoinRpcpassword \
     --data-binary '{"jsonrpc": "1.0", "id":"curltest", "method": "generate", "params": [1] }' \
