@@ -13,20 +13,31 @@ esac
 export NETWORK="integrationDogeRegtest"
 
 if [ "$machine" == "Mac" ]; then
-    dogecoinQtProcessName=Dogecoin-Qt
-    dogecoinQtDatadir=.dogecoin-data
-    dogecoinQtExecutable=/Applications/Dogecoin-Qt.app/Contents/MacOS/Dogecoin-Qt
+    dogecoinDatadir=.dogecoin-data
+    if [[ -v USE_DOGECOIND ]]; then
+        # TODO: add dogecoind path and process name for Mac
+        echo "Unknown dogecoind executable path and process name"
+        exit 1
+    else
+        dogecoinProcessName=Dogecoin-Qt
+        dogecoinExecutable=/Applications/Dogecoin-Qt.app/Contents/MacOS/Dogecoin-Qt
+    fi
 elif [ "$machine" == "Linux" ]; then
-    dogecoinQtProcessName=dogecoin-qt
-    dogecoinQtDatadir=.dogecoin-data
-    dogecoinQtExecutable=dogecoin-qt
+    dogecoinDatadir=.dogecoin-data
+    if [[ -v USE_DOGECOIND ]]; then
+        dogecoinProcessName=dogecoind
+        dogecoinExecutable=dogecoind
+    else
+        dogecoinProcessName=dogecoin-qt
+        dogecoinExecutable=dogecoin-qt
+    fi
 else
     echo "Unexpected OS: $machine"
     exit 1
 fi
 
-dogecoinQtRpcuser=aaa
-dogecoinQtRpcpassword=bbb
+dogecoinRpcuser=aaa
+dogecoinRpcpassword=bbb
 
 if [[ ! -v agentRootDir || ! -d $agentRootDir ]]; then
     echo 'Unknown agent root directory. Set the path to the agent root directory with the agentRootDir environment variable.'
@@ -53,23 +64,32 @@ export TS_NODE_TRANSPILE_ONLY=true
 # Print instructions on the console
 set -o nounset -o errexit # -o xtrace
 
-# TODO: use dogecoind in CI environment
 # Stop dogecoin-qt
-DOGECOIN_PROCESSES="$(pgrep $dogecoinQtProcessName)" || echo "No dogecoin processes found"
+DOGECOIN_PROCESSES="$(pgrep $dogecoinProcessName)" || echo "No dogecoin processes found"
 if [[ $DOGECOIN_PROCESSES ]]; then
     kill "$DOGECOIN_PROCESSES"
     sleep 1s
 fi
 # Replace dogecoin-qt regtest datadir with the prepared db
-rm -rf "$dogecoinQtDatadir/regtest/"
-unzip "$agentRootDir/data/doge-qt-regtest-datadir.zip" -d "$dogecoinQtDatadir" > /dev/null 2>&1
-# Start dogecoin-qt
-$dogecoinQtExecutable -datadir="$dogecoinQtDatadir" -regtest -debug -server -listen -rpcuser=$dogecoinQtRpcuser -rpcpassword=$dogecoinQtRpcpassword -rpcport=41200 &
+rm -rf "$dogecoinDatadir/regtest/"
+unzip "$agentRootDir/data/doge-qt-regtest-datadir.zip" -d "$dogecoinDatadir" > /dev/null 2>&1
+# Start dogecoin node
+$dogecoinExecutable -datadir="$dogecoinDatadir" \
+    -regtest \
+    -debug \
+    -server \
+    -listen \
+    -rpcuser=$dogecoinRpcuser \
+    -rpcpassword=$dogecoinRpcpassword \
+    -rpcport=41200 &
 dogecoinNode=$!
 sleep 4s
 
 # Mine a doge block so dogecoin-qt is fully up and running
-curl --user $dogecoinQtRpcuser:$dogecoinQtRpcpassword  --data-binary '{"jsonrpc": "1.0", "id":"curltest", "method": "generate", "params": [1] }' -H 'content-type: text/plain;' http://127.0.0.1:41200/
+curl --user $dogecoinRpcuser:$dogecoinRpcpassword \
+    --data-binary '{"jsonrpc": "1.0", "id":"curltest", "method": "generate", "params": [1] }' \
+    --header 'content-type: text/plain;' \
+    http://127.0.0.1:41200/
 
 # Clear agent data dir
 # TODO: Move this to a launch agent script
@@ -107,8 +127,22 @@ utxoTxid=34bae623d6fd05ac5d57045d0806c78e2f73f44261f0fb5ffe386cd130fad757
 utxoIndex=0
 utxoValue=$((450000 * 10 ** 8))
 # The utxo value is expected in satoshis
-node "$toolsRootDir/user/lock.js" --deployment $dogethereumDeploymentJson --ethereumAddress 0xa3a744d64f5136aC38E2DE221e750f7B0A6b45Ef --value 5000000000 --dogenetwork regtest --dogeport 41200 --dogeuser $dogecoinQtRpcuser --dogepassword $dogecoinQtRpcpassword --dogePrivateKey $dogePrivateKey --utxoTxid "$utxoTxid" --utxoIndex $utxoIndex --utxoValue $utxoValue
-curl --user $dogecoinQtRpcuser:$dogecoinQtRpcpassword  --data-binary '{"jsonrpc": "1.0", "id":"curltest", "method": "generate", "params": [10] }' -H 'content-type: text/plain;' http://127.0.0.1:41200/
+node "$toolsRootDir/user/lock.js" \
+    --deployment $dogethereumDeploymentJson \
+    --ethereumAddress 0xa3a744d64f5136aC38E2DE221e750f7B0A6b45Ef \
+    --value 5000000000 \
+    --dogenetwork regtest \
+    --dogeport 41200 \
+    --dogeuser $dogecoinRpcuser \
+    --dogepassword $dogecoinRpcpassword \
+    --dogePrivateKey $dogePrivateKey \
+    --utxoTxid "$utxoTxid" \
+    --utxoIndex $utxoIndex \
+    --utxoValue $utxoValue
+curl --user $dogecoinRpcuser:$dogecoinRpcpassword \
+    --data-binary '{"jsonrpc": "1.0", "id":"curltest", "method": "generate", "params": [10] }' \
+    --header 'content-type: text/plain;' \
+    http://127.0.0.1:41200/
 
 pushd . > /dev/null 2>&1
 cd "$agentRootDir"
@@ -128,7 +162,10 @@ curl --request POST --data '{"jsonrpc":"2.0","method":"evm_increaseTime","params
 # It is necessary to mine a block so that the superblock defender agent sees that it can timeout the challenger
 curl --request POST --data '{"jsonrpc":"2.0","method":"evm_mine","params":[],"id":74}' http://localhost:8545;
 # Mine 10 doge blocks so doge unlock tx has enough confirmations
-curl --user $dogecoinQtRpcuser:$dogecoinQtRpcpassword  --data-binary '{"jsonrpc": "1.0", "id":"curltest", "method": "generate", "params": [10] }' -H 'content-type: text/plain;' http://127.0.0.1:41200/
+curl --user $dogecoinRpcuser:$dogecoinRpcpassword \
+    --data-binary '{"jsonrpc": "1.0", "id":"curltest", "method": "generate", "params": [10] }' \
+    --header 'content-type: text/plain;' \
+    http://127.0.0.1:41200/
 
 # Wait for agent to relay doge lock tx to eth and dogetokens minted
 npx hardhat run --network $NETWORK scripts/wait_token_balance.ts
@@ -153,7 +190,10 @@ for i in {1..2}; do
     sleep 30s
 
     # Mine 10 doge blocks so doge unlock tx has enough confirmations
-    curl --user $dogecoinQtRpcuser:$dogecoinQtRpcpassword  --data-binary '{"jsonrpc": "1.0", "id":"curltest", "method": "generate", "params": [10] }' -H 'content-type: text/plain;' http://127.0.0.1:41200/
+    curl --user $dogecoinRpcuser:$dogecoinRpcpassword \
+        --data-binary '{"jsonrpc": "1.0", "id":"curltest", "method": "generate", "params": [10] }' \
+        --header 'content-type: text/plain;' \
+        http://127.0.0.1:41200/
 
     # Wait for agent to relay doge unlock tx to eth and utxo length updated
     npx hardhat dogethereum.waitUtxo --network $NETWORK --operator-public-key-hash 0x03cd041b0139d3240607b9fd1b2d1b691e22b5d6 --utxo-length $((i + 1))
