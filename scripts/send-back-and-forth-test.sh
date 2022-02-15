@@ -64,12 +64,18 @@ export TS_NODE_TRANSPILE_ONLY=true
 # Print instructions on the console
 set -o nounset -o errexit # -o xtrace
 
+function killIfRunning() {
+    # kill fails if passed an empty string
+    if [[ -n $1 ]]; then
+        kill "$@"
+        sleep 1s
+    fi
+}
+
 # Stop dogecoin-qt
 DOGECOIN_PROCESSES="$(pgrep $dogecoinProcessName)" || echo "No dogecoin processes found"
-if [[ $DOGECOIN_PROCESSES ]]; then
-    kill "$DOGECOIN_PROCESSES"
-    sleep 1s
-fi
+killIfRunning "$DOGECOIN_PROCESSES"
+
 # Replace dogecoin-qt regtest datadir with the prepared db
 rm -rf "$dogecoinDatadir/regtest/"
 unzip "$agentRootDir/data/doge-qt-regtest-datadir.zip" -d "$dogecoinDatadir" > /dev/null 2>&1
@@ -97,11 +103,8 @@ rm -rf "${agentDataDir:?}"/*
 
 # Stop previous ethereum node if it is still running
 lingeringEthNode="$(pgrep -f '(^node.*ganache-cli)|(^node.*hardhat node)')" || echo "No ethereum node processes found"
-if [[ $lingeringEthNode ]]; then
-    # kill fails if passed an empty string
-    kill "$lingeringEthNode"
-    sleep 1s
-fi
+killIfRunning "$lingeringEthNode"
+
 # Start ethereum node
 if [[ -v USE_HH_NETWORK ]]; then
     npm run hh-network > hh-network.txt &
