@@ -38,6 +38,7 @@ fi
 
 dogecoinRpcuser=aaa
 dogecoinRpcpassword=bbb
+dogecoinRpcPort=41200
 
 if [[ ! -v agentRootDir || ! -d $agentRootDir ]]; then
     echo 'Unknown agent root directory. Set the path to the agent root directory with the agentRootDir environment variable.'
@@ -87,7 +88,7 @@ $dogecoinExecutable -datadir="$dogecoinDatadir" \
     -listen \
     -rpcuser=$dogecoinRpcuser \
     -rpcpassword=$dogecoinRpcpassword \
-    -rpcport=41200 &
+    -rpcport=$dogecoinRpcPort &
 dogecoinNode=$!
 
 # TODO: move this sleep into a typescript script that waits for the dogecoin node RPC interface to be available.
@@ -137,7 +138,7 @@ node "$toolsRootDir/user/lock.js" \
     --ethereumAddress 0xa3a744d64f5136aC38E2DE221e750f7B0A6b45Ef \
     --value 5000000000 \
     --dogenetwork regtest \
-    --dogeport 41200 \
+    --dogeport $dogecoinRpcPort \
     --dogeuser $dogecoinRpcuser \
     --dogepassword $dogecoinRpcpassword \
     --dogePrivateKey $dogePrivateKey \
@@ -147,7 +148,7 @@ node "$toolsRootDir/user/lock.js" \
 curl --user $dogecoinRpcuser:$dogecoinRpcpassword \
     --data-binary '{"jsonrpc": "1.0", "id":"curltest", "method": "generate", "params": [10] }' \
     --header 'content-type: text/plain;' \
-    http://127.0.0.1:41200/
+    "http://127.0.0.1:$dogecoinRpcPort/"
 
 pushd . > /dev/null 2>&1
 cd "$agentRootDir"
@@ -178,7 +179,7 @@ curl --request POST --data '{"jsonrpc":"2.0","method":"evm_mine","params":[],"id
 curl --user $dogecoinRpcuser:$dogecoinRpcpassword \
     --data-binary '{"jsonrpc": "1.0", "id":"curltest", "method": "generate", "params": [10] }' \
     --header 'content-type: text/plain;' \
-    http://127.0.0.1:41200/
+    "http://127.0.0.1:$dogecoinRpcPort/"
 
 # Wait for agent to relay doge lock tx to eth and dogetokens minted
 npx hardhat run --network $NETWORK scripts/wait_token_balance.ts
@@ -207,7 +208,7 @@ for i in {1..2}; do
 
     # Wait for Eth to Doge agent to sign and broadcast doge unlock tx
     npx hardhat dogethereum.mineOnTx \
-        --url "http://$dogecoinRpcuser:$dogecoinRpcpassword@127.0.0.1:41200/" \
+        --url "http://$dogecoinRpcuser:$dogecoinRpcpassword@127.0.0.1:$dogecoinRpcPort/" \
         --agent-pid $agentPid \
 
     # Wait for agent to relay doge unlock tx to eth and utxo length updated
