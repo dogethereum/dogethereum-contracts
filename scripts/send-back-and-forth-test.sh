@@ -96,14 +96,15 @@ sleep 4s
 curl --user $dogecoinRpcuser:$dogecoinRpcpassword \
     --data-binary '{"jsonrpc": "1.0", "id":"curltest", "method": "generate", "params": [1] }' \
     --header 'content-type: text/plain;' \
-    http://127.0.0.1:41200/
+    "http://127.0.0.1:$dogecoinRpcPort/"
 
 # Clear agent data dir
 # TODO: Move this to a launch agent script
 rm -rf "${agentDataDir:?}"/*
 
 # Stop previous ethereum node if it is still running
-lingeringEthNode="$(pgrep -f '(^node.*ganache-cli)|(^node.*hardhat node)')" || echo "No ethereum node processes found"
+lingeringEthNode="$(pgrep -f '(^node.*ganache-cli)|(^node.*hardhat node)')" || \
+    echo "No ethereum node processes found"
 killIfRunning "$lingeringEthNode"
 
 # Start ethereum node
@@ -196,7 +197,9 @@ for i in {1..2}; do
 
     # Mine 5 eth blocks so unlock eth tx has enough confirmations
     for j in {1..5}; do
-        curl --request POST --data '{"jsonrpc":"2.0","method":"evm_mine","params":[],"id":74}' http://localhost:8545;
+        curl --request POST \
+            --data '{"jsonrpc":"2.0","method":"evm_mine","params":[],"id":"evm_mine_'"$i"'_'"$j"'"}' \
+            http://localhost:8545;
     done
 
     # TODO: replace this sleep with a typescript script that waits for this
