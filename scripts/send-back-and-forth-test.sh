@@ -151,6 +151,9 @@ curl --user $dogecoinRpcuser:$dogecoinRpcpassword \
 
 pushd . > /dev/null 2>&1
 cd "$agentRootDir"
+lingeringAgent=$(pgrep -f 'exec:java -Ddogethereum.agents.conf.file=' -d " ") || \
+    echo "No agent processes found"
+killIfRunning $lingeringAgent
 # Here we assume that the agent was already built
 mvn exec:java "-Ddogethereum.agents.conf.file=$agentConfig" > agent.log 2>&1 &
 agentPid=$!
