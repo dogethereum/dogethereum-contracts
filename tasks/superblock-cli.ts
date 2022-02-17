@@ -5,6 +5,7 @@ import type { BigNumber, Contract, ContractTransaction, Event, providers } from 
 import { loadDeployment, DogethereumSystem } from "../deploy";
 
 import { Battle, BridgeEvent } from "./battle";
+import { delay, generateTaskName, testProcess } from "./common";
 
 // TODO: separate this into two modules: one for the status task and another for the challenge task.
 
@@ -146,10 +147,9 @@ interface WaitUtxoTaskArguments {
 
 const STATUS_UNINITIALIZED = 0;
 
-const DOGETHEREUM_SUPERCLI = "dogethereum";
-const STATUS_TASK = `${DOGETHEREUM_SUPERCLI}.status`;
-const CHALLENGE_TASK = `${DOGETHEREUM_SUPERCLI}.challenge`;
-const WAIT_UTXO_TASK = `${DOGETHEREUM_SUPERCLI}.waitUtxo`;
+export const STATUS_TASK = generateTaskName("status");
+export const CHALLENGE_TASK = generateTaskName("challenge");
+export const WAIT_UTXO_TASK = generateTaskName("waitUtxo");
 
 function decodeBattleEvent(battleManager: Contract, event: Event): BridgeEvent {
   if (event.event !== undefined) {
@@ -274,15 +274,10 @@ async function nextSuperblockEvent(
     let intervalToken: NodeJS.Timeout;
     if (agentPid !== undefined) {
       const agentChecker = () => {
-        // Signal `0` is interpreted by node.js as a test for process existence
-        // See https://nodejs.org/docs/latest-v14.x/api/process.html#process_process_kill_pid_signal
-        try {
-          process.kill(agentPid, 0);
-        } catch {
+        if (!testProcess(agentPid)) {
           superblocks.off(newSuperblockFilter, listener);
           clearInterval(intervalToken);
           reject(new Error("The agent process exited without sending superblocks."));
-          return;
         }
       }
       intervalToken = setInterval(agentChecker, 300);
@@ -621,12 +616,6 @@ const waitUtxoCommand: ActionType<WaitUtxoTaskArguments> = async function (
   }
   console.log(`Utxo length of operator ${operatorPublicKeyHash} : ${utxosLength}`);
 };
-
-function delay(milliseconds: number) {
-  return new Promise((resolve) => {
-    setTimeout(resolve, milliseconds);
-  });
-}
 
 task(WAIT_UTXO_TASK, "Wait until a particular operator has a specific amount of UTXOs.")
   .addParam(
