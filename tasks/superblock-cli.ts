@@ -6,6 +6,7 @@ import { loadDeployment, DogethereumSystem } from "../deploy";
 
 import { Battle, BridgeEvent } from "./battle";
 import { delay, generateTaskName, testProcess } from "./common";
+import "./mineDogeBlock";
 
 // TODO: separate this into two modules: one for the status task and another for the challenge task.
 
