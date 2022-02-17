@@ -205,15 +205,10 @@ for i in {1..2}; do
             http://localhost:8545;
     done
 
-    # TODO: replace this sleep with a typescript script that waits for this
     # Wait for Eth to Doge agent to sign and broadcast doge unlock tx
-    sleep 30s
-
-    # Mine 10 doge blocks so doge unlock tx has enough confirmations
-    curl --user $dogecoinRpcuser:$dogecoinRpcpassword \
-        --data-binary '{"jsonrpc": "1.0", "id":"curltest", "method": "generate", "params": [10] }' \
-        --header 'content-type: text/plain;' \
-        http://127.0.0.1:41200/
+    npx hardhat dogethereum.mineOnTx \
+        --url "http://$dogecoinRpcuser:$dogecoinRpcpassword@127.0.0.1:41200/" \
+        --agent-pid $agentPid \
 
     # Wait for agent to relay doge unlock tx to eth and utxo length updated
     npx hardhat dogethereum.waitUtxo \
