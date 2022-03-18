@@ -255,7 +255,10 @@ contract DogeSuperblocks is DogeErrorCodes {
             superblock.status == Status.New || superblock.status == Status.InBattle,
             "ERR_CHALLENGE_SUPERBLOCK_BAD_STATUS"
         );
-        superblock.status = Status.InBattle;
+
+        if (superblock.status != Status.InBattle) {
+            superblock.status = Status.InBattle;
+        }
         emit ChallengeSuperblock(superblockHash, challenger);
         return superblockHash;
     }
