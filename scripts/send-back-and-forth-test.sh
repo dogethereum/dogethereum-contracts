@@ -62,12 +62,14 @@ dogethereumDeploymentJson="deployment/$NETWORK/deployment.json"
 # We avoid typechecking to speed up execution
 export TS_NODE_TRANSPILE_ONLY=true
 
+export NODE_OPTIONS=--unhandled-rejections=strict
+
 # Print instructions on the console
 set -o nounset -o errexit # -o xtrace
 
 function killIfRunning() {
     # kill fails if passed an empty string
-    if [[ -n $1 ]]; then
+    if [[ $# -gt 0 && -n $1 ]]; then
         kill "$@"
         sleep 1s
     fi
@@ -110,8 +112,10 @@ killIfRunning "$lingeringEthNode"
 
 # Start ethereum node
 if [[ -v USE_HH_NETWORK ]]; then
+    challenger=0x9965507d1a55bcc2695c58ba16fb37d819b0a4dc
     npm run hh-network > hh-network.txt &
 else
+    challenger=0xB50a77BF193245E431b29CdD70b354119eb75Fd2
     npm run ganache > ganachelog.txt &
 fi
 ethNode=$!
@@ -161,20 +165,18 @@ agentPid=$!
 popd > /dev/null 2>&1
 
 # Challenge the next superblock
-#HH network: 0x9965507d1a55bcc2695c58ba16fb37d819b0a4dc
-#ganache: 0xB50a77BF193245E431b29CdD70b354119eb75Fd2
 npx hardhat dogethereum.challenge \
     --network $NETWORK \
-    --challenger 0xB50a77BF193245E431b29CdD70b354119eb75Fd2 \
+    --challenger $challenger \
     --deposit 1000000000 \
     --advance-battle true \
     --agent-pid $agentPid
 
 # TODO: avoid hardcoding 10 seconds time delta here
 # This should be enough to timeout the challenger
-curl --request POST --data '{"jsonrpc":"2.0","method":"evm_increaseTime","params":[10],"id":74}' http://localhost:8545;
+curl --request POST --data '{"jsonrpc":"2.0","method":"evm_increaseTime","params":[10],"id":"timeout-challenger"}' http://localhost:8545;
 # It is necessary to mine a block so that the superblock defender agent sees that it can timeout the challenger
-curl --request POST --data '{"jsonrpc":"2.0","method":"evm_mine","params":[],"id":74}' http://localhost:8545;
+curl --request POST --data '{"jsonrpc":"2.0","method":"evm_mine","params":[],"id":"timeout-challenger"}' http://localhost:8545;
 # Mine 10 doge blocks so doge unlock tx has enough confirmations
 curl --user $dogecoinRpcuser:$dogecoinRpcpassword \
     --data-binary '{"jsonrpc": "1.0", "id":"curltest", "method": "generate", "params": [10] }' \
