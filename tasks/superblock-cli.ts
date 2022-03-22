@@ -281,7 +281,7 @@ async function nextSuperblockEvent(
           clearInterval(intervalToken);
           reject(new Error("The agent process exited without sending superblocks."));
         }
-      }
+      };
       intervalToken = setInterval(agentChecker, 300);
     }
 

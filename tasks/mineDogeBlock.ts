@@ -28,7 +28,9 @@ const mineBlockCommand: ActionType<MineBlockTaskArguments> = async function ({
   // eslint-disable-next-line no-constant-condition
   while (true) {
     mempool = await getRawMemPool(false);
-    if (mempool.error !== null) throw new Error(`JSON-RPC failure: ${JSON.stringify(mempool.error)}`);
+    if (mempool.error !== null) {
+      throw new Error(`JSON-RPC failure: ${JSON.stringify(mempool.error)}`);
+    }
     if (mempool.result.length > 0) break;
     if (agentPid !== undefined && !testProcess(agentPid)) {
       throw new Error("Agent process terminated before sending transaction to dogecoin node.");
