@@ -5,8 +5,9 @@ import type { BigNumber, Contract, ContractTransaction, Event, providers } from 
 import { loadDeployment, DogethereumSystem } from "../deploy";
 
 import { Battle, BridgeEvent } from "./battle";
-import { delay, generateTaskName, testProcess } from "./common";
+import { accelerateTimeOnNewProposal, delay, generateTaskName, testProcess } from "./common";
 import "./mineDogeBlock";
+import "./assertTokenStatus";
 
 // TODO: separate this into two modules: one for the status task and another for the challenge task.
 
@@ -607,12 +608,23 @@ const waitUtxoCommand: ActionType<WaitUtxoTaskArguments> = async function (
 ) {
   const {
     dogeToken: { contract: dogeToken },
+    superblockClaims: { contract: superblockClaims },
+    superblocks: { contract: superblocks },
   } = await loadDeployment(hre);
   let utxosLength = await dogeToken.getUtxosLength(operatorPublicKeyHash);
   console.log(`Utxo length of operator ${operatorPublicKeyHash} : ${utxosLength}`);
 
+  const superblockTimeout = (await superblockClaims.superblockTimeout()).toNumber();
+  let blockNumber = 0;
+
   while (utxosLength < expectedUtxoLength) {
-    await delay(2000);
+    await delay(500);
+    blockNumber = await accelerateTimeOnNewProposal(
+      hre,
+      superblocks,
+      superblockTimeout,
+      blockNumber
+    );
     utxosLength = await dogeToken.getUtxosLength(operatorPublicKeyHash);
   }
   console.log(`Utxo length of operator ${operatorPublicKeyHash} : ${utxosLength}`);

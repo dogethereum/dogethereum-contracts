@@ -136,11 +136,12 @@ dogePrivateKey=cW9yAP8NRgGGN2qQ4vEQkvqhHFSNzeFPWTLBXriy5R5wf4KBWDbc
 utxoTxid=34bae623d6fd05ac5d57045d0806c78e2f73f44261f0fb5ffe386cd130fad757
 utxoIndex=0
 utxoValue=$((450000 * 10 ** 8))
+lockValue=5000000000
 # The utxo value is expected in satoshis
-node "$toolsRootDir/user/lock.js" \
+lockTxs=$(node "$toolsRootDir/user/lock.js" \
     --deployment $dogethereumDeploymentJson \
     --ethereumAddress 0xa3a744d64f5136aC38E2DE221e750f7B0A6b45Ef \
-    --value 5000000000 \
+    --value $lockValue \
     --dogenetwork regtest \
     --dogeport $dogecoinRpcPort \
     --dogeuser $dogecoinRpcuser \
@@ -148,7 +149,8 @@ node "$toolsRootDir/user/lock.js" \
     --dogePrivateKey $dogePrivateKey \
     --utxoTxid "$utxoTxid" \
     --utxoIndex $utxoIndex \
-    --utxoValue $utxoValue
+    --utxoValue $utxoValue \
+    --printTxJson)
 curl --user $dogecoinRpcuser:$dogecoinRpcpassword \
     --data-binary '{"jsonrpc": "1.0", "id":"curltest", "method": "generate", "params": [10] }' \
     --header 'content-type: text/plain;' \
@@ -186,6 +188,12 @@ curl --user $dogecoinRpcuser:$dogecoinRpcpassword \
 # Wait for agent to relay doge lock tx to eth and dogetokens minted
 npx hardhat run --network $NETWORK scripts/wait_token_balance.ts
 
+npx hardhat --network $NETWORK dogethereum.assertLock \
+    --url "http://$dogecoinRpcuser:$dogecoinRpcpassword@127.0.0.1:$dogecoinRpcPort/" \
+    --lock-value $lockValue \
+    --tx-list "$lockTxs"
+# TODO: assert token invariant
+
 npx hardhat run --network $NETWORK scripts/debug.ts
 
 # Prepare sender address to do unlocks
@@ -195,11 +203,12 @@ for i in {1..2}; do
     npx hardhat run --network $NETWORK scripts/debug.ts
 
     # Send eth unlock tx
+    unlockValue=300000000
     node "$toolsRootDir/user/unlock.js" \
         --deployment $dogethereumDeploymentJson \
         --privateKey 0xffd02f8d16c657add9aba568c83770cd3f06cebda3ddb544daf313002ca5bd53 \
         --receiver n2z4kV3rWPALTZz4sdoE5ag2UiErsrmJpJ \
-        --value 300000000
+        --value $unlockValue
 
     # Mine 5 eth blocks so unlock eth tx has enough confirmations
     for j in {1..5}; do
@@ -218,6 +227,9 @@ for i in {1..2}; do
         --network $NETWORK \
         --operator-public-key-hash 0x03cd041b0139d3240607b9fd1b2d1b691e22b5d6 \
         --utxo-length $((i + 1))
+
+    # TODO: assert that $unlockValue doges minus fees was correctly sent to the expected address.
+    # TODO: assert token invariant
 done
 
 # Print status after the unlocks were processed
