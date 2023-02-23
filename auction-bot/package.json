@@ -4,7 +4,7 @@
   "description": "",
   "dependencies": {
     "ethers": "^5.5.1",
-    "sequelize": "^6.9.0",
+    "sequelize": "^6.28.2",
     "sqlite3": "^5.0.2",
     "yargs": "^17.2.1"
   },
